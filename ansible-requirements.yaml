@@ -2,3 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+- name: "systemd_networkd"
+  src: "https://github.com/aruhier/ansible-role-systemd-networkd"
+  scm: git
+  version: "3af47e369c7013782e0c4740638927955646471b"
