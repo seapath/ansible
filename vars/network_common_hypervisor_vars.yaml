@@ -1,0 +1,28 @@
+# Copyright (C) 2020, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+systemd_networkd_network:
+  00-enkernelbr0:
+    - Match:
+        - Name: "{{ enbridge0 }}"
+    - Network:
+        - Bridge: "kernelbr0"
+  01-nodhcp:
+    - Match:
+        - Name: "en* eth*"
+        - KernelCommandLine: "!nfsroot"
+    - Network:
+        - DHCP: "no"
+  00-kernelbr0:
+    - Match:
+        - Name: "kernelbr0"
+    - Network:
+        - DNS: "{{ dns_server }}"
+        - Address: "{{ ip_addr }}/{{ subnetwork_suffix }}"
+        - Gateway: "{{ gateway_addr }}"
+systemd_networkd_netdev:
+  00-kernelbr0:
+    - NetDev:
+        - Name: "kernelbr0"
+        - Kind: "bridge"
+        - MACAddress: "{{ 'ea:9e:cf' | random_mac }}"

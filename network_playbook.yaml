@@ -2,6 +2,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+- name: Configure Network hypervisor
+  hosts: hypervisors
+  vars_files:
+    - vars/network_common_hypervisor_vars.yaml
+  roles:
+    - systemd_networkd
+
 - name: Configure Network observer
   hosts: observer
   vars_files:
