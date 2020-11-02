@@ -15,3 +15,24 @@
     - vars/network_observer_vars.yml
   roles:
     - systemd_networkd
+
+- name: Configure hosts and hostname
+  hosts: all
+  tasks:
+      - name: Set hostname
+        hostname:
+            name: "{{ inventory_hostname }}"
+            use: systemd
+      - name: Build hosts file
+        lineinfile:
+            dest: /etc/hosts
+            regexp: '.*{{ item }}$'
+            line: "{{ hostvars[item].ip_addr }} {{item}}"
+            state: present
+        when: hostvars[item].ip_addr is defined
+        loop: "{{ groups['all'] }}"
+      - name: Add rbd in hosts file
+        replace:
+            path: /etc/hosts
+            regexp: '^{{ ip_addr }} {{ inventory_hostname }}$'
+            replace: '{{ ip_addr }} rbd {{ inventory_hostname }}'
