@@ -1,0 +1,5 @@
+[gerrit]
+host = g1.sfl.team
+port = 29419
+project = rte/votp/ansible
+defaultbranch = master
