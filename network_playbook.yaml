@@ -36,3 +36,30 @@
             path: /etc/hosts
             regexp: '^{{ ip_addr }} {{ inventory_hostname }}$'
             replace: '{{ ip_addr }} rbd {{ inventory_hostname }}'
+
+- name: Configure NTP
+  hosts: all
+  tasks:
+      - name: Set NTP configuration in /etc/systemd/timesyncd.conf
+        lineinfile:
+            dest: /etc/systemd/timesyncd.conf
+            regexp: '{{ item.regexp }}'
+            line: '{{ item.line   }}'
+            insertafter: '\[Time\]'
+            backrefs: true
+            create: true
+            state: present
+        with_items:
+            - regexp: '^\s*#?\s*(NTP=).*$'
+              line: 'NTP={{ ntp_servers }}'
+
+            - regexp: '^\s*#?\s*(FallbackNTP=).*$'
+              line: 'FallbackNTP={{ fallback_ntp_servers | default("") }}'
+        notify:
+            - Restart systemd timesyncd
+
+  handlers:
+      - name: Restart systemd timesyncd
+        ansible.builtin.service:
+            name: systemd-timesyncd
+            state: restarted
