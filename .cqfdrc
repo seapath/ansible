@@ -1,0 +1,6 @@
+[project]
+org='rte'
+name='ansible'
+
+[build]
+command='check_yaml'
