@@ -1,0 +1,47 @@
+# Copyright (C) 2020, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+all:
+    children:
+        hypervisors:
+            hosts:
+                votp1:
+                    ansible_host: 192.168.217.15 # Change IP address according to your setup
+                votp2:
+                    ansible_host: 192.168.217.16 # Change IP address according to your setup
+        observers:
+            hosts:
+                observer:
+                    ansible_host: 192.168.217.44 # Change IP address according to your setup
+        VMs:
+            hosts:
+            # Add your Virtual machine here
+            # For instance :
+                guest0:
+                    ansible_host: 192.168.217.58 # Change IP address according to your setup
+    vars:
+        # Use Ansible through SSH
+        ansible_connection: ssh
+        # Ansible use root account on target
+        ansible_user: root
+        # Use python3
+        ansible_python_interpreter: /usr/bin/python3
+
+        ## Optional usefull Ansible variables
+        ## Sone other variables are described here:
+        ## https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html#list-of-behavioral-inventory-parameters
+
+        ## SSH private key used by Ansible to connect
+        #ansible_ssh_private_key_file:  PRIVATE_KEY_FILE
+
+        ## Specify common arguments to pass to sftp/scp/ssh (e.g. ProxyCommand)
+        #ssh-common-args: SSH_COMMON_ARGS
+
+        ## Specify extra arguments to pass to scp only
+        #scp-extra-args: SCP_EXTRA_ARGS
+
+        ## Specify extra arguments to pass to sftp only
+        #sftp-extra-args: SFTP_EXTRA_ARGS
+
+        ## Specify extra arguments to pass to ssh only
+        #ssh-common-args: SSH_COMMON_ARGS
