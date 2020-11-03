@@ -1,7 +1,7 @@
 # Copyright (C) 2020, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
-systemd_networkd_network:
+systemd_networkd_network_common:
   00-enkernelbr0:
     - Match:
         - Name: "{{ enbridge0 }}"
@@ -20,7 +20,7 @@ systemd_networkd_network:
         - DNS: "{{ dns_server }}"
         - Address: "{{ ip_addr }}/{{ subnetwork_suffix }}"
         - Gateway: "{{ gateway_addr }}"
-systemd_networkd_netdev:
+systemd_networkd_netdev_common:
   00-kernelbr0:
     - NetDev:
         - Name: "kernelbr0"

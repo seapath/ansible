@@ -6,6 +6,7 @@
   hosts: hypervisors
   vars_files:
     - vars/network_common_hypervisor_vars.yaml
+    - "vars/network_{{ network_bridge_type }}_hypervisor_vars.yaml"
   roles:
     - systemd_networkd
 

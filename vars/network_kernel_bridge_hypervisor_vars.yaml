@@ -1,0 +1,26 @@
+# Copyright (C) 2020, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+systemd_networkd_network_kernel_bridge:
+  00-enkernelbr1:
+    - Match:
+        - Name: "{{ enbridge1 }}"
+    - Network:
+        - Bridge: "kernelbr1"
+  00-kernelbr1:
+    - Match:
+        - Name: "kernelbr1"
+    - Network:
+        - DHCP: "no"
+systemd_networkd_netdev_kernel_bridge:
+  00-kernelbr1:
+    - NetDev:
+        - Name: "kernelbr1"
+        - Kind: "bridge"
+        - MACAddress: "{{ 'ea:9e:cf' | random_mac }}"
+
+systemd_networkd_network: "{{ systemd_networkd_network_common |
+    combine(systemd_networkd_network_kernel_bridge) }}"
+systemd_networkd_netdev: "{{ systemd_networkd_netdev_common |
+    combine(systemd_networkd_netdev_kernel_bridge) }}"
+
