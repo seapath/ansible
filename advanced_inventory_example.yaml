@@ -1,0 +1,76 @@
+# Copyright (C) 2020, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+all:
+    children:
+        hypervisors:
+            hosts:
+                votp1:
+                    # Change IP address according to your setup
+                    ansible_host: 192.168.217.15
+                    # The network interface that will be used by the hypervisor
+                    # to communicate across the network
+                    enbridge0: enp66s0f1
+                    # DNS server ip. The variable must be define but can be
+                    # empty
+                    dns_server: 9.9.9.9
+                    # The IP address to be set to enbridge0. Don't forget to
+                    # change ansible host if this IP doesn't match with the one
+                    # define in ansible_host
+                    ip_addr: 192.168.217.15
+                    # Gateway IP Addr. The variable must be define but can be
+                    # empty
+                    gateway_addr: 192.168.217.1
+                    # The Subnetwork used by enbridge0
+                    subnetwork_suffix: 24
+                    # The type of bridge used by the VMs. kernel_bridge or ovs.
+                    network_bridge_type: kernel_bridge
+                    # The network interface that will be added to the network
+                    # bridge to be used by the VMs. Must be defined only if
+                    # network_bridge_type is set to kernel_bridge
+                    enbridge1: enp66s0f0
+
+                votp2:
+                    ansible_host: 192.168.217.16
+                    enbridge0: enp66s0f1
+                    dns_server: 9.9.9.9
+                    ip_addr: 192.168.217.16
+                    gateway_addr: 192.168.217.1
+                    subnetwork_suffix: 24
+                    network_bridge_type: ovs
+                    # the ethernet device pci address to use with DPDK
+                    dpdk_nic: "0000:42:00.0"
+                    # The number of virtual Open vSwith ports to create
+                    ovs_number_of_virtual_ports: 8
+            # hypervisors groupe variables
+            vars:
+                # The module to use with dpdk: igb_uio, vfio-pci or
+                # uio_pci_generic. This variable must be define if one
+                # hypersisors have network_bridge_type set to ovs
+                dpdk_module: uio_pci_generic
+
+        observers:
+            hosts:
+                observer:
+                    ansible_host: 192.168.217.11
+                    # The network interface to configure
+                    network_interface: enp0s2
+                    dns_server: 9.9.9.9
+                    ip_addr: 192.168.217.11
+                    gateway_addr: 192.168.1.254
+                    subnetwork_suffix: 24
+    vars:
+        # Use Ansible through SSH
+        ansible_connection: ssh
+        # Ansible use root account on target
+        ansible_user: root
+        # Use python3
+        ansible_python_interpreter: /usr/bin/python3
+        # Set this optional variable to true if we want to apply the
+        # network configuration. Otherwise the network configuration
+        # will be apply during the next reboot
+        systemd_networkd_apply_config: true
+        # NTP server to use
+        ntp_servers: 192.168.217.1
+        # NTP failback servers. Optional variable
+        fallback_ntp_servers: 0.fr.pool.ntp.org 1.fr.pool.ntp.org 2.fr.pool.ntp.org 3.fr.pool.ntp.org
