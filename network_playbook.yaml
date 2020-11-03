@@ -17,6 +17,40 @@
   roles:
     - systemd_networkd
 
+- name: Configure OVS
+  hosts: hypervisors
+  tasks:
+      - name: Ensures /opt/setup dir exists
+        file: path=/opt/setup state=directory
+        when: hostvars[inventory_hostname].network_bridge_type == "ovs"
+      - name: Install setup_ovs.sh
+        template:
+            src: templates/setup_ovs.sh
+            dest: /opt/setup/setup_ovs.sh
+            owner: root
+            group: root
+            mode: '0755'
+        when: hostvars[inventory_hostname].network_bridge_type == "ovs"
+      - name: Install setup_ovs.server
+        template:
+            src: templates/setup_ovs.service
+            dest: /etc/systemd/system
+            owner: root
+            group: root
+            mode: '0644'
+        when: hostvars[inventory_hostname].network_bridge_type == "ovs"
+        notify:
+            - Restart setup_ovs
+  handlers:
+      - name: Restart setup_ovs
+        ansible.builtin.systemd:
+            name: setup_ovs
+            daemon_reload: yes
+            state: restarted
+            enabled: yes
+
+
+
 - name: Configure hosts and hostname
   hosts: all
   tasks:
