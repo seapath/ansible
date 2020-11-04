@@ -1,0 +1,23 @@
+# Copyright (C) 2020, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Setup Corosync
+  hosts: hypervisors
+  vars_files:
+      - vars/corosync_vars.yaml
+  roles:
+      - corosync
+
+- name: Setup Pacemaker
+  hosts: hypervisors
+  tasks:
+      - name: Start Pacemaker
+        ansible.builtin.systemd:
+            name: pacemaker
+            state: started
+            enabled: true
+      - name: Disable quorum policy
+        shell: crm configure property stonith-enabled=false
+      - name: Disable stonith
+        shell: crm configure property no-quorum-policy=ignore
