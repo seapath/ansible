@@ -42,12 +42,27 @@ all:
                     dpdk_nic: "0000:42:00.0"
                     # The number of virtual Open vSwith ports to create
                     ovs_number_of_virtual_ports: 8
+                    # Number of hugepages to reserve. Optional default is 4
+                    kernel_parameters_hugepages: 3
+                    # Optional variable to append extra kernel parameters.
+                    # May be usefull to add iommu=pt intel_iommu=on if you use
+                    # with igb_uio module.
+                    extra_kernel_parameters: iommu=pt intel_iommu=on
+                    # Bootloader configuration file. Must be set to
+                    # /boot/syslinux.cfg on BIOS machine. Default is
+                    # /boot/EFI/BOOT/grub.cfg used by UEFI machines.
+                    bootloader_config_file: /boot/syslinux.cfg
+
+
             # hypervisors groupe variables
             vars:
                 # The module to use with dpdk: igb_uio, vfio-pci or
                 # uio_pci_generic. This variable must be define if one
                 # hypersisors have network_bridge_type set to ovs
                 dpdk_module: uio_pci_generic
+                # Set true to restart after setting kernel parameters (default
+                # is false)
+                kernel_parameters_restart: true
 
         observers:
             hosts:
