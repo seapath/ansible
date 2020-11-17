@@ -41,3 +41,6 @@ fi
 
 echo "Install role requirements.yaml"
 ansible-galaxy install --roles-path="$(pwd)/roles" -r ansible-requirements.yaml
+
+echo "Update git submodules"
+git submodule update --init
