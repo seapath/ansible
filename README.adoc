@@ -96,8 +96,8 @@ an Inventory file and playbook files to play. To install Ansible 2.9 on this
 machine please refer to the Ansible documentation at
 https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html.
 
-*Note:* Only the Ansible version 2.9 was tested. We strongly recommand to use
-and install this version.
+*Warning:* Curently only the Ansible version 2.9 is supported. Other versions
+will not work. Ansible 2.9 is the packaged version in Ubuntu 20.04 and Fedora 33.
 
 
 Also you must install additional components. It can be done by running the
