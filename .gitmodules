@@ -1,0 +1,4 @@
+[submodule "ceph-ansible"]
+	path = ceph-ansible
+	url = https://github.com/ceph/ceph-ansible.git
+	branch = stable-5.0
