@@ -42,5 +42,12 @@ fi
 echo "Install role requirements.yaml"
 ansible-galaxy install --roles-path="$(pwd)/roles" -r ansible-requirements.yaml
 
+# Remove site.yml in ceph-ansible before launching 'git submodule update' to
+# avoid errors
+rm -f ceph-ansible/site.yml
+
 echo "Update git submodules"
 git submodule update --init
+
+echo "Copy ceph-ansible site.yml"
+cp -vf src/ceph-ansible-site.yaml ceph-ansible/site.yml
