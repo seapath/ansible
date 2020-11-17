@@ -37,11 +37,11 @@ https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.ht
 *Note:* Only the Ansible version 2.9 was tested. We strongly recommand to use
 and install this version.
 
-You also need to install Ansible plugin requirements defined in
-_ansible-requirements.yaml_. To do this once you have installed the ansible
-client enter the following command at the top of the ansible git repository:
 
- $ ansible-galaxy install -r ansible-requirements.yaml
+Also you must install additional components. It can be done by running the
+prepare.sh script.
+
+ $ prepare.sh
 
 == Inventory
 
