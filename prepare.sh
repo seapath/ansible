@@ -51,3 +51,6 @@ git submodule update --init
 
 echo "Copy ceph-ansible site.yml"
 cp -vf src/ceph-ansible-site.yaml ceph-ansible/site.yml
+
+echo "Copy ceph-group_vars"
+cp -vf vars/ceph_group_vars/*.yml ceph-ansible/group_vars/
