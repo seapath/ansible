@@ -35,13 +35,13 @@ all:
         #ansible_ssh_private_key_file:  PRIVATE_KEY_FILE
 
         ## Specify common arguments to pass to sftp/scp/ssh (e.g. ProxyCommand)
-        #ssh-common-args: SSH_COMMON_ARGS
+        #ansible-ssh-common-args: SSH_COMMON_ARGS
 
         ## Specify extra arguments to pass to scp only
-        #scp-extra-args: SCP_EXTRA_ARGS
+        #ansible-scp-extra-args: SCP_EXTRA_ARGS
 
         ## Specify extra arguments to pass to sftp only
-        #sftp-extra-args: SFTP_EXTRA_ARGS
+        #ansible-sftp-extra-args: SFTP_EXTRA_ARGS
 
         ## Specify extra arguments to pass to ssh only
-        #ssh-common-args: SSH_COMMON_ARGS
+        #ansible-ssh-extra-args: SSH_EXTRA_ARS
