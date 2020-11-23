@@ -2,27 +2,17 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- name: Configure Network hypervisor
-  hosts: hypervisors
-  vars_files:
-    - vars/network_common_hypervisor_vars.yaml
-    - "vars/network_{{ network_bridge_type }}_hypervisor_vars.yaml"
-  roles:
-    - systemd_networkd
-
-- name: Configure Network observer
-  hosts: observer
-  vars_files:
-    - vars/network_observer_vars.yml
-  roles:
-    - systemd_networkd
-
 - name: Configure OVS
   hosts: hypervisors
+  vars:
+      ovs_bridge_list: "{{ ovs_bridges | default([]) }}"
   tasks:
       - name: Ensures /opt/setup dir exists
         file: path=/opt/setup state=directory
-        when: hostvars[inventory_hostname].network_bridge_type == "ovs"
+      - name: Clean setup_ovs.d directory
+        file: state=absent path=/opt/setup/setup_ovs.d/
+      - name: Create /opt/setup/setup_ovs.d directory
+        file: path=/opt/setup/setup_ovs.d state=directory
       - name: Install setup_ovs.sh
         template:
             src: templates/setup_ovs.sh
@@ -30,7 +20,14 @@
             owner: root
             group: root
             mode: '0755'
-        when: hostvars[inventory_hostname].network_bridge_type == "ovs"
+      - name: Install setup_ovs.d scripts
+        template:
+            src: "templates/setup_ovs_{{ item.type }}.sh"
+            dest: "/opt/setup/setup_ovs.d/{{ item.name }}"
+            owner: root
+            group: root
+            mode: '0755'
+        loop: "{{ ovs_bridge_list }}"
       - name: Install setup_ovs.server
         template:
             src: templates/setup_ovs.service
@@ -38,18 +35,45 @@
             owner: root
             group: root
             mode: '0644'
-        when: hostvars[inventory_hostname].network_bridge_type == "ovs"
         notify:
-            - Restart setup_ovs
+            - Enable setup_ovs
   handlers:
-      - name: Restart setup_ovs
+      - name: Enable setup_ovs
         ansible.builtin.systemd:
             name: setup_ovs
             daemon_reload: yes
-            state: restarted
             enabled: yes
 
+- name: Apply Open vSwitch configuration
+  hosts: hypervisors
+  vars:
+      apply_config: "{{ apply_network_config | default(false) }}"
+  tasks:
+      - name: Restart setup_ovs
+        ansible.builtin.systemd:
+            name: setup_ovs
+            state: restarted
+        when:
+            apply_config
 
+- name: Configure Network
+  hosts: all
+  vars_files:
+    - vars/network_vars.yml
+  roles:
+    - systemd_networkd
+
+- name: Network configuration
+  hosts: all
+  vars:
+      apply_config: "{{ apply_network_config | default(false) }}"
+  tasks:
+      - name: Restart systemd-networkd
+        ansible.builtin.systemd:
+            name: systemd-networkd
+            state: restarted
+        when:
+            apply_config
 
 - name: Configure hosts and hostname
   hosts: all
