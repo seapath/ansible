@@ -104,6 +104,21 @@ all:
                     ip_addr: 192.168.217.11
                     gateway_addr: 192.168.1.254
                     subnet: 24
+        # Ceph Monitor group where a Ceph monitor will be installed
+        mons:
+            hosts:
+                votp1:
+                votp2:
+                observer:
+        # Ceph OSD group where a Ceph OSD will be installed
+        osds:
+            hosts:
+                votp1:
+                votp2:
+            vars:
+                # Disk to use for Ceph OSD
+                ceph_osd_disk: /dev/sdb
+
     vars:
         # Use Ansible through SSH
         ansible_connection: ssh
@@ -121,3 +136,11 @@ all:
         fallback_ntp_servers: 0.fr.pool.ntp.org 1.fr.pool.ntp.org 2.fr.pool.ntp.org 3.fr.pool.ntp.org
         # DNS server ip. The variable must be defined but can be empty.
         dns_server: 9.9.9.9
+        # Ceph public network
+        ceph_public_network: "192.168.217.0/24"
+        # Ceph internal cluster network. It can be the same as public network or
+        # a specific one
+        ceph_cluster_network: "192.168.217.0/24"
+        # The Ceph monitor intial IP address. Usaly the public IP address our
+        # the cluster IP address.
+        monitor_address: "{{ ansible_host }}"
