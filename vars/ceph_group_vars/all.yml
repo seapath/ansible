@@ -15,7 +15,7 @@ dummy:
 ###########
 # GENERAL #
 ###########
-
+#external_cluster_mon_ips: ""
 ######################################
 # Releases name to number dictionary #
 ######################################
@@ -63,7 +63,7 @@ dummy:
 # If configure_firewall is true, then ansible will try to configure the
 # appropriate firewalling rules so that Ceph daemons can communicate
 # with each others.
-#configure_firewall: True
+configure_firewall: false
 
 # Open ports on corresponding nodes if firewall is installed on it
 #ceph_mon_firewall_zone: public
@@ -96,7 +96,7 @@ dummy:
 
 # Enable the ntp service by default to avoid clock skew on ceph nodes
 # Disable if an appropriate NTP client is already installed and configured
-#ntp_service_enabled: true
+ntp_service_enabled: false
 
 # Set type of NTP client daemon to use, valid entries are chronyd, ntpd or timesyncd
 #ntp_daemon_type: chronyd
@@ -144,7 +144,7 @@ dummy:
 #
 #ceph_mirror: http://download.ceph.com
 #ceph_stable_key: https://download.ceph.com/keys/release.asc
-#ceph_stable_release: dummy
+ceph_stable_release: nautilus
 #ceph_stable_repo: "{{ ceph_mirror }}/debian-{{ ceph_stable_release }}"
 
 #nfs_ganesha_stable: true # use stable repos for nfs-ganesha
@@ -251,8 +251,8 @@ dummy:
 # avoid cluttering up your ansible repo. If you set `generate_fsid` to
 # false, you *must* generate `fsid` in another way.
 # ACTIVATE THE FSID VARIABLE FOR NON-VAGRANT DEPLOYMENT
-#fsid: "{{ cluster_uuid.stdout }}"
-#generate_fsid: true
+#fsid: "{{ ceph_uuid }}"
+#generate_fsid: false
 
 #ceph_conf_key_directory: /etc/ceph
 
@@ -261,7 +261,7 @@ dummy:
 # Permissions for keyring files in /etc/ceph
 #ceph_keyring_permissions: '0600'
 
-#cephx: true
+cephx: true
 
 ## Client options
 #
@@ -353,8 +353,8 @@ dummy:
 # osd_memory_target: 4294967296
 #journal_size: 5120 # OSD journal size in MB
 #block_db_size: -1 # block db size in bytes for the ceph-volume lvm batch. -1 means use the default of 'as big as possible'.
-#public_network: 0.0.0.0/0
-#cluster_network: "{{ public_network | regex_replace(' ', '') }}"
+public_network: "{{ ceph_public_network }}"
+cluster_network: "{{ ceph_cluster_network }}"
 #osd_mkfs_type: xfs
 #osd_mkfs_options_xfs: -f -i size=2048
 #osd_mount_options_xfs: noatime,largeio,inode64,swalloc
@@ -531,7 +531,14 @@ dummy:
 #   "client.rgw.{{ hostvars[groups.get(rgw_group_name)[0]]['ansible_hostname'] }}":
 #     rgw_zone: zone1
 #
-#ceph_conf_overrides: {}
+ceph_conf_overrides:
+    global:
+        osd_pool_default_size: 2
+        osd_pool_default_min_size: 1
+        osd_pool_default_pg_num: 250
+        osd_pool_default_pgp_num: 500
+        osd_crush_chooseleaf_type: 1
+        mon_osd_min_down_reporters: 1
 
 
 #############

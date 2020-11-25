@@ -36,13 +36,12 @@ dummy:
 # All scenario(except 3rd) inherit from the following device declaration
 # Note: This scenario uses the ceph-volume lvm batch method to provision OSDs
 
-#devices:
+devices:
+   - "{{ ceph_osd_disk }}"
 #  - /dev/sdb
 #  - /dev/sdc
 #  - /dev/sdd
 #  - /dev/sde
-
-#devices: []
 
 # Declare devices to be used as block.db devices
 
@@ -67,7 +66,7 @@ dummy:
 # this option since ceph-volume has a built-in check which looks for empty devices.
 # Thus devices with existing partition tables will not be used.
 #
-#osd_auto_discovery: false
+osd_auto_discovery: false
 
 # Encrypt your OSD device using dmcrypt
 # If set to True, no matter which osd_objecstore you use the data will be encrypted

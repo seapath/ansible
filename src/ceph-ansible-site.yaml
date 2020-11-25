@@ -60,10 +60,6 @@
     - import_role:
         name: ceph-facts
     - import_role:
-        name: ceph-validate
-    - import_role:
-        name: ceph-infra
-    - import_role:
         name: ceph-common
 
 - hosts: mons
@@ -94,8 +90,6 @@
       tags: ['ceph_update_config']
     - import_role:
         name: ceph-mon
-    - import_role:
-        name: ceph-mgr
       when: groups.get(mgr_group_name, []) | length == 0
 
   post_tasks:
