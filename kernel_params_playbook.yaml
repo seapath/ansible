@@ -15,9 +15,8 @@
         when: extra_kernel_parameters is defined or
             kernel_parameters_hugepages is defined
       - name: "Check that {{ config_file }} exists"
-        stat:
-            path: "{{ config_file }}"
-        register: config_file_stat
+        shell:
+            cmd: test -f "{{ config_file }}"
         when: extra_kernel_parameters is defined or
             kernel_parameters_hugepages is defined
       - name: Set extra kernel parameters
@@ -25,15 +24,13 @@
             path: "{{ config_file }}"
             regexp: '(extra_kernel_parameters_markers).*'
             replace: '\1 {{ extra_kernel_parameters }}'
-        when: config_file_stat.stat.exists and
-            extra_kernel_parameters is defined
+        when: extra_kernel_parameters is defined
       - name: Set kernel parameters hugepages
         replace:
             path: "{{ config_file }}"
             regexp: 'hugepages=\d'
             replace: 'hugepages={{ kernel_parameters_hugepages }}'
-        when: config_file_stat.stat.exists and
-            kernel_parameters_hugepages is defined
+        when: kernel_parameters_hugepages is defined
       - name: Restart
         reboot:
         when: (extra_kernel_parameters is defined or
