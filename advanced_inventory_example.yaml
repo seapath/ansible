@@ -118,6 +118,11 @@ all:
             vars:
                 # Disk to use for Ceph OSD
                 ceph_osd_disk: /dev/sdb
+        # Ceph clients group where ceph will be used
+        clients:
+            hosts:
+                votp1:
+                votp2:
 
     vars:
         # Use Ansible through SSH

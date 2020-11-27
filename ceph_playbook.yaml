@@ -3,3 +3,12 @@
 
 ---
 - import_playbook: ceph-ansible/site.yml
+
+- name: Configure rbd
+  hosts:
+      osds
+  tasks:
+      - name: Disable rbd lock
+        shell:
+            cmd: rbd config global set global rbd_default_features 'layering, deep-flatten'
+        run_once: true
