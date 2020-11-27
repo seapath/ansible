@@ -39,3 +39,8 @@
         when: (extra_kernel_parameters is defined or
             kernel_parameters_hugepages is defined) and
             kernel_parameters_restart is defined and kernel_parameters_restart
+      - name: Wait for host to be online
+        wait_for_connection:
+        when: (extra_kernel_parameters is defined or
+            kernel_parameters_hugepages is defined) and
+            kernel_parameters_restart is defined and kernel_parameters_restart
