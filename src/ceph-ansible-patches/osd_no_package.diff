@@ -1,5 +1,5 @@
 diff --git a/roles/ceph-osd/tasks/main.yml b/roles/ceph-osd/tasks/main.yml
-index fc6d6a2d..9c6aef5d 100644
+index 4df12822..0ff1eb2b 100644
 --- a/roles/ceph-osd/tasks/main.yml
 +++ b/roles/ceph-osd/tasks/main.yml
 @@ -23,7 +23,7 @@
