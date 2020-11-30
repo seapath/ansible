@@ -1,4 +1,6 @@
 # Ignore roles directory
 roles/
+# Ignore collections directory
+collections/
 README.pdf
 ansible.log
