@@ -4,14 +4,17 @@
 ---
 - import_playbook: kernel_params_playbook.yaml
 - import_playbook: network_playbook.yaml
+- name: Restart all hosts
+  hosts: all
+  tasks:
+      - block:
+          - name: Restart
+            reboot:
+          - name: Wait for host to be online
+            wait_for_connection:
+        when: not apply_network_config
 - import_playbook: cluster_playbook.yaml
 - import_playbook: ceph_playbook.yaml
 - import_playbook: libvirt_setup_playbook.yaml
 
-- name: Restart all hosts
-  hosts: all
-  tasks:
-      - name: Restart
-        reboot:
-      - name: Wait for host to be online
-        wait_for_connection:
+
