@@ -1,0 +1,10 @@
+<pool type="rbd">
+  <name>{{ pool_name }}</name>
+  <source>
+    <name>{{ rbd_pool_name }}</name>
+    <host name='rbd' port='6789' />
+    <auth username='libvirt' type='ceph'>
+      <secret uuid='{{ libvirt_uuid_rbd.stdout }}'/>
+    </auth>
+  </source>
+</pool>

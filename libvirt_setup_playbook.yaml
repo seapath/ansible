@@ -4,6 +4,9 @@
 ---
 - name: Configure libvirt rbd secret
   hosts: hypervisors
+  vars:
+      - rbd_pool_name: "{{ libvirt_rbd_pool | default('rbd') }}"
+      - pool_name: "{{ libvirt_pool_name | default('ceph') }}"
   tasks:
       - name: check if secret is already defined
         shell:
@@ -42,5 +45,21 @@
             shell:
                 cmd: 'virsh secret-set-value --secret "{{ libvirt_uuid_rbd.stdout }}
                 " --base64 "{{ ceph_key.stdout }}"'
+          - name: Create libvirt pool link with rbd pool
+            community.libvirt.virt_pool:
+                command: define
+                xml: '{{ lookup("template", "templates/libvirt_pool.xml.j2") }}'
+                name: "{{ pool_name }}"
+          - name: Start libvirt pool
+            community.libvirt.virt_pool:
+                command: start
+                name: "{{ pool_name }}"
+          - name: Enable libvirt pool at boot
+            community.libvirt.virt_pool:
+                name: "{{ pool_name }}"
+                autostart: yes
+          - name: Refresh pool
+            shell:
+                cmd: virsh pool-refresh --pool ceph
         when: secret_defined.stdout == "no secret found"
 
