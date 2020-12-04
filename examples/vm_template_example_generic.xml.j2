@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright (C) 2020, RTE (http://www.rte-france.com) -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
+<!--
+With the exception of "vm_uuid" and "secret_uuuid" which are defined by the
+seapath_vm_manage role all variables must be defined before using this template.
+-->
+
+<domain type="kvm">
+    <name>{{ vm_name }}</name>
+    <uuid>{{ vm_uuid }}</uuid>
+    <title>VOTP {{ vm_name }}</title>
+    <metadata>
+        <!--You can add custom metadata here -->
+    </metadata>
+    <description>Add your description here</description>
+    <memory unit="KiB">1048576</memory>
+    <currentMemory unit="KiB">1048576</currentMemory>
+    <vcpu placement="static">2</vcpu>
+    <!-- You can remove memoryBacking and cputune tags if you don't use DPDK -->
+    <memoryBacking>
+        <hugepages>
+            <page size='1048576' unit='KiB'/>
+        </hugepages>
+    </memoryBacking>
+    <cputune>
+        <shares>4096</shares>
+        <!--
+            Adapt the CPU affinity with your constraints. You can remove this
+            affinity in the case of a VM without real-time constraints and
+            without DPDK.
+        -->
+        <vcpupin vcpu='0' cpuset='4'/>
+        <vcpupin vcpu='1' cpuset='5'/>
+        <emulatorpin cpuset='4-5'/>
+    </cputune>
+    <!-- UEFI machine only. Remove this if your want a BIOS machine -->
+    <os firmware="efi">
+        <type arch="x86_64" machine="pc-i440fx-4.1">hvm</type>
+        <boot dev="hd" />
+        <bootmenu enable="no" />
+        <bios useserial="yes" rebootTimeout="0" />
+        <smbios mode="emulate" />
+    </os>
+    <!-- Uncomment this if you want a BIOS machine -->
+    <!--
+    <os>
+        <type arch="x86_64" machine="pc-q35-4.2">hvm</type>
+        <boot dev="hd"/>
+        <bootmenu enable="no"/>
+    </os>
+    -->
+    <features>
+        <acpi />
+        <apic />
+        <vmport state="off" />
+    </features>
+    <cpu mode="host-model" check="partial">
+        <model fallback="allow" />
+        <!-- You can remove numa tag if you don't use DPDK -->
+        <numa>
+            <cell id='0' cpus='0-1' memory='1048576' unit='KiB' memAccess='shared'/>
+        </numa>
+    </cpu>
+    <clock offset="utc">
+        <timer name="rtc" tickpolicy="catchup" />
+        <timer name="pit" tickpolicy="delay" />
+        <timer name="hpet" present="no" />
+    </clock>
+    <on_poweroff>destroy</on_poweroff>
+    <on_reboot>restart</on_reboot>
+    <on_crash>destroy</on_crash>
+    <pm>
+        <suspend-to-mem enabled="no" />
+        <suspend-to-disk enabled="no" />
+    </pm>
+    <devices>
+        <emulator>/usr/bin/qemu-system-x86_64</emulator>
+        <!-- Ceph disk -->
+        <disk type="network" device="disk">
+            <!-- Only writeback caches are secure with Ceph RBD -->
+            <driver name="qemu" type="raw" cache="writeback" />
+            <auth username="libvirt">
+                <secret type="ceph" uuid="{{ secret_uuid }}" />
+            </auth>
+            <source protocol="rbd" name="your_rbd_pool/your_vm_disk">
+                <host name="rbd" port="6789" />
+            </source>
+            <target dev="vda" bus="virtio" />
+        </disk>
+        <controller type="usb" index="0" model="piix3-uhci" />
+        <controller type="pci" index="0" model="pci-root" />
+        <!-- Network connexion without DPDK -->
+        <interface type="bridge">
+            <mac address="your_mac_address" />
+            <source bridge="your_brige_interface" />
+            <virtualport type='openvswitch'/>
+            <model type="virtio" />
+        </interface>
+        <!-- Network connexion with DPDK -->
+        <interface type='vhostuser'>
+            <!--
+                If you want generate a random mac address you can use the
+                Ansible "random_mac" variable filter but don't call it here
+                because it will generate a different MAC address for each
+                hypervisor.
+                See https://docs.ansible.com/ansible/2.9/user_guide/playbooks_filters.html#random-mac-address-filter
+                to learn more about the "random_mac" variable filter. You can
+                find a exemple in "vm_template_example.xml.j2" and
+                "add_vm_playbook_example.yaml".
+            -->
+            <mac address="your_mac_address" />
+            <!--
+                DPDK sockets are named dpdkvhostuser_[bridge name][port number]
+                Where [bridge name] is the OVS bridge name e.g. ovsbr1
+                [port number] is the OVS bridge virtual port number
+             -->
+            <source type='unix' path='/var/run/openvswitch/your_dpdk_socket' mode='server'/>
+            <model type='virtio'/>
+            <driver name='vhost' rx_queue_size='1024' tx_queue_size='1024'>
+                <host mrg_rxbuf='on'/>
+            </driver>
+        </interface>
+
+        <serial type="pty">
+            <target type="isa-serial" port="0">
+                <model name="isa-serial" />
+            </target>
+        </serial>
+        <console type="pty">
+            <target type="serial" port="0" />
+        </console>
+        <memballoon model="virtio"></memballoon>
+        <watchdog model="ib700" action="poweroff" />
+    </devices>
+</domain>
