@@ -1,0 +1,94 @@
+// Copyright (C) 2020, RTE (http://www.rte-france.com)
+// SPDX-License-Identifier: CC-BY-4.0
+= SEAPATH manage Ceph rbd disks
+
+Manage rbd disks present in a SEAPATH cluster.
+
+== Requirements
+
+The SEAPATH cluster needs to be setup before using these roles.
+
+== Role Variables
+
+* rbd_pool: the Ceph rbd pool to use. Default is "rbd".
+* libvirt_pool: The libvirt volume pool linked to the pool rbd Ceph.
+  Default is "Ceph".
+* disk_name: the disk name to manage or create.
+* action: the action to perform:
+    ** check: check the disk is present.
+    ** create: create a new void empty disk.
+    ** delete: remove a disk.
+    ** copy: copy a disk.
+    ** snapshot: perform a snapshot copy of the disk.
+* new_disk: the snapshot or copied disk name if "action" is "copy" or "snapshot".
+* force: erase existing disk if "action" is "copy" or "create".
+  Default is "false".
+* size: the size of the new disk if "action" is "create".
+* size_unit: the size unit if "action" is "create". Default is "G":
+    ** K: KB
+    ** M: MB
+    ** G: GB
+
+== Examples Playbooks
+
+=== Check disk presence
+[source,yaml]
+....
+- hosts: hypervisors
+  vars:
+     - disk_name: data0
+     - action: check
+  roles:
+     - seapath_manage_disks
+....
+=== Create a new disk
+[source,yaml]
+....
+- hosts: hypervisors
+  vars:
+     - disk_name: data0
+     - action: create
+     - size: 20
+     - size_unit: G
+  roles:
+     - seapath_manage_disks
+....
+
+=== Perform a snapshot
+[source,yaml]
+....
+- hosts: hypervisors
+  vars:
+     - disk_name: data0
+     - action: snapshot
+     - new_disk: snap1
+  roles:
+     - seapath_manage_disks
+....
+
+=== Copy a disk
+[source,yaml]
+....
+- hosts: hypervisors
+  vars:
+     - disk_name: data0
+     - action: copy
+     - new_disk: data_new
+  roles:
+     - seapath_manage_disks
+....
+
+=== Remove a disk
+[source,yaml]
+....
+- hosts: hypervisors
+  vars:
+     - disk_name: data0
+     - action: delete
+  roles:
+     - seapath_manage_disks
+....
+
+== License
+
+Apache-2.0
