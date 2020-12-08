@@ -5,3 +5,7 @@ roles/corosync/
 collections/
 README.pdf
 ansible.log
+custom_playbooks/*
+!custom_playbooks/README.adoc
+inventories/*
+!inventories/README.adoc

@@ -1,0 +1,7 @@
+// Copyright (C) 2020, RTE (http://www.rte-france.com)
+// SPDX-License-Identifier: CC-BY-4.0
+
+Inventories directory
+=====================
+
+Put your Ansible inventory files here.
