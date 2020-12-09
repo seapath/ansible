@@ -11,9 +11,14 @@ usage()
     echo ' --warnings                  include warnings'
 }
 
+find_yaml()
+{
+    find "${1}" -type f -regex '.*\(yml\|yaml\)$' | grep -v -E \
+        "^${1}/(ceph-ansible|roles)"
+}
 
 directory="."
-warms="--no-warnings"
+warns="--no-warnings"
 
 options=$(getopt -o hd: --long directory:,help -- "$@")
 [ $? -eq 0 ] || {
@@ -33,7 +38,7 @@ while true; do
         directory="$1"
         ;;
     --warnings)
-        warms=""
+        warns=""
         ;;
     --)
         shift
@@ -43,8 +48,8 @@ while true; do
     shift
 done
 
-for yaml in $(find ${directory} -type f -regex '.*\(yml\|yaml\)$') ; do
+for yaml in $(find_yaml "${directory}") ; do
     echo -n "test $yaml: "
-    yamllint -f parsable "${warms}" "$yaml"
+    yamllint -f parsable "${warns}" "$yaml"
     echo "ok"
 done

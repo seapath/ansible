@@ -1,0 +1,13 @@
+diff --git a/roles/ceph-osd/tasks/main.yml b/roles/ceph-osd/tasks/main.yml
+index 4df12822..0ff1eb2b 100644
+--- a/roles/ceph-osd/tasks/main.yml
++++ b/roles/ceph-osd/tasks/main.yml
+@@ -23,7 +23,7 @@
+   until: result is succeeded
+   when:
+     - not containerized_deployment | bool
+-    - ansible_os_family != 'ClearLinux'
++    - ansible_os_family != 'ClearLinux' and ansible_os_family != 'Seapath Yocto distribution'
+ 
+ - name: install numactl when needed
+   package:

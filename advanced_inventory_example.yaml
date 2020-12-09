@@ -10,38 +10,53 @@ all:
                     ansible_host: 192.168.217.15
                     # The network interface that will be used by the hypervisor
                     # to communicate across the network
-                    enbridge0: enp66s0f1
-                    # DNS server ip. The variable must be define but can be
-                    # empty
-                    dns_server: 9.9.9.9
+                    network_interface: enp66s0f1
                     # The IP address to be set to enbridge0. Don't forget to
                     # change ansible host if this IP doesn't match with the one
                     # define in ansible_host
-                    ip_addr: 192.168.217.15
+                    ip_addr: "{{ ansible_host }}"
                     # Gateway IP Addr. The variable must be define but can be
                     # empty
                     gateway_addr: 192.168.217.1
-                    # The Subnetwork used by enbridge0
-                    subnetwork_suffix: 24
-                    # The type of bridge used by the VMs. kernel_bridge or ovs.
-                    network_bridge_type: kernel_bridge
-                    # The network interface that will be added to the network
-                    # bridge to be used by the VMs. Must be defined only if
-                    # network_bridge_type is set to kernel_bridge
-                    enbridge1: enp66s0f0
+                    # The Subnetwork. Optional variable, default is 24
+                    subnet: 16
+                    ovs_bridges:
+                        # The name of your brigde
+                        - name: ovsbr0
+                          # OVS brigde type. Set to "dpdk" to use DPDK or
+                          # "regular" if you don't want to DPDK
+                          type: regular
+                          # The interface to use with your bridge
+                          interface: enp66s0f0
+                        - name: ovsbr1
+                          type: dpdk
+                          # the ethernet device pci address to use with DPDK
+                          nic: "0000:42:00.0"
+                          # The number of virtual Open vSwith ports to create
+                          number_of_virtual_ports: 5
+                    # Optional additional Network configuration list
+                    # For more information see roles/systemd_networkd/README.md
+                    custom_network:
+                        # Arbitrary list name. Must begin with 00-
+                        00-ovsbr0:
+                            - Match:
+                                # The name of the interface to configure
+                                - Name: "ovsbr0"
+                            - Network:
+                                # The interface IP address with it subnetwork
+                                - Address: "10.0.24.3/24"
+                        00-ens0p2:
+                            - Match:
+                                - Name: "ens0p2"
+                            - Network:
+                                - Address: "10.0.27.2/24"
 
                 votp2:
                     ansible_host: 192.168.217.16
-                    enbridge0: enp66s0f1
+                    network_interface: ovsbr1
                     dns_server: 9.9.9.9
                     ip_addr: 192.168.217.16
                     gateway_addr: 192.168.217.1
-                    subnetwork_suffix: 24
-                    network_bridge_type: ovs
-                    # the ethernet device pci address to use with DPDK
-                    dpdk_nic: "0000:42:00.0"
-                    # The number of virtual Open vSwith ports to create
-                    ovs_number_of_virtual_ports: 8
                     # Number of hugepages to reserve. Optional default is 4
                     kernel_parameters_hugepages: 3
                     # Optional variable to append extra kernel parameters.
@@ -51,6 +66,21 @@ all:
                     # Bootloader configuration file. Must be set to
                     # /boot/syslinux.cfg on BIOS machine. Default is
                     # /boot/EFI/BOOT/grub.cfg used by UEFI machines.
+                    ovs_bridges:
+                        # The name of your bridge
+                        - name: ovsbr0
+                          # OVS bridge type. Set to "dpdk" to use DPDK or
+                          # "regular" if you don't want to DPDK
+                          type: regular
+                          # The interface to use with your bridge
+                          interface: enp0s7
+                        - name: ovsbr1
+                          type: dpdk
+                          # the ethernet device pci address to use with DPDK
+                          nic: "0000:1:00.0"
+                          # The number of virtual Open vSwith ports to create
+                          number_of_virtual_ports: 5
+
                     bootloader_config_file: /boot/syslinux.cfg
 
 
@@ -73,7 +103,22 @@ all:
                     dns_server: 9.9.9.9
                     ip_addr: 192.168.217.11
                     gateway_addr: 192.168.1.254
-                    subnetwork_suffix: 24
+                    subnet: 24
+        # Ceph Monitor group where a Ceph monitor will be installed
+        mons:
+            hosts:
+                votp1:
+                votp2:
+                observer:
+        # Ceph OSD group where a Ceph OSD will be installed
+        osds:
+            hosts:
+                votp1:
+                votp2:
+            vars:
+                # Disk to use for Ceph OSD
+                ceph_osd_disk: /dev/sdb
+
     vars:
         # Use Ansible through SSH
         ansible_connection: ssh
@@ -84,8 +129,18 @@ all:
         # Set this optional variable to true if we want to apply the
         # network configuration. Otherwise the network configuration
         # will be apply during the next reboot
-        systemd_networkd_apply_config: true
+        apply_network_config: true
         # NTP server to use
         ntp_servers: 192.168.217.1
         # NTP failback servers. Optional variable
         fallback_ntp_servers: 0.fr.pool.ntp.org 1.fr.pool.ntp.org 2.fr.pool.ntp.org 3.fr.pool.ntp.org
+        # DNS server ip. The variable must be defined but can be empty.
+        dns_server: 9.9.9.9
+        # Ceph public network
+        ceph_public_network: "192.168.217.0/24"
+        # Ceph internal cluster network. It can be the same as public network or
+        # a specific one
+        ceph_cluster_network: "192.168.217.0/24"
+        # The Ceph monitor intial IP address. Usaly the public IP address our
+        # the cluster IP address.
+        monitor_address: "{{ ansible_host }}"

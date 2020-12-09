@@ -19,5 +19,7 @@
             enabled: true
       - name: Disable quorum policy
         shell: crm configure property stonith-enabled=false
+        run_once: true
       - name: Disable stonith
         shell: crm configure property no-quorum-policy=ignore
+        run_once: true

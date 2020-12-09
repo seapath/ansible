@@ -1,0 +1,4 @@
+# Ignore roles directory
+roles/
+README.pdf
+ansible.log

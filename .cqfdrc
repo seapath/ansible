@@ -1,6 +1,13 @@
 [project]
 org='rte'
 name='ansible'
+flavors='prepare manual'
 
 [build]
 command='check_yaml'
+
+[prepare]
+command='./prepare.sh'
+
+[manual]
+command='asciidoctor-pdf README.adoc'

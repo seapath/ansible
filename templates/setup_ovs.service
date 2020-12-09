@@ -6,7 +6,8 @@
 Description=setup openvswitch
 After=tlp-init.service
 After=votp-config_ovs.service
-Wants=network-online.target
+Wants=systemd-networkd.service
+Before=systemd-networkd.service
 [Service]
 Type=oneshot
 RemainAfterExit=no

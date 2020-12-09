@@ -29,19 +29,85 @@ Machines that need to be configured by Ansible simply need to provide SSH access
 and have a Unix Shell and a Python interpreter. The Votp images already fit with
 this requirements.
 
-The client machine that is going to run Ansible needs the Ansible application,
-an Inventory file and playbook files to play. To install Ansible in this machine
-please refer to the Ansible documentation at
+=== Use Ansible with cqfd
+
+`cqfd` is a quick and convenient way to run commands in the current directory,
+but within a pre-defined Docker container. Using `cqfd` allows you to avoids
+installing anything else than Docker and `repo` on your development machine.
+
+NOTE: We recommend using this method as it greatly simplifies the build
+configuration management process.
+
+==== Install cqfd
+
+* Install repo and docker if it is not already done.
+
+On Ubuntu, please run:
+
+  $ sudo apt-get install repo docker.io
+
+* Install cqfd:
+
+```
+$ git clone https://github.com/savoirfairelinux/cqfd.git
+$ cd cqfd
+$ sudo make install
+```
+
+The project page on https://github.com/savoirfairelinux/cqfd[Github] contains
+detailed information on usage and installation.
+
+* Make sure that docker does not require sudo
+
+Please use the following commands to add your user account to the `docker`
+group:
+
+```
+$ sudo groupadd docker
+$ sudo usermod -aG docker $USER
+```
+
+Log out and log back in, so that your group membership can be re-evaluated.
+
+==== Use cqfd
+
+The first step with `cqfd` is to create the build container. For this, use the
+`cqfd init` command in the Ansible directory:
+
+  $ cqfd init
+
+NOTE: The step above is only required once, as once the container image has been
+created on your machine, it will become persistent. Further calls to `cqfd init`
+will do nothing, unless the container definition (`.cqfd/docker/Dockerfile`) has
+changed in the source tree.
+
+User can now run commands through cqfd by using "cqfd run" followed by the
+command to run. For instance
+
+  $ cqfd run ansible-playbook -i inventory.yaml myplaybook.yaml
+
+NOTE: Later you must prefix all ansible command with cdfd run.
+
+=== Use Ansible without cqfd
+
+Without cqfd you need to install the dependencies manualy.
+The client machine that is going to run Ansible must have Ansible 2.9 installed
+an Inventory file and playbook files to play. To install Ansible 2.9 on this
+machine please refer to the Ansible documentation at
 https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html.
 
-*Note:* Only the Ansible version 2.9 was tested. We strongly recommand to use
-and install this version.
+*Warning:* Curently only the Ansible version 2.9 is supported. Other versions
+will not work. Ansible 2.9 is the packaged version in Ubuntu 20.04 and Fedora 33.
 
-You also need to install Ansible plugin requirements defined in
-_ansible-requirements.yaml_. To do this once you have installed the ansible
-client enter the following command at the top of the ansible git repository:
 
- $ ansible-galaxy install -r ansible-requirements.yaml
+Also you must install additional components. It can be done by running the
+prepare.sh script.
+
+ $ cqfd -b prepare
+
+ * Without cqfd
+
+ $ ./prepare.sh
 
 == Inventory
 

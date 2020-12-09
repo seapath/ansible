@@ -1,0 +1,5 @@
+[submodule "ceph-ansible"]
+	path = ceph-ansible
+	url = https://github.com/ceph/ceph-ansible.git
+	ignore = dirty
+	branch = v4.0.40
