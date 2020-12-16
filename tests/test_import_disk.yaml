@@ -9,14 +9,14 @@
      - force: false
      - disk_name: disk
   roles:
-     - ../roles/seapath_import_vm_disk
+     - seapath_import_vm_disk
 - hosts: hypervisors
   name: Test check disk
   vars:
      - disk_name: disk
      - action: check
   roles:
-     - ../roles/seapath_manage_disks
+     - seapath_manage_disks
 - hosts: hypervisors
   name: Test import disk raw
   vars:
@@ -25,14 +25,14 @@
      - disk_name: disk_raw
      - disk_format: raw
   roles:
-     - ../roles/seapath_import_vm_disk
+     - seapath_import_vm_disk
 - hosts: hypervisors
   name: Test check disk raw
   vars:
      - disk_name: disk_raw
      - action: check
   roles:
-     - ../roles/seapath_manage_disks
+     - seapath_manage_disks
 - hosts: hypervisors
   name: Test import disk force
   vars:
@@ -40,25 +40,25 @@
      - force: true
      - disk_name: disk
   roles:
-     - ../roles/seapath_import_vm_disk
+     - seapath_import_vm_disk
 - hosts: hypervisors
   name: Test check disk
   vars:
      - disk_name: disk
      - action: check
   roles:
-     - ../roles/seapath_manage_disks
+     - seapath_manage_disks
 - hosts: hypervisors
   name: Cleanup disk
   vars:
      - disk_name: disk
      - action: delete
   roles:
-     - ../roles/seapath_manage_disks
+     - seapath_manage_disks
 - hosts: hypervisors
   name: Cleanu disk_raw
   vars:
      - disk_name: disk_raw
      - action: delete
   roles:
-     - ../roles/seapath_manage_disks
+     - seapath_manage_disks

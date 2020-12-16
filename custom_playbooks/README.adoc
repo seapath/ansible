@@ -6,11 +6,6 @@ Custom playbooks directory
 
 Put your custom Ansible playbooks files here.
 
-Remember that the relative paths in Ansible depend on the position of the
-playbook. So to include a role present in the "roles" subfolder of the
-repository root folder you need to prefix the role name with "../roles" in the
-playbook. For example:
-
 [source,yaml]
 ....
 ---
@@ -20,5 +15,5 @@ playbook. For example:
      - action: create
      - size: 2
   roles:
-     - ../roles/seapath_manage_disks
+     - seapath_manage_disks
 ....
