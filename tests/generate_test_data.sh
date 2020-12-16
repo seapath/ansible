@@ -12,3 +12,4 @@ rm -rf testdata
 mkdir testdata
 qemu-img create -f qcow2 testdata/disk.qcow2 5M
 fallocate -l 5M testdata/disk
+wget "https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img" -O testdata/os.qcow2
