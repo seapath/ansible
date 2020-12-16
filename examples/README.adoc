@@ -1,0 +1,12 @@
+// Copyright (C) 2020, RTE (http://www.rte-france.com)
+// SPDX-License-Identifier: CC-BY-4.0
+
+Examples
+========
+
+This folder contains examples of Ansible inventory, Ansible playbook and VM
+templates.
+
+These examples aim to illustrate how Ansible works with SEAPATH and cannot be
+used directly without adaptation.
+

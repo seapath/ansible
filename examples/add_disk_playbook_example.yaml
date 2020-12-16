@@ -1,5 +1,8 @@
 # Copyright (C) 2020, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
+
+# Simple playbook example to import the disk images/disk.qcow2 into the cluster.
+
 ---
 - hosts: hypervisors
   vars:

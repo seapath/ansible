@@ -3,6 +3,13 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 
 <!--
+Example of a VM template used to create a VM with the role seapath_vm_manage.
+The machine described is a UEFI machine with:
+ - 2 VCPU
+ - 1 GB memory
+ - 1 network interface using an OVS brige without DPDK
+ - 1 network interface using an OVS brige with DPDK
+
 With the exception of "vm_uuid" and "secret_uuuid" which are defined by the
 seapath_vm_manage role all variables must be defined before using this template.
 -->

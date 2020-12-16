@@ -1,6 +1,10 @@
 # Copyright (C) 2020, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
+# This playbook includes the other playbooks that configure the cluster and
+# allows you to configure the cluster from a single playbook. It is the first
+# playbook to call.
+
 ---
 - import_playbook: kernel_params_playbook.yaml
 - import_playbook: network_playbook.yaml

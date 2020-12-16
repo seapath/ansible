@@ -1,6 +1,9 @@
 # Copyright (C) 2020, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
+# This Ansible playbook configures libvirt to work with Ceph. It is called by
+# the playbook setup_playbook.yaml, but can also be called alone.
+
 ---
 - name: Configure libvirt rbd secret
   hosts: hypervisors

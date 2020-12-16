@@ -1,6 +1,10 @@
 # Copyright (C) 2020, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
+# Ansible inventory example containing a description of the variables used.
+# This inventory is there to illustrate the variables and cannot be used
+# directly.
+
 all:
     children:
         hypervisors:

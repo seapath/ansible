@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# This script must be called after retrieving the sources and each change of it.
+# It allows you to retrieve the dependencies required by Ansible SEAPATH.
+
 set -e
 
 cd "$(dirname "$(readlink -f \\"$0\\")")"

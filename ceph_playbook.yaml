@@ -1,6 +1,9 @@
 # Copyright (C) 2020, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
+# This playbook configures and sets up Ceph. It is called by the playbook
+# setup_playbook.yaml, but can also be called alone.
+
 ---
 - import_playbook: ceph-ansible/site.yml
 
