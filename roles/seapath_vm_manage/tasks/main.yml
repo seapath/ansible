@@ -13,7 +13,7 @@
   shell:
     cmd: "crm resource stop {{ vm_name }}"
   run_once: true
-  when: state == "stop" or state == "delete"
+  when: state == "stop"
 
 - name: Disable VM "{{ vm_name }}"
   shell:
@@ -28,8 +28,6 @@
   when: state == "enable"
 
 - name: Delete VM "{{ vm_name }}"
-  shell:
-    cmd: "crm configure delete {{ vm_name }}"
+  script: files/remove_vm.sh "{{ vm_name }}"
   run_once: true
   when: state == "delete"
-
