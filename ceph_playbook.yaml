@@ -7,6 +7,15 @@
 ---
 - import_playbook: ceph-ansible/site.yml
 
+# Ceph mgr module which is enabled by default is not supported by SEAPATH.
+- name: Disable unwanted Ceph mgr module
+  hosts:
+      mons
+  tasks:
+      - name: Disable Ceph mgr restful module
+        shell:
+            cmd: ceph mgr module disable restful
+        run_once: true
 - name: Configure rbd
   hosts:
       osds
