@@ -40,13 +40,13 @@ configuration management process.
 
 ==== Install cqfd
 
-* Install repo and docker if it is not already done.
+* Install `repo` and `docker` if it is not already done.
 
 On Ubuntu, please run:
 
   $ sudo apt-get install repo docker.io
 
-* Install cqfd:
+* Install `cqfd`:
 
 ```
 $ git clone https://github.com/savoirfairelinux/cqfd.git
@@ -57,7 +57,7 @@ $ sudo make install
 The project page on https://github.com/savoirfairelinux/cqfd[Github] contains
 detailed information on usage and installation.
 
-* Make sure that docker does not require sudo
+* Make sure that `docker` does not require `sudo`
 
 Please use the following commands to add your user account to the `docker`
 group:
@@ -81,16 +81,16 @@ created on your machine, it will become persistent. Further calls to `cqfd init`
 will do nothing, unless the container definition (_.cqfd/docker/Dockerfile_) has
 changed in the source tree.
 
-User can now run commands through cqfd by using "cqfd run" followed by the
+User can now run commands through `cqfd` by using `cqfd run` followed by the
 command to run. For instance
 
   $ cqfd run ansible-playbook -i inventory.yaml myplaybook.yaml
 
-NOTE: Later you must prefix all ansible command with cdfd run.
+NOTE: Later you must prefix all ansible command with `cdfd run`.
 
 === Use Ansible without cqfd
 
-Without cqfd you need to install the dependencies manualy.
+Without `cqfd` you need to install the dependencies manually.
 The client machine that is going to run Ansible must have Ansible 2.9 installed
 an Inventory file and playbook files to play. To install Ansible 2.9 on this
 machine please refer to the Ansible documentation at
@@ -101,13 +101,15 @@ will not work. Ansible 2.9 is the packaged version in Ubuntu 20.04 and Fedora 33
 
 
 Also you must install additional components. It can be done by running the
-prepare.sh script.
+_prepare.sh_ script.
 
  $ cqfd -b prepare
 
- * Without cqfd
+* Without cqfd
 
- $ ./prepare.sh
+```
+$ ./prepare.sh
+```
 
 == Inventory
 
@@ -117,30 +119,31 @@ their configurations. Hosts can be grouped into groups.
 Ansible Inventory documentation is available at
 https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html.
 
-In the examples directory you can find the file _inventory_example.yaml_ which
-is a basic example of inventory Ansible file to work with SEAPATH cluster
+In the _examples_ directory you can find the file _inventory_example.yaml_ which
+is a basic example file of Ansible inventory to work with SEAPATH cluster
 composed of 2 hypervisors, an observer and a virtual machine. This file is in
-YAML format. Other formats are valid for inventory file but in this document we
-will only cover the YAML format. This file also contains some commented examples
-of common variables that can be used with Ansible, but does not contain the
-variables used by the SEAPATH playbooks.
+YAML format.
+Other formats are valid for inventory file but in this document we will only
+cover the YAML format. This file also contains some commented examples of common
+variables that can be used with Ansible, but does not contain the variables used
+by the SEAPATH playbooks.
 
 *Note:* If you are not familiar with the YAML format you will find a description
 here: https://docs.ansible.com/ansible/latest/reference_appendices/YAMLSyntax.html
 
-You need to pass your inventory file to all Ansible command with the _-i_
+You need to pass your inventory file to all Ansible command with the `-i`
 argument. To validate your Ansible inventory file you can use the
-_ansible-inventory_ command with _--list_ argument.
-For instance if your Ansible file is cluster.yaml:
+`ansible-inventory` command with `--list` argument.
+For instance if your Ansible file is _cluster.yaml_:
 
  $ ansible-inventory -i cluster.yaml --list
 
-An Ansible iventory file respects a hierarchy. Ansible action can be later
-applied to all hosts included in this level. All level can have _hosts_ and
-_vars_ (variables).
-The top level is _all_. _hosts_ defined here are ungrouped and _vars_ are
+An Ansible inventory file respects a hierarchy. Ansible actions can be later
+applied to all hosts included in this level. All level can have *hosts* and
+*vars* (variables).
+The top level is *all*. *hosts* defined here are ungrouped and *vars* are
 globals.
-If you defined a _children_ entry in _all_ you can define group.
+If you defined a *children* entry in *all* you can define a group.
 For instance:
 
 [source,yaml]
@@ -168,22 +171,22 @@ module:
 
  $ ansible -i cluster.yaml all -m ping
 
-Like all Ansible commands you need to specify your inventory file with the _-i_
+Like all Ansible commands you need to specify your inventory file with the `-i`
 argument, the host or group to apply the action.
-For instance here we use the module ping with the _-m ping_ argument.
+For instance here we use the module ping with the `-m ping` argument.
 
-To check all host in _group1_:
+To check all host in *group1*:
 
  $ ansible -i cluster.yaml group1 -m ping
 
-To check only _host3_:
+To check only *host3*:
 
  $ ansible -i cluster.yaml host3 -m ping
 
 In the examples folder there is also another inventory example:
 _advanced_inventory_example.yaml_. This example adds the variables with their
-descriptions used by the SEAPATH playbooks. This inventory example file can be
-used as a starting point for writing your inventory file.
+descriptions used by the SEAPATH playbooks. This inventory file should be used
+as a starting point for writing your inventory file.
 
 == Playbooks
 
@@ -217,7 +220,7 @@ Calling a role in a playbook is done as in the example below:
 For more information about roles see:
 https://docs.ansible.com/ansible/2.9/user_guide/playbooks_reuse_roles.html
 
-== Using Ansible with SEAPTH in practice
+== Using Ansible with SEAPATH in practice
 
 === Write your inventory file
 
@@ -249,8 +252,8 @@ Or if you use `cqfd`:
 === Manage disks
 
 Disk management in the cluster is done using the *seapath_import_vm_disk* roles
-for importing a new disk and*`seapath_manage_disks* for other actions.
-The possible actions with its roles are:
+for importing a new disk and *seapath_manage_disks* for other actions.
+The possible actions with these roles are:
 
 * import an existing disk in qcow2 or raw format
 * create a empty disk
@@ -270,9 +273,8 @@ folder.
 === Manage VMs
 
 VMs management is done using the *seapath_vm_manage* role. See the role
-documentation:
+documentation for more information:
 https://github.com/seapath/ansible/blob/master/roles/seapath_vm_manage/README.adoc[roles/seapath_vm_manage/README.adoc]
-for more information.
 
 Creating a VM requires using libvirt description file.
 
