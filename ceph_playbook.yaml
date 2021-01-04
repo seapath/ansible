@@ -1,5 +1,26 @@
 # Copyright (C) 2020, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
+# This playbook configures and sets up Ceph. It is called by the playbook
+# setup_playbook.yaml, but can also be called alone.
+
 ---
 - import_playbook: ceph-ansible/site.yml
+
+# Ceph mgr module which is enabled by default is not supported by SEAPATH.
+- name: Disable unwanted Ceph mgr module
+  hosts:
+      mons
+  tasks:
+      - name: Disable Ceph mgr restful module
+        shell:
+            cmd: ceph mgr module disable restful
+        run_once: true
+- name: Configure rbd
+  hosts:
+      osds
+  tasks:
+      - name: Disable rbd lock
+        shell:
+            cmd: rbd config global set global rbd_default_features 'layering, deep-flatten'
+        run_once: true

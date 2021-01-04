@@ -1,0 +1,79 @@
+# Copyright (C) 2020, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# Test VM creation.
+# Prerequisite:
+# - The cluster setup must be done
+# - An OVS bridge without DPDK called ovsbr0 must be present on all hypervisors.
+
+---
+
+- hosts: hypervisors
+  name: Import os disk (this can be long).
+  vars:
+     - disk_path: testdata/os.qcow2
+     - disk_name: os
+     - force: true
+  roles:
+     - seapath_import_vm_disk
+
+- hosts: hypervisors
+  name: Create data disk
+  vars:
+     - disk_name: data0
+     - action: create
+     - size: 10
+     - size_unit: G
+     - force: true
+  roles:
+     - seapath_manage_disks
+
+- hosts: hypervisors
+  name: Copy os disk
+  vars:
+     - disk_name: os
+     - new_disk: os0
+     - action: copy
+     - force: true
+  roles:
+     - seapath_manage_disks
+
+- hosts: hypervisors
+  name: Create the test0 VM
+  vars:
+     - vm_name: test0
+     - state: create
+     - xml_template: vm_template.xml.j2
+     - rbd_pool: rbd
+     - os_disk: os0
+     - data_disk: data0
+     - ovs_br: ovsbr0
+     - ovs_port: 0
+     - activate: "no"
+     - mac_address: "{{ '52:54:00' | random_mac }}"
+  roles:
+     - seapath_vm_manage
+
+- hosts: hypervisors
+  name: Store the configuration in disk metadata
+  tasks:
+     - shell:
+          cmd: 'rbd image-meta set rbd/os0 config_initial \
+               "$(cat /etc/pacemaker/test0.xml)"'
+
+- hosts: hypervisors
+  name: Create os0 initial snapshot
+  vars:
+     - action: snapshot
+     - disk_name: os0
+     - new_disk: snapshot0
+  roles:
+     - seapath_manage_disks
+
+- hosts: hypervisors
+  name: Enable test0 in Pacemaker
+  vars:
+     - vm_name: test0
+     - state: enable
+  roles:
+     - seapath_vm_manage

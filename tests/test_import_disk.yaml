@@ -1,0 +1,64 @@
+# Copyright (C) 2020, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- hosts: hypervisors
+  name: Test import disk qcow2
+  vars:
+     - disk_path: testdata/disk.qcow2
+     - force: false
+     - disk_name: disk
+  roles:
+     - seapath_import_vm_disk
+- hosts: hypervisors
+  name: Test check disk
+  vars:
+     - disk_name: disk
+     - action: check
+  roles:
+     - seapath_manage_disks
+- hosts: hypervisors
+  name: Test import disk raw
+  vars:
+     - disk_path: testdata/disk
+     - force: false
+     - disk_name: disk_raw
+     - disk_format: raw
+  roles:
+     - seapath_import_vm_disk
+- hosts: hypervisors
+  name: Test check disk raw
+  vars:
+     - disk_name: disk_raw
+     - action: check
+  roles:
+     - seapath_manage_disks
+- hosts: hypervisors
+  name: Test import disk force
+  vars:
+     - disk_path: testdata/disk.qcow2
+     - force: true
+     - disk_name: disk
+  roles:
+     - seapath_import_vm_disk
+- hosts: hypervisors
+  name: Test check disk
+  vars:
+     - disk_name: disk
+     - action: check
+  roles:
+     - seapath_manage_disks
+- hosts: hypervisors
+  name: Cleanup disk
+  vars:
+     - disk_name: disk
+     - action: delete
+  roles:
+     - seapath_manage_disks
+- hosts: hypervisors
+  name: Cleanu disk_raw
+  vars:
+     - disk_name: disk_raw
+     - action: delete
+  roles:
+     - seapath_manage_disks

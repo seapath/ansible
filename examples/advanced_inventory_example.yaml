@@ -1,6 +1,10 @@
 # Copyright (C) 2020, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
+# Ansible inventory example containing a description of the variables used.
+# This inventory is there to illustrate the variables and cannot be used
+# directly.
+
 all:
     children:
         hypervisors:
@@ -118,6 +122,11 @@ all:
             vars:
                 # Disk to use for Ceph OSD
                 ceph_osd_disk: /dev/sdb
+        # Ceph clients group where ceph will be used
+        clients:
+            hosts:
+                votp1:
+                votp2:
 
     vars:
         # Use Ansible through SSH

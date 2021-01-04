@@ -1,4 +1,11 @@
 # Ignore roles directory
-roles/
+roles/systemd_networkd/
+roles/corosync/
+# Ignore collections directory
+collections/
 README.pdf
 ansible.log
+custom_playbooks/*
+!custom_playbooks/README.adoc
+inventories/*
+!inventories/README.adoc

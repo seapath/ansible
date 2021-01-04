@@ -1,0 +1,19 @@
+// Copyright (C) 2020, RTE (http://www.rte-france.com)
+// SPDX-License-Identifier: CC-BY-4.0
+
+Custom playbooks directory
+=========================
+
+Put your custom Ansible playbooks files here.
+
+[source,yaml]
+....
+---
+- hosts: hypervisors
+  vars:
+     - disk_name: disk
+     - action: create
+     - size: 2
+  roles:
+     - seapath_manage_disks
+....

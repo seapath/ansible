@@ -1,6 +1,11 @@
 # Copyright (C) 2020, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
+# This Ansible playbook configures the networks and defines the hostnames.
+# It can be used on cluster machines and VMs. It is called by the playbook
+# setup_playbook.yaml, but can also be called independently, especially to
+# configure VMs.
+
 ---
 - name: Configure OVS
   hosts: hypervisors

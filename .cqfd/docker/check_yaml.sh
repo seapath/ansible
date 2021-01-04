@@ -14,7 +14,7 @@ usage()
 find_yaml()
 {
     find "${1}" -type f -regex '.*\(yml\|yaml\)$' | grep -v -E \
-        "^${1}/(ceph-ansible|roles)"
+        "^${1}/(ceph-ansible|roles/corosync|roles/systemd_networkd|collections)"
 }
 
 directory="."

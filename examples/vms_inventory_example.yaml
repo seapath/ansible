@@ -1,0 +1,52 @@
+# Copyright (C) 2020, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# Example of Ansible inventory that can be used as a basis for configuring VMs.
+
+---
+all:
+    children:
+        VMs:
+            hosts:
+                guest0:
+                    # Change IP address according to your setup
+                    ansible_host: 192.168.217.122
+                    # The network interface to configure
+                    network_interface: ens0p2
+                    # The IP address to be set
+                    ip_addr: "{{ ansible_host }}"
+                    # Gateway IP Addr. The variable must be define but can be
+                    # empty
+                    gateway_addr: 192.168.217.1
+                    # The Subnetwork. Optional variable, default is 24
+                    custom_network:
+                        # Arbitrary list name. Must begin with 00-
+                        00-ens0p3:
+                            - Match:
+                                  # The name of the interface to configure
+                                  - Name: "ens0p3"
+                            - Network:
+                                  - DHCP: "yes"
+                guest1:
+                    ansible_host: 192.168.217.123
+                    network_interface: ens0p2
+    vars:
+        # Use Ansible through SSH
+        ansible_connection: ssh
+        # Ansible use root account on target
+        ansible_user: root
+        # Use python3
+        ansible_python_interpreter: /usr/bin/python3
+        # Set this optional variable to true if we want to apply the
+        # network configuration. Otherwise the network configuration
+        # will be apply during the next reboot
+        apply_network_config: true
+        # Set the ip address to ansible_host. You can add this variable in the
+        # host section is your want another IP address
+        ip_addr: "{{ ansible_host }}"
+        # NTP server to use
+        ntp_servers: 192.168.217.1
+        # NTP failback servers. Optional variable
+        fallback_ntp_servers: 0.fr.pool.ntp.org 1.fr.pool.ntp.org 2.fr.pool.ntp.org 3.fr.pool.ntp.org
+        # DNS server ip. The variable must be defined but can be empty.
+        dns_server: 9.9.9.9

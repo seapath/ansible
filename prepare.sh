@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# This script must be called after retrieving the sources and each change of it.
+# It allows you to retrieve the dependencies required by Ansible SEAPATH.
+
 set -e
 
 cd "$(dirname "$(readlink -f \\"$0\\")")"
@@ -39,8 +42,12 @@ then
     exit 1
 fi
 
-echo "Install role requirements.yaml"
+echo "Install roles in requirements.yaml"
 ansible-galaxy install --roles-path="$(pwd)/roles" -r ansible-requirements.yaml
+
+echo "Install collections in ansible-requirements.yaml"
+ansible-galaxy collection install --collections-path="$(pwd)/collections" -r \
+    ansible-requirements.yaml
 
 echo "Update git submodules"
 git submodule update --init -f

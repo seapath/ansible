@@ -1,0 +1,33 @@
+# Copyright (C) 2020, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+---
+- import_tasks: add_vm.yml
+
+- name: Start VM "{{ vm_name }}"
+  shell:
+    cmd: "crm resource start {{ vm_name }}"
+  run_once: true
+  when: state == "start"
+
+- name: Stop VM "{{ vm_name }}"
+  shell:
+    cmd: "crm resource stop {{ vm_name }}"
+  run_once: true
+  when: state == "stop"
+
+- name: Disable VM "{{ vm_name }}"
+  shell:
+    cmd: "crm resource unmanage {{ vm_name }}"
+  run_once: true
+  when: state == "disable"
+
+- name: Enable VM "{{ vm_name }}"
+  shell:
+    cmd: "crm resource manage {{ vm_name }}"
+  run_once: true
+  when: state == "enable"
+
+- name: Delete VM "{{ vm_name }}"
+  script: files/remove_vm.sh "{{ vm_name }}"
+  run_once: true
+  when: state == "delete"

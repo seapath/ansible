@@ -1,0 +1,56 @@
+// Copyright (C) 2020, RTE (http://www.rte-france.com)
+// SPDX-License-Identifier: CC-BY-4.0
+= SEAPATH VM manage
+
+Manage VMs in a SEAPATH cluster
+
+== Requirements
+
+The SEAPATH cluster needs to be setup before using these roles.
+
+== Role Variables
+
+* vm_name: the VM name.
+* state: the action to perform:
+    ** create
+    ** delete
+    ** stop
+    ** start
+    ** disable
+    ** enable
+* xml_template: local path to the VM XML template (only if you want to create a
+  new VM).
+* activate: Only when "status" is "create" activate the VM management by
+  Pacemaker if "yes". Default is "yes".
+
+== Example Playbook
+
+Used pacemaker hosts must be "hypervisors" for create and destroy state. It can
+be "hypervisors" or a specific hypervisor for the other state.
+
+=== Create a VM only without starting it:
+[source,yaml]
+....
+- hosts: hypervisors
+  vars:
+     - vm_name: test
+     - state: create
+     - activate: "no"
+     - xml_template: templates/vm_template.xml.j2
+  roles:
+     - seapath_vm_manage
+....
+=== Stop a VM:
+[source,yaml]
+....
+- hosts: hypervisor1
+  vars:
+     - vm_name: test
+     - state: stop
+  roles:
+     - seapath_vm_manage
+....
+
+== License
+
+Apache-2.0

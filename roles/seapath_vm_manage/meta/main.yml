@@ -1,0 +1,12 @@
+# Copyright (C) 2020, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+galaxy_info:
+  author: Mathieu Dupré
+  description: Manage VMs in a SEAPATH cluster
+  company: RTE
+  license: Apache-2.0
+  min_ansible_version: 2.9
+  platforms:
+    - name: VOTP
+      versions: all
+dependencies: []
