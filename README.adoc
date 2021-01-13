@@ -86,7 +86,7 @@ command to run. For instance
 
   $ cqfd run ansible-playbook -i inventory.yaml myplaybook.yaml
 
-NOTE: Later you must prefix all ansible command with `cdfd run`.
+NOTE: Later you must prefix all ansible command with `cqfd run`.
 
 === Use Ansible without cqfd
 
@@ -99,12 +99,18 @@ https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.ht
 *Warning:* Curently only the Ansible version 2.9 is supported. Other versions
 will not work. Ansible 2.9 is the packaged version in Ubuntu 20.04 and Fedora 33.
 
+Also you must also install the netaddr python3 module.
 
-Also you must install additional components. It can be done by running the
+=== Additional components
+
+You must install additional components. It can be done by running the
 _prepare.sh_ script.
 
- $ cqfd -b prepare
+* With cqfd
 
+```
+$ cqfd -b prepare
+```
 * Without cqfd
 
 ```
