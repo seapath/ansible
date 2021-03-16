@@ -1,0 +1,8 @@
+// Copyright (C) 2021, RTE (http://www.rte-france.com)
+// SPDX-License-Identifier: CC-BY-4.0
+
+Playbooks directory
+===================
+
+This directory contain Ansibleplaybooks. You can also put your custom Ansible
+playbooks files here.

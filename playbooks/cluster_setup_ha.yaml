@@ -9,7 +9,7 @@
 - name: Setup Corosync
   hosts: hypervisors
   vars_files:
-      - vars/corosync_vars.yaml
+      - ../vars/corosync_vars.yaml
   roles:
       - corosync
 

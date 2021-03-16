@@ -5,7 +5,7 @@
 # setup_playbook.yaml, but can also be called alone.
 
 ---
-- import_playbook: ceph-ansible/site.yml
+- import_playbook: ../ceph-ansible/site.yml
 
 # Ceph mgr module which is enabled by default is not supported by SEAPATH.
 - name: Disable unwanted Ceph mgr module
