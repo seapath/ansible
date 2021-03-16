@@ -1,0 +1,25 @@
+---
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# This playbook is for flashing a machine disk with disk image. It works with
+# the flash-pxe image.
+
+- name: Flash hypervisor image
+  hosts: pxe_machines
+  vars:
+      disk: "{{ root_disk | default(\"/dev/vda\") }}"
+      image: "{{ image_path | default(\"seapath-image-votp.wic.gz\") }}"
+      bmap: "{{ image_path | splitext | first }}.bmap"
+  tasks:
+      - name: import image disk
+        copy:
+            dest: /tmp/disk.wic.gz
+            src: "{{ image }}"
+      - name: import image disk bmap file
+        copy:
+            dest: /tmp/disk.wic.bmap
+            src: "{{ bmap }}"
+      - name: copy the image on disk
+        shell:
+            cmd: bmaptool copy /tmp/disk.wic.gz "{{ disk }}"
