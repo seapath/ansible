@@ -5,7 +5,8 @@ roles/corosync/
 collections/
 README.pdf
 ansible.log
-custom_playbooks/*
-!custom_playbooks/README.adoc
+playbooks/*
+!playbooks/README.adoc
+!playbooks/cluster_setup_*.yaml
 inventories/*
 !inventories/README.adoc

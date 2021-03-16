@@ -1,4 +1,4 @@
-# Copyright (C) 2020, RTE (http://www.rte-france.com)
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
 # This Ansible playbook configures libvirt to work with Ceph. It is called by
@@ -34,7 +34,7 @@
                 verbosity: 4
           - name: Copy libvirt xml secret file
             template:
-                src: templates/secret.xml.j2
+                src: ../templates/secret.xml.j2
                 dest: /tmp/secret.xml
           - name: Create libvirt rbd secret
             shell:
@@ -51,7 +51,7 @@
           - name: Create libvirt pool link with rbd pool
             community.libvirt.virt_pool:
                 command: define
-                xml: '{{ lookup("template", "templates/libvirt_pool.xml.j2") }}'
+                xml: '{{ lookup("template", "../templates/libvirt_pool.xml.j2") }}'
                 name: "{{ pool_name }}"
           - name: Start libvirt pool
             community.libvirt.virt_pool:
