@@ -125,10 +125,10 @@ their configurations. Hosts can be grouped into groups.
 Ansible Inventory documentation is available at
 https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html.
 
-In the _examples_ directory you can find the file _inventory_example.yaml_ which
-is a basic example file of Ansible inventory to work with SEAPATH cluster
-composed of 2 hypervisors, an observer and a virtual machine. This file is in
-YAML format.
+In the _examples/inventories_ directory you can find the file
+_inventory_example.yaml_ which is a basic example file of Ansible inventory to
+work with SEAPATH cluster composed of 2 hypervisors, an observer and a virtual
+machine. This file is in YAML format.
 Other formats are valid for inventory file but in this document we will only
 cover the YAML format. This file also contains some commented examples of common
 variables that can be used with Ansible, but does not contain the variables used
@@ -189,7 +189,7 @@ To check only *host3*:
 
  $ ansible -i cluster.yaml host3 -m ping
 
-In the examples folder there is also another inventory example:
+In the _examples/inventories_ folder there is also another inventory example:
 _advanced_inventory_example.yaml_. This example adds the variables with their
 descriptions used by the SEAPATH playbooks. This inventory file should be used
 as a starting point for writing your inventory file.
@@ -201,7 +201,8 @@ For more information about playbooks, see the Ansible documentation:
 https://docs.ansible.com/ansible/2.9/user_guide/playbooks.html.
 Ready-to-use playbooks are provided in this repository. Playbooks performing
 specific actions such as importing a disk will have to be written by you,
-referring if necessary to the playbook examples in the _examples_ folder.
+referring if necessary to the playbook examples in the _examples/playbooks_
+folder.
 
 == Roles
 
@@ -273,8 +274,8 @@ See documentation in roles _README.adoc_:
 * https://github.com/seapath/ansible/blob/master/roles/seapath_import_vm_disk/README.adoc[roles/seapath_import_vm_disk/README.adoc]
 * https://github.com/seapath/ansible/blob/master/roles/seapath_manage_disks/README.adoc[roles/seapath_manage_disks/README.adoc]
 
-Some examples of playbooks using these roles are present in the _examples_
-folder.
+Some examples of playbooks using these roles are present in the
+_examples/playbooks_ folder.
 
 === Manage VMs
 
@@ -292,12 +293,13 @@ For more information on jinja2 templates see the Ansible documentation:
 * https://docs.ansible.com/ansible/2.9/user_guide/playbooks_variables.html
 * https://docs.ansible.com/ansible/2.9/user_guide/playbooks_templating.html
 
-See the _examples_ folder to find playbooks examples using the
+See the _examples/playbooks_ folder to find playbooks examples using the
 *seapath_vm_manage* role and VMs configuration templates examples.
 
 === Configuring the network inside VMs
 
 The network configuration inside the VMs is done with the playbook file
 _network_playbook.yaml_, but using an inventory file describing the VMs instead
-describing the cluster. See the _examples/vms_inventory_example.yaml_ file for
-an example of a VMs inventory file.
+describing the cluster. See the
+_examples/inventories/vms_inventory_example.yaml_ file for an example of a VMs
+inventory file.
