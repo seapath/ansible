@@ -8,5 +8,6 @@ ansible.log
 playbooks/*
 !playbooks/README.adoc
 !playbooks/cluster_setup_*.yaml
+!playbooks/ci_*.yaml
 inventories/*
 !inventories/README.adoc
