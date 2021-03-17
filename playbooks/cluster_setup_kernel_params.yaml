@@ -7,7 +7,7 @@
 
 ---
 - name: Configure Kernel parameters
-  hosts: all
+  hosts: cluster_machines
   vars:
       config_file: "{{ bootloader_config_file |
         default('/boot/EFI/BOOT/grub.cfg') }}"
