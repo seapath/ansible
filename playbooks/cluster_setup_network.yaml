@@ -62,14 +62,14 @@
             apply_config
 
 - name: Configure Network
-  hosts: all
+  hosts: cluster_machines
   vars_files:
     - ../vars/network_vars.yml
   roles:
     - systemd_networkd
 
 - name: Network configuration
-  hosts: all
+  hosts: cluster_machines
   vars:
       apply_config: "{{ apply_network_config | default(false) }}"
   tasks:
@@ -81,7 +81,7 @@
             apply_config
 
 - name: Configure hosts and hostname
-  hosts: all
+  hosts: cluster_machines
   tasks:
       - name: Set hostname
         hostname:
@@ -94,7 +94,7 @@
             line: "{{ hostvars[item].ip_addr }} {{item}}"
             state: present
         when: hostvars[item].ip_addr is defined
-        loop: "{{ groups['all'] }}"
+        loop: "{{ groups['cluster_machines'] }}"
       - name: Add rbd in hosts file
         replace:
             path: /etc/hosts
@@ -102,7 +102,7 @@
             replace: '{{ ip_addr }} rbd {{ inventory_hostname }}'
 
 - name: Configure NTP
-  hosts: all
+  hosts: cluster_machines
   tasks:
       - name: Set NTP configuration in /etc/systemd/timesyncd.conf
         lineinfile:
