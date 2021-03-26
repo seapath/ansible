@@ -1,7 +1,7 @@
-# Copyright (C) 2020, RTE (http://www.rte-france.com)
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 ---
-custom_network: "{{ systemd_networkd_network_custom |default([]) }}"
+systemd_networkd_network_custom: "{{ custom_network |default([]) }}"
 
 wired_systemd_networkd_network:
   00-wired:
@@ -12,4 +12,4 @@ wired_systemd_networkd_network:
         - Address: "{{ ip_addr }}/{{ subnet | default(24) }}"
         - DNS: "{{ dns_server }}"
 
-systemd_networkd_network: "{{ wired_systemd_networkd_network | combine(custom_network) }}"
+systemd_networkd_network: "{{ wired_systemd_networkd_network | combine(systemd_networkd_network_custom) }}"
