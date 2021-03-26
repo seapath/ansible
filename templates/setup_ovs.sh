@@ -12,7 +12,7 @@ if [ -n "${dpdk_module}" ] ; then
 fi
 
 if [ -d /opt/setup/setup_ovs.d ] ; then
-    run-parts /opt/setup/setup_ovs.d
+    /opt/setup/setup_ovs.d/*
 fi
 
 chown :qemu /var/run/openvswitch
