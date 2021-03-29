@@ -1,0 +1,114 @@
+---
+all:
+    children:
+        pxe_machines:
+            hosts:
+                pxe_hypervisor1:
+                    ansible_host: 192.168.219.4
+                    static_ip: 192.168.219.4
+                    network_interface: enp2s0f1
+                pxe_hypervisor2:
+                    ansible_host: 192.168.219.5
+                    static_ip: 192.168.219.5
+                    network_interface: enp66s0f0
+                pxe_observer:
+                    ansible_host: 192.168.219.6
+                    static_ip: 192.168.219.6
+                    network_interface: enp3s0
+            vars:
+                image_path: "/opt/images/seapath-bios-image-votp.wic.gz"
+                root_disk: "/dev/sda"
+        cluster_machines:
+            children:
+                hypervisors:
+                    hosts:
+                        # Advantech
+                        hypervisor1:
+                            ansible_host: 192.168.219.4
+                            network_interface: enp2s0f1
+                            ip_addr: "{{ ansible_host }}"
+                            gateway_addr: 192.168.219.2
+                            ovs_bridges:
+                                - name: ovsbr0
+                                  type: dpdk
+                                  nic: "0000:02:00.0"
+                                  number_of_virtual_ports: 5
+                            custom_network:
+                                00-ovsbr0:
+                                    - Match:
+                                          - Name: "ovsbr0"
+                                    - Network:
+                                          - Address: "10.0.24.4/24"
+                                10-cluster:
+                                    - Match:
+                                          - Name: "enp7s0"
+                                    - Network:
+                                          - Address: "192.168.220.4/24"
+                        hypervisor2:
+                            ansible_host: 192.168.219.5
+                            network_interface: enp66s0f0
+                            ip_addr: "{{ ansible_host }}"
+                            ovs_bridges:
+                                - name: ovsbr0
+                                  type: dpdk
+                                  nic: "0000:42:00.1"
+                                  number_of_virtual_ports: 5
+                            custom_network:
+                                00-ovsbr0:
+                                    - Match:
+                                          - Name: "ovsbr0"
+                                    - Network:
+                                          - Address: "10.0.24.5/24"
+                                10-cluster:
+                                    - Match:
+                                          - Name: "enp1s0"
+                                    - Network:
+                                          - Address: "192.168.220.5/24"
+                    vars:
+                        dpdk_module: uio_pci_generic
+                        kernel_parameters_restart: true
+                        bootloader_config_file: /boot/syslinux.cfg
+
+                observers:
+                    hosts:
+                        observer:
+                            ansible_host: 192.168.219.6
+                            network_interface: enp3s0
+                            ip_addr: "{{ ansible_host }}"
+                            custom_network:
+                                10-cluster:
+                                    - Match:
+                                          - Name: "enp4s0"
+                                    - Network:
+                                          - Address: "192.168.220.6/24"
+        mons:
+            hosts:
+                hypervisor1:
+                hypervisor2:
+                observer:
+        osds:
+            hosts:
+                hypervisor1:
+                hypervisor2:
+            vars:
+                ceph_osd_disk: /dev/sdb
+        clients:
+            hosts:
+                hypervisor1:
+                hypervisor2:
+        VMs:
+    vars:
+        ansible_connection: ssh
+        ansible_user: root
+        ansible_python_interpreter: /usr/bin/python3
+        dns_server: 192.168.219.2
+        gateway_addr: 192.168.219.2
+        apply_network_config: true
+        ntp_servers: 192.168.219.1
+        fallback_ntp_servers: 0.fr.pool.ntp.org 1.fr.pool.ntp.org
+        ceph_public_network: "192.168.219.0/24"
+        ceph_cluster_network: "192.168.220.0/24"
+        monitor_address: "{{ ansible_host }}"
+        ci_docker_compose_path: "/opt/docker"
+        eg_ip: "192.168.219.3"
+        eg_passwd: "Montr3al"
