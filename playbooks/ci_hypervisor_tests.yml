@@ -1,0 +1,23 @@
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# Ansible playbook that runs Cukinia hypervisor tests.
+
+---
+- hosts: "{{ machines_tested | default('hypervisors') }}"
+  name: Hypervisor tests
+  tasks:
+    - name: Create temporary Cukinia directory
+      tempfile:
+        state: directory
+        register: tmp_cukinia_dir
+    - name: Hypervisor tests
+      shell:
+        cmd: "cukinia -f junitxml -o {{ tmp_cukinia_dir.path }}/cukinia_hypervisor.xml
+          /etc/cukinia/cukinia-hypervisor.conf || true"
+    - name: Fetch result
+      fetch:
+        src: "{{ tmp_cukinia_dir.path }}/cukinia_hypervisor.xml"
+        dest: "{{ cukinia_test_prefix | \
+               default('.') }}/common/{{ inventory_hostname }}/cukinia_hypervisor.xml"
+        flat: yes
