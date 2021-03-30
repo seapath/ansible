@@ -1,0 +1,25 @@
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+# This Ansible playbook configure cluster machines.
+---
+- import_playbook: ci_restart_machines.yaml
+  vars:
+      machines: cluster_machines
+- name: remove the static ip previously setup
+  hosts: cluster_machines
+  tasks:
+      name: Remove file /etc/systemd/network/000-static_ip.network
+      file:
+          path: /etc/systemd/network/000-static_ip.network
+          state: absent
+- import_playbook: cluster_setup_kernel_params.yaml
+- import_playbook: cluster_setup_network.yaml
+- name: Restart all hosts
+  hosts: cluster_machines
+  tasks:
+      - block:
+            - name: Restart
+              reboot:
+            - name: Wait for host to be online
+              wait_for_connection:
+        when: not apply_network_config
