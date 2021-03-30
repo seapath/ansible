@@ -15,8 +15,9 @@ all:
                     ansible_host: 192.168.219.6
                     static_ip: 192.168.219.6
                     network_interface: enp3s0
+                    image_path: "/opt/images/seapath-monitor-bios-image-votp.wic.gz"
             vars:
-                image_path: "/opt/images/seapath-bios-image-votp.wic.gz"
+                image_path: "/opt/images/seapath-host-bios-image-votp.wic.gz"
                 root_disk: "/dev/sda"
         cluster_machines:
             children:
