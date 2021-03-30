@@ -1,0 +1,40 @@
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+# This Ansible playbook restart all cluster machines and unsure they have
+# rebooted
+---
+- name: Force rebooting all cluster machines
+  hosts: localhost
+  tasks:
+      - name: Cut the power supply to all machines
+        script: |
+            ../scripts/eg_pms2_lan_driver_power.sh \
+            --ip "{{ eg_ip }}" \
+            --password "{{ eg_passwd }}" \
+            --port "{{ item }}" \
+            --state off
+        with_items:
+            - 1
+            - 2
+            - 3
+            - 4
+      - name: Wait one minute before power on
+        pause:
+            minutes: 1
+      - name: Restore the power supply to all machines
+        script: |
+            ../scripts/eg_pms2_lan_driver_power.sh \
+            --ip "{{ eg_ip }}" \
+            --password "{{ eg_passwd }}" \
+            --port "{{ item }}" \
+            --state on
+        with_items:
+            - 1
+            - 2
+            - 3
+            - 4
+- name: Wait all cluster machines have finish to boot
+  hosts: "{{ machines }}"
+  tasks:
+      - name: Wait for machine to be online
+        wait_for_connection:
