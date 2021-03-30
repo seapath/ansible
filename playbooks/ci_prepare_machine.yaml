@@ -11,39 +11,13 @@
             project_src: "{{ ci_docker_compose_path }}"
             scale:
                 pxe: 1
-      - name: Cut the power supply to all machines
-        script: |
-            ../scripts/eg_pms2_lan_driver_power.sh \
-            --ip "{{ eg_ip }}" \
-            --password "{{ eg_passwd }}" \
-            --port "{{ item }}" \
-            --state off
-        with_items:
-            - 1
-            - 2
-            - 3
-            - 4
-      - name: Wait one minute before power on
-        pause:
-            minutes: 1
-      - name: Restore the power supply to all machines
-        script: |
-            ../scripts/eg_pms2_lan_driver_power.sh \
-            --ip "{{ eg_ip }}" \
-            --password "{{ eg_passwd }}" \
-            --port "{{ item }}" \
-            --state on
-        with_items:
-            - 1
-            - 2
-            - 3
-            - 4
-- name: Wait all machines have finish to boot on flash-pxe image
+- import_playbook: ci_restart_machines.yaml
+  vars:
+      machines: pxe_machines
+- name: Check all machines have boot on the flash-pxe image
   hosts: pxe_machines
   tasks:
-      - name: Wait for machine to be online
-        wait_for_connection:
-      - name: Check we have boot on the flash-pxe image
+      - name: "Check {{ inventory_hostname }} have boot on the flash-pxe image"
         lineinfile:
             path: /etc/os-release
             state: present
