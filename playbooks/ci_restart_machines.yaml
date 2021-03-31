@@ -35,6 +35,7 @@
             - 4
 - name: Wait all cluster machines have finish to boot
   hosts: "{{ machines }}"
+  gather_facts: no
   tasks:
       - name: Wait for machine to be online
         wait_for_connection:
