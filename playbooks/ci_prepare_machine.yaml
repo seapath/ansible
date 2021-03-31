@@ -11,17 +11,17 @@
             name: "ci_pxe"
             tag: "1.0"
             state: present
-            pull: true
+            source: build
             build:
-                source: build
                 path: "{{ ci_docker_compose_path }}/pxe"
+                pull: true
                 args:
                     DHCP_RANGE_BEGIN: "{{ dhcp_range_begin }}"
                     DHCP_RANGE_END: "{{ dhcp_range_end }}"
                     DHCP_BIND_INTERFACE: "{{ dhcp_bind_interface }}"
       - name: Start the PXE server
         docker_container:
-            recreate : true
+            recreate: true
             network_mode: host
             volumes:
                 - "/var/jenkins_home/images:/tftpboot/images"
@@ -30,7 +30,7 @@
             image: "ci_pxe:1.0"
             name: "ci_pxe"
             capabilities:
-                - "sys_time"
+                - "net_admin"
 - import_playbook: ci_restart_machines.yaml
   vars:
       machines: pxe_machines
