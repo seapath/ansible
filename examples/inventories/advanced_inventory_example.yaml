@@ -178,3 +178,8 @@ all:
         # The Ceph monitor intial IP address. Usaly the public IP address our
         # the cluster IP address.
         monitor_address: "{{ ansible_host }}"
+        # The DHCP plage used by the PXE
+        dhcp_range_begin: "192.168.111.50"
+        dhcp_range_end: "192.168.111.100"
+        # The network interace to bind with the PXE
+        dhcp_bind_interface: "eth0"

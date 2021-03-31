@@ -113,3 +113,6 @@ all:
         ci_docker_compose_path: "/opt/docker"
         eg_ip: "192.168.219.3"
         eg_passwd: "Montr3al"
+        dhcp_range_begin: "192.168.219.50"
+        dhcp_range_end: "192.168.219.100"
+        dhcp_bind_interface: "enp3s0f1"
