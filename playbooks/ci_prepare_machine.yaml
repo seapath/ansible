@@ -6,11 +6,31 @@
 - name: Prepare the CI
   hosts: localhost
   tasks:
+      - name: Build the PXE docker image
+        docker_image:
+            name: "ci_pxe"
+            tag: "1.0"
+            state: present
+            pull: true
+            build:
+                source: build
+                path: "{{ ci_docker_compose_path }}/pxe"
+                args:
+                    DHCP_RANGE_BEGIN: "{{ dhcp_range_begin }}"
+                    DHCP_RANGE_END: "{{ dhcp_range_end }}"
+                    DHCP_BIND_INTERFACE: "{{ dhcp_bind_interface }}"
       - name: Start the PXE server
-        docker_compose:
-            project_src: "{{ ci_docker_compose_path }}"
-            scale:
-                pxe: 1
+        docker_container:
+            recreate : true
+            network_mode: host
+            volumes:
+                - "/var/jenkins_home/images:/tftpboot/images"
+            auto_remove: true
+            state: "started"
+            image: "ci_pxe:1.0"
+            name: "ci_pxe"
+            capabilities:
+                - "sys_time"
 - import_playbook: ci_restart_machines.yaml
   vars:
       machines: pxe_machines
@@ -26,7 +46,7 @@
 - name: Stop the PXE server
   hosts: localhost
   tasks:
-      - docker_compose:
-            project_src: "{{ ci_docker_compose_path }}"
-            scale:
-                pxe: 0
+      - name: Stop ci_pxe container
+        docker_container:
+            state: "stopped"
+            name: "ci_pxe"
