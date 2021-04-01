@@ -5,6 +5,18 @@
 # setup_playbook.yaml, but can also be called alone.
 
 ---
+- name: Prepare Ceph installation
+  hosts:
+      mons
+  tasks:
+      - name: Create Ceph log directory
+        file:
+            path: /var/log/ceph
+            owner: ceph
+            group: ceph
+            mode: "0770"
+            state: directory
+
 - import_playbook: ../ceph-ansible/site.yml
 
 # Ceph mgr module which is enabled by default is not supported by SEAPATH.
