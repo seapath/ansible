@@ -104,7 +104,7 @@ all:
         ansible_python_interpreter: /usr/bin/python3
         dns_server: 192.168.219.2
         gateway_addr: 192.168.219.2
-        apply_network_config: true
+        apply_network_config: false
         ntp_servers: 192.168.219.1
         fallback_ntp_servers: 0.fr.pool.ntp.org 1.fr.pool.ntp.org
         ceph_public_network: "192.168.219.0/24"
