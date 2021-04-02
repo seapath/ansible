@@ -15,9 +15,9 @@ all:
                     ansible_host: 192.168.219.6
                     static_ip: 192.168.219.6
                     network_interface: enp3s0
-                    image_path: "/var/jenkins_home/images/seapath-monitor-bios-image-votp.wic.gz"
+                    image_path: "{{ image_directory }}/seapath-monitor-bios-image-votp.wic.gz"
             vars:
-                image_path: "/var/jenkins_home/images/seapath-host-bios-image-votp.wic.gz"
+                image_path: "{{ image_directory }}/seapath-host-bios-image-votp.wic.gz"
                 root_disk: "/dev/sda"
         cluster_machines:
             children:
@@ -116,3 +116,4 @@ all:
         dhcp_range_begin: "192.168.219.50"
         dhcp_range_end: "192.168.219.100"
         dhcp_bind_interface: "enp3s0f1"
+        image_directory: "/var/jenkins_home/images"
