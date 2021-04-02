@@ -2,11 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # This Ansible playbook will configure machines to form a cluster.
 ---
-- name: Prepare ceph OSD disk
-  hosts: osds
-  tasks:
-      - name: "Clean Ceph OSD disk"
-        script: "../scripts/clean_osd_disk.sh {{ ceph_osd_disk }}"
 - import_playbook: cluster_setup_ha.yaml
 - import_playbook: cluster_setup_ceph.yaml
 - import_playbook: cluster_setup_libvirt.yaml
