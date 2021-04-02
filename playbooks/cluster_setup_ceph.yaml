@@ -16,7 +16,21 @@
             group: ceph
             mode: "0770"
             state: directory
+      - name: Create Ceph crash directory
+        file:
+            path: /var/lib/ceph/crash/posted
+            owner: ceph
+            group: ceph
+            mode: "0770"
+            state: directory
 
+- name: Ceph OSD disk
+  hosts:
+      osds
+  tasks:
+      - name: Cleanup Ceph OSD disks with ceph-volume
+        shell:
+            cmd: "ceph-volume lvm zap {{ ceph_osd_disk }} --destroy"
 - import_playbook: ../ceph-ansible/site.yml
 
 # Ceph mgr module which is enabled by default is not supported by SEAPATH.
