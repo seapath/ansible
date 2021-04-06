@@ -6,7 +6,7 @@ all:
                 pxe_hypervisor1:
                     ansible_host: 192.168.219.4
                     static_ip: 192.168.219.4
-                    network_interface: enp2s0f1
+                    network_interface: enp40s0f0
                 pxe_hypervisor2:
                     ansible_host: 192.168.219.5
                     static_ip: 192.168.219.5
@@ -23,16 +23,15 @@ all:
             children:
                 hypervisors:
                     hosts:
-                        # Advantech
                         hypervisor1:
                             ansible_host: 192.168.219.4
-                            network_interface: enp2s0f1
+                            network_interface: enp40s0f0
                             ip_addr: "{{ ansible_host }}"
                             gateway_addr: 192.168.219.2
                             ovs_bridges:
                                 - name: ovsbr0
                                   type: dpdk
-                                  nic: "0000:02:00.0"
+                                  nic: "0000:28:00.1"
                                   number_of_virtual_ports: 5
                             custom_network:
                                 00-ovsbr0:
@@ -42,7 +41,7 @@ all:
                                           - Address: "10.0.24.4/24"
                                 10-cluster:
                                     - Match:
-                                          - Name: "enp7s0"
+                                          - Name: "enp2s0"
                                     - Network:
                                           - Address: "192.168.220.4/24"
                         hypervisor2:
