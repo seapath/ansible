@@ -4,7 +4,7 @@
 # {{ ansible_managed }}
 
 
-dpdk-devbind --force  --bind="{{ dpdk_module }}" "{{ item.nic }}"
+dpdk-devbind --force  --bind=vfio-pci "{{ item.nic }}"
 if ovs-vsctl br-exists "{{ item.name }}" ; then
     ovs-vsctl del-br "{{ item.name }}"
 fi
