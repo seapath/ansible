@@ -100,10 +100,6 @@ all:
 
                     # hypervisors groupe variables
                     vars:
-                        # The module to use with dpdk: igb_uio, vfio-pci or
-                        # uio_pci_generic. This variable must be define if one
-                        # hypersisors have network_bridge_type set to ovs
-                        dpdk_module: uio_pci_generic
                         # Set true to restart after setting kernel parameters
                         # (default is false)
                         kernel_parameters_restart: true
