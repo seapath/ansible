@@ -5,12 +5,6 @@
 
 set -e
 
-dpdk_module="{{ dpdk_module | default() }}"
-
-if [ -n "${dpdk_module}" ] ; then
-    modprobe "${dpdk_module}"
-fi
-
 if [ -d /opt/setup/setup_ovs.d ] ; then
     /opt/setup/setup_ovs.d/*
 fi
