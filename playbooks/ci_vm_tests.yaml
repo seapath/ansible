@@ -11,11 +11,11 @@
       tempfile:
         state: directory
       register: tmp_cukinia_dir
-    - name: vm tests
+    - name: Cukinia VM tests
       shell:
         cmd: "cukinia -f junitxml -o {{ tmp_cukinia_dir.path }}/cukinia_vm.xml
           /etc/cukinia/cukinia-vm.conf || true"
-    - name: Fetch result
+    - name: Fetch Cukinia results
       fetch:
         src: "{{ tmp_cukinia_dir.path }}/cukinia_vm.xml"
         dest: "{{ cukinia_test_prefix | \
