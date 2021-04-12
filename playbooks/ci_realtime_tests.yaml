@@ -1,0 +1,30 @@
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# Ansible playbook that runs Cukinia realtime tests.
+
+---
+- hosts: "{{ machines_tested | default('VMs') }}"
+  name: Realtime tests
+  tasks:
+    - name: Create temporary Cukinia directory
+      tempfile:
+        state: directory
+      register: tmp_cukinia_dir
+    - name: Cukinia realtime tests
+      shell:
+        cmd: "OUTPUT_FILE={{ tmp_cukinia_dir.path }}/output \
+              cukinia -f junitxml -o {{ tmp_cukinia_dir.path }}/cukinia_realtime.xml \
+              /etc/cukinia/cukinia-realtime.conf || true"
+    - name: Fetch Cukinia results
+      fetch:
+        src: "{{ tmp_cukinia_dir.path }}/cukinia_realtime.xml"
+        dest: "{{ cukinia_test_prefix | \
+               default('.') }}/realtime/{{ inventory_hostname }}/cukinia_realtime.xml"
+        flat: yes
+    - name: Fetch Output file
+      fetch:
+        src: "{{ tmp_cukinia_dir.path }}/output"
+        dest: "{{ cukinia_test_prefix | \
+               default('.') }}/realtime/{{ inventory_hostname }}/output"
+        flat: yes
