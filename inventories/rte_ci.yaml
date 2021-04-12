@@ -77,6 +77,7 @@ all:
                                     - Network:
                                           - Address: "192.168.220.2/24"
                     vars:
+                        extra_kernel_parameters: "vfio_iommu_type1.allow_unsafe_interrupts=1"
                         kernel_parameters_restart: true
                         bootloader_config_file: /boot/syslinux.cfg
 

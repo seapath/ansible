@@ -72,9 +72,10 @@ all:
                             # is 4
                             kernel_parameters_hugepages: 3
                             # Optional variable to append extra kernel
-                            # parameters. May be usefull to add iommu=pt
-                            # intel_iommu=on if you use with igb_uio module.
-                            extra_kernel_parameters: iommu=pt intel_iommu=on
+                            # parameters. Use it to add
+                            # vfio_iommu_type1.allow_unsafe_interrupts=1 for old
+                            # machines like HP Z800
+                            extra_kernel_parameters: vfio_iommu_type1.allow_unsafe_interrupts=1
                             # Bootloader configuration file. Must be set to
                             # /boot/syslinux.cfg on BIOS machine. Default is
                             # /boot/EFI/BOOT/grub.cfg used by UEFI machines.
