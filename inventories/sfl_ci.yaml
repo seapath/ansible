@@ -48,6 +48,7 @@ all:
                             ansible_host: 192.168.219.5
                             network_interface: enp66s0f0
                             ip_addr: "{{ ansible_host }}"
+                            extra_kernel_parameters: "vfio_iommu_type1.allow_unsafe_interrupts=1"
                             ovs_bridges:
                                 - name: ovsbr0
                                   type: dpdk
