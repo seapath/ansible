@@ -42,11 +42,16 @@
             mode: '0644'
         notify:
             - Enable setup_ovs
+            - Enable Open vSwitch
   handlers:
       - name: Enable setup_ovs
         ansible.builtin.systemd:
             name: setup_ovs
             daemon_reload: yes
+            enabled: yes
+      - name: Enable Open vSwitch
+        ansible.builtin.systemd:
+            name: openvswitch
             enabled: yes
 
 - name: Apply Open vSwitch configuration
@@ -54,6 +59,10 @@
   vars:
       apply_config: "{{ apply_network_config | default(false) }}"
   tasks:
+      - name: Open vSwitch
+        ansible.builtin.systemd:
+            name: openvswitch
+            state: restarted
       - name: Restart setup_ovs
         ansible.builtin.systemd:
             name: setup_ovs
