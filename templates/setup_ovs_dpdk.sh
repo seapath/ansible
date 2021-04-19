@@ -16,5 +16,5 @@ for i in $(seq 0 $(({{ item.number_of_virtual_ports }} -1))) ; do
     ovs-vsctl add-port "{{ item.name }}" dpdkvhostuser$i -- set Interface \
         dpdkvhostuser$i type=dpdkvhostuserclient
     ovs-vsctl set Interface dpdkvhostuser$i \
-        options:vhost-server-path="/var/run/openvswitch/dpdkvhostuser_{{ item.name }}$i"
+        options:vhost-server-path="/var/run/openvswitch/vm-sockets/dpdkvhostuser_{{ item.name }}$i"
 done

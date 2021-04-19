@@ -69,7 +69,7 @@
             <target dev="vdb" bus="virtio" />
         </disk>
         <interface type='vhostuser'>
-            <source type='unix' path='/var/run/openvswitch/dpdkvhostuser_{{ ovs_br }}{{ ovs_port }}' mode='server'/>
+            <source type='unix' path='/var/run/openvswitch/vm-sockets/dpdkvhostuser_{{ ovs_br }}{{ ovs_port }}' mode='server'/>
             <mac address="{{ mac_address }}" />
             <model type='virtio'/>
             <driver name='vhost' rx_queue_size='1024' tx_queue_size='1024'>
