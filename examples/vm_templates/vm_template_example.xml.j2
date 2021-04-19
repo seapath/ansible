@@ -102,7 +102,7 @@ seapath_vm_manage role all variables must be defined before using this template.
                 Where [bridge name] is the OVS bridge name e.g. ovsbr1
                 [port number] is the OVS bridge virtual port number
              -->
-            <source type='unix' path='/var/run/openvswitch/{{ ovs_br }}{{ ovs_port }}' mode='server'/>
+            <source type='unix' path='/var/run/openvswitch/vm-sockets/{{ ovs_br }}{{ ovs_port }}' mode='server'/>
             <mac address="{{ mac_address2 }}" />
             <model type='virtio'/>
             <driver name='vhost' rx_queue_size='1024' tx_queue_size='1024'>

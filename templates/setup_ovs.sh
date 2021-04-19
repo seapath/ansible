@@ -8,6 +8,3 @@ set -e
 if [ -d /opt/setup/setup_ovs.d ] ; then
     /opt/setup/setup_ovs.d/*
 fi
-
-chown :qemu /var/run/openvswitch
-chmod 775 /var/run/openvswitch
