@@ -1,0 +1,24 @@
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# Ansible playbook that runs openvswitch functional tests
+
+---
+- name: OVS functional tests - hypervisor1
+  hosts: hypervisor1
+  tasks:
+    - name: Ping hypervisor2
+      shell:
+        cmd: >-
+          ping -c 20 $(echo {{
+          hostvars.hypervisor2.custom_network['00-ovsbr0'][1]['Network'][0]['Address']
+          }} | cut -d'/' -f1)
+- name: OVS functional tests - hypervisor2
+  hosts: hypervisor2
+  tasks:
+    - name: Ping hypervisor1
+      shell:
+        cmd: >-
+          ping -c 20 $(echo {{
+          hostvars.hypervisor1.custom_network['00-ovsbr0'][1]['Network'][0]['Address']
+          }} | cut -d'/' -f1)
