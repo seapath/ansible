@@ -97,6 +97,23 @@ all:
                 hypervisor1:
                 hypervisor2:
         VMs:
+            hosts:
+                guest0:
+                    ansible_host: 10.0.24.100
+                    network_interface: enp2s0
+                    ip_addr: "{{ ansible_host }}"
+                guest1:
+                    ansible_host: 10.0.24.101
+                    network_interface: enp2s0
+                    ip_addr: "{{ ansible_host }}"
+                guest2:
+                    ansible_host: 10.0.24.102
+                    network_interface: enp2s0
+                    ip_addr: "{{ ansible_host }}"
+                guest3:
+                    ansible_host: 10.0.24.103
+                    network_interface: enp2s0
+                    ip_addr: "{{ ansible_host }}"
     vars:
         ansible_connection: ssh
         ansible_user: root
