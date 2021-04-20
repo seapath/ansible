@@ -5,6 +5,8 @@
 ---
 - name: Test VM status
   hosts: hypervisors
+  vars:
+      -  any_errors_fatal: false
   tasks:
   - name: Test VM state
     shell: crm status
