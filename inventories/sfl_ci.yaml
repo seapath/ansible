@@ -100,19 +100,19 @@ all:
             hosts:
                 guest0:
                     ansible_host: 10.0.24.100
-                    network_interface: enp2s0
+                    network_interface: enp0s2
                     ip_addr: "{{ ansible_host }}"
                 guest1:
                     ansible_host: 10.0.24.101
-                    network_interface: enp2s0
+                    network_interface: enp0s2
                     ip_addr: "{{ ansible_host }}"
                 guest2:
                     ansible_host: 10.0.24.102
-                    network_interface: enp2s0
+                    network_interface: enp0s2
                     ip_addr: "{{ ansible_host }}"
                 guest3:
                     ansible_host: 10.0.24.103
-                    network_interface: enp2s0
+                    network_interface: enp0s2
                     ip_addr: "{{ ansible_host }}"
     vars:
         ansible_connection: ssh
@@ -131,5 +131,8 @@ all:
         eg_passwd: "Montr3al"
         dhcp_range_begin: "192.168.219.50"
         dhcp_range_end: "192.168.219.100"
+        dhcp_vm_range_begin: "10.0.24.10"
+        dhcp_vm_range_end: "10.0.24.200"
         dhcp_bind_interface: "enp3s0f1"
+        dhcp_vm_bind_interface: "enp3s0f1.2"
         image_directory: "/var/jenkins_home/images"
