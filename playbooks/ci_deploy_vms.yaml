@@ -101,7 +101,7 @@
     - ovs_br: ovsbr0
     - ovs_port: 0
     - activate: 'yes'
-    - mac_address: '{{ ''52:54:00'' | random_mac }}'
+    - mac_address: '52:54:00:ab:39:8f'
   roles:
     - seapath_vm_manage
 - hosts: hypervisors
@@ -116,7 +116,7 @@
     - ovs_br: ovsbr0
     - ovs_port: 1
     - activate: 'yes'
-    - mac_address: '{{ ''52:54:00'' | random_mac }}'
+    - mac_address: '52:54:00:66:d3:c4'
   roles:
     - seapath_vm_manage
 - hosts: hypervisors
@@ -131,7 +131,7 @@
     - ovs_br: ovsbr0
     - ovs_port: 2
     - activate: 'yes'
-    - mac_address: '{{ ''52:54:00'' | random_mac }}'
+    - mac_address: '52:54:00:dd:78:91'
   roles:
     - seapath_vm_manage
 - hosts: hypervisors
@@ -146,6 +146,6 @@
     - ovs_br: ovsbr0
     - ovs_port: 3
     - activate: 'yes'
-    - mac_address: '{{ ''52:54:00'' | random_mac }}'
+    - mac_address: '52:54:00:54:4d:e6'
   roles:
     - seapath_vm_manage
