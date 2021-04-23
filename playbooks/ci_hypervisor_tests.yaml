@@ -13,11 +13,14 @@
       register: tmp_cukinia_dir
     - name: Hypervisor tests
       shell:
-        cmd: "cukinia -f junitxml -o {{ tmp_cukinia_dir.path }}/cukinia_hypervisor.xml
-          /etc/cukinia/cukinia-hypervisor.conf || true"
+        cmd: >-
+          MACHINENAME={{ cukinia_namespace | default(inventory_hostname) }}
+          cukinia -f junitxml -o {{ tmp_cukinia_dir.path
+          }}/cukinia_hypervisor.xml /etc/cukinia/cukinia-hypervisor.conf || true
     - name: Fetch result
       fetch:
-        src: "{{ tmp_cukinia_dir.path }}/cukinia_hypervisor.xml"
-        dest: "{{ cukinia_test_prefix | \
-               default('.') }}/hypervisor/{{ inventory_hostname }}/cukinia_hypervisor.xml"
+        src: '{{ tmp_cukinia_dir.path }}/cukinia_hypervisor.xml'
+        dest: >-
+          {{ cukinia_test_prefix | default('.') }}/hypervisor/{{
+          inventory_hostname }}/cukinia_hypervisor.xml
         flat: yes
