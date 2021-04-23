@@ -19,5 +19,6 @@
       fetch:
         src: "{{ tmp_cukinia_dir.path }}/cukinia_cluster.xml"
         dest: "{{ cukinia_test_prefix | \
-               default('.') }}/cluster/{{ inventory_hostname }}/cukinia_cluster.xml"
+               default('.') }}/cluster/cukinia_cluster.xml"
         flat: yes
+  run_once: true
