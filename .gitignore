@@ -11,3 +11,6 @@ playbooks/*
 !playbooks/ci_*.yaml
 inventories/*
 !inventories/README.adoc
+
+# Ide
+.idea/
