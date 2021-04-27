@@ -10,7 +10,7 @@ all:
                 pxe_hypervisor2:
                     ansible_host: 192.168.219.5
                     static_ip: 192.168.219.5
-                    network_interface: enp66s0f0
+                    network_interface: enp10s0f0
                 pxe_observer:
                     ansible_host: 192.168.219.6
                     static_ip: 192.168.219.6
@@ -46,13 +46,13 @@ all:
                                           - Address: "192.168.220.4/24"
                         hypervisor2:
                             ansible_host: 192.168.219.5
-                            network_interface: enp66s0f0
+                            network_interface: enp10s0f0
                             ip_addr: "{{ ansible_host }}"
                             extra_kernel_parameters: "vfio_iommu_type1.allow_unsafe_interrupts=1"
                             ovs_bridges:
                                 - name: ovsbr0
                                   type: dpdk
-                                  nic: "0000:42:00.1"
+                                  nic: "0000:0a:00.1"
                                   number_of_virtual_ports: 5
                             custom_network:
                                 00-ovsbr0:
@@ -62,7 +62,7 @@ all:
                                           - Address: "10.0.24.5/24"
                                 10-cluster:
                                     - Match:
-                                          - Name: "enp1s0"
+                                          - Name: "eno1"
                                     - Network:
                                           - Address: "192.168.220.5/24"
                     vars:
