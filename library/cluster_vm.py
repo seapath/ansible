@@ -3,7 +3,10 @@
 # Copyright (C) 2021, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
+import os
+import traceback
 from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils._text import to_native
 
 ANSIBLE_METADATA = {
     "metadata_version": "1.0",
@@ -271,11 +274,59 @@ list_metadata:
     returned: success
 """
 
+try:
+    import vm_manager
+except ImportError:
+    HAS_VM_MANAGER = False
+else:
+    HAS_VM_MANAGER = True
+
+commands_list = ["create"]
+
 
 def run_module():
-    module_args = {}
+    module_args = dict(
+        command=dict(type="str", required=True, choices=commands_list),
+        name=dict(type="str", required=False),
+        xml=dict(type="str", required=False),
+        # Use the action plugin copy to copy the file
+        system_image=dict(type="str", required=False),
+    )
     result = {}
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
+    if not HAS_VM_MANAGER:
+        module.fail_json(
+            msg="The `vm_manager` module is not importable. Check the "
+            "requirements."
+        )
+    args = module.params
+    if args.get("command", None) == "create":
+        vm_name = args.get("name", None)
+        if not vm_name:
+            module.fail_json(
+                msg="`name` is required when `command` is `create`"
+            )
+        vm_config = args.get("xml", None)
+        if not vm_config:
+            module.fail_json(
+                msg="`vm_config` is required when `command` is `create`"
+            )
+        system_image = args.get("system_image", None)
+        if not system_image:
+            module.fail_json(
+                msg="`system_image` is required when `command` is `create`"
+            )
+        if not os.path.isfile(system_image):
+            module.fail_json(
+                msg="`system_image` doesn't exist or is not a file`"
+            )
+        try:
+            vm_manager.create(vm_name, vm_config, system_image)
+        except Exception as e:
+            module.fail_json(msg=to_native(e), exception=traceback.format_exc())
+    else:
+        module.fail_json(msg="Other `command` is not implemented yet")
+
     module.exit_json(**result)
 
 
