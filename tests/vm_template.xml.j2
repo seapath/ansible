@@ -6,7 +6,7 @@
   VM template for test_add_vm.yaml
 -->
 
-<domain type="{{ vm_domaine | default('qemu') }}">
+<domain type="{{ vm_domain | default('qemu') }}">
     <name>{{ vm_name }}</name>
     <uuid>{{ vm_uuid }}</uuid>
     <title>VOTP {{ vm_name }}</title>
@@ -56,17 +56,6 @@
                 <host name="rbd" port="6789" />
             </source>
             <target dev="vda" bus="virtio" />
-            </disk>
-            <disk type="network" device="disk">
-            <!-- Only writeback caches are secure with Ceph RBD -->
-            <driver name="qemu" type="raw" cache="writeback" />
-            <auth username="libvirt">
-                <secret type="ceph" uuid="{{ secret_uuid }}" />
-            </auth>
-            <source protocol="rbd" name="{{ rbd_pool }}/{{ data_disk }}">
-                <host name="rbd" port="6789" />
-            </source>
-            <target dev="vdb" bus="virtio" />
         </disk>
         <interface type="bridge">
             <mac address="{{ mac_address }}"/>
