@@ -281,7 +281,7 @@ except ImportError:
 else:
     HAS_VM_MANAGER = True
 
-commands_list = ["create"]
+commands_list = ["create", "remove", "start", "stop"]
 
 
 def run_module():
@@ -289,6 +289,9 @@ def run_module():
         command=dict(type="str", required=True, choices=commands_list),
         name=dict(type="str", required=False),
         xml=dict(type="str", required=False),
+        data_size=dict(type="str", required=False),
+        force=dict(type="bool", required=False, default=False),
+        enable=dict(type="bool", required=False, default=True),
         # Use the action plugin copy to copy the file
         system_image=dict(type="str", required=False),
     )
@@ -300,12 +303,17 @@ def run_module():
             "requirements."
         )
     args = module.params
-    if args.get("command", None) == "create":
+    command = args.get("command", None)
+    if command != "list":
         vm_name = args.get("name", None)
         if not vm_name:
             module.fail_json(
                 msg="`name` is required when `command` is `create`"
             )
+    force = args.get("force", False)
+    data_size = args.get("data_size", None)
+    enable = args.get("enable", True)
+    if command == "create":
         vm_config = args.get("xml", None)
         if not vm_config:
             module.fail_json(
@@ -320,8 +328,31 @@ def run_module():
             module.fail_json(
                 msg="`system_image` doesn't exist or is not a file`"
             )
+
         try:
-            vm_manager.create(vm_name, vm_config, system_image)
+            vm_manager.create(
+                vm_name,
+                vm_config,
+                system_image,
+                data_size=data_size,
+                force=force,
+                enable=enable,
+            )
+        except Exception as e:
+            module.fail_json(msg=to_native(e), exception=traceback.format_exc())
+    elif command == "remove":
+        try:
+            vm_manager.remove(vm_name)
+        except Exception as e:
+            module.fail_json(msg=to_native(e), exception=traceback.format_exc())
+    elif command == "start":
+        try:
+            vm_manager.start(vm_name)
+        except Exception as e:
+            module.fail_json(msg=to_native(e), exception=traceback.format_exc())
+    elif command == "stop":
+        try:
+            vm_manager.stop(vm_name)
         except Exception as e:
             module.fail_json(msg=to_native(e), exception=traceback.format_exc())
     else:
