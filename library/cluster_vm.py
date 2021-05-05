@@ -50,6 +50,8 @@ options:
       - C(pause)  Pause a VM. Require arguments I(name)
       - C(clone) Create a VM based on other VM. Require arguments I(name),
         I(src_name)
+      - C(enable)  Enable a VM. Require arguments I(name)
+      - C(disable)  Disable a VM. Require arguments I(name)
       - C(snapshot_create) Create a snapshot of a VM. Require arguments I(name)
         ,I(snapshot_name)
       - C(snapshot_remove) Delete a snapshot of a VM. Require arguments I(name)
@@ -67,7 +69,8 @@ options:
         I(metadata_value)
     choices: [ create, define, remove, list_vms, start, status, stop,
     pause, clone, snapshot_create,snapshot_remove, snapshot_purge,
-    snapshot_rollback, list_metadata, get_metadata, set_metadata]
+    snapshot_rollback, list_metadata, get_metadata, set_metadata, disable,
+    enable]
     type: str
   xml:
     description:
@@ -182,6 +185,18 @@ EXAMPLES = r"""
     name: guest0
     command: pause
 
+# enable a VM
+- name: enable guest0
+  cluster_vm:
+    name: guest0
+    command: enable
+
+# disable a VM
+- name: disable guest0
+  cluster_vm:
+    name: guest0
+    command: disable
+
 # clone a VM
 - name: clone guest0 into guest1
   cluster_vm:
@@ -281,7 +296,15 @@ except ImportError:
 else:
     HAS_VM_MANAGER = True
 
-commands_list = ["create", "remove", "start", "stop"]
+commands_list = [
+    "create",
+    "remove",
+    "start",
+    "stop",
+    "list_vms",
+    "enable",
+    "disable",
+]
 
 
 def run_module():
@@ -304,7 +327,7 @@ def run_module():
         )
     args = module.params
     command = args.get("command", None)
-    if command != "list":
+    if command != "list_vms":
         vm_name = args.get("name", None)
         if not vm_name:
             module.fail_json(
@@ -313,7 +336,12 @@ def run_module():
     force = args.get("force", False)
     data_size = args.get("data_size", None)
     enable = args.get("enable", True)
-    if command == "create":
+    if command == "list_vms":
+        try:
+            result["list_vms"] = vm_manager.list_vms()
+        except Exception as e:
+            module.fail_json(msg=to_native(e), exception=traceback.format_exc())
+    elif command == "create":
         vm_config = args.get("xml", None)
         if not vm_config:
             module.fail_json(
@@ -353,6 +381,16 @@ def run_module():
     elif command == "stop":
         try:
             vm_manager.stop(vm_name)
+        except Exception as e:
+            module.fail_json(msg=to_native(e), exception=traceback.format_exc())
+    elif command == "disable":
+        try:
+            vm_manager.disable_vm(vm_name)
+        except Exception as e:
+            module.fail_json(msg=to_native(e), exception=traceback.format_exc())
+    elif command == "enable":
+        try:
+            vm_manager.enable_vm(vm_name)
         except Exception as e:
             module.fail_json(msg=to_native(e), exception=traceback.format_exc())
     else:
