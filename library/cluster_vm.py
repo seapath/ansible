@@ -266,8 +266,9 @@ list_vms:
     returned: success
 # for status command
 status:
-    description: The status of the VM, among starting, started, pause,
-                 stopped and disabled return by the status command
+    description: The status of the VM, among Starting, Started, Paused, Stopped,
+                 Stopping, FAILED, Disabled and Undefined return by
+                 the status command
     type: str
     sample: "started"
     returned: success
@@ -304,6 +305,7 @@ commands_list = [
     "list_vms",
     "enable",
     "disable",
+    "status",
 ]
 
 
@@ -393,6 +395,11 @@ def run_module():
             vm_manager.enable_vm(vm_name)
         except Exception as e:
             module.fail_json(msg=to_native(e), exception=traceback.format_exc())
+    elif command == "status":
+        try:
+            result["status"] = vm_manager.status(vm_name)
+        except Exception as e:
+            module.fail_json(msg=to_native(e), exception=traceback.format_exc())
     else:
         module.fail_json(msg="Other `command` is not implemented yet")
 
@@ -405,3 +412,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
