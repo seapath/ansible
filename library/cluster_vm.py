@@ -46,7 +46,7 @@ options:
       - C(status) Get the status of a VM. Require arguments I(name)
       - C(stop)  Gracefully stop a VM. Require arguments I(name)
       - C(clone) Create a VM based on other VM. Require arguments I(name),
-        I(src_name)
+        I(src_name), I(xml)
       - C(enable)  Enable a VM. Require arguments I(name)
       - C(disable)  Disable a VM. Require arguments I(name)
       - C(snapshot_create) Create a snapshot of a VM. Require arguments I(name)
@@ -70,7 +70,7 @@ options:
     type: str
   xml:
     description:
-      - Libvirt XML config used if I(command) is C(create)
+      - Libvirt XML config used if I(command) is C(create) or C(clone)
       - XML document used with the define command.
       - Must be raw XML content using C(lookup). XML cannot be referenced to a
         file.
@@ -104,18 +104,27 @@ options:
       - This option is required if I(command) is C(get_metadata),
         C(set_metadata)
     type: str
-  disk_data_size:
+  disk_data:
     description:
       - The disk data size to create
       - Use unit suffix K, M or G
       - Leave it empty not to create a data disk
-      - This option is optional if I(command) is C(create)
+      - if I(command) is C(clone), the special value "clone" can be set
+      - If clone value is set the data disk will be copied from the source VM
+      - This option is optional if I(command) is C(create) or C(clone)
     type: str
   metadata_value:
     description:
       - a metadata value
       - This option is required if I(command) is C(set_metadata)
     type: str
+  metadata:
+    description:
+      - metadata in format key, value to store in the VM
+      - This parameter is optional if I(command) is C(create) or C(clone)
+      - metadata key must be composed of letters and numbers only
+    type: dict
+
 requirements:
     - python >= 3.7
     - librbd
@@ -134,8 +143,11 @@ EXAMPLES = r"""
     name: guest0
     command: create
     system_image: my_disk.qcow2
-    disk_data_size: 10G
+    disk_data: 10G
     xml: "{{ lookup('file', 'my_vm_config.xml', errors='strict') }}"
+    metadata:
+        myMetadata: value
+        anotherMetadata: value
 
 # Remove a VM
 - name: Remove guest0
@@ -185,6 +197,8 @@ EXAMPLES = r"""
     name: guest1
     src_name: guest0
     command: clone
+    disk_data: clone
+    xml: "{{ lookup('template', 'my_vm_config.xml', errors='strict') }}"
 
 # Create a VM snapshot
 - name: create a snapshot of guest0
@@ -313,7 +327,7 @@ def run_module():
         command=dict(type="str", required=True, choices=commands_list),
         name=dict(type="str", required=False),
         xml=dict(type="str", required=False),
-        data_size=dict(type="str", required=False),
+        data_disk=dict(type="str", required=False),
         force=dict(type="bool", required=False, default=False),
         enable=dict(type="bool", required=False, default=True),
         system_image=dict(type="str", required=False),
@@ -321,6 +335,7 @@ def run_module():
         metadata_name=dict(type="str", required=False),
         metadata_value=dict(type="str", required=False),
         snapshot_name=dict(type="str", required=False),
+        metadata=dict(type="dict", require=False),
     )
     result = {}
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
@@ -335,11 +350,12 @@ def run_module():
     vm_config = args.get("xml", None)
     system_image = args.get("system_image", None)
     force = args.get("force", False)
-    data_size = args.get("data_size", None)
+    data_disk = args.get("data_disk", None)
     enable = args.get("enable", True)
     src_name = args.get("src_name", None)
     metadata_name = args.get("metadata_name", None)
     metadata_value = args.get("metadata_value", None)
+    metadata = args.get("metadata", {})
     snapshot_name = args.get("snapshot_name", None)
 
     vm_name_command_list = commands_list.copy()
@@ -376,9 +392,26 @@ def run_module():
                 vm_name,
                 vm_config,
                 system_image,
-                data_size=data_size,
+                data_size=data_disk,
                 force=force,
                 enable=enable,
+                metadata=metadata,
+            )
+        except Exception as e:
+            module.fail_json(
+                msg=to_native(e), exception=traceback.format_exc()
+            )
+    elif command == "clone":
+
+        try:
+            vm_manager.clone(
+                src_name,
+                vm_name,
+                base_xml=vm_config,
+                data=data_disk,
+                force=force,
+                enable=enable,
+                metadata=metadata,
             )
         except Exception as e:
             module.fail_json(
