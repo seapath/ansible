@@ -49,13 +49,14 @@ options:
         I(src_name), I(xml)
       - C(enable)  Enable a VM. Require arguments I(name)
       - C(disable)  Disable a VM. Require arguments I(name)
-      - C(snapshot_create) Create a snapshot of a VM. Require arguments I(name)
+      - C(list_snapshots)  List all snapshots of a VM. Require arguments I(name)
+      - C(create_snapshot) Create a snapshot of a VM. Require arguments I(name)
         ,I(snapshot_name)
-      - C(snapshot_remove) Delete a snapshot of a VM. Require arguments I(name)
+      - C(remove_snapshot) Delete a snapshot of a VM. Require arguments I(name)
         ,I(snapshot_name)
-      - C(snapshot_purge) Delete all snapshot of a VM. Require arguments
+      - C(purge_image) Delete all snapshot of a VM. Require arguments
         I(name)
-      - C(snapshot_rollback) Restore the VM in its previous state using a
+      - C(rollback_snapshot) Restore the VM in its previous state using a
         snapshot. Require arguments I(name), I(snapshot_name)
       - C(list_metadata) List all metadatas associated to a VM. Require
         arguments I(name)
@@ -65,8 +66,8 @@ options:
         given value. Require arguments I(name), I(metadata_name),
         I(metadata_value)
     choices: [ create, remove, list_vms, start, status, stop, clone,
-    snapshot_create,snapshot_remove, snapshot_purge, snapshot_rollback,
-    list_metadata, get_metadata, set_metadata, disable, enable]
+    list_snapshots, create_snapshot,remove_snapshot, rollback_snapshot,
+    purge_image, list_metadata, get_metadata, set_metadata, disable, enable]
     type: str
   xml:
     description:
@@ -95,8 +96,8 @@ options:
   snapshot_name:
     description:
       - name of the snapshot
-      - This option is required if I(command) is C(snapshot_create),
-        C(snapshot_remove)
+      - This option is required if I(command) is C(create_snapshot),
+        C(remove_snapshot), C(rollback_snapshot)
     type: str
   metadata_name:
     description:
@@ -204,28 +205,34 @@ EXAMPLES = r"""
 - name: create a snapshot of guest0
   cluster_vm:
     name: guest0
-    command: snapshot_create
+    command: create_snapshot
     snapshot_name: snap1
 
 # Delete a VM snapshot
 - name: remove snap1 snapshot of guest0
   cluster_vm:
     name: guest0
-    command: snapshot_remove
+    command: remove_snapshot
     snapshot_name: snap1
 
 # Remove all snapshots
 - name: Remove all snapshots of guest0
   cluster_vm:
     name: guest0
-    command: snapshot_purge
+    command: purge_image
 
 # Restore a VM from a snapshot
 - name: rollback guest0 into snapshot snap1
   cluster_vm:
     name: guest0
-    command: snapshot_rollback
+    command: rollback_snapshot
     snapshot_name: snap1
+
+# List all snapshots stored in a VM
+- name: lists snapshots of guest0
+  cluster_vm:
+    name: guest0
+    command: list_snapshots
 
 # List metadata stored in a VM
 - name: list guest0 metadatas
@@ -284,6 +291,14 @@ list_metadata:
         "other metadata"
     ]
     returned: success
+# for list_snapshots command
+list_snapshots:
+    description: The napshots list returned by the list_snapshots command
+    type: list
+    sample: [
+        "snapshot1",
+        "snapshot2",
+    ]
 """
 
 try:
@@ -303,9 +318,11 @@ commands_list = [
     "disable",
     "status",
     "clone",
-    "snapshot_create",
-    "snapshot_remove",
-    "snapshot_purge",
+    "create_snapshot",
+    "remove_snapshot",
+    "list_snapshots",
+    "rollback_snapshot",
+    "purge_image",
     "list_metadata",
     "get_metadata",
     "set_metadata",
@@ -371,7 +388,7 @@ def run_module():
     check_parameters({"metadata_value": metadata_value}, ["set_metadata"])
     check_parameters(
         {"snapshot_name": snapshot_name},
-        ["snapshot_create", "snapshot_remove", "snapshot_rollback"],
+        ["create_snapshot", "remove_snapshot", "rollback_snapshot"],
     )
     if command == "list_vms":
         try:
@@ -462,6 +479,64 @@ def run_module():
     elif command == "status":
         try:
             result["status"] = vm_manager.status(vm_name)
+        except Exception as e:
+            module.fail_json(
+                msg=to_native(e), exception=traceback.format_exc()
+            )
+    elif command == "create_snapshot":
+        try:
+            vm_manager.create_snapshot(vm_name, snapshot_name)
+        except Exception as e:
+            module.fail_json(
+                msg=to_native(e), exception=traceback.format_exc()
+            )
+    elif command == "purge_image":
+        try:
+            vm_manager.purge_image(vm_name)
+        except Exception as e:
+            module.fail_json(
+                msg=to_native(e), exception=traceback.format_exc()
+            )
+    elif command == "remove_snapshot":
+        try:
+            vm_manager.remove_snapshot(vm_name, snapshot_name)
+        except Exception as e:
+            module.fail_json(
+                msg=to_native(e), exception=traceback.format_exc()
+            )
+    elif command == "list_snapshots":
+        try:
+            result["list_snapshot"] = vm_manager.list_snapshots(vm_name)
+        except Exception as e:
+            module.fail_json(
+                msg=to_native(e), exception=traceback.format_exc()
+            )
+    elif command == "rollback_snapshot":
+        try:
+            vm_manager.rollback_snapshot(vm_name, snapshot_name)
+        except Exception as e:
+            module.fail_json(
+                msg=to_native(e), exception=traceback.format_exc()
+            )
+    elif command == "list_metadata":
+        try:
+            result["list_metadata"] = vm_manager.list_metadata(vm_name)
+        except Exception as e:
+            module.fail_json(
+                msg=to_native(e), exception=traceback.format_exc()
+            )
+    elif command == "get_metadata":
+        try:
+            result["metadata_value"] = vm_manager.get_metadata(
+                vm_name, metadata_name
+            )
+        except Exception as e:
+            module.fail_json(
+                msg=to_native(e), exception=traceback.format_exc()
+            )
+    elif command == "set_metadata":
+        try:
+            vm_manager.set_metadata(vm_name, metadata_name, metadata_value)
         except Exception as e:
             module.fail_json(
                 msg=to_native(e), exception=traceback.format_exc()
