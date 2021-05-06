@@ -288,6 +288,13 @@ commands_list = [
     "enable",
     "disable",
     "status",
+    "clone",
+    "snapshot_create",
+    "snapshot_remove",
+    "snapshot_purge",
+    "list_metadata",
+    "get_metadata",
+    "set_metadata",
 ]
 
 
@@ -299,7 +306,6 @@ def run_module():
         data_size=dict(type="str", required=False),
         force=dict(type="bool", required=False, default=False),
         enable=dict(type="bool", required=False, default=True),
-        # Use the action plugin copy to copy the file
         system_image=dict(type="str", required=False),
     )
     result = {}
