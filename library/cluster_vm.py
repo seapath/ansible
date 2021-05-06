@@ -248,9 +248,9 @@ list_vms:
     returned: success
 # for status command
 status:
-    description: The status of the VM, among Starting, Started, Paused, Stopped,
-                 Stopping, FAILED, Disabled and Undefined return by
-                 the status command
+    description: The status of the VM, among Starting, Started, Paused,
+                 Stopped,Stopping, FAILED, Disabled and Undefined return by the
+                 status command
     type: str
     sample: "started"
     returned: success
@@ -330,7 +330,9 @@ def run_module():
         try:
             result["list_vms"] = vm_manager.list_vms()
         except Exception as e:
-            module.fail_json(msg=to_native(e), exception=traceback.format_exc())
+            module.fail_json(
+                msg=to_native(e), exception=traceback.format_exc()
+            )
     elif command == "create":
         vm_config = args.get("xml", None)
         if not vm_config:
@@ -357,37 +359,51 @@ def run_module():
                 enable=enable,
             )
         except Exception as e:
-            module.fail_json(msg=to_native(e), exception=traceback.format_exc())
+            module.fail_json(
+                msg=to_native(e), exception=traceback.format_exc()
+            )
     elif command == "remove":
         try:
             vm_manager.remove(vm_name)
         except Exception as e:
-            module.fail_json(msg=to_native(e), exception=traceback.format_exc())
+            module.fail_json(
+                msg=to_native(e), exception=traceback.format_exc()
+            )
     elif command == "start":
         try:
             vm_manager.start(vm_name)
         except Exception as e:
-            module.fail_json(msg=to_native(e), exception=traceback.format_exc())
+            module.fail_json(
+                msg=to_native(e), exception=traceback.format_exc()
+            )
     elif command == "stop":
         try:
             vm_manager.stop(vm_name)
         except Exception as e:
-            module.fail_json(msg=to_native(e), exception=traceback.format_exc())
+            module.fail_json(
+                msg=to_native(e), exception=traceback.format_exc()
+            )
     elif command == "disable":
         try:
             vm_manager.disable_vm(vm_name)
         except Exception as e:
-            module.fail_json(msg=to_native(e), exception=traceback.format_exc())
+            module.fail_json(
+                msg=to_native(e), exception=traceback.format_exc()
+            )
     elif command == "enable":
         try:
             vm_manager.enable_vm(vm_name)
         except Exception as e:
-            module.fail_json(msg=to_native(e), exception=traceback.format_exc())
+            module.fail_json(
+                msg=to_native(e), exception=traceback.format_exc()
+            )
     elif command == "status":
         try:
             result["status"] = vm_manager.status(vm_name)
         except Exception as e:
-            module.fail_json(msg=to_native(e), exception=traceback.format_exc())
+            module.fail_json(
+                msg=to_native(e), exception=traceback.format_exc()
+            )
     else:
         module.fail_json(msg="Other `command` is not implemented yet")
 
@@ -400,4 +416,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
