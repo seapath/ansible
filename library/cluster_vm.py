@@ -47,7 +47,6 @@ options:
       - C(start)  Start or resume a VM. Require arguments I(name)
       - C(status) Get the status of a VM. Require arguments I(name)
       - C(stop)  Gracefully stop a VM. Require arguments I(name)
-      - C(pause)  Pause a VM. Require arguments I(name)
       - C(clone) Create a VM based on other VM. Require arguments I(name),
         I(src_name)
       - C(enable)  Enable a VM. Require arguments I(name)
@@ -68,9 +67,8 @@ options:
         given value. Require arguments I(name), I(metadata_name),
         I(metadata_value)
     choices: [ create, define, remove, list_vms, start, status, stop,
-    pause, clone, snapshot_create,snapshot_remove, snapshot_purge,
-    snapshot_rollback, list_metadata, get_metadata, set_metadata, disable,
-    enable]
+    clone, snapshot_create,snapshot_remove, snapshot_purge, snapshot_rollback,
+    list_metadata, get_metadata, set_metadata, disable, enable]
     type: str
   xml:
     description:
@@ -178,12 +176,6 @@ EXAMPLES = r"""
     name: guest0
     command: stop
     force: true
-
-# Pause a VM
-- name: pause guest0
-  cluster_vm:
-    name: guest0
-    command: pause
 
 # enable a VM
 - name: enable guest0
