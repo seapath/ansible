@@ -121,7 +121,8 @@ options:
 requirements:
     - python >= 3.7
     - librbd
-    - seapath_rbd
+    - libvirt
+    - vm_manager
 
 author:
     - Mathieu Dupré (mathieu.dupre@savoirfairelinux.com)
