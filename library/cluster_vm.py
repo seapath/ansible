@@ -299,6 +299,16 @@ commands_list = [
 
 
 def run_module():
+    def check_parameters(parameters, commands_list):
+        if command in commands_list:
+            for var_name, value in parameters.items():
+                if not value:
+                    module.fail_json(
+                        msg="`{}` is required when `command` is `{}`".format(
+                            var_name, command
+                        )
+                    )
+
     module_args = dict(
         command=dict(type="str", required=True, choices=commands_list),
         name=dict(type="str", required=False),
@@ -307,6 +317,10 @@ def run_module():
         force=dict(type="bool", required=False, default=False),
         enable=dict(type="bool", required=False, default=True),
         system_image=dict(type="str", required=False),
+        src_name=dict(type="str", required=False),
+        metadata_name=dict(type="str", required=False),
+        metadata_value=dict(type="str", required=False),
+        snapshot_name=dict(type="str", required=False),
     )
     result = {}
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
@@ -317,15 +331,32 @@ def run_module():
         )
     args = module.params
     command = args.get("command", None)
-    if command != "list_vms":
-        vm_name = args.get("name", None)
-        if not vm_name:
-            module.fail_json(
-                msg="`name` is required when `command` is `create`"
-            )
+    vm_name = args.get("name", None)
+    vm_config = args.get("xml", None)
+    system_image = args.get("system_image", None)
     force = args.get("force", False)
     data_size = args.get("data_size", None)
     enable = args.get("enable", True)
+    src_name = args.get("src_name", None)
+    metadata_name = args.get("metadata_name", None)
+    metadata_value = args.get("metadata_value", None)
+    snapshot_name = args.get("snapshot_name", None)
+
+    vm_name_command_list = commands_list.copy()
+    vm_name_command_list.remove("list_vms")
+    check_parameters({"name": vm_name}, vm_name_command_list)
+    check_parameters(
+        {"system_image": system_image, "vm_config": vm_config}, ["create"]
+    )
+    check_parameters({"src_name": src_name}, ["clone"])
+    check_parameters(
+        {"metadata_name": metadata_name}, ["get_metadata", "set_metadata"]
+    )
+    check_parameters({"metadata_value": metadata_value}, ["set_metadata"])
+    check_parameters(
+        {"snapshot_name": snapshot_name},
+        ["snapshot_create", "snapshot_remove", "snapshot_rollback"],
+    )
     if command == "list_vms":
         try:
             result["list_vms"] = vm_manager.list_vms()
@@ -334,16 +365,7 @@ def run_module():
                 msg=to_native(e), exception=traceback.format_exc()
             )
     elif command == "create":
-        vm_config = args.get("xml", None)
-        if not vm_config:
-            module.fail_json(
-                msg="`vm_config` is required when `command` is `create`"
-            )
-        system_image = args.get("system_image", None)
-        if not system_image:
-            module.fail_json(
-                msg="`system_image` is required when `command` is `create`"
-            )
+
         if not os.path.isfile(system_image):
             module.fail_json(
                 msg="`system_image` doesn't exist or is not a file`"
@@ -390,6 +412,13 @@ def run_module():
             module.fail_json(
                 msg=to_native(e), exception=traceback.format_exc()
             )
+    elif command == "status":
+        try:
+            result["status"] = vm_manager.status(vm_name)
+        except Exception as e:
+            module.fail_json(
+                msg=to_native(e), exception=traceback.format_exc()
+            )
     elif command == "enable":
         try:
             vm_manager.enable_vm(vm_name)
@@ -405,7 +434,9 @@ def run_module():
                 msg=to_native(e), exception=traceback.format_exc()
             )
     else:
-        module.fail_json(msg="Other `command` is not implemented yet")
+        module.fail_json(
+            msg="{} `command` is not implemented yet".format(command)
+        )
 
     module.exit_json(**result)
 
