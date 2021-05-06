@@ -40,8 +40,6 @@ options:
       - The action to perform
       - C(create)  Create and start a new VM. Require arguments I(name), I(xml)
         , I(system_image)
-      - C(define)  Create a new VM without starting it. Require arguments
-        I(name), I(xml), I(system_image)
       - C(remove)  Remove a VM with its data. Require arguments I(name)
       - C(list_vms)  List all the defined VMs in the cluster
       - C(start)  Start or resume a VM. Require arguments I(name)
@@ -66,13 +64,13 @@ options:
       - C(set_metadata) Set the given metadata associated to a VM to the
         given value. Require arguments I(name), I(metadata_name),
         I(metadata_value)
-    choices: [ create, define, remove, list_vms, start, status, stop,
-    clone, snapshot_create,snapshot_remove, snapshot_purge, snapshot_rollback,
+    choices: [ create, remove, list_vms, start, status, stop, clone,
+    snapshot_create,snapshot_remove, snapshot_purge, snapshot_rollback,
     list_metadata, get_metadata, set_metadata, disable, enable]
     type: str
   xml:
     description:
-      - Libvirt XML config used if I(command) is C(create) or C(clone)
+      - Libvirt XML config used if I(command) is C(create)
       - XML document used with the define command.
       - Must be raw XML content using C(lookup). XML cannot be referenced to a
         file.
@@ -85,7 +83,7 @@ options:
   force:
     description:
       - Force an action to be performed
-      - Relevant if I(command) is C(create), C(define), C(clone),
+      - Relevant if I(command) is C(create), C(clone),
         C(snapshot_create) or C(stop)
     type: boolean
     default: false
@@ -111,7 +109,7 @@ options:
       - The disk data size to create
       - Use unit suffix K, M or G
       - Leave it empty not to create a data disk
-      - This option is optional if I(command) is C(create) or C(define)
+      - This option is optional if I(command) is C(create)
     type: str
   metadata_value:
     description:
@@ -137,15 +135,6 @@ EXAMPLES = r"""
     command: create
     system_image: my_disk.qcow2
     disk_data_size: 10G
-    xml: "{{ lookup('file', 'my_vm_config.xml', errors='strict') }}"
-
-# Force the creation of a VM without starting it
-- name: Create guest1
-  cluster_vm:
-    name: guest1
-    command: define
-    system_image: my_disk.qcow2
-    force: true
     xml: "{{ lookup('file', 'my_vm_config.xml', errors='strict') }}"
 
 # Remove a VM
