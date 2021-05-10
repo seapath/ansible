@@ -32,6 +32,7 @@ options:
     description:
       - name of the guest VM being managed.
       - This option is required unless I(command) is C(list_vms)
+      - name must be composed of letters and numbers only
     type: str
     aliases:
       - guest
@@ -49,7 +50,8 @@ options:
         I(src_name), I(xml)
       - C(enable)  Enable a VM. Require arguments I(name)
       - C(disable)  Disable a VM. Require arguments I(name)
-      - C(list_snapshots)  List all snapshots of a VM. Require arguments I(name)
+      - C(list_snapshots)  List all snapshots of a VM. Require arguments
+        I(name)
       - C(create_snapshot) Create a snapshot of a VM. Require arguments I(name)
         ,I(snapshot_name)
       - C(remove_snapshot) Delete a snapshot of a VM. Require arguments I(name)
@@ -342,7 +344,7 @@ def run_module():
 
     module_args = dict(
         command=dict(type="str", required=True, choices=commands_list),
-        name=dict(type="str", required=False),
+        name=dict(type="str", required=False, aliases=["guest"]),
         xml=dict(type="str", required=False),
         data_disk=dict(type="str", required=False),
         force=dict(type="bool", required=False, default=False),
@@ -355,7 +357,33 @@ def run_module():
         metadata=dict(type="dict", require=False),
     )
     result = {}
-    module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
+    required = [
+        ("command", "create", ("name", "xml", "system_image",)),
+        ("command", "clone", ("name", "src_name",)),
+        ("command", "remove", ("name",)),
+        ("command", "start", ("name",)),
+        ("command", "stop", ("name",)),
+        ("command", "status", ("name",)),
+        ("command", "enable", ("name",)),
+        ("command", "disable", ("name",)),
+        ("command", "list_metadata", ("name",)),
+        ("command", "get_metadata", ("name", "metadata_name",)),
+        (
+            "command",
+            "set_metadata",
+            ("name", "metadata_name", "metadata_value",),
+        ),
+        ("command", "purge_image", ("name",)),
+        ("command", "create_snapshot", ("name", "snapshot_name",)),
+        ("command", "remove_snapshot", ("name", "snapshot_name",)),
+        ("command", "rollback_snapshot", ("name", "snapshot_name",)),
+        ("command", "list_snapshots", ("name",)),
+    ]
+    module = AnsibleModule(
+        argument_spec=module_args,
+        supports_check_mode=True,
+        required_if=required,
+    )
     if not HAS_VM_MANAGER:
         module.fail_json(
             msg="The `vm_manager` module is not importable. Check the "
