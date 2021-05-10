@@ -56,8 +56,8 @@ options:
         ,I(snapshot_name)
       - C(remove_snapshot) Delete a snapshot of a VM. Require arguments I(name)
         ,I(snapshot_name)
-      - C(purge_image) Delete all snapshot of a VM. Require arguments
-        I(name)
+      - C(purge_image) Delete all snapshots (or optionally the ones filtered by
+        number or date) of a VM. Require arguments I(name)
       - C(rollback_snapshot) Restore the VM in its previous state using a
         snapshot. Require arguments I(name), I(snapshot_name)
       - C(list_metadata) List all metadatas associated to a VM. Require
@@ -127,6 +127,35 @@ options:
       - This parameter is optional if I(command) is C(create) or C(clone)
       - metadata key must be composed of letters and numbers only
     type: dict
+  purge_date:
+    description:
+      - Date until all snapshot must be removed
+      - This option is optional if I(command) is C(purge)
+      - Cannot be used if I(purge_number) is set
+    type: date
+  purge_number:
+    description:
+      - Number of snapshots to delete starting with the oldest
+      - This option is optional if I(command) is C(purge)
+      - Cannot be used if I(purge_date) is set
+    type: int
+
+requirements:
+    - python >= 3.7
+    - librbd
+    - libvirt
+    - vm_manager
+
+author:
+    - Mathieu Dupré (mathieu.dupre@savoirfairelinux.com)
+    - Albert Babí Oller (albert.babi@savoirfairelinux.com)
+"""
+
+EXAMPLES = r"""
+# Create and start a VM
+- name: Create and start guest0
+  cluster_vm:
+    name: guest0
 
 requirements:
     - python >= 3.7
@@ -355,11 +384,28 @@ def run_module():
         metadata_value=dict(type="str", required=False),
         snapshot_name=dict(type="str", required=False),
         metadata=dict(type="dict", require=False),
+        purge_date=dict(type="date", require=False),
+        purge_number=dict(type="int", require=False),
     )
     result = {}
     required = [
-        ("command", "create", ("name", "xml", "system_image",)),
-        ("command", "clone", ("name", "src_name",)),
+        (
+            "command",
+            "create",
+            (
+                "name",
+                "xml",
+                "system_image",
+            ),
+        ),
+        (
+            "command",
+            "clone",
+            (
+                "name",
+                "src_name",
+            ),
+        ),
         ("command", "remove", ("name",)),
         ("command", "start", ("name",)),
         ("command", "stop", ("name",)),
@@ -367,22 +413,60 @@ def run_module():
         ("command", "enable", ("name",)),
         ("command", "disable", ("name",)),
         ("command", "list_metadata", ("name",)),
-        ("command", "get_metadata", ("name", "metadata_name",)),
+        (
+            "command",
+            "get_metadata",
+            (
+                "name",
+                "metadata_name",
+            ),
+        ),
         (
             "command",
             "set_metadata",
-            ("name", "metadata_name", "metadata_value",),
+            (
+                "name",
+                "metadata_name",
+                "metadata_value",
+            ),
         ),
         ("command", "purge_image", ("name",)),
-        ("command", "create_snapshot", ("name", "snapshot_name",)),
-        ("command", "remove_snapshot", ("name", "snapshot_name",)),
-        ("command", "rollback_snapshot", ("name", "snapshot_name",)),
+        (
+            "command",
+            "create_snapshot",
+            (
+                "name",
+                "snapshot_name",
+            ),
+        ),
+        (
+            "command",
+            "remove_snapshot",
+            (
+                "name",
+                "snapshot_name",
+            ),
+        ),
+        (
+            "command",
+            "rollback_snapshot",
+            (
+                "name",
+                "snapshot_name",
+            ),
+        ),
         ("command", "list_snapshots", ("name",)),
     ]
     module = AnsibleModule(
         argument_spec=module_args,
         supports_check_mode=True,
         required_if=required,
+        mutually_exclusive=[
+            (
+                "purge_date",
+                "purge_number",
+            ),
+        ],
     )
     if not HAS_VM_MANAGER:
         module.fail_json(
@@ -402,6 +486,8 @@ def run_module():
     metadata_value = args.get("metadata_value", None)
     metadata = args.get("metadata", {})
     snapshot_name = args.get("snapshot_name", None)
+    purge_date = args.get("purge_date", None)
+    purge_number = args.get("purge_number", None)
 
     vm_name_command_list = commands_list.copy()
     vm_name_command_list.remove("list_vms")
@@ -520,7 +606,9 @@ def run_module():
             )
     elif command == "purge_image":
         try:
-            vm_manager.purge_image(vm_name)
+            vm_manager.purge_image(
+                vm_name, date=purge_date, number=purge_number
+            )
         except Exception as e:
             module.fail_json(
                 msg=to_native(e), exception=traceback.format_exc()
