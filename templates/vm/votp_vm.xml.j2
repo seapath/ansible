@@ -7,9 +7,7 @@
 -->
 
 <domain type="{{ vm_domaine | default('kvm') }}">
-    <name>{{ vm_name }}</name>
-    <uuid>{{ vm_uuid }}</uuid>
-    <title>VOTP {{ vm_name }}</title>
+    <title>{{ title }}</title>
     <description>
             VOTP guest without DPDK
     </description>
@@ -45,28 +43,6 @@
     <devices>
         <emulator>/usr/bin/qemu-system-x86_64</emulator>
         <!-- Ceph disk -->
-        <disk type="network" device="disk">
-            <!-- Only writeback caches are secure with Ceph RBD -->
-            <driver name="qemu" type="raw" cache="writeback" />
-            <auth username="libvirt">
-                <secret type="ceph" uuid="{{ secret_uuid }}" />
-            </auth>
-            <source protocol="rbd" name="{{ rbd_pool }}/{{ os_disk }}">
-                <host name="rbd" port="6789" />
-            </source>
-            <target dev="vda" bus="virtio" />
-            </disk>
-            <disk type="network" device="disk">
-            <!-- Only writeback caches are secure with Ceph RBD -->
-            <driver name="qemu" type="raw" cache="writeback" />
-            <auth username="libvirt">
-                <secret type="ceph" uuid="{{ secret_uuid }}" />
-            </auth>
-            <source protocol="rbd" name="{{ rbd_pool }}/{{ data_disk }}">
-                <host name="rbd" port="6789" />
-            </source>
-            <target dev="vdb" bus="virtio" />
-        </disk>
         <interface type="bridge">
             <mac address="{{ mac_address }}"/>
             <source bridge="ovsbr0"/>
