@@ -30,151 +30,90 @@
         capabilities:
           - "net_admin"
 
-- hosts: hypervisors
-  name: Import os disk (this can be long).
+
+- name: create 4 VMs
+  hosts: "{{ groups.hypervisors[0] }}"
   vars:
+    - xml_template: >-
+        {{ vm_config | default('../templates/vm/votp_vm_dpdk.xml.j2') }}
     - disk_path: >-
         {{ image_directory }}/{{ guest_image |
         default('seapath-guest-efi-image-votp.wic.qcow2') }}
-    - disk_name: os
-    - force: true
-  roles:
-    - seapath_import_vm_disk
-- hosts: hypervisors
-  name: Copy os disk for guest0
-  vars:
-    - disk_name: os
-    - new_disk: os0
-    - action: copy
-    - force: true
-  roles:
-    - seapath_manage_disks
-- hosts: hypervisors
-  name: Copy os disk for guest1
-  vars:
-    - disk_name: os
-    - new_disk: os1
-    - action: copy
-    - force: true
-  roles:
-    - seapath_manage_disks
-- hosts: hypervisors
-  name: Copy os disk for guest2
-  vars:
-    - disk_name: os
-    - new_disk: os2
-    - action: copy
-    - force: true
-  roles:
-    - seapath_manage_disks
-- hosts: hypervisors
-  name: Copy os disk for guest3
-  vars:
-    - disk_name: os
-    - new_disk: os3
-    - action: copy
-    - force: true
-  roles:
-    - seapath_manage_disks
-- hosts: hypervisors
-  name: Create data disk for guest0
-  vars:
-    - disk_name: data0
-    - action: create
-    - size: 5
-    - size_unit: G
-    - force: true
-  roles:
-    - seapath_manage_disks
-- hosts: hypervisors
-  name: Create data disk for guest1
-  vars:
-    - disk_name: data1
-    - action: create
-    - size: 5
-    - size_unit: G
-    - force: true
-  roles:
-    - seapath_manage_disks
-- hosts: hypervisors
-  name: Create data disk for guest2
-  vars:
-    - disk_name: data2
-    - action: create
-    - size: 5
-    - size_unit: G
-    - force: true
-  roles:
-    - seapath_manage_disks
-- hosts: hypervisors
-  name: Create data disk for guest3
-  vars:
-    - disk_name: data3
-    - action: create
-    - size: 5
-    - size_unit: G
-    - force: true
-  roles:
-    - seapath_manage_disks
-- hosts: hypervisors
-  name: Create the guest0 VM
-  vars:
-    - vm_name: guest0
-    - state: create
-    - xml_template: ../templates/vm/votp_vm_dpdk.xml.j2
-    - rbd_pool: rbd
-    - os_disk: os0
-    - data_disk: data0
-    - ovs_br: ovsbr0
-    - ovs_port: 0
-    - activate: 'yes'
-    - mac_address: '52:54:00:ab:39:8f'
-  roles:
-    - seapath_vm_manage
-- hosts: hypervisors
-  name: Create the guest1 VM
-  vars:
-    - vm_name: guest1
-    - state: create
-    - xml_template: ../templates/vm/votp_vm_dpdk.xml.j2
-    - rbd_pool: rbd
-    - os_disk: os1
-    - data_disk: data1
-    - ovs_br: ovsbr0
-    - ovs_port: 1
-    - activate: 'yes'
-    - mac_address: '52:54:00:66:d3:c4'
-  roles:
-    - seapath_vm_manage
-- hosts: hypervisors
-  name: Create the guest2 VM
-  vars:
-    - vm_name: guest2
-    - state: create
-    - xml_template: ../templates/vm/votp_vm_dpdk.xml.j2
-    - rbd_pool: rbd
-    - os_disk: os2
-    - data_disk: data2
-    - ovs_br: ovsbr0
-    - ovs_port: 2
-    - activate: 'yes'
-    - mac_address: '52:54:00:dd:78:91'
-  roles:
-    - seapath_vm_manage
-- hosts: hypervisors
-  name: Create the guest3 VM
-  vars:
-    - vm_name: guest3
-    - state: create
-    - xml_template: ../templates/vm/votp_vm_dpdk.xml.j2
-    - rbd_pool: rbd
-    - os_disk: os3
-    - data_disk: data3
-    - ovs_br: ovsbr0
-    - ovs_port: 3
-    - activate: 'yes'
-    - mac_address: '52:54:00:54:4d:e6'
-  roles:
-    - seapath_vm_manage
+  tasks:
+    - name: copy the disk on target
+      copy:
+        src: "{{ disk_path }}"
+        dest: /tmp/os.qcow2
+    - name: "Create a template VM"
+      cluster_vm:
+        name: template
+        command: create
+        system_image: /tmp/os.qcow2
+        force: true
+        enable: false
+        xml: >-
+          {{ lookup('template', xml_template,
+          template_vars=dict(
+            title='guest0',
+            ovs_br='ovsbr0',
+            ovs_port=0,
+            mac_address='52:54:00:ab:39:8f', ),
+          errors='strict') }}
+    - name: Remove temporary file
+      file:
+        path: /tmp/os.qcow2
+        state: absent
+    - name: "Clone template on guest0"
+      cluster_vm:
+        name: guest0
+        command: clone
+        src_name: template
+        force: true
 
-
+    - name: "Clone template on guest1"
+      cluster_vm:
+        name: guest1
+        command: clone
+        src_name: template
+        force: true
+        xml: >-
+          {{ lookup('template', xml_template,
+          template_vars=dict(
+            title='guest1',
+            ovs_br='ovsbr0',
+            ovs_port=1,
+            mac_address='52:54:00:66:d3:c4', ),
+          errors='strict') }}
+    - name: "Clone template on guest2"
+      cluster_vm:
+        name: guest2
+        command: clone
+        src_name: template
+        force: true
+        xml: >-
+          {{ lookup('template', xml_template,
+          template_vars=dict(
+            title='guest2',
+            ovs_br='ovsbr0',
+            ovs_port=2,
+            mac_address='52:54:00:dd:78:91', ),
+          errors='strict') }}
+    - name: "Clone template on guest3"
+      cluster_vm:
+        name: guest3
+        command: clone
+        src_name: template
+        force: true
+        enable: false
+        xml: >-
+          {{ lookup('template', xml_template,
+          template_vars=dict(
+            title='guest3',
+            ovs_br='ovsbr0',
+            ovs_port=2,
+            mac_address='52:54:00:54:4d:e6', ),
+          errors='strict') }}
+    - name: "Enable guest3"
+      cluster_vm:
+          name: guest3
+          command: enable
