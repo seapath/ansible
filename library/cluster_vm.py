@@ -5,6 +5,7 @@
 
 import os
 import traceback
+import datetime
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils._text import to_native
 
@@ -132,7 +133,26 @@ options:
       - Date until all snapshot must be removed
       - This option is optional if I(command) is C(purge)
       - Cannot be used if I(purge_number) is set
-    type: date
+    type: dict
+    suboptions:
+      date:
+        description:
+          - Date in format YYYY-MM-DD
+        type: str
+      iso_8601:
+        description:
+          - Date and time represented in international ISO 8601 format
+            Time zone information is ignored
+        type: str
+      posix:
+        description:
+          - Number of milliseconds that have elapsed since 00,00,00, 1 January
+            1970
+        type: int
+      time:
+        description:
+          - Time in format HH:MM
+        type: str
   purge_number:
     description:
       - Number of snapshots to delete starting with the oldest
@@ -251,6 +271,15 @@ EXAMPLES = r"""
   cluster_vm:
     name: guest0
     command: purge_image
+
+# Remove old snapshots
+- name: Remove snapshots of guest0 older than January 24th 2021 8:00 AM
+  cluster_vm:
+    name: guest0
+    command: purge_image
+    purge_date:
+        date: '2021-01-24'
+        time: '08:00'
 
 # Restore a VM from a snapshot
 - name: rollback guest0 into snapshot snap1
@@ -384,7 +413,16 @@ def run_module():
         metadata_value=dict(type="str", required=False),
         snapshot_name=dict(type="str", required=False),
         metadata=dict(type="dict", require=False),
-        purge_date=dict(type="date", require=False),
+        purge_date=dict(
+            type=dict,
+            require=False,
+            options=dict(
+                date=dict(type="str"),
+                iso_8601=dict(type="str"),
+                posix=dict(type="int"),
+                time=dict(type="str"),
+            ),
+        ),
         purge_number=dict(type="int", require=False),
     )
     result = {}
@@ -605,9 +643,51 @@ def run_module():
                 msg=to_native(e), exception=traceback.format_exc()
             )
     elif command == "purge_image":
+        date_time = None
+        if purge_date:
+            if (
+                ("date" in purge_date and "time" not in purge_date)
+                or "time" in purge_date
+                and "date" not in purge_date
+            ):
+                module.fail_json(
+                    msg="purge_date argument error: date and time must be set"
+                    " together"
+                )
+            if (
+                "date" in purge_date
+                and ("posix" in purge_date or "iso_8601" in purge_date)
+                or "posix" in purge_date
+                and "iso_8601" in purge_date
+            ):
+                module.fail_json(
+                    msg="purge_date argument error: date/time, iso_8601 and"
+                    " posix and mutually exclusive"
+                )
+            try:
+                if "date" in purge_date:
+                    date = purge_date["date"]
+                    time = purge_date["time"]
+                    date_time = datetime.datetime.combine(
+                        datetime.date.fromisoformat(date),
+                        datetime.time.fromisoformat(time),
+                    )
+                elif "iso_8601" in purge_date:
+                    date_time = datetime.datetime.fromisoformat(
+                        purge_date["iso_8601"]
+                    )
+                elif "posix" in purge_date:
+                    date_time = datetime.datetime.fromtimestamp(
+                        purge_date["posix"]
+                    )
+            except Exception as e:
+                module.fail_json(
+                    msg=to_native(e), exception=traceback.format_exc()
+                )
+
         try:
             vm_manager.purge_image(
-                vm_name, date=purge_date, number=purge_number
+                vm_name, date=date_time, number=purge_number
             )
         except Exception as e:
             module.fail_json(
