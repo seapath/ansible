@@ -1,0 +1,53 @@
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+#
+# This file is a skeleton to update a VM. It can not be used without adapdation.
+
+---
+- name: "Prepare the VM update"
+  hosts: "{{ groups.hypervisors[0] }}"
+  tasks:
+      - name: Stop vm  # First disable the vm01
+        cluster_vm:
+            name: vm
+            command: stop
+      - name: "Perform a snapshot"
+        cluster_vm:
+            name: vm
+            command: create_snapshot
+            snapshot_name: snap0
+      - name: Restart vm
+        cluster_vm:
+            name: vm
+            command: start
+
+# VM specific part must be adapted
+- name: Apply the update
+  hosts: vm
+  tasks:
+      - name: Wait the VM to be online
+        wait_for_connection:
+      - name: Run the update  # Adjust this command
+        ignore_errors: true
+        shell:
+            cmd: "my update command"
+        register: vm_update
+      - name: Test VM update  # Adjust this Test
+        ignore_errors: true
+        shell:
+            cmd: "my test"
+        register: vm_test
+        when: vm_update.rc != 0
+
+
+# If the test has failed rollback to the previous snapshot
+- name: Rollback to previous snapshot
+  hosts: "{{ groups.hypervisors[0] }}"
+  tasks:
+      - name: "Remove vm02"
+        ignore_errors: true
+        cluster_vm:
+            name: vm
+            command: rollback_snapshot
+            snapshot_name: snap0
+        when: vm_update.rc != 0 or vm_test.rc != 0
