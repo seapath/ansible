@@ -1,0 +1,80 @@
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# This file is a skeleton to configure a VM. It can not be used without
+# adapdation.
+
+---
+- name: Clone vm01 into vm02 with a new configuration
+  hosts: "{{ groups.hypervisors[0] }}"
+  tasks:
+      - name: disable vm01  # First disable the vm01
+        cluster_vm:
+            name: vm01
+            command: disable
+      - name: "Clone vm01 into vm02 and update its configuration"
+        block:
+            cluster_vm:
+                name: vm02
+                command: clone
+                src_name: vm01
+                xml: "{{ lookup('file', 'new_config.xml', errors='strict') }}"
+                metadata:  # You can add, remove or update metadata
+                    newMetadata: "my_value"
+                    removedMetadata: ""
+                    existingMetadata: "my_value"
+        # If the clone has failed remove the VM and re-enable vm01
+        rescue:
+            - name: "Remove vm02"
+              ignore_errors: true  # It is possible that vm02 does not exist
+              cluster_vm:
+                  name: vm02
+                  command: remove
+            - name: "Restaure vm01"
+              cluster_vm:
+                  name: vm01
+                  command: enable
+
+
+# VM specific part must be adapted
+- name: Test the new VM is ok
+  hosts: vm02
+  tasks:
+      - name: Wait the VM to be online
+        wait_for_connection:
+            timeout: 150  # Adjust this timeout
+        ignore_errors: true
+        register: vm_online
+      - name: Test VM  # Adjust this Test
+        ignore_errors: true
+        shell:
+            cmd: "my test"
+        register: result
+        when:
+            vm_online.elapsed < 150
+
+# If the test has failed restore the vm01
+- name: Restore vm01
+  hosts: "{{ groups.hypervisors[0] }}"
+  tasks:
+      - name: "Remove vm02"
+        ignore_errors: true
+        cluster_vm:
+            name: vm02
+            command: remove
+        when: vm_online.elapsed >= 150 or result.rc != 0
+      - name: "Restaure vm01"
+        cluster_vm:
+            name: vm01
+            command: enable
+        when: vm_online.elapsed >= 150 or result.rc != 0
+
+# If the test is ok, you can remove vm01
+- name: Remove vm01
+  hosts: "{{ groups.hypervisors[0] }}"
+  tasks:
+      - name: "Remove vm01"
+        cluster_vm:
+            name: vm01
+            command: remove
+        when: vm_online.elapsed < 150 or result.rc == 0
