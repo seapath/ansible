@@ -1,0 +1,22 @@
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# Stop a VM by using the cluster_vm Ansible module
+# Prerequisites:
+# - VM cluster must be deployed
+# - VM test1 must be started on the cluster
+
+---
+- name: Stop VM test1
+  hosts : "{{ groups.hypervisors[0] }}"
+  tasks:
+      - name: Stop VM test1
+        cluster_vm:
+            name: test1
+            command: stop
+      - name: Verify status
+        cluster_vm:
+            command: status
+            name: test1
+        register: vm_status
+        failed_when: vm_status.status != "Stopped"

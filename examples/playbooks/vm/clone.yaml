@@ -1,0 +1,32 @@
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# Clone a VM by using the cluster_vm Ansible module
+# Prerequisites:
+# - VM cluster must be deployed
+# - VM 'test0' must be disabled and VM 'test1' not exist
+
+---
+- name: Clone VM test0 into test1 with metadata
+  hosts : "{{ groups.hypervisors[0] }}"
+  tasks:
+      - name: Clone VM
+        cluster_vm:
+            name: test1
+            src_name: test0
+            command: clone
+            force: true
+            metadata:
+                data0: "datatest0"
+      - name: Verify clone
+        cluster_vm:
+            command: list_vms
+        register: vm_list
+        failed_when: "'test1' not in vm_list.list_vms"
+      - name: Verify metadata
+        cluster_vm:
+            name: test1
+            command: get_metadata
+            metadata_name: data0
+        register: md_value
+        failed_when: "md_value.metadata_value != 'datatest0'"

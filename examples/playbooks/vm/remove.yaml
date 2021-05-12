@@ -1,0 +1,27 @@
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# Remove VMs by using the cluster_vm Ansible module
+# Prerequisites:
+# - VM cluster must be deployed
+# - VMs test0 and test1 must be present on the cluster
+
+---
+- name: Remove VM test1 and test0
+  hosts : "{{ groups.hypervisors[0] }}"
+  tasks:
+      - name: Remove VM test1
+        cluster_vm:
+            name: test1
+            command: remove
+      - name: Remove VM test0
+        cluster_vm:
+            name: test0
+            command: remove
+      - name: Verify removal
+        cluster_vm:
+            command: list_vms
+        register: vm_list
+        failed_when:
+            - "'test0' in vm_list.list_vms"
+            - "'test1' in vm_list.list_vms"

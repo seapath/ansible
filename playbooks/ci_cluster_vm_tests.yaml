@@ -1,0 +1,28 @@
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# This playbook includes example playbooks to test the cluster_vm
+# module.
+# Prerequisite: the VM cluster must be deployed
+
+# With default values for the playbook variables, the sequence is:
+# 1. Create VM test0 (disabled)
+# 2. Enable VM test0
+# 3. Disable VM test0
+# 4. Clone VM test0 into test1 (enabled)
+# 5. Stop test1
+# 6. Start test1
+# 7. Create snapshots on test1
+# 8. Purge snapshots on test1
+# 9. Remove both VMs
+
+---
+- import_playbook: ../examples/playbooks/vm/create.yaml
+- import_playbook: ../examples/playbooks/vm/enable.yaml
+- import_playbook: ../examples/playbooks/vm/disable.yaml
+- import_playbook: ../examples/playbooks/vm/clone.yaml
+- import_playbook: ../examples/playbooks/vm/stop.yaml
+- import_playbook: ../examples/playbooks/vm/start.yaml
+- import_playbook: ../examples/playbooks/vm/create_snapshots.yaml
+- import_playbook: ../examples/playbooks/vm/purge.yaml
+- import_playbook: ../examples/playbooks/vm/remove.yaml
