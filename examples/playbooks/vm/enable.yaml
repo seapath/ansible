@@ -1,0 +1,22 @@
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# Enable a VM by using the cluster_vm Ansible module
+# Prerequisites:
+# - VM cluster must be deployed
+# - VM test0 must be present on the cluster
+
+---
+- name: Enable VM test0
+  hosts : "{{ groups.hypervisors[0] }}"
+  tasks:
+      - name: Enable VM test0
+        cluster_vm:
+            name: test0
+            command: enable
+      - name: Verify status
+        cluster_vm:
+            command: status
+            name: test0
+        register: vm_status
+        failed_when: vm_status.status != "Started"

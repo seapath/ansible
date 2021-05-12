@@ -1,0 +1,37 @@
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+# Create VM test0
+
+---
+- name: Create VM test0
+  hosts: "{{ groups.hypervisors[0] }}"
+  vars:
+    - xml_template: >-
+        {{ vm_config | default('../../../templates/vm/votp_vm.xml.j2') }}
+    - disk_path: >-
+        {{ image_directory }}/{{ guest_image |
+        default('seapath-guest-efi-image-votp.wic.qcow2') }}
+  tasks:
+    - name: Copy the disk on target
+      copy:
+        src: "{{ disk_path }}"
+        dest: /tmp/os.qcow2
+    - name: Create VM test0
+      cluster_vm:
+        name: test0
+        command: create
+        system_image: /tmp/os.qcow2
+        force: true
+        enable: false
+        xml: >-
+          {{ lookup('template', xml_template,
+          template_vars=dict(
+            title='test0',
+            ovs_br='ovsbr0',
+            ovs_port=0,
+            mac_address='52:54:00:ab:39:8f', ),
+          errors='strict') }}
+    - name: Remove temporary file
+      file:
+        path: /tmp/os.qcow2
+        state: absent

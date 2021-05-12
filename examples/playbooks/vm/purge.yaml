@@ -1,0 +1,36 @@
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# Purge a VM by using the cluster_vm Ansible module
+# Prerequisites:
+# - VM cluster must be deployed
+# - Snapshots snap0 and snap1 (created by this order)
+#   must be present on VM test1
+
+---
+- name: Purge VM test1
+  hosts : "{{ groups.hypervisors[0] }}"
+  tasks:
+      - name: Partial purge (n=1)
+        cluster_vm:
+            name: test1
+            command: purge_image
+            purge_number: 1
+      - name: List snapshots
+        cluster_vm:
+            name: test1
+            command: list_snapshots
+        register: snap_list
+        failed_when:
+            - "'snap0' in snap_list.list_snapshot"
+            - "'snap1' not in snap_list.list_snapshot"
+      - name: Complete purge
+        cluster_vm:
+            name: test1
+            command: purge_image
+      - name: List snapshots
+        cluster_vm:
+            name: test1
+            command: list_snapshots
+        register: snap_list
+        failed_when: snap_list.list_snapshot | length > 0
