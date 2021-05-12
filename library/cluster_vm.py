@@ -65,12 +65,9 @@ options:
         arguments I(name)
       - C(get_metadata) Get the given metadata associated to a VM. Require
         arguments I(name), I(metadata_name)
-      - C(set_metadata) Set the given metadata associated to a VM to the
-        given value. Require arguments I(name), I(metadata_name),
-        I(metadata_value)
     choices: [ create, remove, list_vms, start, status, stop, clone,
     list_snapshots, create_snapshot,remove_snapshot, rollback_snapshot,
-    purge_image, list_metadata, get_metadata, set_metadata, disable, enable]
+    purge_image, list_metadata, get_metadata, disable, enable]
     type: str
   xml:
     description:
@@ -105,22 +102,7 @@ options:
   metadata_name:
     description:
       - name of a metadata
-      - This option is required if I(command) is C(get_metadata),
-        C(set_metadata)
-    type: str
-  disk_data:
-    description:
-      - The disk data size to create
-      - Use unit suffix K, M or G
-      - Leave it empty not to create a data disk
-      - if I(command) is C(clone), the special value "clone" can be set
-      - If clone value is set the data disk will be copied from the source VM
-      - This option is optional if I(command) is C(create) or C(clone)
-    type: str
-  metadata_value:
-    description:
-      - a metadata value
-      - This option is required if I(command) is C(set_metadata)
+      - This option is required if I(command) is C(get_metadata)
     type: str
   metadata:
     description:
@@ -195,7 +177,6 @@ EXAMPLES = r"""
     name: guest0
     command: create
     system_image: my_disk.qcow2
-    disk_data: 10G
     xml: "{{ lookup('file', 'my_vm_config.xml', errors='strict') }}"
     metadata:
         myMetadata: value
@@ -249,7 +230,6 @@ EXAMPLES = r"""
     name: guest1
     src_name: guest0
     command: clone
-    disk_data: clone
     xml: "{{ lookup('template', 'my_vm_config.xml', errors='strict') }}"
 
 # Create a VM snapshot
@@ -306,14 +286,6 @@ EXAMPLES = r"""
     name: guest0
     command: get_metadata
     metadata_name: test_metadata
-
-# Set the value of a metadata
-- name: write data on metadata test_metadata stored on guest0
-  cluster_vm:
-    name: guest0
-    command: set_metadata
-    metadata_name: test_metadata
-    set_metadata: test_data
 """
 
 RETURN = """
@@ -385,7 +357,6 @@ commands_list = [
     "purge_image",
     "list_metadata",
     "get_metadata",
-    "set_metadata",
 ]
 
 
@@ -410,7 +381,6 @@ def run_module():
         system_image=dict(type="str", required=False),
         src_name=dict(type="str", required=False),
         metadata_name=dict(type="str", required=False),
-        metadata_value=dict(type="str", required=False),
         snapshot_name=dict(type="str", required=False),
         metadata=dict(type="dict", require=False),
         purge_date=dict(
@@ -457,15 +427,6 @@ def run_module():
             (
                 "name",
                 "metadata_name",
-            ),
-        ),
-        (
-            "command",
-            "set_metadata",
-            (
-                "name",
-                "metadata_name",
-                "metadata_value",
             ),
         ),
         ("command", "purge_image", ("name",)),
@@ -517,11 +478,9 @@ def run_module():
     vm_config = args.get("xml", None)
     system_image = args.get("system_image", None)
     force = args.get("force", False)
-    data_disk = args.get("data_disk", None)
     enable = args.get("enable", True)
     src_name = args.get("src_name", None)
     metadata_name = args.get("metadata_name", None)
-    metadata_value = args.get("metadata_value", None)
     metadata = args.get("metadata", {})
     snapshot_name = args.get("snapshot_name", None)
     purge_date = args.get("purge_date", None)
@@ -535,9 +494,8 @@ def run_module():
     )
     check_parameters({"src_name": src_name}, ["clone"])
     check_parameters(
-        {"metadata_name": metadata_name}, ["get_metadata", "set_metadata"]
+        {"metadata_name": metadata_name}, ["get_metadata"]
     )
-    check_parameters({"metadata_value": metadata_value}, ["set_metadata"])
     check_parameters(
         {"snapshot_name": snapshot_name},
         ["create_snapshot", "remove_snapshot", "rollback_snapshot"],
@@ -561,7 +519,6 @@ def run_module():
                 vm_name,
                 vm_config,
                 system_image,
-                data_size=data_disk,
                 force=force,
                 enable=enable,
                 metadata=metadata,
@@ -577,7 +534,6 @@ def run_module():
                 src_name,
                 vm_name,
                 base_xml=vm_config,
-                data=data_disk,
                 force=force,
                 enable=enable,
                 metadata=metadata,
@@ -726,13 +682,6 @@ def run_module():
             result["metadata_value"] = vm_manager.get_metadata(
                 vm_name, metadata_name
             )
-        except Exception as e:
-            module.fail_json(
-                msg=to_native(e), exception=traceback.format_exc()
-            )
-    elif command == "set_metadata":
-        try:
-            vm_manager.set_metadata(vm_name, metadata_name, metadata_value)
         except Exception as e:
             module.fail_json(
                 msg=to_native(e), exception=traceback.format_exc()
