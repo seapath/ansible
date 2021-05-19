@@ -77,6 +77,10 @@ all:
                                     - Network:
                                           - Address: "192.168.220.2/24"
                     vars:
+                        ansible_user: admin
+                        ansible_become: true
+                        ansible_become_method: sudo
+                        ansible_become_flags: "-n -E"
                         extra_kernel_parameters: "vfio_iommu_type1.allow_unsafe_interrupts=1"
                         kernel_parameters_restart: true
                         bootloader_config_file: /boot/syslinux.cfg
@@ -93,6 +97,11 @@ all:
                                           - Name: TODO
                                     - Network:
                                           - Address: "192.168.220.3/24"
+                    vars:
+                        ansible_user: admin
+                        ansible_become: true
+                        ansible_become_method: sudo
+                        ansible_become_flags: "-n -E"
         mons:
             hosts:
                 hypervisor1:

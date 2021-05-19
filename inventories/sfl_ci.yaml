@@ -66,6 +66,10 @@ all:
                                     - Network:
                                           - Address: "192.168.220.5/24"
                     vars:
+                        ansible_user: admin
+                        ansible_become: true
+                        ansible_become_method: sudo
+                        ansible_become_flags: "-n -E"
                         kernel_parameters_restart: true
                         bootloader_config_file: /boot/syslinux.cfg
 
@@ -81,6 +85,11 @@ all:
                                           - Name: "enp4s0"
                                     - Network:
                                           - Address: "192.168.220.6/24"
+                    vars:
+                        ansible_user: admin
+                        ansible_become: true
+                        ansible_become_method: sudo
+                        ansible_become_flags: "-n -E"
         mons:
             hosts:
                 hypervisor1:
