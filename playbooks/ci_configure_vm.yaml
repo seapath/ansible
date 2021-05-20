@@ -8,14 +8,6 @@
   tasks:
       - name: Wait for VM to be online
         wait_for_connection:
-- name: Stop the DHCP server
-  hosts: localhost
-  tasks:
-      - name: Stop ci_dhcp_vm container
-        docker_container:
-            state: "stopped"
-            name: "ci_dhcp_vm"
-
 - name: Configure Network
   hosts: VMs
   vars_files:

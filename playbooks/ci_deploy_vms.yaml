@@ -2,35 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Deploy 4 VMs on the CI
 
----
-- name: Prepare the CI
-  hosts: localhost
-  tasks:
-    - name: Build the DHCP server docker image
-      docker_image:
-        name: "ci_dhcp_vm"
-        tag: "1.0"
-        state: present
-        source: build
-        build:
-          path: "{{ ci_docker_compose_path }}/dhcp_vm"
-          pull: true
-          args:
-            DHCP_RANGE_BEGIN: "{{ dhcp_vm_range_begin }}"
-            DHCP_RANGE_END: "{{ dhcp_vm_range_end }}"
-            DHCP_BIND_INTERFACE: "{{ dhcp_vm_bind_interface }}"
-    - name: Start the DHCP server
-      docker_container:
-        recreate: true
-        network_mode: host
-        auto_remove: true
-        state: "started"
-        image: "ci_dhcp_vm:1.0"
-        name: "ci_dhcp_vm"
-        capabilities:
-          - "net_admin"
-
-
 - name: create 4 VMs
   hosts: "{{ groups.hypervisors[0] }}"
   vars:

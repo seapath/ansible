@@ -1,0 +1,11 @@
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Stop the DHCP server
+  hosts: localhost
+  tasks:
+      - name: Stop ci_dhcp_vm container
+        docker_container:
+            state: "stopped"
+            name: "ci_dhcp_vm"
