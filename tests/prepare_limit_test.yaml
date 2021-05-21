@@ -1,0 +1,20 @@
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- import_playbook: ../playbooks/ci_configure_vm.yaml
+
+- name: Enable sync test
+  hosts: VMs
+  vars:
+      - test_server_ip: "{{ vm_ip_server | default('10.0.24.10') }}"
+  tasks:
+      - name: Configure the service
+        template:
+            src: votp-test-sync.conf.j2
+            dest: /etc/sysconfig/votp-test-sync.conf
+      - name: Start and enable the service
+        ansible.builtin.systemd:
+            name: votp-test-sync
+            state: started
+            enabled: true
