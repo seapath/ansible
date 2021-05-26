@@ -15,6 +15,10 @@
         shell:
             cmd: mount /dev/disk/by-label/platform /mnt
             warn: no
+        retries: 3
+        delay: 2
+        register: result
+        until: result.rc == 0
       - name: Install the systemd-networkd configuration file
         template:
             dest: /mnt/etc/systemd/network/000-static_ip.network
