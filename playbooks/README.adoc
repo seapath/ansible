@@ -4,5 +4,5 @@
 Playbooks directory
 ===================
 
-This directory contain Ansibleplaybooks. You can also put your custom Ansible
-playbooks files here.
+This directory contains Ansible playbooks. You can also place your
+custom Ansible playbooks here.

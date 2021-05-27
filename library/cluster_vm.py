@@ -31,9 +31,9 @@ description: This module manages virtual machines on a SEAPATH cluster.
 options:
   name:
     description:
-      - name of the guest VM being managed.
+      - Name of the guest VM being managed
       - This option is required unless I(command) is C(list_vms)
-      - name must be composed of letters and numbers only
+      - Name must be composed of letters and numbers only
     type: str
     aliases:
       - guest
@@ -54,9 +54,9 @@ options:
       - C(list_snapshots)  List all snapshots of a VM. Require arguments
         I(name)
       - C(create_snapshot) Create a snapshot of a VM. Require arguments I(name)
-        ,I(snapshot_name)
+        , I(snapshot_name)
       - C(remove_snapshot) Delete a snapshot of a VM. Require arguments I(name)
-        ,I(snapshot_name)
+        , I(snapshot_name)
       - C(purge_image) Delete all snapshots (or optionally the ones filtered by
         number or date) of a VM. Require arguments I(name)
       - C(rollback_snapshot) Restore the VM in its previous state using a
@@ -72,9 +72,9 @@ options:
   xml:
     description:
       - Libvirt XML config used if I(command) is C(create) or C(clone)
-      - XML document used with the define command.
-      - Must be raw XML content using C(lookup). XML cannot be referenced to a
-        file.
+      - It will be used by the Libvirt define command
+      - It must be raw XML content (that can be obtained by using C(lookup))
+        and not a reference to a file
     type: str
   system_image:
     description:
@@ -84,37 +84,38 @@ options:
   force:
     description:
       - Force an action to be performed
-      - Relevant if I(command) is C(create), C(clone),
-        C(snapshot_create) or C(stop)
+      - Relevant if I(command) is C(create), C(clone), C(snapshot_create)
+        or C(stop)
     type: boolean
     default: false
   src_name:
     description:
-      - name of the VM to clone
+      - Name of the VM to clone
       - This option is required if I(command) is C(clone)
     type: str
   snapshot_name:
     description:
-      - name of the snapshot
+      - Name of the snapshot
       - This option is required if I(command) is C(create_snapshot),
-        C(remove_snapshot), C(rollback_snapshot)
+        C(remove_snapshot) or C(rollback_snapshot)
     type: str
   metadata_name:
     description:
-      - name of a metadata
+      - Name of a metadata key
       - This option is required if I(command) is C(get_metadata)
     type: str
   metadata:
     description:
-      - metadata in format key, value to store in the VM
-      - This parameter is optional if I(command) is C(create) or C(clone)
-      - metadata key must be composed of letters and numbers only
+      - Metadata in format key, value to store in the VM
+      - This parameter is optional if the I(command) is C(create) or
+        C(clone)
+      - Metadata key must be composed of letters and numbers only
     type: dict
   purge_date:
     description:
-      - Date until all snapshot must be removed
-      - This option is optional if I(command) is C(purge)
-      - Cannot be used if I(purge_number) is set
+      - Date until the snapshots must be removed
+      - This paramter is optional if I(command) is C(purge)
+      - It cannot be used if I(purge_number) is set
     type: dict
     suboptions:
       date:
@@ -123,8 +124,8 @@ options:
         type: str
       iso_8601:
         description:
-          - Date and time represented in international ISO 8601 format
-            Time zone information is ignored
+          - Date and time represented in international ISO 8601 format. Time
+            zone information is ignored
         type: str
       posix:
         description:
@@ -138,7 +139,7 @@ options:
   purge_number:
     description:
       - Number of snapshots to delete starting with the oldest
-      - This option is optional if I(command) is C(purge)
+      - This parameter is optional if I(command) is C(purge)
       - Cannot be used if I(purge_date) is set
     type: int
 
@@ -193,39 +194,39 @@ EXAMPLES = r"""
   cluster_vm:
     command: list_vms
 
-# start a VM
-- name: start guest0
+# Start a VM
+- name: Start guest0
   cluster_vm:
     name: guest0
     command: start
 
-# stop a VM
-- name: stop guest0
+# Stop a VM
+- name: Stop guest0
   cluster_vm:
     name: guest0
     command: stop
 
-# force stopping (power off) a VM
-- name: stop guest0
+# Force stopping (power off) a VM
+- name: Stop guest0
   cluster_vm:
     name: guest0
     command: stop
     force: true
 
-# enable a VM
-- name: enable guest0
+# Enable a VM
+- name: Enable guest0
   cluster_vm:
     name: guest0
     command: enable
 
-# disable a VM
-- name: disable guest0
+# Disable a VM
+- name: Disable guest0
   cluster_vm:
     name: guest0
     command: disable
 
-# clone a VM
-- name: clone guest0 into guest1
+# Clone a VM
+- name: Clone guest0 into guest1
   cluster_vm:
     name: guest1
     src_name: guest0
@@ -233,14 +234,14 @@ EXAMPLES = r"""
     xml: "{{ lookup('template', 'my_vm_config.xml', errors='strict') }}"
 
 # Create a VM snapshot
-- name: create a snapshot of guest0
+- name: Create a snapshot of guest0
   cluster_vm:
     name: guest0
     command: create_snapshot
     snapshot_name: snap1
 
 # Delete a VM snapshot
-- name: remove snap1 snapshot of guest0
+- name: Remove snap1 snapshot of guest0
   cluster_vm:
     name: guest0
     command: remove_snapshot
@@ -262,26 +263,26 @@ EXAMPLES = r"""
         time: '08:00'
 
 # Restore a VM from a snapshot
-- name: rollback guest0 into snapshot snap1
+- name: Rollback guest0 into snapshot snap1
   cluster_vm:
     name: guest0
     command: rollback_snapshot
     snapshot_name: snap1
 
 # List all snapshots stored in a VM
-- name: lists snapshots of guest0
+- name: List snapshots of guest0
   cluster_vm:
     name: guest0
     command: list_snapshots
 
 # List metadata stored in a VM
-- name: list guest0 metadatas
+- name: List guest0 metadata
   cluster_vm:
     name: guest0
     command: list_metadata
 
-# Get the value of a metadata
-- name: get metadata test_metadata stored on guest0
+# Get the value of a metadata field
+- name: Get metadata test_metadata stored on guest0
   cluster_vm:
     name: guest0
     command: get_metadata
@@ -289,9 +290,9 @@ EXAMPLES = r"""
 """
 
 RETURN = """
-# for list_vms command
+# For list_vms command
 list_vms:
-    description: The list of VMs defined on the remote cluster return by the
+    description: The list of VMs defined on the remote cluster returned by the
                  list_vms command
     type: list
     sample: [
@@ -299,7 +300,7 @@ list_vms:
         "guest1"
     ]
     returned: success
-# for status command
+# For status command
 status:
     description: The status of the VM, among Starting, Started, Paused,
                  Stopped,Stopping, FAILED, Disabled and Undefined return by the
@@ -307,13 +308,13 @@ status:
     type: str
     sample: "started"
     returned: success
-# for get_metadata command
+# For get_metadata command
 metadata_value:
     description: The metadata returned by the get_metadata command
     type: str
     sample: "my metadata value"
     returned: success
-# for list_metadata command
+# For list_metadata command
 list_metadata:
     description: The metadata list returned by the list_metadata command
     type: list
@@ -397,23 +398,8 @@ def run_module():
     )
     result = {}
     required = [
-        (
-            "command",
-            "create",
-            (
-                "name",
-                "xml",
-                "system_image",
-            ),
-        ),
-        (
-            "command",
-            "clone",
-            (
-                "name",
-                "src_name",
-            ),
-        ),
+        ("command", "create", ("name", "xml", "system_image")),
+        ("command", "clone", ("name", "src_name")),
         ("command", "remove", ("name",)),
         ("command", "start", ("name",)),
         ("command", "stop", ("name",)),
@@ -421,51 +407,18 @@ def run_module():
         ("command", "enable", ("name",)),
         ("command", "disable", ("name",)),
         ("command", "list_metadata", ("name",)),
-        (
-            "command",
-            "get_metadata",
-            (
-                "name",
-                "metadata_name",
-            ),
-        ),
+        ("command", "get_metadata", ("name", "metadata_name")),
         ("command", "purge_image", ("name",)),
-        (
-            "command",
-            "create_snapshot",
-            (
-                "name",
-                "snapshot_name",
-            ),
-        ),
-        (
-            "command",
-            "remove_snapshot",
-            (
-                "name",
-                "snapshot_name",
-            ),
-        ),
-        (
-            "command",
-            "rollback_snapshot",
-            (
-                "name",
-                "snapshot_name",
-            ),
-        ),
+        ("command", "create_snapshot", ("name", "snapshot_name")),
+        ("command", "remove_snapshot", ("name", "snapshot_name")),
+        ("command", "rollback_snapshot", ("name", "snapshot_name")),
         ("command", "list_snapshots", ("name",)),
     ]
     module = AnsibleModule(
         argument_spec=module_args,
         supports_check_mode=True,
         required_if=required,
-        mutually_exclusive=[
-            (
-                "purge_date",
-                "purge_number",
-            ),
-        ],
+        mutually_exclusive=[("purge_date", "purge_number")],
     )
     if not HAS_VM_MANAGER:
         module.fail_json(
@@ -493,9 +446,7 @@ def run_module():
         {"system_image": system_image, "vm_config": vm_config}, ["create"]
     )
     check_parameters({"src_name": src_name}, ["clone"])
-    check_parameters(
-        {"metadata_name": metadata_name}, ["get_metadata"]
-    )
+    check_parameters({"metadata_name": metadata_name}, ["get_metadata"])
     check_parameters(
         {"snapshot_name": snapshot_name},
         ["create_snapshot", "remove_snapshot", "rollback_snapshot"],
