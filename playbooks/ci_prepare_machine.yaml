@@ -41,7 +41,7 @@
         lineinfile:
             path: /etc/os-release
             state: present
-            line: ID="votp-flash"
+            line: NAME="Seapath Flash Yocto distribution"
         check_mode: true
 - name: Stop the PXE server
   hosts: localhost
