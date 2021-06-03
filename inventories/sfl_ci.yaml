@@ -62,7 +62,7 @@ all:
                                           - Address: "10.0.24.5/24"
                                 10-cluster:
                                     - Match:
-                                          - Name: "eno1"
+                                          - Name: "enp8s0f1"
                                     - Network:
                                           - Address: "192.168.220.5/24"
                     vars:
