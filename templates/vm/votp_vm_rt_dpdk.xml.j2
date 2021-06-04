@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright (C) 2021, RTE (http://www.rte-france.com) -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
+<domain type="{{ vm_domaine | default('kvm') }}">
+    <title>{{ title }}</title>
+    <description>VOTP guest with DPDK support, RT optimisation and CPU isolation
+    </description>
+    <memory unit="GiB">1</memory>
+    <currentMemory unit="GiB">1</currentMemory>
+    <memoryBacking>
+        <hugepages>
+            <page size="1" unit="G" />
+        </hugepages>
+        <locked />
+        <nosharepages />
+    </memoryBacking>
+    <vcpu placement="static">1</vcpu>
+    <os firmware="efi">
+        <type arch="x86_64" machine="pc-i440fx-4.1">hvm</type>
+        <boot dev="hd" />
+        <bootmenu enable="no" />
+        <bios useserial="yes" rebootTimeout="0" />
+        <smbios mode="emulate" />
+    </os>
+    <features>
+        <acpi />
+        <apic />
+        <vmport state="off" />
+        <pmu state="off" />
+    </features>
+    <cputune>
+        <vcpupin vcpu="0" cpuset="{{ cpuset }}"/>
+        <vcpusched vcpus="0" scheduler="fifo" priority="1" />
+    </cputune>
+    <cpu mode="host-passthrough">
+        <numa>
+            <cell id="0" cpus="0" memory="1" unit="GiB" memAccess="shared" />
+        </numa>
+        <topology sockets="1" dies="1" cores="1" threads="1" />
+        <feature policy="require" name="tsc-deadline" />
+    </cpu>
+    <clock offset="utc">
+        <timer name="rtc" tickpolicy="catchup" />
+        <timer name="pit" tickpolicy="delay" />
+        <timer name="hpet" present="no" />
+    </clock>
+    <on_poweroff>destroy</on_poweroff>
+    <on_reboot>restart</on_reboot>
+    <on_crash>destroy</on_crash>
+    <pm>
+        <suspend-to-mem enabled="no" />
+        <suspend-to-disk enabled="no" />
+    </pm>
+    <devices>
+        <emulator>/usr/bin/qemu-system-x86_64</emulator>
+        <interface type="vhostuser">
+            <source type="unix" path="/var/run/openvswitch/vm-sockets/dpdkvhostuser_{{ ovs_br }}{{ ovs_port }}" mode="server" />
+            <mac address="{{ mac_address }}" />
+            <model type="virtio" />
+            <driver name="vhost" rx_queue_size="1024" tx_queue_size="1024">
+                <host mrg_rxbuf="on" />
+            </driver>
+        </interface>
+        <controller type="pci" index="0" model="pci-root" />
+        <controller type="usb" model="none" />
+        <serial type="pty">
+            <target type="isa-serial" port="0">
+                <model name="isa-serial" />
+            </target>
+        </serial>
+        <console type="pty">
+            <target type="serial" port="0" />
+        </console>
+        <memballoon model="none" />
+        <watchdog model="ib700" action="poweroff" />
+    </devices>
+</domain>
