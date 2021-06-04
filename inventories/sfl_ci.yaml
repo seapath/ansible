@@ -134,3 +134,4 @@ all:
         dhcp_vm_bind_interface: "enp3s0f1.2"
         image_directory: "/var/jenkins_home/images"
         ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+        ansible_remote_tmp: /tmp/.ansible/tmp
