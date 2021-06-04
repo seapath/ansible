@@ -2,11 +2,13 @@
 # SPDX-License-Identifier: Apache-2.0
 # Deploy 4 VMs on the CI
 
+---
 - name: create 4 VMs
   hosts: "{{ groups.hypervisors[0] }}"
   vars:
     - xml_template: >-
-        {{ vm_config | default('../templates/vm/votp_vm_dpdk.xml.j2') }}
+        {{ vm_config |
+        default('../templates/vm/votp_vm_dpdk_isolated.xml.j2') }}
     - disk_path: >-
         {{ image_directory }}/{{ guest_image |
         default('seapath-guest-efi-image-votp.wic.qcow2') }}
@@ -28,6 +30,7 @@
             title='guest0',
             ovs_br='ovsbr0',
             ovs_port=0,
+            cpuset=3,
             mac_address='52:54:00:ab:39:8f', ),
           errors='strict') }}
     - name: Remove temporary file
@@ -53,6 +56,7 @@
             title='guest1',
             ovs_br='ovsbr0',
             ovs_port=1,
+            cpuset=5,
             mac_address='52:54:00:66:d3:c4', ),
           errors='strict') }}
     - name: "Clone template on guest2"
@@ -67,6 +71,7 @@
             title='guest2',
             ovs_br='ovsbr0',
             ovs_port=2,
+            cpuset=7,
             mac_address='52:54:00:dd:78:91', ),
           errors='strict') }}
     - name: "Clone template on guest3"
@@ -82,9 +87,10 @@
             title='guest3',
             ovs_br='ovsbr0',
             ovs_port=3,
+            cpuset=9,
             mac_address='52:54:00:54:4d:e6', ),
           errors='strict') }}
     - name: "Enable guest3"
       cluster_vm:
-          name: guest3
-          command: enable
+        name: guest3
+        command: enable
