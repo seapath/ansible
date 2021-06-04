@@ -180,3 +180,5 @@ all:
         dhcp_range_end: "192.168.111.100"
         # The network interace to bind with the PXE
         dhcp_bind_interface: "eth0"
+        # Change the Ansible working folder to a rw accessible folder
+        ansible_remote_tmp: /tmp/.ansible/tmp
