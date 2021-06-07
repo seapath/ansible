@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # This playbook configures and sets up Ceph. It is called by the playbook
-# setup_playbook.yaml, but can also be called alone.
+# cluster_setup_main.yaml, but can also be called independently.
 
 ---
 - name: Prepare Ceph installation

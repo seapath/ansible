@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # This Ansible playbook configures the kernel paremeters and the number of
-# hugepages available. It is called by the playbook setup_playbook.yaml, but can
-# also be called alone.
+# hugepages available. It is called by the playbook cluster_setup_main.yaml,
+# but can also be called alone.
 
 ---
 - name: Configure Kernel parameters
