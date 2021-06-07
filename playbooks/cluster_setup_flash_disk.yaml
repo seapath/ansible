@@ -2,8 +2,8 @@
 # Copyright (C) 2021, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
-# This playbook is for flashing a machine disk with disk image. It works with
-# the flash-pxe image.
+# This playbook is for flashing a machine disk with disk image. It works
+# with the flash-pxe and flash-efi images.
 
 - name: Flash hypervisor image
   hosts: pxe_machines
@@ -22,4 +22,4 @@
             src: "{{ bmap }}"
       - name: copy the image on disk
         shell:
-            cmd: bmaptool copy /tmp/disk.wic.gz "{{ disk }}"
+            cmd: flash -i /tmp/disk.wic.gz -d "{{ disk }}"
