@@ -140,6 +140,7 @@ all:
         dhcp_vm_range_begin: "10.0.24.10"
         dhcp_vm_range_end: "10.0.24.200"
         dhcp_bind_interface: "enp3s0f1"
+        pxe_server_address: "192.168.219.1"
         dhcp_vm_bind_interface: "enp3s0f1.2"
         image_directory: "/var/jenkins_home/images"
         ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
