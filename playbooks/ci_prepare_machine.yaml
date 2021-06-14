@@ -19,6 +19,7 @@
                     DHCP_RANGE_BEGIN: "{{ dhcp_range_begin }}"
                     DHCP_RANGE_END: "{{ dhcp_range_end }}"
                     DHCP_BIND_INTERFACE: "{{ dhcp_bind_interface }}"
+                    TFTP_SERVER: "{{ pxe_server_address }}"
       - name: Start the PXE server
         docker_container:
             recreate: true
