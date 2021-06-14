@@ -141,5 +141,6 @@ all:
         dhcp_range_end: TODO
         # Interface used for DHCP PXE
         dhcp_bind_interface: TODO
+        pxe_server_address: TODO
         image_directory: "/var/jenkins_home/images"
         ansible_remote_tmp: /tmp/.ansible/tmp
