@@ -178,12 +178,6 @@ all:
                 guest1:
                     # The VM IP address
                     ansible_host: TODO
-                guest2:
-                    # The VM IP address
-                    ansible_host: TODO
-                guest3:
-                    # The VM IP address
-                    ansible_host: TODO
             vars:
                 network_interface: enp0s2
                 ip_addr: "{{ ansible_host }}"

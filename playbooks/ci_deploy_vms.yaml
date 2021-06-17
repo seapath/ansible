@@ -59,38 +59,3 @@
             cpuset=5,
             mac_address='52:54:00:66:d3:c4', ),
           errors='strict') }}
-    - name: "Clone template on guest2"
-      cluster_vm:
-        name: guest2
-        command: clone
-        src_name: template
-        force: true
-        xml: >-
-          {{ lookup('template', xml_template,
-          template_vars=dict(
-            title='guest2',
-            ovs_br='ovsbr0',
-            ovs_port=2,
-            cpuset=7,
-            mac_address='52:54:00:dd:78:91', ),
-          errors='strict') }}
-    - name: "Clone template on guest3"
-      cluster_vm:
-        name: guest3
-        command: clone
-        src_name: template
-        force: true
-        enable: false
-        xml: >-
-          {{ lookup('template', xml_template,
-          template_vars=dict(
-            title='guest3',
-            ovs_br='ovsbr0',
-            ovs_port=3,
-            cpuset=9,
-            mac_address='52:54:00:54:4d:e6', ),
-          errors='strict') }}
-    - name: "Enable guest3"
-      cluster_vm:
-        name: guest3
-        command: enable
