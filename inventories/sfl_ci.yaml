@@ -111,10 +111,6 @@ all:
                     ansible_host: 10.0.24.100
                 guest1:
                     ansible_host: 10.0.24.101
-                guest2:
-                    ansible_host: 10.0.24.102
-                guest3:
-                    ansible_host: 10.0.24.103
             vars:
                 network_interface: enp0s2
                 ip_addr: "{{ ansible_host }}"
