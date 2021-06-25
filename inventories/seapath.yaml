@@ -179,6 +179,10 @@ all:
                     # The VM IP address
                     ansible_host: TODO
             vars:
+                ansible_user: admin
+                ansible_become: true
+                ansible_become_method: sudo
+                ansible_become_flags: "-n -E"
                 network_interface: enp0s2
                 ip_addr: "{{ ansible_host }}"
                 # Gateway IP Address used by the VMs.
