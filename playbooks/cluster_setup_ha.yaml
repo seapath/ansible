@@ -21,6 +21,12 @@
             name: pacemaker
             state: started
             enabled: true
+      - name: wait for pacemaker
+        command: crm status
+        register: result
+        until: result.rc == 0
+        retries: 3
+        delay: 1
       - name: Disable quorum policy
         shell: crm configure property stonith-enabled=false
         run_once: true
