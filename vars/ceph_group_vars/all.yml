@@ -535,6 +535,8 @@ ceph_conf_overrides:
         osd_pool_default_pgp_num: 256
         osd_crush_chooseleaf_type: 1
         mon_osd_min_down_reporters: 1
+    mon:
+        auth_allow_insecure_global_id_reclaim: false
 
 
 #############
