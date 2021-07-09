@@ -14,7 +14,7 @@
   tasks:
       - name: Mount /boot partition if not mounted
         shell:
-            cmd: mount | grep '/boot ' || mount /boot
+            cmd: mount | grep '/boot ' || mount /dev/disk/by-label/boot /boot
             warn: false
         when: extra_kernel_parameters is defined or
             kernel_parameters_hugepages is defined
