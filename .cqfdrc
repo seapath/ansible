@@ -10,4 +10,4 @@ command='check_yaml'
 command='./prepare.sh'
 
 [manual]
-command='asciidoctor-pdf README.adoc'
+command='asciidoctor-pdf README.adoc OVS_configuration.adoc'

@@ -3,7 +3,7 @@ roles/systemd_networkd/
 roles/corosync/
 # Ignore collections directory
 collections/
-README.pdf
+*.pdf
 ansible.log
 playbooks/*
 !playbooks/README.adoc
