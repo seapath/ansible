@@ -28,8 +28,7 @@
           {{ lookup('template', xml_template,
           template_vars=dict(
             title='guest0',
-            ovs_br='ovsbr0',
-            ovs_port=0,
+            ovs_port='br0P0',
             cpuset=3,
             mac_address='52:54:00:ab:39:8f', ),
           errors='strict') }}
@@ -54,8 +53,7 @@
           {{ lookup('template', xml_template,
           template_vars=dict(
             title='guest1',
-            ovs_br='ovsbr0',
-            ovs_port=1,
+            ovs_port='br0P1',
             cpuset=5,
             mac_address='52:54:00:66:d3:c4', ),
           errors='strict') }}

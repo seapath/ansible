@@ -48,8 +48,7 @@
      - rbd_pool: rbd
      - os_disk: os0
      - data_disk: data0
-     - ovs_br: ovsbr0
-     - ovs_port: 0
+     - ovs_port: ovsbr0Port0
      - activate: "no"
      - mac_address: "{{ '52:54:00' | random_mac }}"
   roles:

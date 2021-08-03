@@ -43,31 +43,18 @@ all:
                             ip_addr: "{{ ansible_host }}"
                             # Subnetwork. Optional variable, default is 24
                             subnet: TODO or remove it to use default value
-                            ovs_bridges:
-                                # The name of your brigde
-                                - name: ovsbr0
-                                  # OVS bridge type. Set to "dpdk" to use DPDK
-                                  # or "regular" if you don't want to use DPDK
-                                  type: regular
-                                  # The interface to use with your bridge
-                                  interface: TODO
-                                - name: ovsbr1
-                                  type: dpdk
-                                  # The ethernet device pci address to use with
-                                  # DPDK. e.g. 0000:42:00.0
-                                  nic: TODO
-                                  # The number of virtual Open vSwith ports to
-                                  # create
-                                  number_of_virtual_ports: 5
+                            # the ethernet device pci address to use with
+                            # DPDK. e.g. 0000:42:00.0
+                            dpdk_nic: TODO
                             # Optional additional network configuration list
                             # For more information see
                             # roles/systemd_networkd/README.md
                             custom_network:
                                 # Arbitrary list name. Must begin with 00-
-                                00-ovsbr0:
+                                00-br0Host:
                                     - Match:
                                         # The name of the interface to configure
-                                        - Name: "ovsbr0"
+                                        - Name: "br0Host"
                                     - Network:
                                         # The interface IP address with its
                                         # subnetwork
@@ -89,31 +76,18 @@ all:
                             ip_addr: "{{ ansible_host }}"
                             # Subnetwork. Optional variable, default is 24
                             subnet: TODO or remove it to use default value
-                            ovs_bridges:
-                                # The name of your brigde
-                                - name: ovsbr0
-                                  # OVS bridge type. Set to "dpdk" to use DPDK
-                                  # or "regular" if you don't want to use DPDK
-                                  type: regular
-                                  # The interface to use with your bridge
-                                  interface: TODO
-                                - name: ovsbr1
-                                  type: dpdk
-                                  # the ethernet device pci address to use with
-                                  # DPDK. e.g. 0000:42:00.0
-                                  nic: TODO
-                                  # The number of virtual Open vSwith ports to
-                                  # create
-                                  number_of_virtual_ports: 5
+                            # the ethernet device pci address to use with
+                            # DPDK. e.g. 0000:42:00.0
+                            dpdk_nic: TODO
                             # Optional additional Network configuration list
                             # For more information see
                             # roles/systemd_networkd/README.md
                             custom_network:
                                 # Arbitrary list name. Must begin with 00-
-                                00-ovsbr0:
+                                00-br0Host:
                                     - Match:
                                         # The name of the interface to configure
-                                        - Name: "ovsbr0"
+                                        - Name: "br0Host"
                                     - Network:
                                         # The interface IP address with its
                                         # subnetwork
@@ -133,6 +107,24 @@ all:
                         ansible_become_flags: "-n -E"
                         kernel_parameters_restart: true
                         bootloader_config_file: /boot/syslinux.cfg
+                        ovs_bridges:
+                          - name: br0
+                            ports:
+                              - name: br0P0
+                                type: dpdkvhostuserclient
+                              - name: br0P1
+                                type: dpdkvhostuserclient
+                              - name: br0P2
+                                type: dpdkvhostuserclient
+                              - name: br0P3
+                                type: dpdkvhostuserclient
+                              - name: br0P4
+                                type: dpdkvhostuserclient
+                              - name: br0Host
+                                type: internal
+                              - name: br0External
+                                type: dpdk
+                                interface: "{{ dpdk_nic }}"
 
                 observers:
                     hosts:
