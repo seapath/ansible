@@ -27,31 +27,15 @@ all:
                             gateway_addr: 192.168.217.1
                             # The Subnetwork. Optional variable, default is 24
                             subnet: 16
-                            ovs_bridges:
-                                # The name of your brigde
-                                - name: ovsbr0
-                                  # OVS brigde type. Set to "dpdk" to use DPDK
-                                  # or "regular" if you don't want to DPDK
-                                  type: regular
-                                  # The interface to use with your bridge
-                                  interface: enp66s0f0
-                                - name: ovsbr1
-                                  type: dpdk
-                                  # the ethernet device pci address to use with
-                                  # DPDK
-                                  nic: "0000:42:00.0"
-                                  # The number of virtual Open vSwith ports to
-                                  # create
-                                  number_of_virtual_ports: 5
-                            # Optional additional Network configuration list
+                            # Optional additional network configuration list
                             # For more information see
                             # roles/systemd_networkd/README.md
                             custom_network:
                                 # Arbitrary list name. Must begin with 00-
-                                00-ovsbr0:
+                                00-br0ExternalPort:
                                     - Match:
                                         # The name of the interface to configure
-                                        - Name: "ovsbr0"
+                                        - Name: "br0ExternalPort"
                                     - Network:
                                         # The interface IP address with it
                                         # subnetwork
@@ -64,7 +48,7 @@ all:
 
                         votp2:
                             ansible_host: 192.168.217.16
-                            network_interface: ovsbr1
+                            network_interface: br1
                             dns_server: 9.9.9.9
                             ip_addr: 192.168.217.16
                             gateway_addr: 192.168.217.1
@@ -79,23 +63,6 @@ all:
                             # Bootloader configuration file. Must be set to
                             # /boot/syslinux.cfg on BIOS machine. Default is
                             # /boot/EFI/BOOT/grub.cfg used by UEFI machines.
-                            ovs_bridges:
-                                # The name of your bridge
-                                - name: ovsbr0
-                                  # OVS bridge type. Set to "dpdk" to use DPDK
-                                  # or "regular" if you don't want to DPDK
-                                  type: regular
-                                  # The interface to use with your bridge
-                                  interface: enp0s7
-                                - name: ovsbr1
-                                  type: dpdk
-                                  # the ethernet device pci address to use with
-                                  # DPDK
-                                  nic: "0000:1:00.0"
-                                  # The number of virtual Open vSwith ports to
-                                  # create
-                                  number_of_virtual_ports: 5
-
                             bootloader_config_file: /boot/syslinux.cfg
 
 
@@ -104,6 +71,70 @@ all:
                         # Set true to restart after setting kernel parameters
                         # (default is false)
                         kernel_parameters_restart: true
+                        # OVS bridges and ports description
+                        # See OVS_configuration.adoc for more details.
+                        # Declared here, bridges configuration is the same for
+                        # all hypervisors. Ansible variables can be used to
+                        # select hypervisor specific settings like NIC PCI
+                        # addresses or network interfaces.
+                        ovs_bridges:
+                            # Bridge interface name
+                          - name: br0
+                            # Bridge's ports list
+                            ports:
+                                # Port interace name
+                              - name: br0P0
+                                # Port type dpdkvhostuserclient is a port to
+                                # connect VM with DPDK support
+                                type: dpdkvhostuserclient
+                                # VLAN ID
+                                tag: 4
+                              - name: br0P1
+                                type: dpdkvhostuserclient
+                                tag: 4
+                              - name: br0P2
+                                type: dpdkvhostuserclient
+                                tag: 4
+                              - name: br0P3
+                                type: dpdkvhostuserclient
+                                tag: 4
+                              - name: br0P4
+                                type: dpdkvhostuserclient
+                              - name: br0Host
+                                # Create an internal for host connection
+                                type: internal
+                                tag: 4
+                              - name: br0External
+                                # Attach an network interface using DPDK
+                                type: dpdk
+                                # With type dpdk you need to set the NIC
+                                # interface PCI address. This address is
+                                # hardware dependend to we use an Ansible
+                                # variable to set this address in each
+                                # hypervisor machine.
+                                interface: "{{ dpdk_nic }}"
+                                tag: 4
+                          - name: br1
+                            ports:
+                              - name: br1P0
+                                # Use type "internal" to attach an OVS port in a
+                                # VM without using DPDK
+                                type: internal
+                                # You can set a port VLAN trunks
+                                trunks:
+                                  - 300
+                                  - 301
+                              - name: br1P1
+                                type: internal
+                                tag: 300
+                                # VLAN mode can be set in each port
+                                # configuration
+                                vlan_mode: native-untagged
+                              - name: br1External
+                                # Attach a network interface without using DPDK
+                                type: system
+                                # The interface to attach
+                                interface: eno1
 
                 observers:
                     hosts:

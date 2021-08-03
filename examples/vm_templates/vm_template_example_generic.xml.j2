@@ -99,11 +99,10 @@ seapath_vm_manage role all variables must be defined before using this template.
         <controller type="usb" index="0" model="piix3-uhci" />
         <controller type="pci" index="0" model="pci-root" />
         <!-- Network connexion without DPDK -->
-        <interface type="bridge">
+        <interface type="ethernet">
             <mac address="your_mac_address" />
-            <source bridge="your_brige_interface" />
-            <virtualport type='openvswitch'/>
-            <model type="virtio" />
+            <target dev="your ovs port to attach" managed="no"/>
+            <model type="virtio"/>
         </interface>
         <!-- Network connexion with DPDK -->
         <interface type='vhostuser'>

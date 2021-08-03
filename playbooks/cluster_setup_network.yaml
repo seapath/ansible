@@ -10,62 +10,16 @@
 - name: Configure OVS
   hosts: hypervisors
   vars:
-      ovs_bridge_list: "{{ ovs_bridges | default([]) }}"
-  tasks:
-      - name: Ensures /opt/setup dir exists
-        file: path=/opt/setup state=directory
-      - name: Clean setup_ovs.d directory
-        file: state=absent path=/opt/setup/setup_ovs.d/
-      - name: Create /opt/setup/setup_ovs.d directory
-        file: path=/opt/setup/setup_ovs.d state=directory
-      - name: Install setup_ovs.sh
-        template:
-            src: ../templates/setup_ovs.sh
-            dest: /opt/setup/setup_ovs.sh
-            owner: root
-            group: root
-            mode: '0755'
-      - name: Install setup_ovs.d scripts
-        template:
-            src: "../templates/setup_ovs_{{ item.type }}.sh"
-            dest: "/opt/setup/setup_ovs.d/{{ item.name }}"
-            owner: root
-            group: root
-            mode: '0755'
-        loop: "{{ ovs_bridge_list }}"
-      - name: Install setup_ovs.server
-        template:
-            src: ../templates/setup_ovs.service
-            dest: /etc/systemd/system
-            owner: root
-            group: root
-            mode: '0644'
-        notify:
-            - Enable setup_ovs
-            - Enable Open vSwitch
-  handlers:
-      - name: Enable setup_ovs
-        ansible.builtin.systemd:
-            name: setup_ovs
-            daemon_reload: yes
-            enabled: yes
-      - name: Enable Open vSwitch
-        ansible.builtin.systemd:
-            name: openvswitch
-            enabled: yes
-
-- name: Apply Open vSwitch configuration
-  hosts: hypervisors
-  vars:
       apply_config: "{{ apply_network_config | default(false) }}"
   tasks:
-      - name: Open vSwitch
+      - name: Create OVS configuration
+        template:
+          src: ../templates/ovs_configuration.json.j2
+          dest: /etc/ovs_configuration.json
+          validate: setup_ovs.py -v -c -f %s
+      - name: Restart votp-config_ovs
         ansible.builtin.systemd:
-            name: openvswitch
-            state: restarted
-      - name: Restart setup_ovs
-        ansible.builtin.systemd:
-            name: setup_ovs
+            name: votp-config_ovs
             state: restarted
         when:
             apply_config

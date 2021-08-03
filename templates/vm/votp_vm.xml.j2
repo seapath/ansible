@@ -42,11 +42,9 @@
     </pm>
     <devices>
         <emulator>/usr/bin/qemu-system-x86_64</emulator>
-        <!-- Ceph disk -->
-        <interface type="bridge">
+        <interface type="ethernet">
             <mac address="{{ mac_address }}"/>
-            <source bridge="ovsbr0"/>
-            <virtualport type='openvswitch'/>
+            <target dev="{{ ovs_port }}" managed="no"/>
             <model type="virtio"/>
             <alias name="net0"/>
         </interface>
