@@ -32,18 +32,32 @@ The variable must comply with the following YAML schema:
 ---
 ovs_bridges:
   - name: string
+    rstp_enable: bool
+    other_config: string | [ string ]
     ports:
       - name: string
-        type: internal | system | dpdk | dpdkvhostuserclient | tap
+        type: internal | system | dpdk | dpdkvhostuserclient | tap | vxlan
         tag: integer
         trunks: integer | [ integer ]
         vlan_mode: access | native-tagged | native-untagged | trunk
         interface: string
+        other_config: string | [ string ]
+        external-ids: string | [ string ]
+        hook_file: string
+        remote_ip: string
+        remote_port: interger
+        key: string
+        ingress_policing_rate: interger
+        ingress_policing_burst: interger
 ----
 
 The ovs_bridges takes a bridge list with the following mandatory attributes:
 
 * *name*: the interface bridge name
+* *rstp_enable*: set to true to enable RSTP on the bridge. Default is false.
+* *other_config*: optional OVS configuration for the bridge as you can pass with
+  _other_config=_ when running the command `ovs-vsctl`.
+
 * *ports*: the list of OVS ports in the bridge
 
 Each port has the following attributes:
@@ -69,6 +83,9 @@ Each port has the following attributes:
 ** *dpdkvhostuserclient*:
    Same as internal but create a port that use DPDK. +
    This type of port can be attached to a VM.
+** *vxlan*:
+  Create a vxlan interface and attached it to the port. +
+  Use remote_ip, remote_port and key to configure it
 * *interface*: The interface to attach to the port. NIC for DPDK or Linux
                interface for system, not used for other port types
 * *tag*: optional integer, in range 0 to 4,095 +
@@ -97,16 +114,38 @@ Each port has the following attributes:
     Any packet with an 802.1Q header with a nonzero VLAN ID that ingresses on an
     access port is dropped, regardless of whether the VLAN ID in the header is
     the access port’s VLAN ID.
-
 ** *native-tagged*:
     A native-tagged port resembles a trunk port, with the exception that a
     packet without an 802.1Q header that ingresses on a native-tagged port is in
     the _native VLAN_ (specified in the tag column).
-
 ** *native-untagged*:
     A native-untagged port is like a native-tagged port, with the exception
     that a packet that egresses on a native-untagged port in the native VLAN
     will not have an 802.1Q header.
+* *remote_ip*:
+  vxlan remote IP to connect.
+* *remote_port*:
+  vxlan remote port. Default is 4789.
+* *key*:
+  vxlan key.
+* *other_config*:
+  Optional additional OVS port configurations as you can pass with
+  _other_config=_ when running `ovs-vsctl`.
+* *external-ids*:
+  Optional OVS port meta-data. This attributes will be stored in the port
+  _external-ids_ field in the OVS database. This can be used to associate
+  resources outside of OpenVSwitch.
+* *hook_file*:
+  Optional hook script file to call after the port creation. +
+  The bridge is given as first parameter. +
+  The OVS port is given as second parameter.
+* *ingress_policing_rate*:
+  The maximum rate (in Kbps) that this port should be allowed to send. +
+  If not set, this policy will be disabled.
+* *ingress_policing_burst*:
+  A parameter to the policing algorithm to indicate the maximum amount of data
+  (in Kb) that this interface can send beyond the policing rate. +
+  If not set, this policy will be disabled.
 
 == OVS configuration example
 
@@ -125,6 +164,8 @@ all:
                   - name: ovsbr0VirtualPort0
                     type: tap
                     tag: 40
+                    ingress_policing_rate: 1000
+                    ingress_policing_burst: 500
                     vlan_mode: native-untagged
                   - name: ovsbr0VirtualPort1
                     type: tap
