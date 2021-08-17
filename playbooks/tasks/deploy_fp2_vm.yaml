@@ -1,0 +1,20 @@
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+# Task to deploy a VM
+
+---
+- name: "Copy {{ item }} system disk on target"
+  copy:
+    src: "{{ vms_disks_directory }}/{{ item }}.qcow2"
+    dest: /tmp/os.qcow2
+- name: "Create {{ item }}"
+  cluster_vm:
+    name: "{{ item }}"
+    command: create
+    system_image: /tmp/os.qcow2
+    force: true
+    xml: "{{ lookup('file', vms_config_directory + '/' + item + '.xml') }}"
+- name: Remove temporary file
+  file:
+    path: "/tmp/os.qcow2"
+    state: absent

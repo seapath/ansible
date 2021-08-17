@@ -1,0 +1,11 @@
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+# Deploy all VMs define in the VMs group
+
+---
+- name: Deploy VMs
+  hosts: "{{ groups.hypervisors[0] }}"
+  tasks:
+    - name: "Prepare tasks"
+      include_tasks: tasks/deploy_fp2_vm.yaml
+      loop: "{{ groups['VMs'] }}"
