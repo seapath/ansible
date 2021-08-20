@@ -203,6 +203,8 @@ all:
         ceph_cluster_network: "192.168.220.0/24"
         monitor_address: "{{ ansible_host }}"
         ansible_remote_tmp: /tmp/.ansible/tmp
+        # The syslog serve rIP address where logs are centralized
+        syslog_server_ip: "192.168.220.6"
 
         ##############################################################
         # CI specific part. If you do not use the CI remove this part.
