@@ -33,6 +33,7 @@ The variable must comply with the following YAML schema:
 ovs_bridges:
   - name: string
     rstp_enable: bool
+    enable_ipv6: bool
     other_config: string | [ string ]
     ports:
       - name: string
@@ -40,10 +41,10 @@ ovs_bridges:
         tag: integer
         trunks: integer | [ integer ]
         vlan_mode: access | native-tagged | native-untagged | trunk
+        mac: string
+        ip: string | [ string ]
         interface: string
         other_config: string | [ string ]
-        external-ids: string | [ string ]
-        hook_file: string
         remote_ip: string
         remote_port: interger
         key: string
@@ -55,6 +56,7 @@ The ovs_bridges takes a bridge list with the following mandatory attributes:
 
 * *name*: the interface bridge name
 * *rstp_enable*: set to true to enable RSTP on the bridge. Default is false.
+* *enable_ipv6*: if false all ipv6 paquet will be dropped. Default is false.
 * *other_config*: optional OVS configuration for the bridge as you can pass with
   _other_config=_ when running the command `ovs-vsctl`.
 
@@ -122,6 +124,13 @@ Each port has the following attributes:
     A native-untagged port is like a native-tagged port, with the exception
     that a packet that egresses on a native-untagged port in the native VLAN
     will not have an 802.1Q header.
+* *mac*:
+  Ingresses source MAC address accepted. All others sources will be dropped. +
+  Only works with tap or dpdkvhostuserclient.
+* *ip*:
+  Ingresses source IP addresses accepted list. All others sources will be
+  dropped. +
+  Only works with tap or dpdkvhostuserclient.
 * *remote_ip*:
   vxlan remote IP to connect.
 * *remote_port*:
@@ -131,14 +140,6 @@ Each port has the following attributes:
 * *other_config*:
   Optional additional OVS port configurations as you can pass with
   _other_config=_ when running `ovs-vsctl`.
-* *external-ids*:
-  Optional OVS port meta-data. This attributes will be stored in the port
-  _external-ids_ field in the OVS database. This can be used to associate
-  resources outside of OpenVSwitch.
-* *hook_file*:
-  Optional hook script file to call after the port creation. +
-  The bridge is given as first parameter. +
-  The OVS port is given as second parameter.
 * *ingress_policing_rate*:
   The maximum rate (in Kbps) that this port should be allowed to send. +
   If not set, this policy will be disabled.
@@ -167,10 +168,14 @@ all:
                     ingress_policing_rate: 1000
                     ingress_policing_burst: 500
                     vlan_mode: native-untagged
+                    mac: "77:fd:4d:68:30:3b"
+                    ip: "192.168.4.3"
                   - name: ovsbr0VirtualPort1
                     type: tap
                     tag: 40
                     vlan_mode: native-untagged
+                    mac: "77:fd:4d:68:30:3c"
+                    ip: "192.168.4.3"
                   - name: ovsbr0HostPort
                     type: internal
                     tag: 40
@@ -186,10 +191,17 @@ all:
                       - 300
                       - 2170
                       - 1170
+                    mac: "94:9b:37:7b:87:50"
+                    ip:
+                        - "10.10.1.7"
+                        - "192.168.27"
+                        - "10.4.1.7"
                   - name: dpdkbr0VirtualPort1
                     type: dpdkvhostuserclient
                     tag: 300
                     vlan_mode: native-untagged
+                    mac: "94:9b:37:7b:87:51"
+                    ip: "10.10.1.8"
                   - name: dpdkbr1ExternalPort
                     type: dpdk
                     interface: "0000:08:00.1"
