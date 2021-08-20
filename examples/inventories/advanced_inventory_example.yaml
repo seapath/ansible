@@ -215,3 +215,5 @@ all:
         pxe_server_address: "192.168.111.1"
         # Change the Ansible working folder to a rw accessible folder
         ansible_remote_tmp: /tmp/.ansible/tmp
+        # The syslog server IP address where logs are centralized
+        syslog_server_ip: "192.168.220.6"
