@@ -105,6 +105,10 @@
 
   handlers:
       - name: Restart systemd syslog-ng
+        vars:
+            apply_config: "{{ apply_network_config | default(false) }}"
         ansible.builtin.service:
             name: syslog-ng@default
             state: restarted
+        when:
+            apply_config
