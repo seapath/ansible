@@ -46,6 +46,10 @@ all:
               # the ethernet device pci address to use with DPDK.
               # e.g. 0000:42:00.0
               dpdk_nic: TODO
+              # Set the cluster interface
+              cluster_interface: TODO
+              # Set the cluster IP address
+              cluster_ip_addr: TODO
               # Optional additional network configuration list.
               # For more information see roles/systemd_networkd/README.md
               custom_network:
@@ -60,11 +64,9 @@ all:
                       - Address: TODO
                 10-cluster:
                   - Match:
-                      # Set the cluster interface
-                      - Name: TODO
+                      - Name: "{{ cluster_interface }}"
                   - Network:
-                      # Set the cluster IP address
-                      - Address: TODO
+                      - Address: "{{ cluster_ip_addr }}/24"
 
             hypervisor2:
               # Change IP address according to your setup
@@ -78,6 +80,10 @@ all:
               # the ethernet device pci address to use with DPDK.
               # e.g. 0000:42:00.0
               dpdk_nic: TODO
+              # Set the cluster interface
+              cluster_interface: TODO
+              # Set the cluster IP address
+              cluster_ip_addr: TODO
               # Optional additional Network configuration list
               # For more information see roles/systemd_networkd/README.md
               custom_network:
@@ -92,11 +98,9 @@ all:
                       - Address: TODO
                 00-cluster:
                   - Match:
-                      # Set the cluster interface
-                      - Name: TODO
+                      - Name: "{{ cluster_interface }}"
                   - Network:
-                      # Set the cluster IP address
-                      - Address: TODO
+                      - Address: "{{ cluster_ip_addr }}/24"
           # hypervisors groupe variables
           vars:
             ansible_user: admin
@@ -132,14 +136,16 @@ all:
               # Set the public interface
               network_interface: TODO
               ip_addr: "{{ ansible_host }}"
+              # Set the cluster interface
+              cluster_interface: TODO
+              # Set the cluster IP address
+              cluster_ip_addr: TODO
               custom_network:
                 10-cluster:
                   - Match:
-                      # Set the cluster interface
-                      - Name: TODO
+                      - Name: "{{ cluster_interface }}"
                   - Network:
-                      # Set the cluster IP address
-                      - Address: TODO
+                      - Address: "{{ cluster_ip_addr }}/24"
           vars:
             ansible_user: admin
             ansible_become: true
@@ -193,8 +199,8 @@ all:
     fallback_ntp_servers: 0.fr.pool.ntp.org 1.fr.pool.ntp.org
     # The Ceph public network see:
     # https://access.redhat.com/documentation/en-us/red_hat_ceph_storage/1.2.3/html/ceph_configuration_guide/network-configuration-reference
-    # e.g. "192.168.219.0/24"
-    ceph_public_network: TODO
+    # e.g. "192.168.220.0/24"
+    ceph_public_network: "192.168.220.0/24"
     # The Ceph cluster network used by osd only:
     # https://access.redhat.com/documentation/en-us/red_hat_ceph_storage/1.2.3/html/ceph_configuration_guide/network-configuration-reference
     # e.g. "192.168.220.0/24"

@@ -54,15 +54,16 @@
       lineinfile:
         dest: /etc/hosts
         regexp: '.*{{ item }}$'
-        line: "{{ hostvars[item].ip_addr }} {{item}}"
+        line: "{{ hostvars[item].cluster_ip_addr }} {{item}}"
         state: present
-      when: hostvars[item].ip_addr is defined
+      when: hostvars[item].cluster_ip_addr is defined
       loop: "{{ groups['cluster_machines'] }}"
     - name: Add rbd in hosts file
       replace:
         path: /etc/hosts
-        regexp: '^{{ ip_addr }} {{ inventory_hostname }}$'
-        replace: '{{ ip_addr }} rbd {{ inventory_hostname }}'
+        regexp: '^{{ cluster_ip_addr }} {{ inventory_hostname }}$'
+        replace: '{{ cluster_ip_addr }} rbd {{ inventory_hostname }}'
+      when: cluster_ip_addr is defined
 
 - name: Configure NTP
   hosts: cluster_machines
@@ -111,3 +112,21 @@
         state: restarted
       when:
         apply_config
+
+- name: Configure systemd-networkd-wait-online.service
+  hosts: hypervisors
+  tasks:
+    - block:
+        - name: Create systemd-networkd-wait-online.service.d directory
+          file:
+            state: directory
+            path: /etc/systemd/system/systemd-networkd-wait-online.service.d
+            owner: root
+            group: root
+            mode: 644
+        - name: Copy systemd-networkd-wait-online.service overide
+          template:
+            src: ../templates/systemd-networkd-wait-online.service.j2
+            dest: >-
+              /etc/systemd/system/systemd-networkd-wait-online.service.d/override.conf
+      when: cluster_interface is defined
