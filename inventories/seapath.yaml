@@ -5,223 +5,221 @@
 
 ---
 all:
-    children:
-        # You can remove the pxe_machines section if you do not use the CI.
-        pxe_machines:
-            hosts:
-                pxe_hypervisor1:
-                    # Set IP address according to your setup
-                    ansible_host: TODO
-                    # The network interface to be used for the first boot
-                    network_interface: TODO
-                pxe_hypervisor2:
-                    # Set IP address according to your setup
-                    ansible_host: TODO
-                    # The network interface to be used for the fist boot
-                    network_interface: TODO
-                pxe_observer:
-                    # Set IP address according to your setup
-                    ansible_host: TODO
-                    # The network interface to be used for the first boot
-                    network_interface: TODO
-            vars:
-                image_path: "{{ image_directory }}/seapath-host-bios-image-votp.wic.gz"
-                static_ip: "{{ ansible_host }}"
-                # The disk where the SEAPTAH distribution will be installed
-                # In general: /dev/sda
-                root_disk: TODO
-        cluster_machines:
-            children:
-                hypervisors:
-                    hosts:
-                        hypervisor1:
-                            # Set IP address according to your setup
-                            ansible_host: TODO
-                            # The network interface that will be used by the
-                            # hypervisor to communicate across the network
-                            network_interface: TODO
-                            ip_addr: "{{ ansible_host }}"
-                            # Subnetwork. Optional variable, default is 24
-                            subnet: TODO or remove it to use default value
-                            # the ethernet device pci address to use with
-                            # DPDK. e.g. 0000:42:00.0
-                            dpdk_nic: TODO
-                            # Optional additional network configuration list
-                            # For more information see
-                            # roles/systemd_networkd/README.md
-                            custom_network:
-                                # Arbitrary list name. Must begin with 00-
-                                00-br0Host:
-                                    - Match:
-                                        # The name of the interface to configure
-                                        - Name: "br0Host"
-                                    - Network:
-                                        # The interface IP address with its
-                                        # subnetwork
-                                        - Address: TODO
-                                10-cluster:
-                                    - Match:
-                                        # Set the cluster interface
-                                        - Name: TODO
-                                    - Network:
-                                          # Set the cluster IP address
-                                        - Address: TODO
+  children:
+    # You can remove the pxe_machines section if you do not use the CI.
+    pxe_machines:
+      hosts:
+        pxe_hypervisor1:
+          # Set IP address according to your setup
+          ansible_host: TODO
+          # The network interface to be used for the first boot
+          network_interface: TODO
+        pxe_hypervisor2:
+          # Set IP address according to your setup
+          ansible_host: TODO
+          # The network interface to be used for the fist boot
+          network_interface: TODO
+        pxe_observer:
+          # Set IP address according to your setup
+          ansible_host: TODO
+          # The network interface to be used for the first boot
+          network_interface: TODO
+      vars:
+        image_path: "{{ image_directory }}/seapath-host-bios-image-votp.wic.gz"
+        static_ip: "{{ ansible_host }}"
+        # The disk where the SEAPTAH distribution will be installed
+        # In general: /dev/sda
+        root_disk: TODO
+    cluster_machines:
+      children:
+        hypervisors:
+          hosts:
+            hypervisor1:
+              # Set IP address according to your setup
+              ansible_host: TODO
+              # The network interface that will be used by the hypervisor to
+              # communicate across the network
+              network_interface: TODO
+              ip_addr: "{{ ansible_host }}"
+              # Subnetwork. Optional variable, default is 24
+              subnet: TODO or remove it to use default value
+              # the ethernet device pci address to use with DPDK.
+              # e.g. 0000:42:00.0
+              dpdk_nic: TODO
+              # Optional additional network configuration list.
+              # For more information see roles/systemd_networkd/README.md
+              custom_network:
+                # Arbitrary list name. Must begin with 00-
+                00-br0Host:
+                  - Match:
+                      # The name of the interface to configure
+                      - Name: "br0Host"
+                  - Network:
+                      # The interface IP address with its
+                      # subnetwork
+                      - Address: TODO
+                10-cluster:
+                  - Match:
+                      # Set the cluster interface
+                      - Name: TODO
+                  - Network:
+                      # Set the cluster IP address
+                      - Address: TODO
 
-                        hypervisor2:
-                            # Change IP address according to your setup
-                            ansible_host: TODO
-                            # The network interface that will be used by the
-                            # hypervisor to communicate across the network
-                            network_interface: TODO
-                            ip_addr: "{{ ansible_host }}"
-                            # Subnetwork. Optional variable, default is 24
-                            subnet: TODO or remove it to use default value
-                            # the ethernet device pci address to use with
-                            # DPDK. e.g. 0000:42:00.0
-                            dpdk_nic: TODO
-                            # Optional additional Network configuration list
-                            # For more information see
-                            # roles/systemd_networkd/README.md
-                            custom_network:
-                                # Arbitrary list name. Must begin with 00-
-                                00-br0Host:
-                                    - Match:
-                                        # The name of the interface to configure
-                                        - Name: "br0Host"
-                                    - Network:
-                                        # The interface IP address with its
-                                        # subnetwork
-                                        - Address: TODO
-                                10-cluster:
-                                    - Match:
-                                        # Set the cluster interface
-                                        - Name: TODO
-                                    - Network:
-                                        # Set the cluster IP address
-                                        - Address: TODO
-                    # hypervisors groupe variables
-                    vars:
-                        ansible_user: admin
-                        ansible_become: true
-                        ansible_become_method: sudo
-                        ansible_become_flags: "-n -E"
-                        kernel_parameters_restart: true
-                        bootloader_config_file: /boot/syslinux.cfg
-                        ovs_bridges:
-                          - name: br0
-                            ports:
-                              - name: br0P0
-                                type: dpdkvhostuserclient
-                              - name: br0P1
-                                type: dpdkvhostuserclient
-                              - name: br0P2
-                                type: dpdkvhostuserclient
-                              - name: br0P3
-                                type: dpdkvhostuserclient
-                              - name: br0P4
-                                type: dpdkvhostuserclient
-                              - name: br0Host
-                                type: internal
-                              - name: br0External
-                                type: dpdk
-                                interface: "{{ dpdk_nic }}"
+            hypervisor2:
+              # Change IP address according to your setup
+              ansible_host: TODO
+              # The network interface that will be used by the hypervisor to
+              # communicate across the network
+              network_interface: TODO
+              ip_addr: "{{ ansible_host }}"
+              # Subnetwork. Optional variable, default is 24
+              subnet: TODO or remove it to use default value
+              # the ethernet device pci address to use with DPDK.
+              # e.g. 0000:42:00.0
+              dpdk_nic: TODO
+              # Optional additional Network configuration list
+              # For more information see roles/systemd_networkd/README.md
+              custom_network:
+                # Arbitrary list name. Must begin with 00-
+                00-br0Host:
+                  - Match:
+                      # The name of the interface to configure
+                      - Name: "br0Host"
+                  - Network:
+                      # The interface IP address with its
+                      # subnetwork
+                      - Address: TODO
+                00-cluster:
+                  - Match:
+                      # Set the cluster interface
+                      - Name: TODO
+                  - Network:
+                      # Set the cluster IP address
+                      - Address: TODO
+          # hypervisors groupe variables
+          vars:
+            ansible_user: admin
+            ansible_become: true
+            ansible_become_method: sudo
+            ansible_become_flags: "-n -E"
+            kernel_parameters_restart: true
+            bootloader_config_file: /boot/syslinux.cfg
+            ovs_bridges:
+              - name: br0
+                ports:
+                  - name: br0P0
+                    type: dpdkvhostuserclient
+                  - name: br0P1
+                    type: dpdkvhostuserclient
+                  - name: br0P2
+                    type: dpdkvhostuserclient
+                  - name: br0P3
+                    type: dpdkvhostuserclient
+                  - name: br0P4
+                    type: dpdkvhostuserclient
+                  - name: br0Host
+                    type: internal
+                  - name: br0External
+                    type: dpdk
+                    interface: "{{ dpdk_nic }}"
 
-                observers:
-                    hosts:
-                        observer:
-                            # Change IP address according to your setup
-                            ansible_host: TODO
-                            # Set the public interface
-                            network_interface: TODO
-                            ip_addr: "{{ ansible_host }}"
-                            custom_network:
-                                10-cluster:
-                                    - Match:
-                                          # Set the cluster interface
-                                          - Name: TODO
-                                    - Network:
-                                          # Set the cluster IP address
-                                          - Address: TODO
-                    vars:
-                        ansible_user: admin
-                        ansible_become: true
-                        ansible_become_method: sudo
-                        ansible_become_flags: "-n -E"
-        mons:
-            hosts:
-                hypervisor1:
-                hypervisor2:
-                observer:
-        osds:
-            hosts:
-                hypervisor1:
-                hypervisor2:
-            vars:
-                ceph_osd_disk: /dev/sdb
-        clients:
-            hosts:
-                hypervisor1:
-                hypervisor2:
-        VMs:
-            hosts:
-                guest0:
-                    # The VM IP address
-                    ansible_host: TODO
-                guest1:
-                    # The VM IP address
-                    ansible_host: TODO
-            vars:
-                ansible_user: admin
-                ansible_become: true
-                ansible_become_method: sudo
-                ansible_become_flags: "-n -E"
-                network_interface: enp0s2
-                ip_addr: "{{ ansible_host }}"
-                # Gateway IP Address used by the VMs.
-                # Leave it empty to not set a gateway.
-                gateway_addr: TODO
+        observers:
+          hosts:
+            observer:
+              # Change IP address according to your setup
+              ansible_host: TODO
+              # Set the public interface
+              network_interface: TODO
+              ip_addr: "{{ ansible_host }}"
+              custom_network:
+                10-cluster:
+                  - Match:
+                      # Set the cluster interface
+                      - Name: TODO
+                  - Network:
+                      # Set the cluster IP address
+                      - Address: TODO
+          vars:
+            ansible_user: admin
+            ansible_become: true
+            ansible_become_method: sudo
+            ansible_become_flags: "-n -E"
+    mons:
+      hosts:
+        hypervisor1:
+        hypervisor2:
+        observer:
+    osds:
+      hosts:
+        hypervisor1:
+        hypervisor2:
+      vars:
+        ceph_osd_disk: /dev/sdb
+    clients:
+      hosts:
+        hypervisor1:
+        hypervisor2:
+    VMs:
+      hosts:
+        guest0:
+          # The VM IP address
+          ansible_host: TODO
+        guest1:
+          # The VM IP address
+          ansible_host: TODO
+      vars:
+        ansible_user: admin
+        ansible_become: true
+        ansible_become_method: sudo
+        ansible_become_flags: "-n -E"
+        network_interface: enp0s2
+        ip_addr: "{{ ansible_host }}"
+        # Gateway IP Address used by the VMs.
+        # Leave it empty to not set a gateway.
+        gateway_addr: TODO
 
-    vars:
-        ansible_connection: ssh
-        ansible_user: root
-        ansible_python_interpreter: /usr/bin/python3
-        # DNS server. Leave it empty to not set the DNS server
-        dns_server: 192.168.219.2
-        # Gateway IP Addr. The variable must be define but can be empty
-        gateway_addr: 192.168.219.2
-        apply_network_config: false
-        # Set a correct NTP server. The SEAPTH cluster cannot work without it.
-        ntp_servers: TODO
-        fallback_ntp_servers: 0.fr.pool.ntp.org 1.fr.pool.ntp.org
-        # The Ceph public network see:
-        # https://access.redhat.com/documentation/en-us/red_hat_ceph_storage/1.2.3/html/ceph_configuration_guide/network-configuration-reference
-        # e.g. "192.168.219.0/24"
-        ceph_public_network: TODO
-        # The Ceph cluster network used by osd only:
-        # https://access.redhat.com/documentation/en-us/red_hat_ceph_storage/1.2.3/html/ceph_configuration_guide/network-configuration-reference
-        # e.g. "192.168.220.0/24"
-        ceph_cluster_network: "192.168.220.0/24"
-        monitor_address: "{{ ansible_host }}"
-        ansible_remote_tmp: /tmp/.ansible/tmp
-        # The syslog serve rIP address where logs are centralized
-        syslog_server_ip: "192.168.220.6"
+  vars:
+    ansible_connection: ssh
+    ansible_user: root
+    ansible_python_interpreter: /usr/bin/python3
+    # DNS server. Leave it empty to not set the DNS server
+    dns_server: 192.168.219.2
+    # Gateway IP Addr. The variable must be define but can be empty
+    gateway_addr: 192.168.219.2
+    apply_network_config: false
+    # Set a correct NTP server. The SEAPTH cluster cannot work without it.
+    ntp_servers: TODO
+    fallback_ntp_servers: 0.fr.pool.ntp.org 1.fr.pool.ntp.org
+    # The Ceph public network see:
+    # https://access.redhat.com/documentation/en-us/red_hat_ceph_storage/1.2.3/html/ceph_configuration_guide/network-configuration-reference
+    # e.g. "192.168.219.0/24"
+    ceph_public_network: TODO
+    # The Ceph cluster network used by osd only:
+    # https://access.redhat.com/documentation/en-us/red_hat_ceph_storage/1.2.3/html/ceph_configuration_guide/network-configuration-reference
+    # e.g. "192.168.220.0/24"
+    ceph_cluster_network: "192.168.220.0/24"
+    monitor_address: "{{ ansible_host }}"
+    ansible_remote_tmp: /tmp/.ansible/tmp
+    # The syslog serve rIP address where logs are centralized
+    syslog_server_ip: "192.168.220.6"
 
-        ##############################################################
-        # CI specific part. If you do not use the CI remove this part.
-        ##############################################################
-        # The DHCP IP range used by the PXE
-        dhcp_range_begin: TODO
-        dhcp_range_end: TODO
-        # The network interace to bind with the PXE
-        dhcp_bind_interface: TODO
-        # The PXE IP address assigned to the "dhcp_bind_interface" interface
-        pxe_server_address: TODO
-        # The DHCP IP range used by the VMs DHCP server
-        dhcp_vm_range_begin: TODO
-        dhcp_vm_range_end: TODO
-        # The VM DHCP server IP address assigned to the "dhcp_bind_interface"
-        # interface
-        dhcp_vm_bind_interface: TODO
-        # Path where the CI must search the images
-        # e.g. /var/jenkins_home/images
-        image_directory: TODO
+    ##############################################################
+    # CI specific part. If you do not use the CI remove this part.
+    ##############################################################
+    # The DHCP IP range used by the PXE
+    dhcp_range_begin: TODO
+    dhcp_range_end: TODO
+    # The network interace to bind with the PXE
+    dhcp_bind_interface: TODO
+    # The PXE IP address assigned to the "dhcp_bind_interface" interface
+    pxe_server_address: TODO
+    # The DHCP IP range used by the VMs DHCP server
+    dhcp_vm_range_begin: TODO
+    dhcp_vm_range_end: TODO
+    # The VM DHCP server IP address assigned to the "dhcp_bind_interface"
+    # interface
+    dhcp_vm_bind_interface: TODO
+    # Path where the CI must search the images
+    # e.g. /var/jenkins_home/images
+    image_directory: TODO
