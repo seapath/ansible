@@ -29,6 +29,10 @@ all:
               subnet: 16
               # Optional additional network configuration list
               # For more information see roles/systemd_networkd/README.md
+              # Set the cluster interface
+              cluster_interface: "ens0p2"
+              # Set the cluster IP address
+              cluster_ip_addr: "10.0.27.2"
               custom_network:
                 # Arbitrary list name. Must begin with 00-
                 00-br0ExternalPort:
@@ -39,11 +43,11 @@ all:
                       # The interface IP address with it
                       # subnetwork
                       - Address: "10.0.24.3/24"
-                00-ens0p2:
+                00-cluster:
                   - Match:
-                      - Name: "ens0p2"
+                      - Name: "{{ cluster_interface }}"
                   - Network:
-                      - Address: "10.0.27.2/24"
+                      - Address: "{{ cluster_ip_addr }}/24"
 
             votp2:
               ansible_host: 192.168.217.16
