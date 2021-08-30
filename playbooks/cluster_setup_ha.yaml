@@ -7,14 +7,14 @@
 
 ---
 - name: Setup Corosync
-  hosts: hypervisors
+  hosts: cluster_machines
   vars_files:
       - ../vars/corosync_vars.yaml
   roles:
       - corosync
 
 - name: Setup Pacemaker
-  hosts: hypervisors
+  hosts: cluster_machines
   tasks:
       - name: Start Pacemaker
         ansible.builtin.systemd:
@@ -27,9 +27,10 @@
         until: result.rc == 0
         retries: 3
         delay: 1
-      - name: Disable quorum policy
+      - name: Disable stonith
         shell: crm configure property stonith-enabled=false
         run_once: true
-      - name: Disable stonith
-        shell: crm configure property no-quorum-policy=ignore
-        run_once: true
+      - name: Save cluster machine informations
+        template:
+            src: ../templates/cluster.conf.j2
+            dest: /etc/cluster.conf
