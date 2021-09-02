@@ -3,12 +3,6 @@
 # Copyright (C) 2021, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
-import os
-import traceback
-import datetime
-from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils._text import to_native
-
 ANSIBLE_METADATA = {
     "metadata_version": "1.0",
     "status": ["preview"],
@@ -25,6 +19,10 @@ module: cluster_vm
 short_description: Manages virtual machines on a SEAPATH cluster
 
 version_added: "2.9"
+
+author:
+    - "Mathieu Dupré (mathieu.dupre@savoirfairelinux.com)"
+    - "Albert Babí Oller (albert.babi@savoirfairelinux.com)"
 
 description: This module manages virtual machines on a SEAPATH cluster.
 
@@ -86,7 +84,7 @@ options:
       - Force an action to be performed
       - Relevant if I(command) is C(create), C(clone), C(snapshot_create)
         or C(stop)
-    type: boolean
+    type: bool
     default: false
   src_name:
     description:
@@ -99,6 +97,22 @@ options:
       - This option is required if I(command) is C(create_snapshot),
         C(remove_snapshot) or C(rollback_snapshot)
     type: str
+  preferred_host:
+    description:
+      - Deploy the VM on the given host in priority
+      - Optional parameter relevant only if I(command) is C(create) or C(clone)
+    type: str
+  pinned_host:
+    description:
+      - Pin the VM on the given host
+      - Optional parameter relevant only if I(command) is C(create) or C(clone)
+    type: str
+  clear_constraint:
+    description:
+      - Do not keep source location constraint
+      - Optional parameter relevant only if I(command) is C(clone)
+    type: bool
+    default: false
   metadata_name:
     description:
       - Name of a metadata key
@@ -148,28 +162,8 @@ requirements:
     - librbd
     - libvirt
     - vm_manager
-
-author:
-    - Mathieu Dupré (mathieu.dupre@savoirfairelinux.com)
-    - Albert Babí Oller (albert.babi@savoirfairelinux.com)
 """
 
-EXAMPLES = r"""
-# Create and start a VM
-- name: Create and start guest0
-  cluster_vm:
-    name: guest0
-
-requirements:
-    - python >= 3.7
-    - librbd
-    - libvirt
-    - vm_manager
-
-author:
-    - Mathieu Dupré (mathieu.dupre@savoirfairelinux.com)
-    - Albert Babí Oller (albert.babi@savoirfairelinux.com)
-"""
 
 EXAMPLES = r"""
 # Create and start a VM
@@ -332,7 +326,14 @@ list_snapshots:
         "snapshot1",
         "snapshot2",
     ]
+    returned: success
 """
+
+import os
+import traceback
+import datetime
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils._text import to_native
 
 try:
     import vm_manager
@@ -395,6 +396,9 @@ def run_module():
             ),
         ),
         purge_number=dict(type="int", require=False),
+        preferred_host=dict(type="str", require=False),
+        pinned_host=dict(type="str", require=False),
+        clear_constraint=dict(type="bool", required=False, default=False),
     )
     result = {}
     required = [
@@ -438,6 +442,9 @@ def run_module():
     snapshot_name = args.get("snapshot_name", None)
     purge_date = args.get("purge_date", None)
     purge_number = args.get("purge_number", None)
+    preferred_host = args.get("preferred_host", None)
+    pinned_host = args.get("pinned_host", None)
+    clear_constraint = args.get("clear_constraint", False)
 
     vm_name_command_list = commands_list.copy()
     vm_name_command_list.remove("list_vms")
@@ -473,6 +480,8 @@ def run_module():
                 force=force,
                 enable=enable,
                 metadata=metadata,
+                preferred_host=preferred_host,
+                pinned_host=pinned_host,
             )
         except Exception as e:
             module.fail_json(
@@ -488,6 +497,9 @@ def run_module():
                 force=force,
                 enable=enable,
                 metadata=metadata,
+                preferred_host=preferred_host,
+                pinned_host=pinned_host,
+                clear_constraint=clear_constraint,
             )
         except Exception as e:
             module.fail_json(
