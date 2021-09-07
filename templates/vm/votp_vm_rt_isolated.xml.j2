@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright (C) 2021, RTE (http://www.rte-france.com) -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
+<domain type="{{ vm_domaine | default('kvm') }}">
+    <title>{{ title }}</title>
+    <description>
+            VOTP guest with RT tweak without DPDK
+    </description>
+    <memory unit="MiB">256</memory>
+    <currentMemory unit="MiB">256</currentMemory>
+    <vcpu placement="static">1</vcpu>
+    <os firmware="efi">
+        <type arch="x86_64" machine="pc-i440fx-4.1">hvm</type>
+        <boot dev="hd" />
+        <bootmenu enable="no" />
+        <bios useserial="yes" rebootTimeout="0" />
+        <smbios mode="emulate" />
+    </os>
+    <features>
+        <acpi />
+        <apic />
+        <vmport state="off" />
+        <pmu state="off" />
+    </features>
+    <cputune>
+        <vcpupin vcpu="0" cpuset="{{ cpuset }}"/>
+        <vcpusched vcpus="0" scheduler="fifo" priority="1" />
+    </cputune>
+    <cpu mode="host-passthrough">
+        <topology sockets="1" dies="1" cores="1" threads="1" />
+        <feature policy="require" name="tsc-deadline" />
+    </cpu>
+    <clock offset="utc">
+        <timer name="rtc" tickpolicy="catchup" />
+        <timer name="pit" tickpolicy="delay" />
+        <timer name="hpet" present="no" />
+    </clock>
+    <on_poweroff>destroy</on_poweroff>
+    <on_reboot>restart</on_reboot>
+    <on_crash>destroy</on_crash>
+    <pm>
+        <suspend-to-mem enabled="no" />
+        <suspend-to-disk enabled="no" />
+    </pm>
+    <devices>
+        <emulator>/usr/bin/qemu-system-x86_64</emulator>
+        <interface type="ethernet">
+            <mac address="{{ mac_address }}"/>
+            <target dev="{{ ovs_port }}" managed="no"/>
+            <model type="virtio"/>
+            <alias name="net0"/>
+        </interface>
+        <controller type="pci" index="0" model="pci-root" />
+        <serial type="pty">
+            <target type="isa-serial" port="0">
+                <model name="isa-serial" />
+            </target>
+        </serial>
+        <console type="pty">
+            <target type="serial" port="0" />
+        </console>
+        <memballoon model="virtio">
+        </memballoon>
+        <watchdog model="ib700" action="poweroff" />
+    </devices>
+</domain>
