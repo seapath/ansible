@@ -6,7 +6,7 @@
 ANSIBLE_METADATA = {
     "metadata_version": "1.0",
     "status": ["preview"],
-    "supported_by": "community",
+    "supported_by": "seapath",
 }
 
 
@@ -23,6 +23,8 @@ version_added: "2.9"
 author:
     - "Mathieu Dupré (mathieu.dupre@savoirfairelinux.com)"
     - "Albert Babí Oller (albert.babi@savoirfairelinux.com)"
+
+suported_by: seapath
 
 description: This module manages virtual machines on a SEAPATH cluster.
 
