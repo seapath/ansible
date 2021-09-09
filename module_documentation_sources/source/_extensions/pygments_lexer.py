@@ -5,6 +5,7 @@
 # https://bitbucket.org/birkenfeld/pygments-main/raw/7941677dc77d4f2bf0bbd6140ade85a9454b8b80/AUTHORS
 # Copyright by Norman Richards (original author of JSON lexer).
 #
+# SPDX-License-Identifier: BSD-2-Clause
 # Licensed under BSD license:
 #
 # Copyright (c) 2006-2017 by the respective authors (see AUTHORS file).

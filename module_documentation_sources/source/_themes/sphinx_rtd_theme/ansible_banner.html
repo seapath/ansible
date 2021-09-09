@@ -2,7 +2,7 @@
 {# Creates a banner at the top of the page for any version not latest. #}
   <script>
     current_url = window.location.href;
-    if ((current_url.search("latest") > -1) || (current_url.search("/{{ latest_version }}/") > -1)) {
+    if (true || (current_url.search("latest") > -1) || (current_url.search("/{{ latest_version }}/") > -1)) {
      // no banner for latest release
     } else if (current_url.search("devel") > -1) {
       document.write('<div id="banner_id" class="admonition caution">');

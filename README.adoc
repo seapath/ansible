@@ -255,3 +255,12 @@ To launch the playbook _cluster_setup_main.yaml_ use the following command:
 Or if you use `cqfd`:
 
  $ cqfd run ansible-playbook -i inventories/cluster_inventory.yaml playbooks/cluster_setup_main.yaml
+
+=== Generate SEAPATH Ansible modules documentation
+
+The SEAPATH Ansible modules documentation can be generated using the command:
+
+ $ cqfd -b module_documentation
+
+The generated documentation is in HTML format and can be found in
+_module_documentation/index.html_.

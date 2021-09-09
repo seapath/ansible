@@ -1,7 +1,7 @@
 [project]
 org='rte'
 name='ansible'
-flavors='prepare manual'
+flavors='prepare manual module_documentation'
 
 [build]
 command='check_yaml'
@@ -11,3 +11,6 @@ command='./prepare.sh'
 
 [manual]
 command='asciidoctor-pdf README.adoc OVS_configuration.adoc'
+
+[module_documentation]
+command='./generate_module_documentation.sh'

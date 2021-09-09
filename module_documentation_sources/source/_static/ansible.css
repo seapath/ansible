@@ -1,3 +1,8 @@
+/*
+ * Takes from Ansible repository.
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * */
+
 /* Fix for read the docs theme:
  * https://rackerlabs.github.io/docs-rackspace/tools/rtd-tables.html
  */
@@ -345,7 +350,7 @@ table {
         background-color: #000;
         text-decoration: none;
         font-family: 'Open Sans', sans-serif;
-        width: 1100px;
+        /*width: 1100px;*/
     }
 
 
@@ -427,7 +432,6 @@ table {
         background-color: #000;
         text-decoration: none;
         font-family: 'Open Sans', sans-serif;
-        width: 1100px;
     }
 
 
@@ -451,7 +455,7 @@ table {
 
     .ansibleNav{
         height: 45px;
-        width: 1100px;
+        /*width: 1100px;*/
         font-size: 13px;
         padding: 0px 60px 0px 0px;
     }
@@ -475,4 +479,19 @@ table {
         text-transform: uppercase;
         padding: 8px 13px;
     }
+}
+.rst-content li {
+    list-style: disc;
+    margin-left: 24px;
+}
+.rst-content li p {
+    margin-bottom: 0px;
+}
+
+.rst-content li:last-child {
+    margin-bottom:10px;
+}
+
+.wy-nav-content {
+    max-width: inherit;
 }

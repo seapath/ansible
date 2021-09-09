@@ -1,8 +1,10 @@
 # Copyright: (c) 2012, Jan-Piet Mens <jpmens () gmail.com>
 # Copyright: (c) 2012-2014, Michael DeHaan <michael@ansible.com> and others
 # Copyright: (c) 2017, Ansible Project
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
 
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
@@ -44,9 +46,9 @@ from ansible.utils import plugin_docs
 from ansible.utils.display import Display
 
 # Pylint doesn't understand Python3 namespace modules.
-from ..change_detection import update_file_if_different  # pylint: disable=relative-beyond-top-level
-from ..commands import Command  # pylint: disable=relative-beyond-top-level
-from ..jinja2.filters import do_max, documented_type, html_ify, rst_fmt, rst_ify, rst_xline  # pylint: disable=relative-beyond-top-level
+from utils.change_detection import update_file_if_different  # pylint: disable=relative-beyond-top-level
+from utils.commands import Command  # pylint: disable=relative-beyond-top-level
+from utils.filters import do_max, documented_type, html_ify, rst_fmt, rst_ify, rst_xline  # pylint: disable=relative-beyond-top-level
 
 
 #####################################################################################
@@ -239,7 +241,8 @@ def get_plugin_info(module_dir, limit_to=None, verbose=False):
         primary_category = ''
         module_categories = []
         # build up the categories that this module belongs to
-        for new_cat in mod_path_only.split('/')[1:]:
+        cat_list = ["seapath"] if mod_path_only == "/" else mod_path_only.split('/')[1:]
+        for new_cat in cat_list:
             if new_cat not in category:
                 category[new_cat] = dict()
                 category[new_cat]['_modules'] = []
@@ -590,6 +593,18 @@ effort support will be provided but is not covered under any support contracts.
 
 These modules are currently shipped with Ansible, but will most likely be shipped separately in the future.
                                           """},
+                    'SEAPATH Community': {'slug': 'seapath_supported',
+                                          'modules': [],
+                                          'output': 'seapath_maintained.rst',
+                                          'blurb': """
+These are :doc:`modules maintained by the SEAPATH Community<community_maintained>`.  They **are
+not** supported by the Ansible Core Team or by companies/partners associated to the module.
+
+They are still fully usable, but the response rate to issues is purely up to the community.  Best
+effort support will be provided but is not covered under any support contracts.
+
+These modules are currently shipped with Ansible, but will most likely be shipped separately in the future.
+                                          """},
                     }
 
     # only gen support pages for modules for now, need to split and namespace templates and generated docs
@@ -608,6 +623,8 @@ These modules are currently shipped with Ansible, but will most likely be shippe
             supported_by['Ansible Partners']['modules'].append(module)
         elif info['metadata']['supported_by'] == 'community':
             supported_by['Ansible Community']['modules'].append(module)
+        elif info['metadata']['supported_by'] == 'seapath':
+            supported_by['SEAPATH Community']['modules'].append(module)
         else:
             raise AnsibleError('Unknown supported_by value: %s' % info['metadata']['supported_by'])
 
@@ -653,8 +670,7 @@ class DocumentPlugins(Command):
     name = 'document-plugins'
 
     @classmethod
-    def init_parser(cls, add_parser):
-        parser = add_parser(cls.name, description='Generate module documentation from metadata')
+    def init_parser(cls, parser):
 
         parser.add_argument("-A", "--ansible-version", action="store", dest="ansible_version",
                             default="unknown", help="Ansible version number")
@@ -752,3 +768,15 @@ class DocumentPlugins(Command):
             process_support_levels(plugin_info, categories, templates, output_dir, plugin_type)
 
         return 0
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description='Generate module documentation from metadata')
+    DocumentPlugins.init_parser(parser)
+    args = parser.parse_args()
+    DocumentPlugins.main(args)
+    index = os.path.join(args.output_dir, "index.rst")
+    if os.path.islink(index):
+        os.unlink(index)
+    os.symlink("list_of_all_modules.rst", index)

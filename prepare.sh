@@ -1,4 +1,6 @@
 #!/bin/bash
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
 
 # This script must be called after retrieving the sources and each change of it.
 # It allows you to retrieve the dependencies required by Ansible SEAPATH.
