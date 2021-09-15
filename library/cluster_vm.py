@@ -65,9 +65,12 @@ options:
         arguments I(name)
       - C(get_metadata) Get the given metadata associated to a VM. Require
         arguments I(name), I(metadata_name)
+      - C(define_colocation) Define colocation rules. Require
+        arguments I(name), I(colocated_vms)
     choices: [ create, remove, list_vms, start, status, stop, clone,
     list_snapshots, create_snapshot,remove_snapshot, rollback_snapshot,
-    purge_image, list_metadata, get_metadata, disable, enable]
+    purge_image, list_metadata, get_metadata, disable, enable,
+    define_colocation]
     type: str
   xml:
     description:
@@ -158,6 +161,19 @@ options:
       - This parameter is optional if I(command) is C(purge)
       - Cannot be used if I(purge_date) is set
     type: int
+  strong:
+    description:
+      - If set to "yes", defines a strong colocation. In a strong colocation,
+        a VM will be started only if all resources colocated with it are
+        started to and this VM will be stopped if one of them is stopped
+      - This option is optional if I(command) is C(define_colocation)
+    type: bool
+    default: false
+  colocated_vms:
+    description:
+      - VM list to be be colocated with the VM define in I(name) parameter
+      - This parameter is required if I(command) is C(define_colocation)
+    type: list
 
 requirements:
     - python >= 3.7
@@ -283,6 +299,15 @@ EXAMPLES = r"""
     name: guest0
     command: get_metadata
     metadata_name: test_metadata
+
+# Define a colocation constraint
+- name: Colocate guest1 and guest2 with guest0
+  cluster_vm:
+    name: guest0
+    command: colocation
+    colocated_vms:
+     - guest1
+     - guest2
 """
 
 RETURN = """
@@ -361,6 +386,7 @@ commands_list = [
     "purge_image",
     "list_metadata",
     "get_metadata",
+    "define_colocation",
 ]
 
 
@@ -401,6 +427,8 @@ def run_module():
         preferred_host=dict(type="str", require=False),
         pinned_host=dict(type="str", require=False),
         clear_constraint=dict(type="bool", required=False, default=False),
+        strong=dict(type="bool", required=False, default=False),
+        colocated_vms=dict(type="list", required=False),
     )
     result = {}
     required = [
@@ -419,6 +447,7 @@ def run_module():
         ("command", "remove_snapshot", ("name", "snapshot_name")),
         ("command", "rollback_snapshot", ("name", "snapshot_name")),
         ("command", "list_snapshots", ("name",)),
+        ("command", "define_colocation", ("name", "colocated_vms")),
     ]
     module = AnsibleModule(
         argument_spec=module_args,
@@ -447,6 +476,8 @@ def run_module():
     preferred_host = args.get("preferred_host", None)
     pinned_host = args.get("pinned_host", None)
     clear_constraint = args.get("clear_constraint", False)
+    strong_constraint = args.get("strong", False)
+    colocated_vms = args.get("colocated_vms", [])
 
     vm_name_command_list = commands_list.copy()
     vm_name_command_list.remove("list_vms")
@@ -557,6 +588,12 @@ def run_module():
         elif command == "get_metadata":
             result["metadata_value"] = vm_manager.get_metadata(
                 vm_name, metadata_name
+            )
+        elif command == "define_colocation":
+            if not colocated_vms:
+                module.fail_json(msg="No colocated VM defined")
+            vm_manager.add_colocation(
+                vm_name, *colocated_vms, strong=strong_constraint
             )
         else:
             module.fail_json(
