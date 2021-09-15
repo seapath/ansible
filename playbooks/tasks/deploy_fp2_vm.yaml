@@ -14,6 +14,8 @@
     system_image: /tmp/os.qcow2
     force: true
     xml: "{{ lookup('file', vms_config_directory + '/' + item + '.xml') }}"
+    pinned_host: "{{ hostvars[item].pinned_host | default('') }}"
+    preferred_host: "{{ hostvars[item].preferred_host | default('') }}"
 - name: Remove temporary file
   file:
     path: "/tmp/os.qcow2"
