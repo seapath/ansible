@@ -23,3 +23,12 @@ module_documentation
 # Ignore python cache files
 __pycache__/
 .pyc
+
+#privatekey
+cluster_rsa
+
+#ansible facts
+facts/
+
+#private inventories
+inventories_private/

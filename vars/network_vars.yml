@@ -10,6 +10,16 @@ wired_systemd_networkd_network:
     - Network:
         - Gateway: "{{ gateway_addr }}"
         - Address: "{{ ip_addr }}/{{ subnet | default(24) }}"
-        - DNS: "{{ dns_server }}"
+ #        - DNS: "{{ dns_server }}"
+  00-team0_0:
+    - Match:
+        - Name: "{{ team0_0 }}"
+    - Link:
+        - MTUBytes: 1800
+  00-team0_1:
+    - Match:
+        - Name: "{{ team0_1 }}"
+    - Link:
+        - MTUBytes: 1800
 
 systemd_networkd_network: "{{ wired_systemd_networkd_network | combine(systemd_networkd_network_custom) }}"

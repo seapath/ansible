@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
 	bash \
 	locales \
 	ruby \
+        vim \
 	git \
 	ssh \
 	python3-libvirt \

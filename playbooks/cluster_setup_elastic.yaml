@@ -1,0 +1,8 @@
+- name: Add elastic cluster ip
+  hosts: cluster_machines
+  tasks:
+    - name: lineinfile in hosts file for logstash_seapath
+      lineinfile:
+        dest: /etc/hosts
+        line: "{{ logstash_server_ip }} logstash_seapath"
+        state: present
