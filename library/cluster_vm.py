@@ -24,7 +24,7 @@ author:
     - "Mathieu Dupré (mathieu.dupre@savoirfairelinux.com)"
     - "Albert Babí Oller (albert.babi@savoirfairelinux.com)"
 
-suported_by: seapath
+supported_by: seapath
 
 description: This module manages virtual machines on a SEAPATH cluster.
 
@@ -130,7 +130,7 @@ options:
   purge_date:
     description:
       - Date until the snapshots must be removed
-      - This paramter is optional if I(command) is C(purge)
+      - This parameter is optional if I(command) is C(purge)
       - It cannot be used if I(purge_number) is set
     type: dict
     suboptions:
@@ -460,21 +460,14 @@ def run_module():
         {"snapshot_name": snapshot_name},
         ["create_snapshot", "remove_snapshot", "rollback_snapshot"],
     )
-    if command == "list_vms":
-        try:
+    try:
+        if command == "list_vms":
             result["list_vms"] = vm_manager.list_vms()
-        except Exception as e:
-            module.fail_json(
-                msg=to_native(e), exception=traceback.format_exc()
-            )
-    elif command == "create":
-
-        if not os.path.isfile(system_image):
-            module.fail_json(
-                msg="`system_image` doesn't exist or is not a file`"
-            )
-
-        try:
+        elif command == "create":
+            if not os.path.isfile(system_image):
+                module.fail_json(
+                    msg="`system_image` doesn't exist or is not a file`"
+                )
             vm_manager.create(
                 vm_name,
                 vm_config,
@@ -485,13 +478,7 @@ def run_module():
                 preferred_host=preferred_host,
                 pinned_host=pinned_host,
             )
-        except Exception as e:
-            module.fail_json(
-                msg=to_native(e), exception=traceback.format_exc()
-            )
-    elif command == "clone":
-
-        try:
+        elif command == "clone":
             vm_manager.clone(
                 src_name,
                 vm_name,
@@ -503,89 +490,44 @@ def run_module():
                 pinned_host=pinned_host,
                 clear_constraint=clear_constraint,
             )
-        except Exception as e:
-            module.fail_json(
-                msg=to_native(e), exception=traceback.format_exc()
-            )
-    elif command == "remove":
-        try:
+        elif command == "remove":
             vm_manager.remove(vm_name)
-        except Exception as e:
-            module.fail_json(
-                msg=to_native(e), exception=traceback.format_exc()
-            )
-    elif command == "start":
-        try:
+        elif command == "start":
             vm_manager.start(vm_name)
-        except Exception as e:
-            module.fail_json(
-                msg=to_native(e), exception=traceback.format_exc()
-            )
-    elif command == "stop":
-        try:
+        elif command == "stop":
             vm_manager.stop(vm_name)
-        except Exception as e:
-            module.fail_json(
-                msg=to_native(e), exception=traceback.format_exc()
-            )
-    elif command == "disable":
-        try:
+        elif command == "disable":
             vm_manager.disable_vm(vm_name)
-        except Exception as e:
-            module.fail_json(
-                msg=to_native(e), exception=traceback.format_exc()
-            )
-    elif command == "status":
-        try:
+        elif command == "status":
             result["status"] = vm_manager.status(vm_name)
-        except Exception as e:
-            module.fail_json(
-                msg=to_native(e), exception=traceback.format_exc()
-            )
-    elif command == "enable":
-        try:
+        elif command == "enable":
             vm_manager.enable_vm(vm_name)
-        except Exception as e:
-            module.fail_json(
-                msg=to_native(e), exception=traceback.format_exc()
-            )
-    elif command == "status":
-        try:
+        elif command == "status":
             result["status"] = vm_manager.status(vm_name)
-        except Exception as e:
-            module.fail_json(
-                msg=to_native(e), exception=traceback.format_exc()
-            )
-    elif command == "create_snapshot":
-        try:
+        elif command == "create_snapshot":
             vm_manager.create_snapshot(vm_name, snapshot_name)
-        except Exception as e:
-            module.fail_json(
-                msg=to_native(e), exception=traceback.format_exc()
-            )
-    elif command == "purge_image":
-        date_time = None
-        if purge_date:
-            if (
-                ("date" in purge_date and "time" not in purge_date)
-                or "time" in purge_date
-                and "date" not in purge_date
-            ):
-                module.fail_json(
-                    msg="purge_date argument error: date and time must be set"
-                    " together"
-                )
-            if (
-                "date" in purge_date
-                and ("posix" in purge_date or "iso_8601" in purge_date)
-                or "posix" in purge_date
-                and "iso_8601" in purge_date
-            ):
-                module.fail_json(
-                    msg="purge_date argument error: date/time, iso_8601 and"
-                    " posix and mutually exclusive"
-                )
-            try:
+        elif command == "purge_image":
+            date_time = None
+            if purge_date:
+                if (
+                    ("date" in purge_date and "time" not in purge_date)
+                    or "time" in purge_date
+                    and "date" not in purge_date
+                ):
+                    module.fail_json(
+                        msg="purge_date argument error: date and time must be"
+                        "set together"
+                    )
+                if (
+                    "date" in purge_date
+                    and ("posix" in purge_date or "iso_8601" in purge_date)
+                    or "posix" in purge_date
+                    and "iso_8601" in purge_date
+                ):
+                    module.fail_json(
+                        msg="purge_date argument error: date/time, iso_8601"
+                        " and posix and mutually exclusive"
+                    )
                 if "date" in purge_date:
                     date = purge_date["date"]
                     time = purge_date["time"]
@@ -601,60 +543,27 @@ def run_module():
                     date_time = datetime.datetime.fromtimestamp(
                         purge_date["posix"]
                     )
-            except Exception as e:
-                module.fail_json(
-                    msg=to_native(e), exception=traceback.format_exc()
-                )
-
-        try:
             vm_manager.purge_image(
                 vm_name, date=date_time, number=purge_number
             )
-        except Exception as e:
-            module.fail_json(
-                msg=to_native(e), exception=traceback.format_exc()
-            )
-    elif command == "remove_snapshot":
-        try:
+        elif command == "remove_snapshot":
             vm_manager.remove_snapshot(vm_name, snapshot_name)
-        except Exception as e:
-            module.fail_json(
-                msg=to_native(e), exception=traceback.format_exc()
-            )
-    elif command == "list_snapshots":
-        try:
+        elif command == "list_snapshots":
             result["list_snapshot"] = vm_manager.list_snapshots(vm_name)
-        except Exception as e:
-            module.fail_json(
-                msg=to_native(e), exception=traceback.format_exc()
-            )
-    elif command == "rollback_snapshot":
-        try:
+        elif command == "rollback_snapshot":
             vm_manager.rollback_snapshot(vm_name, snapshot_name)
-        except Exception as e:
-            module.fail_json(
-                msg=to_native(e), exception=traceback.format_exc()
-            )
-    elif command == "list_metadata":
-        try:
+        elif command == "list_metadata":
             result["list_metadata"] = vm_manager.list_metadata(vm_name)
-        except Exception as e:
-            module.fail_json(
-                msg=to_native(e), exception=traceback.format_exc()
-            )
-    elif command == "get_metadata":
-        try:
+        elif command == "get_metadata":
             result["metadata_value"] = vm_manager.get_metadata(
                 vm_name, metadata_name
             )
-        except Exception as e:
+        else:
             module.fail_json(
-                msg=to_native(e), exception=traceback.format_exc()
+                msg="{} `command` is not implemented yet".format(command)
             )
-    else:
-        module.fail_json(
-            msg="{} `command` is not implemented yet".format(command)
-        )
+    except Exception as e:
+        module.fail_json(msg=to_native(e), exception=traceback.format_exc())
 
     module.exit_json(**result)
 
