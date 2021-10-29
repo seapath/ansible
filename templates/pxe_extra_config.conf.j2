@@ -1,0 +1,3 @@
+{% for pxe_machine in groups['pxe_machines'] %}
+dhcp-host={{ hostvars[pxe_machine].mac_address }},{{ hostvars[pxe_machine].ansible_host }}
+{% endfor %}
