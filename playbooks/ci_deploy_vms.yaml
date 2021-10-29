@@ -1,9 +1,9 @@
 # Copyright (C) 2021, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
-# Deploy 4 VMs on the CI
+# Deploy 2 VMs on the CI
 
 ---
-- name: create 4 VMs
+- name: create 2 VMs
   hosts: "{{ groups.hypervisors[0] }}"
   vars:
     - xml_template: >-
@@ -30,7 +30,7 @@
             title='guest0',
             ovs_port='br0P0',
             cpuset=3,
-            mac_address='52:54:00:ab:39:8f', ),
+            mac_address=hostvars["guest0"].mac_address,),
           errors='strict') }}
     - name: Remove temporary file
       file:
@@ -55,5 +55,5 @@
             title='guest1',
             ovs_port='br0P1',
             cpuset=5,
-            mac_address='52:54:00:66:d3:c4', ),
+            mac_address=hostvars["guest1"].mac_address, ),
           errors='strict') }}
