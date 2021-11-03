@@ -28,5 +28,6 @@ RUN dpkg-reconfigure locales
 # Asciidoctor PDF generator for generating the manual
 RUN gem install asciidoctor-pdf --pre -v 1.5.0.rc2
 ADD check_yaml.sh /usr/bin/check_yaml
+RUN python3 -m pip install docutils==0.16
 ADD documentation_requirements.txt /tmp/requirements.txt
 RUN python3 -m pip install -r /tmp/requirements.txt
