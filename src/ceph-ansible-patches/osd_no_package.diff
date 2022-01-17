@@ -1,13 +1,28 @@
 diff --git a/roles/ceph-osd/tasks/main.yml b/roles/ceph-osd/tasks/main.yml
-index 18595055..28ba5743 100644
+index 18595055..ee298a10 100644
 --- a/roles/ceph-osd/tasks/main.yml
 +++ b/roles/ceph-osd/tasks/main.yml
-@@ -23,7 +23,7 @@
-   until: result is succeeded
-   when:
-     - not containerized_deployment | bool
--    - ansible_facts['os_family'] != 'ClearLinux'
-+    - ansible_os_family != 'ClearLinux' and ansible_os_family != 'Seapath Yocto distribution'
+@@ -15,16 +15,6 @@
+ - name: include_tasks system_tuning.yml
+   include_tasks: system_tuning.yml
  
+-- name: install dependencies
+-  package:
+-    name: parted
+-    state: present
+-  register: result
+-  until: result is succeeded
+-  when:
+-    - not containerized_deployment | bool
+-    - ansible_facts['os_family'] != 'ClearLinux'
+-
  - name: install numactl when needed
    package:
+     name: numactl
+@@ -129,4 +119,4 @@
+     - not rolling_update | default(False) | bool
+     - openstack_config | bool
+     - inventory_hostname == groups[osd_group_name] | last
+-  tags: wait_all_osds_up
+\ No newline at end of file
++  tags: wait_all_osds_up
