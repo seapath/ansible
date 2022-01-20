@@ -118,6 +118,7 @@ ntp_service_enabled: false
 #  you will get whatever version of Ceph is included in your Linux distro.
 # 'local' means that the ceph binaries will be copied over from the local machine
 #ceph_origin: dummy
+ceph_origin: local
 #valid_ceph_origins:
 #  - repository
 #  - distro
@@ -532,7 +533,7 @@ ceph_conf_overrides:
         osd_pool_default_size: 2
         osd_pool_default_min_size: 1
         osd_pool_default_pg_num: 128
-        osd_pool_default_pgp_num: 256
+        osd_pool_default_pgp_num: 128
         osd_crush_chooseleaf_type: 1
         mon_osd_min_down_reporters: 1
     mon:
