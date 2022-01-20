@@ -28,6 +28,9 @@ rbd:
   name: "rbd"
   application: "rbd"
   pg_autoscale_mode: off
+#options not defaulting to ceph_conf_overrides ??
+  pg_num: 128
+  pgp_num: 128
   type: replicated
   #  target_size_ratio: 0.5
 #test2:
