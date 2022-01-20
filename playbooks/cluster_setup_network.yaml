@@ -62,7 +62,7 @@
       replace:
         path: /etc/hosts
         regexp: '^{{ cluster_ip_addr }} {{ inventory_hostname }}$'
-        replace: '{{ cluster_ip_addr }} rbd {{ inventory_hostname }}'
+        replace: '{{ cluster_ip_addr }} {{ inventory_hostname }} rbd'
       when: cluster_ip_addr is defined
 
 - name: Configure NTP
