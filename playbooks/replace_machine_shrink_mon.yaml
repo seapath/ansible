@@ -1,4 +1,5 @@
 # Copyright (C) 2022 Ansible Project
+# Copyright (C) 2022, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 # Import from ceph-ansible infrastructure-playbooks/shrink-mgr.yml:
 # https://github.com/ceph/ceph-ansible/blob/000e93f608cd6c07ffa8d0dc76092d6234682ea8/infrastructure-playbooks/shrink-mgr.yml
@@ -24,6 +25,8 @@
   become: true
 
   tasks:
+    - name: "Gather facts"
+      gather_facts:
     - debug: msg="gather facts on all Ceph hosts for following reference"
 
 - name: confirm whether user really meant to remove monitor from the ceph cluster
