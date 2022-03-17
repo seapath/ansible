@@ -7,6 +7,7 @@
   hosts: localhost
   tasks:
       - name: Cut the power supply to all machines
+        when: skip_reboot is undefined
         script: |
             ../scripts/eg_pms2_lan_driver_power.sh \
             --ip "{{ eg_ip }}" \
@@ -19,9 +20,11 @@
             - 3
             - 4
       - name: Wait one minute before power on
+        when: skip_reboot is undefined
         pause:
             minutes: 1
       - name: Restore the power supply to all machines
+        when: skip_reboot is undefined
         script: |
             ../scripts/eg_pms2_lan_driver_power.sh \
             --ip "{{ eg_ip }}" \
