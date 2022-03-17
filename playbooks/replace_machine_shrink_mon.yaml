@@ -99,6 +99,13 @@
     - name: set_fact mon_to_kill_hostname
       set_fact:
         mon_to_kill_hostname: "{{ hostvars[mon_to_kill]['ansible_facts']['hostname'] }}"
+      when: offline_host is undefined
+
+    - name: set_fact mon_to_kill_hostname offline
+      set_fact:
+        mon_to_kill_hostname: "{{ mon_to_kill }}"
+      when: offline_host is defined
+
 
     - name: stop monitor service(s)
       service:
@@ -107,12 +114,14 @@
         enabled: no
       delegate_to: "{{ mon_to_kill }}"
       failed_when: false
+      when: offline_host is undefined
 
     - name: purge monitor store
       file:
         path: /var/lib/ceph/mon/{{ cluster }}-{{ mon_to_kill_hostname }}
         state: absent
       delegate_to: "{{ mon_to_kill }}"
+      when: offline_host is undefined
 
     - name: remove monitor from the quorum
       command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} mon remove {{ mon_to_kill_hostname }}"
