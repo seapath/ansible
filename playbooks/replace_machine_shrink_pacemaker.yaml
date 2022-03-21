@@ -1,0 +1,15 @@
+# Copyright (C) 2022, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+---
+- name: Remove a host from pacemaker
+  hosts: cluster_machines
+  pre_tasks:
+    - name: exit playbook, if no machine was given
+      fail:
+        msg: "machine_to_remove must be declared"
+      when: machine_to_remove is not defined
+  tasks:
+    - name: Remove pacemaker node
+      run_once: true
+      shell:
+        cmd: "crm_node -R {{ machine_to_remove }} --force"
