@@ -1,0 +1,14 @@
+# Copyright (C) 2022, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+---
+- name: Cut the power supply to machines
+  include_tasks: tasks/stop_machine.yaml
+  with_items: "{{ ports }}"
+
+- name: Wait one minute before power on
+  pause:
+      minutes: 1
+
+- name: Restore the power supply to machines
+  include_tasks: tasks/start_machine.yaml
+  with_items: "{{ ports }}"
