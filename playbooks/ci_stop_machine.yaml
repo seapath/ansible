@@ -1,0 +1,12 @@
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+---
+- name: "Stop {{ machine_to_stop }}"
+  hosts: localhost
+  vars:
+    ip: "{{ power_control_ip | default(eg_ip) }}"
+    passwd: "{{ power_control_passwd | default(eg_passwd) }}"
+    powerdown_script: "{{ power_control_script | default('../scripts/eg_pms2_lan_driver_power.sh') }}"
+  tasks:
+    - include_tasks: tasks/stop_machine.yaml
+      with_items: "{{ hostvars[machine_to_stop]['plug_port'] }}"
