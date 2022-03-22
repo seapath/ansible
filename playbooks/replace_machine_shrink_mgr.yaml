@@ -31,11 +31,6 @@
 - name: confirm if user really meant to remove manager from the ceph cluster
   hosts: "{{ groups[mon_group_name][0] }}"
   become: true
-  vars_prompt:
-    - name: ireallymeanit
-      prompt: Are you sure you want to shrink the cluster?
-      default: 'no'
-      private: no
   pre_tasks:
     - import_role:
         name: ceph-defaults
@@ -81,14 +76,6 @@
               -e mgr_to_kill=ceph-mgr01 argument. You can only remove a single
               manager each time the playbook runs."
       when: mgr_to_kill is not defined
-
-    - name: exit playbook, if user did not mean to shrink cluster
-      fail:
-        msg: "Exiting shrink-mgr playbook, no manager was removed.
-           To shrink the cluster, either say 'yes' on the prompt or
-           or use `-e ireallymeanit=yes` on the command line when
-           invoking the playbook"
-      when: ireallymeanit != 'yes'
 
     - name: set_fact mgr_to_kill_hostname
       set_fact:
