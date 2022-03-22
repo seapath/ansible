@@ -28,10 +28,15 @@
   hosts:
       osds
   tasks:
+      - name: Check if the disk needs to be cleaned
+        shell:
+            cmd: "ceph-volume lvm list | grep -q {{ ceph_osd_disk }}"
+        register: osd_status
+        failed_when: osd_status.rc > 1
       - name: Cleanup Ceph OSD disks with ceph-volume
         shell:
             cmd: "ceph-volume lvm zap {{ ceph_osd_disk }} --destroy"
-        when: skip_disk_format is undefined
+        when: osd_status.rc == 1
 
 - import_playbook: ../ceph-ansible/site.yml
 
