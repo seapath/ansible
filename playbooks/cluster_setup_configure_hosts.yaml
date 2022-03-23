@@ -1,0 +1,13 @@
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+# This Ansible playbook configure cluster machines.
+---
+- import_playbook: cluster_setup_kernel_params.yaml
+- name: remove the static ip previously setup
+  hosts: cluster_machines
+  tasks:
+      - name: Remove file /etc/systemd/network/000-static_ip.network
+        file:
+            path: /etc/systemd/network/000-static_ip.network
+            state: absent
+- import_playbook: cluster_setup_network.yaml
