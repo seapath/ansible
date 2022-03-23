@@ -17,12 +17,20 @@
         src: ../templates/ovs_configuration.json.j2
         dest: /etc/ovs_configuration.json
         validate: setup_ovs.py -v -c -f %s
+      register: ovs_conf
     - name: Restart votp-config_ovs
       ansible.builtin.systemd:
         name: votp-config_ovs
         state: restarted
       when:
-        apply_config
+        - apply_config
+        - ovs_conf.changed
+    - name: Register reboot
+      set_fact:
+        need_reboot: true
+      when:
+        - not apply_config
+        - ovs_conf.changed
 
 - name: Configure Network
   hosts: cluster_machines
@@ -53,15 +61,15 @@
     - name: Build hosts file
       lineinfile:
         dest: /etc/hosts
-        regexp: '.*{{ item }}$'
-        line: "{{ hostvars[item].cluster_ip_addr }} {{item}}"
+        regexp: '.*{{ item }}(| rbd)$'
+        line: "{{ hostvars[item].cluster_ip_addr }} {{item}}{% if item == inventory_hostname %} rbd{% endif %}"
         state: present
       when: hostvars[item].cluster_ip_addr is defined
       loop: "{{ groups['cluster_machines'] }}"
     - name: Add rbd in hosts file
       replace:
         path: /etc/hosts
-        regexp: '^{{ cluster_ip_addr }} {{ inventory_hostname }}$'
+        regexp: '.*{{ inventory_hostname }}$'
         replace: '{{ cluster_ip_addr }} {{ inventory_hostname }} rbd'
       when: cluster_ip_addr is defined
 
@@ -130,3 +138,13 @@
             dest: >-
               /etc/systemd/system/systemd-networkd-wait-online.service.d/override.conf
       when: cluster_interface is defined
+
+- name: Restart machine if needed
+  hosts: cluster_machines
+  tasks:
+    - block:
+        - name: Restart
+          reboot:
+        - name: Wait for host to be online
+          wait_for_connection:
+      when: need_reboot is defined and need_reboot
