@@ -9,39 +9,64 @@
 - name: Configure Kernel parameters
   hosts: cluster_machines
   vars:
-      config_file: "{{ bootloader_config_file |
-        default('/boot/EFI/BOOT/grub.cfg') }}"
+    config_file: "{{ bootloader_config_file |
+      default('/boot/EFI/BOOT/grub.cfg') }}"
+  pre_tasks:
+    - name: Check if we need to add extra kernel parameters
+      command: "grep -q '{{ extra_kernel_parameters }}' /proc/cmdline"
+      register: extra_param_raw
+      failed_when: extra_param_raw.rc > 1
+      changed_when: false
+      when: extra_kernel_parameters is defined
+    - name: Register result extra kernel parameters check
+      set_fact:
+        extra_param_needed: true
+      when:
+        - extra_kernel_parameters is defined
+        - extra_param_raw.rc == 1
+    - name: Check if we need to change hugepages
+      command:
+        cmd: "grep -q hugepages={{ kernel_parameters_hugepages }} /proc/cmdline"
+      register: hugepages_param_raw
+      failed_when: hugepages_param_raw.rc > 1
+      changed_when: false
+      when: kernel_parameters_hugepages is defined
+    - name: Register result hugepages change check
+      set_fact:
+        hugepages_changes_needed: true
+      when:
+        - kernel_parameters_hugepages is defined
+        - hugepages_param_raw.rc == 1
   tasks:
-      - name: Mount /boot partition if not mounted
-        shell:
+    - block:
+        - name: Mount /boot partition if not mounted
+          shell:
             cmd: mount | grep '/boot ' || mount /dev/disk/by-label/boot /boot
             warn: false
-        when: extra_kernel_parameters is defined or
-            kernel_parameters_hugepages is defined
-      - name: "Check that {{ config_file }} exists"
-        shell:
+        - name: "Check that {{ config_file }} exists"
+          shell:
             cmd: test -f "{{ config_file }}"
-        when: extra_kernel_parameters is defined or
-            kernel_parameters_hugepages is defined
-      - name: Set extra kernel parameters
-        replace:
+          changed_when: false
+        - name: Set extra kernel parameters
+          replace:
             path: "{{ config_file }}"
-            regexp: '(extra_kernel_parameters_markers).*'
+            regexp: '(root=.*)'
             replace: '\1 {{ extra_kernel_parameters }}'
-        when: extra_kernel_parameters is defined
-      - name: Set kernel parameters hugepages
-        replace:
+          when: extra_param_needed is defined
+        - name: Set kernel parameters hugepages
+          replace:
             path: "{{ config_file }}"
             regexp: 'hugepages=\d'
             replace: 'hugepages={{ kernel_parameters_hugepages }}'
-        when: kernel_parameters_hugepages is defined
-      - name: Restart
-        reboot:
-        when: (extra_kernel_parameters is defined or
-            kernel_parameters_hugepages is defined) and
-            kernel_parameters_restart is defined and kernel_parameters_restart
-      - name: Wait for host to be online
-        wait_for_connection:
-        when: (extra_kernel_parameters is defined or
-            kernel_parameters_hugepages is defined) and
-            kernel_parameters_restart is defined and kernel_parameters_restart
+          when: hugepages_changes_needed is defined
+        - name: Restart
+          reboot:
+          when:
+            - kernel_parameters_restart is defined
+            - kernel_parameters_restart
+        - name: Wait for host to be online
+          wait_for_connection:
+          when:
+            - kernel_parameters_restart is defined
+            - kernel_parameters_restart
+      when: hugepages_changes_needed is defined or extra_param_needed is defined
