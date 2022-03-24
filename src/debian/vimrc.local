@@ -1,0 +1,2 @@
+set mouse=
+set ttymouse=

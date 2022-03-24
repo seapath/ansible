@@ -66,12 +66,6 @@
         state: present
       when: hostvars[item].cluster_ip_addr is defined
       loop: "{{ groups['cluster_machines'] }}"
-    - name: Add rbd in hosts file
-      replace:
-        path: /etc/hosts
-        regexp: '.*{{ inventory_hostname }}$'
-        replace: '{{ cluster_ip_addr }} {{ inventory_hostname }} rbd'
-      when: cluster_ip_addr is defined
 
 - name: Configure NTP
   hosts: cluster_machines

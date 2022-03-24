@@ -117,8 +117,7 @@ ntp_service_enabled: false
 # - 'distro' means that no separate repo file will be added
 #  you will get whatever version of Ceph is included in your Linux distro.
 # 'local' means that the ceph binaries will be copied over from the local machine
-#ceph_origin: dummy
-ceph_origin: local
+ceph_origin: distro
 #valid_ceph_origins:
 #  - repository
 #  - distro
@@ -555,7 +554,6 @@ ceph_conf_overrides:
 # Set this to a byte value (e.g. 134217728)
 # A value of 0 will leave the package default.
 #ceph_tcmalloc_max_total_thread_cache: 0
-
 
 ##########
 # DOCKER #

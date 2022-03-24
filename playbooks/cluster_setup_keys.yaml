@@ -22,7 +22,7 @@
       authorized_key:
         user: root
         state: present
-        path: /home/root/.ssh/authorized_keys
+        path: /root/.ssh/authorized_keys
         #path: /etc/ssh/root/authorized_keys
         key: "{{ lookup('file','buffer/{{item}}-id_rsa.pub')}}"
       with_items: "{{groups['hypervisors']}}"

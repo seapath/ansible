@@ -1,0 +1,1063 @@
+#!/bin/sh
+#
+# Support:	  users@clusterlabs.org
+# License:	  GNU General Public License (GPL)
+#
+#   Resource Agent for domains managed by the libvirt API.
+#   Requires a running libvirt daemon (libvirtd).
+#
+#   (c) 2008-2010 Florian Haas, Dejan Muhamedagic,
+#				 and Linux-HA contributors
+#
+#		usage: $0 {start|stop|status|monitor|migrate_to|migrate_from|meta-data|validate-all}
+#
+#######################################################################
+# Initialization:
+: ${OCF_FUNCTIONS_DIR=${OCF_ROOT}/lib/heartbeat}
+. ${OCF_FUNCTIONS_DIR}/ocf-shellfuncs
+
+# Defaults
+OCF_RESKEY_config_default=""
+OCF_RESKEY_migration_transport_default=""
+OCF_RESKEY_migration_downtime_default=0
+OCF_RESKEY_migration_speed_default=0
+OCF_RESKEY_migration_network_suffix_default=""
+OCF_RESKEY_force_stop_default=0
+OCF_RESKEY_monitor_scripts_default=""
+OCF_RESKEY_autoset_utilization_cpu_default="true"
+OCF_RESKEY_autoset_utilization_hv_memory_default="true"
+OCF_RESKEY_migrateport_default=$(( 49152 + $(ocf_maybe_random) % 64 ))
+OCF_RESKEY_CRM_meta_timeout_default=90000
+OCF_RESKEY_save_config_on_stop_default=false
+OCF_RESKEY_sync_config_on_stop_default=false
+OCF_RESKEY_snapshot_default=""
+OCF_RESKEY_backingfile_default=""
+OCF_RESKEY_stateless_default="false"
+OCF_RESKEY_copyindirs_default=""
+OCF_RESKEY_shutdown_mode_default=""
+OCF_RESKEY_seapath_default="false"
+
+: ${OCF_RESKEY_config=${OCF_RESKEY_config_default}}
+: ${OCF_RESKEY_migration_transport=${OCF_RESKEY_migration_transport_default}}
+: ${OCF_RESKEY_migration_downtime=${OCF_RESKEY_migration_downtime_default}}
+: ${OCF_RESKEY_migration_speed=${OCF_RESKEY_migration_speed_default}}
+: ${OCF_RESKEY_migration_network_suffix=${OCF_RESKEY_migration_network_suffix_default}}
+: ${OCF_RESKEY_force_stop=${OCF_RESKEY_force_stop_default}}
+: ${OCF_RESKEY_monitor_scripts=${OCF_RESKEY_monitor_scripts_default}}
+: ${OCF_RESKEY_autoset_utilization_cpu=${OCF_RESKEY_autoset_utilization_cpu_default}}
+: ${OCF_RESKEY_autoset_utilization_hv_memory=${OCF_RESKEY_autoset_utilization_hv_memory_default}}
+: ${OCF_RESKEY_migrateport=${OCF_RESKEY_migrateport_default}}
+: ${OCF_RESKEY_CRM_meta_timeout=${OCF_RESKEY_CRM_meta_timeout_default}}
+: ${OCF_RESKEY_save_config_on_stop=${OCF_RESKEY_save_config_on_stop_default}}
+: ${OCF_RESKEY_sync_config_on_stop=${OCF_RESKEY_sync_config_on_stop_default}}
+: ${OCF_RESKEY_snapshot=${OCF_RESKEY_snapshot_default}}
+: ${OCF_RESKEY_backingfile=${OCF_RESKEY_backingfile_default}}
+: ${OCF_RESKEY_stateless=${OCF_RESKEY_stateless_default}}
+: ${OCF_RESKEY_copyindirs=${OCF_RESKEY_copyindirs_default}}
+: ${OCF_RESKEY_shutdown_mode=${OCF_RESKEY_shutdown_mode_default}}
+: ${OCF_RESKEY_seapath=${OCF_RESKEY_seapath_default}}
+
+if ocf_is_true ${OCF_RESKEY_sync_config_on_stop}; then
+	OCF_RESKEY_save_config_on_stop="true"
+fi
+#######################################################################
+
+## I'd very much suggest to make this RA use bash,
+## and then use magic $SECONDS.
+## But for now:
+NOW=$(date +%s)
+
+usage() {
+  echo "usage: $0 {start|stop|status|monitor|migrate_to|migrate_from|meta-data|validate-all}"
+}
+
+VirtualDomain_meta_data() {
+		cat <<EOF
+<?xml version="1.0"?>
+<!DOCTYPE resource-agent SYSTEM "ra-api-1.dtd">
+<resource-agent name="VirtualDomain">
+<version>1.1</version>
+
+<longdesc lang="en">
+Resource agent for a virtual domain (a.k.a. domU, virtual machine,
+virtual environment etc., depending on context) managed by libvirtd.
+</longdesc>
+<shortdesc lang="en">Manages virtual domains through the libvirt virtualization framework</shortdesc>
+
+<parameters>
+
+<parameter name="config" unique="1" required="1">
+<longdesc lang="en">
+Absolute path to the libvirt configuration file,
+for this virtual domain.
+</longdesc>
+<shortdesc lang="en">Virtual domain configuration file</shortdesc>
+<content type="string" default="${OCF_RESKEY_config_default}" />
+</parameter>
+
+<parameter name="hypervisor" unique="0" required="0">
+<longdesc lang="en">
+Hypervisor URI to connect to. See the libvirt documentation for
+details on supported URI formats. The default is system dependent.
+Determine the system's default uri by running 'virsh --quiet uri'.
+</longdesc>
+<shortdesc lang="en">Hypervisor URI</shortdesc>
+<content type="string"/>
+</parameter>
+
+<parameter name="force_stop" unique="0" required="0">
+<longdesc lang="en">
+Always forcefully shut down ("destroy") the domain on stop. The default
+behavior is to resort to a forceful shutdown only after a graceful
+shutdown attempt has failed. You should only set this to true if
+your virtual domain (or your virtualization backend) does not support
+graceful shutdown.
+</longdesc>
+<shortdesc lang="en">Always force shutdown on stop</shortdesc>
+<content type="boolean" default="${OCF_RESKEY_force_stop_default}" />
+</parameter>
+
+<parameter name="migration_transport" unique="0" required="0">
+<longdesc lang="en">
+Transport used to connect to the remote hypervisor while
+migrating. Please refer to the libvirt documentation for details on
+transports available. If this parameter is omitted, the resource will
+use libvirt's default transport to connect to the remote hypervisor.
+</longdesc>
+<shortdesc lang="en">Remote hypervisor transport</shortdesc>
+<content type="string" default="${OCF_RESKEY_migration_transport_default}" />
+</parameter>
+
+<parameter name="migration_user" unique="0" required="0">
+<longdesc lang="en">
+The username will be used in the remote libvirt remoteuri/migrateuri. No user will be
+given (which means root) in the username if omitted
+
+If remoteuri is set, migration_user will be ignored.
+</longdesc>
+<shortdesc lang="en">Remote username for the remoteuri</shortdesc>
+<content type="string" />
+</parameter>
+
+<parameter name="migration_downtime" unique="0" required="0">
+<longdesc lang="en">
+Define max downtime during live migration in milliseconds
+</longdesc>
+<shortdesc lang="en">Live migration downtime</shortdesc>
+<content type="integer" default="${OCF_RESKEY_migration_downtime_default}" />
+</parameter>
+
+<parameter name="migration_speed" unique="0" required="0">
+<longdesc lang="en">
+Define live migration speed per resource in MiB/s
+</longdesc>
+<shortdesc lang="en">Live migration speed</shortdesc>
+<content type="integer" default="${OCF_RESKEY_migration_speed_default}" />
+</parameter>
+
+<parameter name="migration_network_suffix" unique="0" required="0">
+<longdesc lang="en">
+Use a dedicated migration network. The migration URI is composed by
+adding this parameters value to the end of the node name. If the node
+name happens to be an FQDN (as opposed to an unqualified host name),
+insert the suffix immediately prior to the first period (.) in the FQDN.
+At the moment Qemu/KVM and Xen migration via a dedicated network is supported.
+
+Note: Be sure this composed host name is locally resolvable and the
+associated IP is reachable through the favored network. This suffix will
+be added to the remoteuri and migrateuri parameters.
+
+See also the migrate_options parameter below.
+</longdesc>
+<shortdesc lang="en">Migration network host name suffix</shortdesc>
+<content type="string" default="${OCF_RESKEY_migration_network_suffix_default}" />
+</parameter>
+
+<parameter name="migrateuri" unique="0" required="0">
+<longdesc lang="en">
+You can also specify here if the calculated migrate URI is unsuitable for your
+environment.
+
+If migrateuri is set then migration_network_suffix, migrateport and
+--migrateuri in migrate_options are effectively ignored. Use "%n" as the
+placeholder for the target node name.
+
+Please refer to the libvirt documentation for details on guest
+migration.
+</longdesc>
+<shortdesc lang="en">Custom migrateuri for migration state transfer</shortdesc>
+<content type="string" />
+</parameter>
+
+<parameter name="migrate_options" unique="0" required="0">
+<longdesc lang="en">
+Extra virsh options for the guest live migration. You can also specify
+here --migrateuri if the calculated migrate URI is unsuitable for your
+environment. If --migrateuri is set then migration_network_suffix
+and migrateport are effectively ignored. Use "%n" as the placeholder
+for the target node name.
+
+Please refer to the libvirt documentation for details on guest
+migration.
+</longdesc>
+<shortdesc lang="en">live migrate options</shortdesc>
+<content type="string" />
+</parameter>
+
+<parameter name="monitor_scripts" unique="0" required="0">
+<longdesc lang="en">
+To additionally monitor services within the virtual domain, add this
+parameter with a list of scripts to monitor.
+
+Note: when monitor scripts are used, the start and migrate_from operations
+will complete only when all monitor scripts have completed successfully.
+Be sure to set the timeout of these operations to accommodate this delay.
+</longdesc>
+<shortdesc lang="en">space-separated list of monitor scripts</shortdesc>
+<content type="string" default="${OCF_RESKEY_monitor_scripts_default}" />
+</parameter>
+
+<parameter name="autoset_utilization_cpu" unique="0" required="0">
+<longdesc lang="en">
+If set true, the agent will detect the number of domainU's vCPUs from virsh, and put it
+into the CPU utilization of the resource when the monitor is executed.
+</longdesc>
+<shortdesc lang="en">Enable auto-setting the CPU utilization of the resource</shortdesc>
+<content type="boolean" default="${OCF_RESKEY_autoset_utilization_cpu_default}" />
+</parameter>
+
+<parameter name="autoset_utilization_hv_memory" unique="0" required="0">
+<longdesc lang="en">
+If set true, the agent will detect the number of *Max memory* from virsh, and put it
+into the hv_memory utilization of the resource when the monitor is executed.
+</longdesc>
+<shortdesc lang="en">Enable auto-setting the hv_memory utilization of the resource</shortdesc>
+<content type="boolean" default="${OCF_RESKEY_autoset_utilization_hv_memory_default}" />
+</parameter>
+
+<parameter name="migrateport" unique="0" required="0">
+<longdesc lang="en">
+This port will be used in the qemu migrateuri. If unset, the port will be a random highport.
+</longdesc>
+<shortdesc lang="en">Port for migrateuri</shortdesc>
+<content type="integer" />
+</parameter>
+
+<parameter name="remoteuri" unique="0" required="0">
+<longdesc lang="en">
+Use this URI as virsh connection URI to commuicate with a remote hypervisor.
+
+If remoteuri is set then migration_user and migration_network_suffix are
+effectively ignored. Use "%n" as the placeholder for the target node name.
+
+Please refer to the libvirt documentation for details on guest
+migration.
+</longdesc>
+<shortdesc lang="en">Custom remoteuri to communicate with a remote hypervisor</shortdesc>
+<content type="string" />
+</parameter>
+
+<parameter name="save_config_on_stop" unique="0" required="0">
+<longdesc lang="en">
+Changes to a running VM's config are normally lost on stop. 
+This parameter instructs the RA to save the configuration back to the xml file provided in the "config" parameter.
+</longdesc>
+<shortdesc lang="en">Save running VM's config back to its config file</shortdesc>
+<content type="boolean" />
+</parameter>
+
+<parameter name="sync_config_on_stop" unique="0" required="0">
+<longdesc lang="en">
+Setting this automatically enables save_config_on_stop.
+When enabled this parameter instructs the RA to
+call csync2 -x to synchronize the file to all nodes.
+csync2 must be properly set up for this to work.
+</longdesc>
+<shortdesc lang="en">Save running VM's config back to its config file</shortdesc>
+<content type="boolean" />
+</parameter>
+
+<parameter name="snapshot">
+<longdesc lang="en">
+Path to the snapshot directory where the virtual machine image will be stored.  When this
+parameter is set, the virtual machine's RAM state will be saved to a file in the snapshot
+directory when stopped.  If on start a state file is present for the domain, the domain
+will be restored to the same state it was in right before it stopped last.  This option
+is incompatible with the 'force_stop' option.
+</longdesc>
+<shortdesc lang="en">
+Restore state on start/stop
+</shortdesc>
+<content type="string" default="${OCF_RESKEY_snapshot_default}"/>
+</parameter>
+
+<parameter name="backingfile" unique="0" required="0">
+<longdesc lang="en">
+When the VM is used in Copy-On-Write mode, this is the backing file to use (with its full path).
+The VMs image will be created based on this backing file.
+This backing file will never be changed during the life of the VM.
+</longdesc>
+<shortdesc lang="en">If the VM is wanted to work with Copy-On-Write mode, this is the backing file to use (with its full path)</shortdesc>
+<content type="string" default="${OCF_RESKEY_backingfile_default}" />
+</parameter>
+
+<parameter name="stateless" unique="0" required="0">
+<longdesc lang="en">
+If set to true and backingfile is defined, the start of the VM will systematically create a new qcow2 based on
+the backing file, therefore the VM will always be stateless.  If set to false, the start of the VM will use the
+COW (&lt;vmname&gt;.qcow2) file if it exists, otherwise the first start will create a new qcow2 based on the backing
+file given as backingfile.
+</longdesc>
+<shortdesc lang="en">If set to true, the (&lt;vmname&gt;.qcow2) file will be re-created at each start, based on the backing file (if defined)</shortdesc>
+<content type="boolean" default="${OCF_RESKEY_stateless_default}" />
+</parameter>
+
+<parameter name="copyindirs" unique="0" required="0">
+<longdesc lang="en">
+List of directories for the virt-copy-in before booting the VM. Used only in stateless mode.
+</longdesc>
+<shortdesc lang="en">List of directories for the virt-copy-in before booting the VM stateless mode.</shortdesc>
+<content type="string" default="${OCF_RESKEY_copyindirs_default}" />
+</parameter>
+
+<parameter name="shutdown_mode">
+<longdesc lang="en">
+virsh shutdown method to use. Please verify that it is supported by your virsh toolsed with 'virsh help shutdown'
+When this parameter is set --mode shutdown_mode is passed as an additional argument to the 'virsh shutdown' command.
+One can use this option in case default acpi method does not work. Verify that this mode is supported
+by your VM.  By default --mode is not passed.
+</longdesc>
+<shortdesc lang="en">
+Instruct virsh to use specific shutdown mode
+</shortdesc>
+<content type="string" default="${OCF_RESKEY_shutdown_mode_default}"/>
+</parameter>
+<parameter name="seapath" unique="0" required="0">
+<longdesc lang="en">
+Work on Seapath cluster.
+</longdesc>
+<shortdesc lang="en">Enable seapath cluster support</shortdesc>
+<content type="boolean" default="${OCF_RESKEY_seapath_default}"/>
+</parameter>
+
+</parameters>
+
+<actions>
+<action name="start" timeout="90s" />
+<action name="stop" timeout="90s" />
+<action name="status" depth="0" timeout="30s" interval="10s" />
+<action name="monitor" depth="0" timeout="30s" interval="10s" />
+<action name="migrate_from" timeout="60s" />
+<action name="migrate_to" timeout="120s" />
+<action name="meta-data" timeout="5s" />
+<action name="validate-all" timeout="5s" />
+</actions>
+</resource-agent>
+EOF
+}
+
+set_util_attr() {
+	local attr=$1 val=$2
+	local cval outp
+
+	cval=$(crm_resource -Q -r $OCF_RESOURCE_INSTANCE -z -g $attr 2>/dev/null)
+	if [ $? -ne 0 ] && [ -z "$cval" ]; then
+		crm_resource -Q -r $OCF_RESOURCE_INSTANCE -z -g $attr 2>&1 | grep -e "not connected" > /dev/null 2>&1
+		if [ $? -eq 0 ]; then
+			ocf_log debug "Unable to set utilization attribute, cib is not available"
+			return
+		fi
+	fi
+
+	if [ "$cval" != "$val" ]; then
+		outp=$(crm_resource -r $OCF_RESOURCE_INSTANCE -z -p $attr -v $val 2>&1) ||
+		ocf_log warn "crm_resource failed to set utilization attribute $attr: $outp"
+	fi
+}
+
+update_utilization() {
+	local dom_cpu dom_mem
+
+	if ocf_is_true "$OCF_RESKEY_autoset_utilization_cpu"; then
+	   dom_cpu=$(LANG=C virsh $VIRSH_OPTIONS dominfo ${DOMAIN_NAME} 2>/dev/null | awk '/CPU\(s\)/{print $2}')
+	   test -n "$dom_cpu" && set_util_attr cpu $dom_cpu
+	fi
+	if ocf_is_true "$OCF_RESKEY_autoset_utilization_hv_memory"; then
+	   dom_mem=$(LANG=C virsh $VIRSH_OPTIONS dominfo ${DOMAIN_NAME} 2>/dev/null | awk '/Max memory/{printf("%d", $3/1024)}')
+	   test -n "$dom_mem" && set_util_attr hv_memory "$dom_mem"
+	fi
+}
+
+get_emulator()
+{
+	local emulator=""
+
+	emulator=$(virsh $VIRSH_OPTIONS dumpxml $DOMAIN_NAME 2>/dev/null | sed -n -e 's/^.*<emulator>\(.*\)<\/emulator>.*$/\1/p')
+	if [ -z "$emulator" ] && [ -e "$EMULATOR_STATE" ]; then
+		emulator=$(cat $EMULATOR_STATE)
+	fi
+	if [ -z "$emulator" ]; then
+		emulator=$(cat ${OCF_RESKEY_config} | sed -n -e 's/^.*<emulator>\(.*\)<\/emulator>.*$/\1/p')
+	fi
+
+	if [ -n "$emulator" ]; then
+		basename $emulator
+	fi
+}
+
+update_emulator_cache()
+{
+	local emulator
+
+	emulator=$(get_emulator)
+	if [ -n "$emulator" ]; then
+		echo $emulator > $EMULATOR_STATE
+	fi
+}
+
+# attempt to check domain status outside of libvirt using the emulator process
+pid_status()
+{
+	local rc=$OCF_ERR_GENERIC
+	local emulator=$(get_emulator)
+	# An emulator is not required, so only report message in debug mode
+	local loglevel="debug"
+
+	if ocf_is_probe; then
+		loglevel="notice"
+	fi
+
+	case "$emulator" in
+		qemu-kvm|qemu-dm|qemu-system-*)
+			rc=$OCF_NOT_RUNNING
+			ps awx | grep -E "[q]emu-(kvm|dm|system).*-name $DOMAIN_NAME " > /dev/null 2>&1
+			if [ $? -eq 0 ]; then
+				rc=$OCF_SUCCESS
+			fi
+			;;
+		libvirt_lxc)
+			rc=$OCF_NOT_RUNNING
+			ps awx | grep -E "[l]ibvirt_lxc.*-name $DOMAIN_NAME " > /dev/null 2>&1
+			if [ $? -eq 0 ]; then
+				rc=$OCF_SUCCESS
+			fi
+			;;
+		# This can be expanded to check for additional emulators
+		*)
+			# We may be running xen with PV domains, they don't
+			# have an emulator set. try xl list or xen-lists
+			if have_binary xl; then
+				rc=$OCF_NOT_RUNNING
+				xl list $DOMAIN_NAME >/dev/null 2>&1
+				if [ $? -eq 0 ]; then
+					rc=$OCF_SUCCESS
+				fi
+			elif have_binary xen-list; then
+				rc=$OCF_NOT_RUNNING
+				xen-list $DOMAIN_NAME 2>/dev/null | grep -qs "State.*[-r][-b][-p]--" 2>/dev/null
+				if [ $? -eq 0 ]; then
+					rc=$OCF_SUCCESS
+				fi
+			else 
+				ocf_log $loglevel "Unable to determine emulator for $DOMAIN_NAME"
+			fi
+			;;
+	esac
+
+	if [ $rc -eq $OCF_SUCCESS ]; then
+		ocf_log debug "Virtual domain $DOMAIN_NAME is currently running."
+	elif [ $rc -eq $OCF_NOT_RUNNING ]; then
+		ocf_log debug "Virtual domain $DOMAIN_NAME is currently not running."
+	fi
+
+	return $rc
+}
+
+VirtualDomain_status() {
+	local try=0
+	rc=$OCF_ERR_GENERIC
+	status="no state"
+	while [ "$status" = "no state" ]; do
+		try=$(($try + 1 ))
+		status=$(LANG=C virsh $VIRSH_OPTIONS domstate $DOMAIN_NAME 2>&1 | tr 'A-Z' 'a-z')
+		case "$status" in
+			*"error:"*"domain not found"|*"error:"*"failed to get domain"*|"shut off")
+				# shut off: domain is defined, but not started, will not happen if
+				#   domain is created but not defined
+				# "Domain not found" or "failed to get domain": domain is not defined
+				#   and thus not started
+				ocf_log debug "Virtual domain $DOMAIN_NAME is not running: $(echo $status | sed s/error://g)"
+				rc=$OCF_NOT_RUNNING
+				;;
+			running|paused|idle|blocked|"in shutdown")
+				# running: domain is currently actively consuming cycles
+				# paused: domain is paused (suspended)
+				# idle: domain is running but idle
+				# blocked: synonym for idle used by legacy Xen versions
+				# in shutdown: the domain is in process of shutting down, but has not completely shutdown or crashed.
+				ocf_log debug "Virtual domain $DOMAIN_NAME is currently $status."
+				rc=$OCF_SUCCESS
+				;;
+			""|*"failed to "*"connect to the hypervisor"*|"no state")
+				# Empty string may be returned when virsh does not
+				# receive a reply from libvirtd.
+				# "no state" may occur when the domain is currently
+				# being migrated (on the migration target only), or
+				# whenever virsh can't reliably obtain the domain
+				# state.
+				status="no state"
+				if [ "$__OCF_ACTION" = "stop" ] && [ $try -ge 3 ]; then
+					# During the stop operation, we want to bail out
+					# quickly, so as to be able to force-stop (destroy)
+					# the domain if necessary.
+					ocf_log error "Virtual domain $DOMAIN_NAME has no state during stop operation, bailing out."
+					return $OCF_ERR_GENERIC;
+				elif [ "$__OCF_ACTION" = "monitor" ]; then
+					pid_status
+					rc=$?
+					if [ $rc -ne $OCF_ERR_GENERIC ]; then
+						# we've successfully determined the domains status outside of libvirt
+						return $rc
+					fi
+
+				else
+					# During all other actions, we just wait and try
+					# again, relying on the CRM/LRM to time us out if
+					# this takes too long.
+					ocf_log info "Virtual domain $DOMAIN_NAME currently has no state, retrying."
+				fi
+				sleep 1
+				;;
+			*)
+				# any other output is unexpected.
+				ocf_log error "Virtual domain $DOMAIN_NAME has unknown status \"$status\"!"
+				sleep 1
+				;;
+		esac
+	done
+	return $rc
+}
+
+# virsh undefine removes configuration files if they are in
+# directories which are managed by libvirt. such directories
+# include also subdirectories of /etc (for instance
+# /etc/libvirt/*) which may be surprising. VirtualDomain didn't
+# include the undefine call before, hence this wasn't an issue
+# before.
+#
+# There seems to be no way to find out which directories are
+# managed by libvirt.
+#
+verify_undefined() {
+	local tmpf
+	if virsh --connect=${OCF_RESKEY_hypervisor} list --all --name 2>/dev/null | grep -wqs "$DOMAIN_NAME"
+	then
+		tmpf=$(mktemp -t vmcfgsave.XXXXXX)
+		if [ ! -r "$tmpf" ]; then
+			ocf_log warn "unable to create temp file, disk full?"
+			# we must undefine the domain
+			virsh $VIRSH_OPTIONS undefine --nvram $DOMAIN_NAME > /dev/null 2>&1
+		else
+			cp -p $OCF_RESKEY_config $tmpf
+			virsh $VIRSH_OPTIONS undefine --nvram $DOMAIN_NAME > /dev/null 2>&1
+			[ -f $OCF_RESKEY_config ] || cp -f $tmpf $OCF_RESKEY_config
+			rm -f $tmpf
+		fi
+	fi
+}
+
+restore_config() {
+	if ocf_is_true $OCF_RESKEY_seapath  ; then
+		local disk_name=system_$DOMAIN_NAME
+		if rbd info $disk_name > /dev/null 2>&1 ; then
+			rbd image-meta get $disk_name xml > $OCF_RESKEY_config
+		fi
+	fi
+}
+
+VirtualDomain_start() {
+	local snapshotimage
+
+	if VirtualDomain_status; then
+		ocf_log info "Virtual domain $DOMAIN_NAME already running."
+		return $OCF_SUCCESS
+	fi
+
+	# systemd drop-in to stop domain before libvirtd terminates services
+	# during shutdown/reboot
+	if systemd_is_running ; then
+		systemd_drop_in "99-VirtualDomain-libvirt" "After" "libvirtd.service"
+		systemd_drop_in "99-VirtualDomain-machines" "Wants" "virt-guest-shutdown.target"
+		systemctl start virt-guest-shutdown.target
+	fi
+
+	snapshotimage="$OCF_RESKEY_snapshot/${DOMAIN_NAME}.state"
+	if [ -n "$OCF_RESKEY_snapshot" -a -f "$snapshotimage" ]; then
+		virsh restore $snapshotimage
+		if [ $? -eq 0 ]; then
+			rm -f $snapshotimage
+			return $OCF_SUCCESS
+		fi
+		ocf_exit_reason "Failed to restore ${DOMAIN_NAME} from state file in ${OCF_RESKEY_snapshot} directory."
+		return $OCF_ERR_GENERIC
+	fi
+
+	restore_config
+	# Make sure domain is undefined before creating.
+	# The 'create' command guarantees that the domain will be
+	# undefined on shutdown, but requires the domain to be undefined.
+	# if a user defines the domain
+	# outside of this agent, we have to ensure that the domain
+	# is restored to an 'undefined' state before creating.
+	verify_undefined
+
+	if [ -z "${OCF_RESKEY_backingfile}" ]; then
+		virsh $VIRSH_OPTIONS create ${OCF_RESKEY_config}
+		if [ $? -ne 0 ]; then
+			ocf_exit_reason "Failed to start virtual domain ${DOMAIN_NAME}."
+			return $OCF_ERR_GENERIC
+		fi
+	else
+		if ocf_is_true "${OCF_RESKEY_stateless}" || [ ! -s "${OCF_RESKEY_config%%.*}.qcow2" ]; then
+			# Create the Stateless image
+			dirconfig=`dirname ${OCF_RESKEY_config}`
+			qemu-img create -f qcow2 -b ${OCF_RESKEY_backingfile} ${OCF_RESKEY_config%%.*}.qcow2
+			if [ $? -ne 0 ]; then
+				ocf_exit_reason "Failed qemu-img create ${DOMAIN_NAME} with backing file ${OCF_RESKEY_backingfile}."
+				return $OCF_ERR_GENERIC
+			fi
+
+			virsh define ${OCF_RESKEY_config}
+			if [ $? -ne 0 ]; then
+				ocf_exit_reason "Failed to define virtual domain ${DOMAIN_NAME}."
+				return $OCF_ERR_GENERIC
+			fi
+
+			if [ -n "${OCF_RESKEY_copyindirs}" ]; then
+				# Inject copyindirs directories and files
+				virt-copy-in -d ${DOMAIN_NAME}  ${OCF_RESKEY_copyindirs}  /
+				if [ $? -ne 0 ]; then
+					ocf_exit_reason "Failed on virt-copy-in command ${DOMAIN_NAME}."
+					return $OCF_ERR_GENERIC
+				fi
+			fi
+		else
+			virsh define ${OCF_RESKEY_config}
+			if [ $? -ne 0 ]; then
+				ocf_exit_reason "Failed to define virtual domain ${DOMAIN_NAME}."
+				return $OCF_ERR_GENERIC
+			fi
+		fi
+
+		virsh $VIRSH_OPTIONS start ${DOMAIN_NAME}
+		if [ $? -ne 0 ]; then
+			ocf_exit_reason "Failed to start virtual domain ${DOMAIN_NAME}."
+			return $OCF_ERR_GENERIC
+		fi
+	fi
+
+	while ! VirtualDomain_monitor; do
+		sleep 1
+	done
+
+	return $OCF_SUCCESS
+}
+
+force_stop()
+{
+	local out ex translate
+	local status=0
+
+	ocf_log info "Issuing forced shutdown (destroy) request for domain ${DOMAIN_NAME}."
+	out=$(LANG=C virsh $VIRSH_OPTIONS destroy ${DOMAIN_NAME} 2>&1)
+	ex=$?
+	translate=$(echo $out|tr 'A-Z' 'a-z')
+	echo >&2 "$translate"
+	case $ex$translate in
+		*"error:"*"domain is not running"*|*"error:"*"domain not found"*|\
+		*"error:"*"failed to get domain"*)
+			: ;; # unexpected path to the intended outcome, all is well
+		[!0]*)
+			ocf_exit_reason "forced stop failed"
+			return $OCF_ERR_GENERIC ;;
+		0*)
+			while [ $status != $OCF_NOT_RUNNING ]; do
+				VirtualDomain_status
+				status=$?
+			done ;;
+	esac
+	return $OCF_SUCCESS
+}
+
+sync_config(){
+	ocf_log info "Syncing $DOMAIN_NAME config file with csync2 -x ${OCF_RESKEY_config}"
+	if ! csync2 -x ${OCF_RESKEY_config}; then
+		ocf_log warn "Syncing ${OCF_RESKEY_config} failed.";
+	fi
+}
+
+save_config(){
+	CFGTMP=$(mktemp -t vmcfgsave.XXX)
+	virsh $VIRSH_OPTIONS dumpxml --inactive --security-info ${DOMAIN_NAME} > ${CFGTMP}
+	if [ -s ${CFGTMP} ]; then
+		if ! cmp -s ${CFGTMP} ${OCF_RESKEY_config}; then
+			if virt-xml-validate ${CFGTMP} domain 2>/dev/null ;	then
+				ocf_log info "Saving domain $DOMAIN_NAME to ${OCF_RESKEY_config}. Please make sure it's present on all nodes or sync_config_on_stop is on."
+				if cat ${CFGTMP} > ${OCF_RESKEY_config} ; then
+					ocf_log info "Saved $DOMAIN_NAME domain's configuration to ${OCF_RESKEY_config}."
+					if ocf_is_true "$OCF_RESKEY_sync_config_on_stop"; then
+						sync_config
+					fi
+				else
+					ocf_log warn "Moving ${CFGTMP} to ${OCF_RESKEY_config} failed."
+				fi
+			else
+				ocf_log warn "Domain $DOMAIN_NAME config failed to validate after dump. Skipping config update."
+			fi
+		fi
+	else
+		ocf_log warn "Domain $DOMAIN_NAME config has 0 size. Skipping config update."
+	fi
+	rm -f ${CFGTMP}
+}
+
+VirtualDomain_stop() {
+	local i
+	local status
+	local shutdown_timeout
+	local needshutdown=1
+
+	VirtualDomain_status
+	status=$?
+
+	case $status in
+		$OCF_SUCCESS)
+			if ocf_is_true $OCF_RESKEY_force_stop; then
+				# if force stop, don't bother attempting graceful shutdown.
+				force_stop
+				return $?
+			fi
+
+			ocf_log info "Issuing graceful shutdown request for domain ${DOMAIN_NAME}."
+
+			if [ -n "$OCF_RESKEY_snapshot" ]; then
+				virsh save $DOMAIN_NAME "$OCF_RESKEY_snapshot/${DOMAIN_NAME}.state"
+				if [ $? -eq 0 ]; then
+					needshutdown=0
+				else
+					ocf_log error "Failed to save snapshot state of ${DOMAIN_NAME} on stop"
+				fi
+			fi
+
+			# save config if needed
+			if ocf_is_true "$OCF_RESKEY_save_config_on_stop"; then
+				save_config
+			fi
+
+			# issue the shutdown if save state didn't shutdown for us
+			if [ $needshutdown -eq 1 ]; then
+				# Issue a graceful shutdown request
+				if [ -n "${OCF_RESKEY_CRM_shutdown_mode}" ]; then
+					shutdown_opts="--mode ${OCF_RESKEY_CRM_shutdown_mode}"
+				fi
+				virsh $VIRSH_OPTIONS shutdown ${DOMAIN_NAME} $shutdown_opts
+			fi
+
+			# The "shutdown_timeout" we use here is the operation
+			# timeout specified in the CIB, minus 5 seconds
+			shutdown_timeout=$(( $NOW + ($OCF_RESKEY_CRM_meta_timeout/1000) -5 ))
+			# Loop on status until we reach $shutdown_timeout
+			while [ $NOW -lt $shutdown_timeout ]; do
+				VirtualDomain_status
+				status=$?
+				case $status in
+					$OCF_NOT_RUNNING)
+						# This was a graceful shutdown.
+						return $OCF_SUCCESS
+						;;
+					$OCF_SUCCESS)
+						# Domain is still running, keep
+						# waiting (until shutdown_timeout
+						# expires)
+						sleep 1
+						;;
+					*)
+						# Something went wrong. Bail out and
+						# resort to forced stop (destroy).
+						break;
+				esac
+				NOW=$(date +%s)
+			done
+			;;
+		$OCF_NOT_RUNNING)
+			ocf_log info "Domain $DOMAIN_NAME already stopped."
+			return $OCF_SUCCESS
+	esac
+
+	# OK. Now if the above graceful shutdown hasn't worked, kill
+	# off the domain with destroy. If that too does not work,
+	# have the LRM time us out.
+	force_stop
+}
+
+mk_migrateuri() {
+	local target_node
+	local migrate_target
+	local hypervisor
+
+	target_node="$OCF_RESKEY_CRM_meta_migrate_target"
+
+	# A typical migration URI via a special  migration network looks
+	# like "tcp://bar-mig:49152". The port would be randomly chosen
+	# by libvirt from the range 49152-49215 if omitted, at least since
+	# version 0.7.4 ...
+	if [ -n "${OCF_RESKEY_migration_network_suffix}" ]; then
+		hypervisor="${OCF_RESKEY_hypervisor%%[+:]*}"
+		# Hostname might be a FQDN
+		migrate_target=$(echo ${target_node} | sed -e "s,^\([^.]\+\),\1${OCF_RESKEY_migration_network_suffix},")
+		case $hypervisor in
+			qemu)
+				# For quiet ancient libvirt versions a migration port is needed
+				# and the URI must not contain the "//". Newer versions can handle
+				# the "bad" URI.
+				echo "tcp:${migrate_target}:${OCF_RESKEY_migrateport}"
+				;;
+			xen)
+				echo "xenmigr://${migrate_target}"
+				;;
+			*)
+				ocf_log warn "$DOMAIN_NAME: Migration via dedicated network currently not supported for ${hypervisor}."
+				;;
+		esac
+	fi
+}
+
+VirtualDomain_migrate_to() {
+	local rc
+	local target_node
+	local remoteuri
+	local transport_suffix
+	local migrateuri
+	local migrate_opts
+	local migrate_pid
+
+	target_node="$OCF_RESKEY_CRM_meta_migrate_target"
+
+	if VirtualDomain_status; then
+		# Find out the remote hypervisor to connect to. That is, turn
+		# something like "qemu://foo:9999/system" into
+		# "qemu+tcp://bar:9999/system"
+
+		if [ -n "${OCF_RESKEY_remoteuri}" ]; then
+			remoteuri=`echo "${OCF_RESKEY_remoteuri}" |
+				sed "s/%n/$target_node/g"`
+		else
+			if [ -n "${OCF_RESKEY_migration_transport}" ]; then
+				transport_suffix="+${OCF_RESKEY_migration_transport}"
+			fi
+
+			# append user defined suffix if virsh target should differ from cluster node name
+			if [ -n "${OCF_RESKEY_migration_network_suffix}" ]; then
+				# Hostname might be a FQDN
+				target_node=$(echo ${target_node} | sed -e "s,^\([^.]\+\),\1${OCF_RESKEY_migration_network_suffix},")
+			fi
+
+			# a remote user has been defined to connect to target_node
+			if echo ${OCF_RESKEY_migration_user} | grep -q "^[a-z][-a-z0-9]*$" ; then
+				target_node="${OCF_RESKEY_migration_user}@${target_node}"
+			fi
+
+			# Scared of that sed expression? So am I. :-)
+			remoteuri=$(echo ${OCF_RESKEY_hypervisor} | sed -e "s,\(.*\)://[^/:]*\(:\?[0-9]*\)/\(.*\),\1${transport_suffix}://${target_node}\2/\3,")
+		fi
+
+		# User defined migrateuri or do we make one?
+		migrate_opts="$OCF_RESKEY_migrate_options"
+
+		# migration_uri is directly set
+		if [ -n "${OCF_RESKEY_migrateuri}" ]; then
+			migrateuri=`echo "${OCF_RESKEY_migrateuri}" |
+				sed "s/%n/$target_node/g"`
+
+		# extract migrationuri from options
+		elif echo "$migrate_opts" | fgrep -qs -- "--migrateuri="; then
+			migrateuri=`echo "$migrate_opts" |
+				sed "s/.*--migrateuri=\([^ ]*\).*/\1/;s/%n/$target_node/g"`
+
+		# auto generate
+		else
+			migrateuri=`mk_migrateuri`
+		fi
+
+		# remove --migrateuri from migration_opts
+		migrate_opts=`echo "$migrate_opts" |
+			sed "s/\(.*\)--migrateuri=[^ ]*\(.*\)/\1\2/"`
+
+
+		# save config if needed
+		if ocf_is_true "$OCF_RESKEY_save_config_on_stop"; then
+			save_config
+		fi
+
+		# Live migration speed limit
+		if [ ${OCF_RESKEY_migration_speed} -ne 0 ]; then
+			ocf_log info "$DOMAIN_NAME: Setting live migration speed limit for $DOMAIN_NAME (using: virsh ${VIRSH_OPTIONS} migrate-setspeed $DOMAIN_NAME ${OCF_RESKEY_migration_speed})."
+			virsh ${VIRSH_OPTIONS} migrate-setspeed $DOMAIN_NAME ${OCF_RESKEY_migration_speed}
+		fi
+
+		# OK, we know where to connect to. Now do the actual migration.
+		ocf_log info "$DOMAIN_NAME: Starting live migration to ${target_node} (using: virsh ${VIRSH_OPTIONS} migrate --live $migrate_opts $DOMAIN_NAME $remoteuri $migrateuri)."
+		virsh ${VIRSH_OPTIONS} migrate --live $migrate_opts $DOMAIN_NAME $remoteuri $migrateuri &
+
+		migrate_pid=${!}
+
+		# Live migration downtime interval
+		# Note: You can set downtime only while live migration is in progress
+		if [ ${OCF_RESKEY_migration_downtime} -ne 0 ]; then
+			sleep 2
+			ocf_log info "$DOMAIN_NAME: Setting live migration downtime for $DOMAIN_NAME (using: virsh ${VIRSH_OPTIONS} migrate-setmaxdowntime $DOMAIN_NAME ${OCF_RESKEY_migration_downtime})."
+			virsh ${VIRSH_OPTIONS} migrate-setmaxdowntime $DOMAIN_NAME ${OCF_RESKEY_migration_downtime}
+		fi
+
+		wait ${migrate_pid}
+
+		rc=$?
+		if [ $rc -ne 0 ]; then
+			ocf_exit_reason "$DOMAIN_NAME: live migration to ${target_node} failed: $rc"
+			return $OCF_ERR_GENERIC
+		else
+			ocf_log info "$DOMAIN_NAME: live migration to ${target_node} succeeded."
+			return $OCF_SUCCESS
+		fi
+	else
+		ocf_exit_reason "$DOMAIN_NAME: migrate_to: Not active locally!"
+		return $OCF_ERR_GENERIC
+	fi
+}
+
+VirtualDomain_migrate_from() {
+	# systemd drop-in to stop domain before libvirtd terminates services
+	# during shutdown/reboot
+	if systemd_is_running ; then
+		systemd_drop_in "99-VirtualDomain-libvirt" "After" "libvirtd.service"
+		systemd_drop_in "99-VirtualDomain-machines" "Wants" "virt-guest-shutdown.target"
+		systemctl start virt-guest-shutdown.target
+	fi
+
+	while ! VirtualDomain_monitor; do
+		sleep 1
+	done
+	ocf_log info "$DOMAIN_NAME: live migration from ${OCF_RESKEY_CRM_meta_migrate_source} succeeded."
+	# save config if needed
+	if ocf_is_true "$OCF_RESKEY_save_config_on_stop"; then
+		save_config
+	fi
+	return $OCF_SUCCESS
+}
+
+VirtualDomain_monitor() {
+	# First, check the domain status. If that returns anything other
+	# than $OCF_SUCCESS, something is definitely wrong.
+	VirtualDomain_status
+	rc=$?
+	if [ ${rc} -eq ${OCF_SUCCESS} ]; then
+		# OK, the generic status check turned out fine.  Now, if we
+		# have monitor scripts defined, run them one after another.
+		for script in ${OCF_RESKEY_monitor_scripts}; do
+			script_output="$($script 2>&1)"
+			script_rc=$?
+			if [ ${script_rc} -ne ${OCF_SUCCESS} ]; then
+				# A monitor script returned a non-success exit
+				# code. Stop iterating over the list of scripts, log a
+				# warning message, and propagate $OCF_ERR_GENERIC.
+				ocf_exit_reason "Monitor command \"${script}\" for domain ${DOMAIN_NAME} returned ${script_rc} with output: ${script_output}"
+				rc=$OCF_ERR_GENERIC
+				break
+			else
+				ocf_log debug "Monitor command \"${script}\" for domain ${DOMAIN_NAME} completed successfully with output: ${script_output}"
+			fi
+		done
+	fi
+
+	update_emulator_cache
+	update_utilization
+   # Save configuration on monitor as well, so we will have a better chance of
+	# having fresh and up to date config files on all nodes.
+	if ocf_is_true "$OCF_RESKEY_save_config_on_stop"; then
+		save_config
+	fi
+
+	return ${rc}
+}
+
+VirtualDomain_validate_all() {
+	printenv >> /tmp/log2
+	if ocf_is_true $OCF_RESKEY_force_stop && [ -n "$OCF_RESKEY_snapshot" ]; then
+		ocf_exit_reason "The 'force_stop' and 'snapshot' options can not be used together."
+		return $OCF_ERR_CONFIGURED
+	fi
+
+	if [ ! -r $OCF_RESKEY_config ] ; then
+		restore_config
+	fi
+	# check if we can read the config file (otherwise we're unable to
+	# deduce $DOMAIN_NAME from it, see below)
+	if [ ! -r $OCF_RESKEY_config ]; then
+		if ocf_is_probe; then
+			ocf_log info "Configuration file $OCF_RESKEY_config not readable during probe."
+		elif [ "$__OCF_ACTION" = "stop" ]; then
+			ocf_log info "Configuration file $OCF_RESKEY_config not readable, resource considered stopped."
+		else
+			ocf_exit_reason "Configuration file $OCF_RESKEY_config does not exist or not readable."
+		fi
+		return $OCF_ERR_INSTALLED
+	fi
+
+	if [ -z $DOMAIN_NAME ]; then
+		ocf_exit_reason "Unable to determine domain name."
+		return $OCF_ERR_INSTALLED
+	fi
+
+	# Check if csync2 is available when config tells us we might need it.
+	if ocf_is_true $OCF_RESKEY_sync_config_on_stop; then
+		check_binary csync2
+	fi
+
+	# Check if migration_speed is a decimal value
+	if ! ocf_is_decimal ${OCF_RESKEY_migration_speed}; then
+		ocf_exit_reason "migration_speed has to be a decimal value"
+		return $OCF_ERR_CONFIGURED
+	fi
+
+	# Check if migration_downtime is a decimal value
+	if ! ocf_is_decimal ${OCF_RESKEY_migration_downtime}; then
+		ocf_exit_reason "migration_downtime has to be a decimal value"
+		return $OCF_ERR_CONFIGURED
+	fi
+
+	if ocf_is_true "${OCF_RESKEY_stateless}" && [ -z "${OCF_RESKEY_backingfile}" ]; then
+		ocf_exit_reason "Stateless functionality can't be achieved without a backing file."
+		return $OCF_ERR_CONFIGURED
+	fi
+}
+
+VirtualDomain_getconfig() {
+	# Grab the virsh uri default, but only if hypervisor isn't set
+	: ${OCF_RESKEY_hypervisor=$(virsh --quiet uri 2>/dev/null)}
+
+	# Set options to be passed to virsh:
+	VIRSH_OPTIONS="--connect=${OCF_RESKEY_hypervisor} --quiet"
+	if ocf_is_true $OCF_RESKEY_seapath ; then
+		# Retrieve the domain name from xml filename
+		DOMAIN_NAME=`basename ${OCF_RESKEY_config} | cut -d '.' -f 1`
+	else
+		# Retrieve the domain name from the xml file.
+		DOMAIN_NAME=`egrep '[[:space:]]*<name>.*</name>[[:space:]]*$' ${OCF_RESKEY_config} 2>/dev/null | sed -e 's/[[:space:]]*<name>\(.*\)<\/name>[[:space:]]*$/\1/'`
+	fi
+
+	EMULATOR_STATE="${HA_RSCTMP}/VirtualDomain-${DOMAIN_NAME}-emu.state"
+}
+
+OCF_REQUIRED_PARAMS="config"
+OCF_REQUIRED_BINARIES="virsh sed"
+ocf_rarun $*

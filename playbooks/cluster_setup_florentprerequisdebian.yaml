@@ -1,0 +1,170 @@
+- name: Configure debian prerequisites
+  hosts:
+      hypervisors
+  tasks:
+    - name: create src folder on hosts
+      file:
+        path: /tmp/src
+        state: directory
+        mode: '0755'
+
+    - name: Synchronization of src python3-setup-ovs on the control machine to dest on the remote hosts
+      ansible.posix.synchronize:
+        src: ../src/debian/python3-setup-ovs
+        dest: /tmp/src
+    - name: Install python3-setup-ovs
+      command:
+        cmd: /usr/bin/python3 setup.py install
+        chdir: /tmp/src/python3-setup-ovs
+    - name: Copy votp-config_ovs.service
+      ansible.builtin.copy:
+        src: ../src/debian/votp-config_ovs.service
+        dest: /etc/systemd/system/votp-config_ovs.service
+        mode: '0755'
+      register: votpconfigovs
+    - name: daemon-reload
+      ansible.builtin.service:
+        daemon_reload: yes
+      when: votpconfigovs.changed
+    - name: enable votp-config_ovs.service
+      ansible.builtin.systemd:
+        name: votp-config_ovs.service
+        enabled: yes
+
+    - name: Synchronization of src vm_manager on the control machine to dest on the remote hosts
+      ansible.posix.synchronize:
+        src: ../src/debian/vm_manager
+        dest: /tmp/src
+    - name: Install vm_manager
+      command:
+        cmd: /usr/bin/python3 setup.py install
+        chdir: /tmp/src/vm_manager
+    - name: Create a symbolic link
+      ansible.builtin.file:
+        src: /usr/local/bin/vm_manager_cmd.py
+        dest: /usr/local/bin/vm-mgr
+        state: link
+
+    - name: Synchronization of backup-restore folder on the control machine to dest on the remote hosts
+      ansible.posix.synchronize:
+        src: ../src/debian/backup-restore/
+        dest: /usr/bin/
+
+    - name: Copy consolevm.sh
+      ansible.builtin.copy:
+        src: ../src/debian/consolevm.sh
+        dest: /usr/local/bin/consolevm
+        mode: '0755'
+
+    - name: Copy vimrc.local file
+      ansible.builtin.copy:
+        src: ../src/debian/vimrc.local
+        dest: /etc/vim/vimrc.local
+        mode: '0644'
+
+    - name: Copy VirtualDomain file
+      ansible.builtin.copy:
+        src: ../src/debian/VirtualDomain
+        dest: /usr/lib/ocf/resource.d/heartbeat/VirtualDomain
+        mode: '0755'
+
+    - name: create /var/log/syslog-ng folder on hosts
+      file:
+        path: /var/log/syslog-ng
+        state: directory
+        mode: '0755'
+    - name: Copy syslog-ng conf file
+      template:
+        src: ../templates/syslog-ng.conf.j2
+        dest: /etc/syslog-ng/syslog-ng.conf
+        mode: '0644'
+    - name: Restart syslog-ng
+      ansible.builtin.systemd:
+        state: restarted
+        name: syslog-ng
+
+    - name: Create pacemaker.service.d directory
+      file:
+        path: /etc/systemd/system/pacemaker.service.d/
+        state: directory
+        owner: root
+        group: root
+        mode: 0755
+    - name: Copy pacemaker.service drop-in
+      ansible.builtin.copy:
+        src: ../src/debian/pacemaker_override.conf
+        dest: /etc/systemd/system/pacemaker.service.d/override.conf
+        owner: root
+        group: root
+        mode: 0644
+      notify: daemon-reload
+      register: pacemaker_corosync
+    - name: disable pacemaker (reinstall step 1/2)
+      ansible.builtin.systemd:
+        name: pacemaker.service
+        enabled: no
+      when: pacemaker_corosync.changed
+    - name: enable pacemaker (reinstall step 2/2)
+      ansible.builtin.systemd:
+        name: pacemaker.service
+        enabled: yes
+      when: pacemaker_corosync.changed
+
+    - name: Synchronization of snmp_ scripts
+      ansible.posix.synchronize:
+        src: ../src/debian/
+        dest: /usr/local/bin/
+        rsync_opts:
+        - "--include=snmp_*.sh"
+        - "--include=virt-df.sh"
+        - "--chmod=F755"
+    - name: Snmp config
+      ansible.builtin.copy:
+        src: ../src/debian/snmpd.conf
+        dest: /etc/snmp/snmpd.conf
+        mode: '0644'
+      register: snmpd_conf
+    - name: restart snmpd
+      ansible.builtin.systemd:
+        name: snmpd.service
+        state: restarted
+      when: snmpd_conf.changed
+    - name: Adding user Debian-snmp to groups libvirt and haclient
+      user: name=Debian-snmp
+        group=Debian-snmp
+        shell=/bin/false
+        groups=libvirt,haclient
+        append=yes
+
+    - name: Allow 'Debian-snmp' user to run snmp_diskusag
+      lineinfile:
+        dest: /etc/sudoers
+        state: present
+        regexp: '^Debian-snmp'
+        line: 'Debian-snmp     ALL = (root) NOPASSWD: /usr/local/bin/snmp_diskusage.sh'
+        validate: visudo -cf %s
+    - name: Copy journald conf file
+      ansible.builtin.copy:
+        src: ../src/debian/journald.conf
+        dest: /etc/systemd/journald.conf
+        mode: '0644'
+    - name: Restart systemd-journald
+      ansible.builtin.systemd:
+        state: restarted
+        name: systemd-journald
+
+    - name: Copy metricbeat conf file
+      ansible.builtin.copy:
+        src: ../src/debian/metricbeat.yml
+        dest: /etc/metricbeat/metricbeat.yml
+        mode: '0644'
+    - name: enable metricbeat
+      ansible.builtin.systemd:
+        name: metricbeat.service
+        enabled: yes
+        state: started
+
+  handlers:
+    - name: daemon-reload
+      ansible.builtin.service:
+        daemon_reload: yes
