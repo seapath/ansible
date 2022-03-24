@@ -1,4 +1,4 @@
-# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# Copyright (C) 2022, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
 # This Ansible playbook configures libvirt to work with Ceph. It is
@@ -8,31 +8,51 @@
 ---
 - name: Configure libvirt rbd secret
   hosts: hypervisors
-  vars:
-      - rbd_pool_name: "{{ libvirt_rbd_pool | default('rbd') }}"
-      - pool_name: "{{ libvirt_pool_name | default('ceph') }}"
-  tasks:
-      - name: check if secret is already defined
+
+  pre_tasks:
+      - name: Try to get already defined secret
         shell:
-            cmd: virsh secret-list |grep -q "ceph" || echo "no secret found"
+          cmd: virsh secret-list |grep "ceph" |grep -oE '[a-f0-9]+-[a-f0-9]+-[a-f0-9]+-[a-f0-9]+-[a-f0-9]+'
         register: secret_defined
+        failed_when: secret_defined.rc > 1
+        changed_when: false
+      - debug:
+          var: secret_defined
+      - name: Check if a secret pool has to be created
+        set_fact:
+          create_secret_pool: "{% if hostvars[item]['secret_defined'].stdout == '' %}true{% else %}{{ create_secret_pool | default(false) }}{% endif %}"
+        loop: "{{ groups['hypervisors'] }}"
+
+  tasks:
       - block:
+          - name: Check if the secret is already defined
+            set_fact:
+              libvirt_uuid_rbd: "{% if hostvars[item]['secret_defined'].stdout != '' %}{{ hostvars[item]['secret_defined'].stdout }}{% else %}{{ libvirt_uuid_rbd | default('') }}{% endif %}"
+            loop: "{{ groups['hypervisors'] }}"
+          - debug:
+              msg: "Found UUID {{ libvirt_uuid_rbd }}"
+            when: libvirt_uuid_rbd != ''
+            run_once: true
           - name: Generate secret uuid
             shell:
                 cmd: uuidgen
-            register: libvirt_uuid_rbd
+            changed_when: false
+            register: raw_uuid
             run_once: true
-          - debug:
-                msg: "{{ libvirt_uuid_rbd.stdout }}"
-                verbosity: 4
+            when: libvirt_uuid_rbd == ''
+          - name: Register uuid
+            set_fact:
+              libvirt_uuid_rbd: "{{ raw_uuid.stdout }}"
+            when: libvirt_uuid_rbd == ''
           - name: Get Ceph libvirt client key
             shell:
                 cmd: ceph auth get-key client.libvirt
+            changed_when: false
             register: ceph_key
             run_once: true
-          - debug:
-                msg: "{{ ceph_key.stdout }}"
-                verbosity: 4
+        when: create_secret_pool
+
+      - block:
           - name: Copy libvirt xml secret file
             template:
                 src: ../templates/secret.xml.j2
@@ -47,23 +67,40 @@
                 state: absent
           - name: Set key in libvirt secret
             shell:
-                cmd: 'virsh secret-set-value --secret "{{ libvirt_uuid_rbd.stdout }}
-                " --base64 "{{ ceph_key.stdout }}"'
-          - name: Create libvirt pool link with rbd pool
-            community.libvirt.virt_pool:
-                command: define
-                xml: '{{ lookup("template", "../templates/libvirt_pool.xml.j2") }}'
-                name: "{{ pool_name }}"
-          - name: Start libvirt pool
-            community.libvirt.virt_pool:
-                command: start
-                name: "{{ pool_name }}"
-          - name: Enable libvirt pool at boot
-            community.libvirt.virt_pool:
-                name: "{{ pool_name }}"
-                autostart: yes
-          - name: Refresh pool
-            shell:
-                cmd: virsh pool-refresh --pool ceph
-        when: secret_defined.stdout == "no secret found"
+                cmd: 'virsh secret-set-value --secret "{{ libvirt_uuid_rbd }}" --base64 "{{ ceph_key.stdout }}"'
+        when:
+          - create_secret_pool
+          - secret_defined.stdout == ''
 
+
+- name: Create rbd pool
+  hosts: hypervisors
+  vars:
+    rbd_pool_name: "{{ libvirt_rbd_pool | default('rbd') }}"
+    pool_name: "{{ libvirt_pool_name | default('ceph') }}"
+  pre_tasks:
+    - name: Get secret UUID
+      shell:
+        cmd: virsh secret-list |grep "ceph" |grep -oE '[a-f0-9]+-[a-f0-9]+-[a-f0-9]+-[a-f0-9]+-[a-f0-9]+'
+      register: secret_uuid_raw
+    - name: Register secret UUID
+      set_fact:
+        libvirt_uuid_rbd: "{{ secret_uuid_raw.stdout }}"
+  tasks:
+    - name: Create libvirt pool link with rbd pool
+      community.libvirt.virt_pool:
+          command: define
+          xml: '{{ lookup("template", "../templates/libvirt_pool.xml.j2") }}'
+          name: "{{ pool_name }}"
+    - name: Start libvirt pool
+      community.libvirt.virt_pool:
+          state: active
+          name: "{{ pool_name }}"
+    - name: Autostart pool
+      community.libvirt.virt_pool:
+          autostart: yes
+          name: "{{ pool_name }}"
+    - name: Refresh pool
+      shell:
+          cmd: virsh pool-refresh --pool ceph
+      changed_when: false

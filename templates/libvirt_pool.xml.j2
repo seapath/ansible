@@ -4,7 +4,7 @@
     <name>{{ rbd_pool_name }}</name>
     <host name='rbd' port='6789' />
     <auth username='libvirt' type='ceph'>
-      <secret uuid='{{ libvirt_uuid_rbd.stdout }}'/>
+      <secret uuid='{{ libvirt_uuid_rbd }}'/>
     </auth>
   </source>
 </pool>
