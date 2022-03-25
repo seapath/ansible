@@ -13,7 +13,7 @@
     ports: "{{ power_control_ports | default([1, 2, 3, 4]) }}"
   tasks:
     - name: Calling reboot task
-      when: skip_reboot is undefined
+      when: skip_reboot is undefined or not skip_reboot |bool
       include_tasks: tasks/restart_machine.yaml
 
 - name: Wait all cluster machines have finish to boot

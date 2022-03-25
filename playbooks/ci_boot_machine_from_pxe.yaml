@@ -1,10 +1,51 @@
-# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# Copyright (C) 2022, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 # This Ansible playbook start machines and ensure the PXE flash image is
-# running on it.
+# running on it. When skip_reboot is defined only boot on PXE machines which are
+# halted.
+
 ---
+- name: Detect which machine has to be flashed
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Check if machine is online
+      register: machine_up
+      shell:
+        cmd: "ping -c 1 -t 1 {{ hostvars[item]['ansible_host'] }}"
+      failed_when: machine_up.rc > 1
+      changed_when: false
+      when: 
+        - skip_reboot is defined
+        - skip_reboot |bool
+      loop: "{{ groups['pxe_machines'] }}"
+    - name: Register if machine need to be started
+      set_fact:
+        machines_to_reboot: "{{ machines_to_reboot | default([]) + [item.item] }}"
+        ports: "{{ ports | default([]) + [hostvars[item.item]['plug_port']] }}"
+      loop: "{{ machine_up.results }}"
+      when:
+        - skip_reboot is defined
+        - skip_reboot |bool
+        - item.rc == 1
+    - name: Set all machine to be restarted
+      set_fact:
+        machines_to_reboot: pxe_machines
+      when: skip_reboot is undefined or not skip_reboot |bool
+    - name: exit playbook, if no machine has to be flashed
+      fail:
+        msg: "No machine to be flashed was found."
+      when: machines_to_reboot is undefined or not machines_to_reboot
+    - name: "Machine to setup:"
+      debug:
+        var: machines_to_reboot
+
 - name: Launch PXE server on CI
   hosts: localhost
+  vars:
+    ip: "{{ power_control_ip | default(eg_ip) }}"
+    passwd: "{{ power_control_passwd | default(eg_passwd) }}"
+    powerup_script: "{{ power_control_script | default('../scripts/eg_pms2_lan_driver_power.sh') }}"
   tasks:
       - name: Create PXE configuration file
         template:
@@ -30,11 +71,20 @@
                 BIND_INTERFACE: "{{ dhcp_bind_interface }}"
                 SERVER_ADDRESS: "{{ pxe_server_address }}"
                 PXE: "bios"
+      - name: Start machines
+        include_tasks: tasks/start_machine.yaml
+        with_items: "{{ ports }}"
+        when:
+          - skip_reboot is defined
+          - skip_reboot |bool
+
 - import_playbook: ci_restart_machines.yaml
   vars:
-      machines: pxe_machines
+      machines: "{{ hostvars['localhost'].machines_to_reboot }}"
+
+
 - name: Check all machines have boot on the flash-pxe image
-  hosts: pxe_machines
+  hosts: "{{ hostvars['localhost'].machines_to_reboot }}"
   tasks:
       - name: "Check {{ inventory_hostname }} have boot on the flash-pxe image"
         lineinfile:
@@ -42,6 +92,7 @@
             state: present
             line: NAME="Seapath Flash Yocto distribution"
         check_mode: true
+
 - name: Stop the PXE server
   hosts: localhost
   tasks:
