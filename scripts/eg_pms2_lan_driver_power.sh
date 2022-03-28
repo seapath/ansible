@@ -84,6 +84,12 @@ login() {
     curl -X POST -sd 'pw='$passwd'' http://$ip/login.html >/dev/null 2>&1
     is_login=1
 }
+
+logout() {
+    local ip=$1
+    curl http://$ip/login.html >/dev/null 2>&1
+}
+
 get_status() {
     local ip=$1
     local passwd=$2
@@ -105,12 +111,13 @@ power() {
     local state=$4
     echo "setting $ip[$port] to $state"
 
+    if ping_plug $ip; then
+        echo "$ip can not be ping"
+        exit
+    fi
+
     if [ ! $is_login ]; then
         login $ip $passwd
-    fi
-    if ping_plug $IP; then
-        echo "$IP can not be ping"
-        exit
     fi
     if [ "$state" = "off" ]; then
         curl -sd 'cte'$port'=0' http://$ip >/dev/null 2>&1
@@ -118,8 +125,10 @@ power() {
         curl -sd 'cte'$port'=1' http://$ip >/dev/null 2>&1
     else
         echo "wrong state set"
+        logout $ip
         exit 1
     fi
+    logout $ip
 }
 # Parse options
 parse_options "${@}"
