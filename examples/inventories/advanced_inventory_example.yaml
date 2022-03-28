@@ -27,6 +27,8 @@ all:
               gateway_addr: 192.168.217.1
               # The Subnetwork. Optional variable, default is 24
               subnet: 16
+              # The smart plug port associated to the machine
+              plug_port: 4
               # Optional additional network configuration list
               # For more information see roles/systemd_networkd/README.md
               # Set the cluster interface
