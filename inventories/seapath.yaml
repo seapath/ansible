@@ -14,16 +14,22 @@ all:
           ansible_host: TODO
           # The network interface to be used for the first boot
           network_interface: TODO
+          # The smart plug port associated to the machine
+          plug_port: TODO
         pxe_hypervisor2:
           # Set IP address according to your setup
           ansible_host: TODO
           # The network interface to be used for the fist boot
           network_interface: TODO
+          # The smart plug port associated to the machine
+          plug_port: TODO
         pxe_observer:
           # Set IP address according to your setup
           ansible_host: TODO
           # The network interface to be used for the first boot
           network_interface: TODO
+          # The smart plug port associated to the machine
+          plug_port: TODO
       vars:
         image_path: "{{ image_directory }}/seapath-host-bios-image-votp.wic.gz"
         static_ip: "{{ ansible_host }}"
@@ -35,6 +41,8 @@ all:
         hypervisors:
           hosts:
             hypervisor1:
+              # The smart plug port associated to the machine
+              plug_port: TODO
               # Set IP address according to your setup
               ansible_host: TODO
               # The network interface that will be used by the hypervisor to
@@ -69,6 +77,8 @@ all:
                       - Address: "{{ cluster_ip_addr }}/24"
 
             hypervisor2:
+              # The smart plug port associated to the machine
+              plug_port: TODO
               # Change IP address according to your setup
               ansible_host: TODO
               # The network interface that will be used by the hypervisor to
@@ -131,6 +141,8 @@ all:
         observers:
           hosts:
             observer:
+              # The smart plug port associated to the machine
+              plug_port: TODO
               # Change IP address according to your setup
               ansible_host: TODO
               # Set the public interface
