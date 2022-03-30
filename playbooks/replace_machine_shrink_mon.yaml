@@ -18,30 +18,9 @@
 #     automation scripts to avoid interactive prompt.
 
 
-- name: gather facts and check the init system
-
-  hosts: "{{ mon_group_name|default('mons') }}"
-
-  become: true
-
+- name: Sanity check
+  hosts: localhost
   tasks:
-    - name: "Gather facts"
-      gather_facts:
-    - debug: msg="gather facts on all Ceph hosts for following reference"
-
-- name: confirm whether user really meant to remove monitor from the ceph cluster
-  hosts: "{{ groups[mon_group_name][0] }}"
-  become: true
-  vars:
-    mon_group_name: mons
-
-  pre_tasks:
-    - name: exit playbook, if only one monitor is present in cluster
-      fail:
-        msg: "You are about to shrink the only monitor present in the cluster.
-              If you really want to do that, please use the purge-cluster playbook."
-      when: groups[mon_group_name] | length | int == 1
-
     - name: exit playbook, if no monitor was given
       fail:
         msg: "mon_to_kill must be declared
@@ -49,6 +28,56 @@
            On the command line when invoking the playbook, you can use
            -e mon_to_kill=ceph-mon01 argument. You can only remove a single monitor each time the playbook runs."
       when: mon_to_kill is not defined
+
+- name: Try to find an online Ceph machine
+  hosts: "{{ mon_group_name|default('mons') }}"
+  gather_facts: false
+  tasks:
+    - name: Wait for machine to be online
+      wait_for_connection:
+        timeout: 1
+      ignore_errors: true
+      no_log: true
+      register: machine_up
+
+- name: Register the machine to use to control Ceph
+  hosts: localhost
+  vars:
+    mon_group_name: mons
+  tasks:
+    - name: Register the machine
+      set_fact:
+        mon_host: "{% if not hostvars[item].machine_up.failed  %}{{item}}{% else %}{{ mon_host | default(false | bool)}}{% endif %}"
+        offline_host: "{% if hostvars[item].machine_up.failed  %}{{true | bool}}{% else %}{{ offline_host | default(false | bool)}}{% endif %}"
+      loop: "{{ groups.get(mon_group_name) }}"
+    - name: check if a Ceph machine is up
+      fail:
+        msg: "There is no Ceph machine available"
+      when: not mon_host
+
+- name: gather facts and check the init system
+  hosts: "{{ mon_group_name|default('mons') }}"
+  become: true
+  tasks:
+    - name: "Gather facts"
+      gather_facts:
+      when: not machine_up.failed
+
+
+- name: Remove monitor
+  hosts: "{{ hostvars['localhost'].mon_host }}"
+  become: true
+  vars:
+    mon_group_name: mons
+    offline_host: "{{ hostvars['localhost'].offline_host }}"
+    mon_host: "{{ hostvars['localhost'].mon_host }}"
+
+  pre_tasks:
+    - name: exit playbook, if only one monitor is present in cluster
+      fail:
+        msg: "You are about to shrink the only monitor present in the cluster.
+              If you really want to do that, please use the purge-cluster playbook."
+      when: groups[mon_group_name] | length | int == 1
 
     - name: exit playbook, if the monitor is not part of the inventory
       fail:
@@ -63,12 +92,6 @@
         tasks_from: container_binary
 
   tasks:
-    - name: pick a monitor different than the one we want to remove
-      set_fact:
-        mon_host: "{{ item }}"
-      with_items: "{{ groups[mon_group_name] }}"
-      when: item != mon_to_kill
-
     - name: "set_fact container_exec_cmd build {{ container_binary }} exec command (containerized)"
       set_fact:
         container_exec_cmd: "{{ container_binary }} exec ceph-mon-{{ hostvars[mon_host]['ansible_facts']['hostname'] }}"
@@ -79,7 +102,6 @@
       register: ceph_health
       changed_when: false
       until: ceph_health.stdout.find("HEALTH") > -1
-      delegate_to: "{{ mon_host }}"
       retries: 5
       delay: 2
 
@@ -114,12 +136,10 @@
       command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} mon remove {{ mon_to_kill_hostname }}"
       changed_when: false
       failed_when: false
-      delegate_to: "{{ mon_host }}"
 
   post_tasks:
     - name: verify the monitor is out of the cluster
       command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} quorum_status -f json"
-      delegate_to: "{{ mon_host }}"
       changed_when: false
       failed_when: false
       register: result
@@ -142,10 +162,8 @@
 
     - name: show ceph health
       command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} -s"
-      delegate_to: "{{ mon_host }}"
       changed_when: false
 
     - name: show ceph mon status
       command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} mon stat"
-      delegate_to: "{{ mon_host }}"
       changed_when: false

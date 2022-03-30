@@ -13,7 +13,6 @@
     - name: set variables
       set_fact:
         mon_to_kill: "{{ machine_to_remove }}"
-        offline_host: true
       run_once: true
     - name: get OSD to shrink
       script: "../scripts/get_osd.py {{ machine_to_remove }}"
