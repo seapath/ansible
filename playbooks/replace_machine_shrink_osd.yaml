@@ -17,29 +17,10 @@
 #     Overrides the prompt using -e option. Can be used in
 #     automation scripts to avoid interactive prompt.
 
-- name: gather facts and check the init system
 
-  hosts:
-    - "{{ mon_group_name|default('mons') }}"
-    - "{{ osd_group_name|default('osds') }}"
-
-  become: True
+- name: Sanity check
+  hosts: localhost
   tasks:
-    - name: "Gather facts"
-      gather_facts:
-    - debug: msg="gather facts on all Ceph hosts for following reference"
-
-- name: confirm whether user really meant to remove osd(s) from the cluster
-
-  hosts: "{{ groups[mon_group_name][0] }}"
-
-  become: true
-
-  vars:
-    mon_group_name: mons
-    osd_group_name: osds
-
-  pre_tasks:
     - name: exit playbook, if no osd(s) was/were given
       fail:
         msg: "osd_to_kill must be declared
@@ -47,12 +28,55 @@
            On the command line when invoking the playbook, you can use
            -e osd_to_kill=0,1,2,3 argument."
       when: osd_to_kill is not defined
-
     - name: check the osd ids passed have the correct format
       fail:
         msg: "The id {{ item }} has wrong format, please pass the number only"
       with_items: "{{ osd_to_kill.split(',') }}"
       when: not item is regex("^\d+$")
+
+- name: Try to find an online Ceph machine
+  hosts: "{{ mon_group_name|default('mons') }}"
+  gather_facts: false
+  tasks:
+    - name: Wait for machine to be online
+      wait_for_connection:
+        timeout: 1
+      ignore_errors: true
+      no_log: true
+      register: machine_up
+
+- name: Register the machine to use to control Ceph
+  hosts: localhost
+  vars:
+    mon_group_name: mons
+  tasks:
+    - name: Register the machine
+      set_fact:
+        mon_host: "{% if not hostvars[item].machine_up.failed  %}{{item}}{% else %}{{ mon_host | default(false | bool)}}{% endif %}"
+        offline_host: "{% if hostvars[item].machine_up.failed  %}{{true | bool}}{% else %}{{ offline_host | default(false | bool)}}{% endif %}"
+      loop: "{{ groups.get(mon_group_name) }}"
+    - name: check if a Ceph machine is up
+      fail:
+        msg: "There is no Ceph machine available"
+      when: not mon_host
+
+- name: gather facts and check the init system
+  hosts:
+    - "{{ mon_group_name|default('mons') }}"
+    - "{{ osd_group_name|default('osds') }}"
+  become: True
+  tasks:
+    - name: "Gather facts"
+      gather_facts:
+      when: not machine_up.failed
+
+- name: Remove the OSD
+  hosts: "{{ hostvars['localhost'].mon_host }}"
+  become: true
+  vars:
+    mon_group_name: mons
+    osd_group_name: osds
+    offline_host: "{{ hostvars['localhost'].offline_host }}"
 
   tasks:
     - import_role:
@@ -151,7 +175,6 @@
     - name: mark osd(s) out of the cluster
       command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} osd out {{ osd_to_kill.replace(',', ' ') }}"
       changed_when: false
-      run_once: true
 
     - name: stop osd(s) service
       service:
@@ -250,13 +273,10 @@
     - name: ensure osds are marked down
       command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} osd down {{ osd_to_kill.replace(',', ' ') }}"
       changed_when: false
-      run_once: true
-      delegate_to: "{{ groups[mon_group_name][0] }}"
 
     - name: purge osd(s) from the cluster
       command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} osd purge {{ item }} --yes-i-really-mean-it"
       changed_when: false
-      run_once: true
       with_items: "{{ osd_to_kill.split(',') }}"
 
     - name: remove osd data dir
