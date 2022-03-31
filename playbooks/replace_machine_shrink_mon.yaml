@@ -29,48 +29,25 @@
            -e mon_to_kill=ceph-mon01 argument. You can only remove a single monitor each time the playbook runs."
       when: mon_to_kill is not defined
 
-- name: Try to find an online Ceph machine
-  hosts: "{{ mon_group_name|default('mons') }}"
-  gather_facts: false
-  tasks:
-    - name: Wait for machine to be online
-      wait_for_connection:
-        timeout: 1
-      ignore_errors: true
-      no_log: true
-      register: machine_up
-
-- name: Register the machine to use to control Ceph
-  hosts: localhost
-  vars:
-    mon_group_name: mons
-  tasks:
-    - name: Register the machine
-      set_fact:
-        mon_host: "{% if not hostvars[item].machine_up.failed  %}{{item}}{% else %}{{ mon_host | default(false | bool)}}{% endif %}"
-        offline_host: "{% if hostvars[item].machine_up.failed  %}{{true | bool}}{% else %}{{ offline_host | default(false | bool)}}{% endif %}"
-      loop: "{{ groups.get(mon_group_name) }}"
-    - name: check if a Ceph machine is up
-      fail:
-        msg: "There is no Ceph machine available"
-      when: not mon_host
+- import_playbook: replace_machine_find_online_ceph_machine.yaml
+  when: groups['mon_host'] is undefined
 
 - name: gather facts and check the init system
   hosts: "{{ mon_group_name|default('mons') }}"
   become: true
   tasks:
+    - debug:
+        var: machine_up
     - name: "Gather facts"
       gather_facts:
-      when: not machine_up.failed
-
+      when: machine_up
 
 - name: Remove monitor
-  hosts: "{{ hostvars['localhost'].mon_host }}"
+  hosts: mon_host
   become: true
   vars:
     mon_group_name: mons
-    offline_host: "{{ hostvars['localhost'].offline_host }}"
-    mon_host: "{{ hostvars['localhost'].mon_host }}"
+    offline_host: "{{ groups['offline_host'] is defined }}"
 
   pre_tasks:
     - name: exit playbook, if only one monitor is present in cluster
@@ -94,7 +71,7 @@
   tasks:
     - name: "set_fact container_exec_cmd build {{ container_binary }} exec command (containerized)"
       set_fact:
-        container_exec_cmd: "{{ container_binary }} exec ceph-mon-{{ hostvars[mon_host]['ansible_facts']['hostname'] }}"
+        container_exec_cmd: "{{ container_binary }} exec ceph-mon-{{ hostvars[inventory_hostname]['ansible_facts']['hostname'] }}"
       when: containerized_deployment | bool
 
     - name: exit playbook, if can not connect to the cluster

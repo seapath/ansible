@@ -34,31 +34,8 @@
       with_items: "{{ osd_to_kill.split(',') }}"
       when: not item is regex("^\d+$")
 
-- name: Try to find an online Ceph machine
-  hosts: "{{ mon_group_name|default('mons') }}"
-  gather_facts: false
-  tasks:
-    - name: Wait for machine to be online
-      wait_for_connection:
-        timeout: 1
-      ignore_errors: true
-      no_log: true
-      register: machine_up
-
-- name: Register the machine to use to control Ceph
-  hosts: localhost
-  vars:
-    mon_group_name: mons
-  tasks:
-    - name: Register the machine
-      set_fact:
-        mon_host: "{% if not hostvars[item].machine_up.failed  %}{{item}}{% else %}{{ mon_host | default(false | bool)}}{% endif %}"
-        offline_host: "{% if hostvars[item].machine_up.failed  %}{{true | bool}}{% else %}{{ offline_host | default(false | bool)}}{% endif %}"
-      loop: "{{ groups.get(mon_group_name) }}"
-    - name: check if a Ceph machine is up
-      fail:
-        msg: "There is no Ceph machine available"
-      when: not mon_host
+- import_playbook: replace_machine_find_online_ceph_machine.yaml
+  when: groups['mon_host'] is undefined
 
 - name: gather facts and check the init system
   hosts:
@@ -68,15 +45,15 @@
   tasks:
     - name: "Gather facts"
       gather_facts:
-      when: not machine_up.failed
+      when: machine_up
 
 - name: Remove the OSD
-  hosts: "{{ hostvars['localhost'].mon_host }}"
+  hosts: mon_host
   become: true
   vars:
     mon_group_name: mons
     osd_group_name: osds
-    offline_host: "{{ hostvars['localhost'].offline_host }}"
+    offline_host: "{{ groups['offline_host'] is defined }}"
 
   tasks:
     - import_role:
