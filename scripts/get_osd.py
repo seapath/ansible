@@ -7,7 +7,7 @@ import argparse
 
 def print_osd_on_host(hostname):
     subprocess.run(
-        "ceph osd getcrushmap > /tmp/crushmap",
+        "ceph osd getcrushmap > ./crushmap",
         shell=True,
         check=True,
         capture_output=True,
@@ -16,7 +16,7 @@ def print_osd_on_host(hostname):
         [
             "crushtool",
             "-d",
-            "/tmp/crushmap",
+            "./crushmap",
             "-f",
             "json",
             "--dump",
@@ -25,9 +25,8 @@ def print_osd_on_host(hostname):
         ],
         check=True,
         shell=False,
-        capture_output=True,
+        stdout=subprocess.PIPE
     )
-    os.unlink("/tmp/crushmap")
 
     curshmap = json.loads(result.stdout.decode("UTF-8"))
     found_ods = None
@@ -36,7 +35,7 @@ def print_osd_on_host(hostname):
         if bucket["type_name"] == "host" and bucket["name"] == hostname:
             for osd in bucket["items"]:
                 found_ods = (
-                    osd["id"] if not found_ods else found_ods + "," + osd["id"]
+                    str(osd["id"]) if not found_ods else found_ods + "," + str(osd["id"])
                 )
             break
     if found_ods:

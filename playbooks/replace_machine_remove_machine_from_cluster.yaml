@@ -1,32 +1,41 @@
 # Copyright (C) 2022, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 ---
-- name: Remove a host from pacemaker
-  hosts: cluster_machines
+- name: Sanity check
+  hosts: localhost
   pre_tasks:
     - name: exit playbook, if no machine was given
       fail:
         msg: "machine_to_remove must be declared"
-      when: machine_to_remove is not defined
-      run_once: true
+      when: machine_to_remove is undefined
+
+- import_playbook: replace_machine_find_online_ceph_machine.yaml
+  when: groups['mon_host'] is undefined
+
+- name: Try to find OSD
+  hosts: cluster_machines
   tasks:
-    - name: set variables
-      set_fact:
-        mon_to_kill: "{{ machine_to_remove }}"
-      run_once: true
     - name: get OSD to shrink
       script: "../scripts/get_osd.py {{ machine_to_remove }}"
       register: raw_osd
-      run_once: true
+      delegate_to: "{{ groups['mon_host'][0] }}"
+    - debug:
+        var: raw_osd
     - name: register OSD
       set_fact:
         osd_to_kill: "{{ raw_osd.stdout_lines[0] }}"
       when: raw_osd.stdout
-      run_once: true
+      delegate_to: "{{ groups['mon_host'][0] }}"
+    - debug:
+        var: osd_to_kill
 
 - import_playbook: replace_machine_shrink_osd.yaml
   when: osd_to_kill is defined
 
 - import_playbook: replace_machine_shrink_mon.yaml
+  vars:
+    mon_to_kill: "{{ machine_to_remove }}"
 
 - import_playbook: replace_machine_shrink_pacemaker.yaml
+  vars:
+    pacemaker_machine: mon_host
