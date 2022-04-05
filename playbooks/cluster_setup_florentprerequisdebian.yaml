@@ -153,6 +153,18 @@
         state: restarted
         name: systemd-journald
 
+    - name: Copy iptable bridge rules
+      ansible.builtin.copy:
+        src: ../src/debian/00-bridge_nf_call.conf
+        dest: /etc/sysctl.d/00-bridge_nf_call.conf
+        mode: '0644'
+    - name: add br_netfilter to /etc/modules
+      lineinfile:
+        dest: /etc/modules
+        state: present
+        regexp: '^br_netfilter$'
+        line: 'br_netfilter'
+
     - name: Copy apparmor libvirt-qemu rules
       ansible.builtin.copy:
         src: ../src/debian/etc_apparmor.d_abstractions_libvirt-qemu.conf
