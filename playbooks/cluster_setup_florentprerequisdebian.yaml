@@ -153,6 +153,12 @@
         state: restarted
         name: systemd-journald
 
+    - name: Copy apparmor libvirt-qemu rules
+      ansible.builtin.copy:
+        src: ../src/debian/etc_apparmor.d_abstractions_libvirt-qemu.conf
+        dest: /etc/apparmor.d/abstractions/libvirt-qemu
+        mode: '0644'
+
     - name: Copy metricbeat conf file
       ansible.builtin.copy:
         src: ../src/debian/metricbeat.yml
