@@ -78,10 +78,12 @@
         src: ../templates/syslog-ng.conf.j2
         dest: /etc/syslog-ng/syslog-ng.conf
         mode: '0644'
+      register: syslogconf
     - name: Restart syslog-ng
       ansible.builtin.systemd:
         state: restarted
         name: syslog-ng
+      when: syslogconf.changed
 
     - name: Create libvirtd.service.d directory
       file:
@@ -163,16 +165,22 @@
         src: ../src/debian/journald.conf
         dest: /etc/systemd/journald.conf
         mode: '0644'
+      register: journaldconf
     - name: Restart systemd-journald
       ansible.builtin.systemd:
         state: restarted
         name: systemd-journald
+      when: journaldconf.changed
 
-    - name: Copy iptable bridge rules
+    - name: Copy sysctl rules
       ansible.builtin.copy:
-        src: ../src/debian/00-bridge_nf_call.conf
-        dest: /etc/sysctl.d/00-bridge_nf_call.conf
+        src: ../src/debian/{{ item }}
+        dest: /etc/sysctl.d/{{ item }}
         mode: '0644'
+      with_items:
+        - 00-bridge_nf_call.conf
+        - 00-schedrt.conf
+        - 00-panicreboot.conf
     - name: add br_netfilter to /etc/modules
       lineinfile:
         dest: /etc/modules
@@ -186,6 +194,18 @@
         dest: /etc/apparmor.d/abstractions/libvirt-qemu
         mode: '0644'
 
+    - name: Copy sysfs.d cpumask
+      ansible.builtin.copy:
+        src: ../src/debian/00-workqueue_cpumask.conf
+        dest: /etc/sysfs.d/00-workqueue_cpumask.conf
+        mode: '0644'
+      register: sysfscpumask
+    - name: restart sysfsutils
+      ansible.builtin.systemd:
+        name: sysfsutils.service
+        state: restarted
+      when: sysfscpumask.changed
+
     - name: Copy metricbeat conf file
       ansible.builtin.copy:
         src: ../src/debian/metricbeat.yml
@@ -196,6 +216,106 @@
         name: metricbeat.service
         enabled: yes
         state: started
+
+    - name: "grub conf"
+      lineinfile:
+        dest: /etc/default/grub
+        regexp: '^GRUB_CMDLINE_LINUX_DEFAULT=".*"$'
+        line: 'GRUB_CMDLINE_LINUX_DEFAULT="ipv6.disable=1 efi=runtime psi=0 slub_debug=- iommu.passthrough=1 audit=off cpuidle.off=1 cpufreq.off=1 no_debug_objects dma_debug=off powersave=off schedstats=disable pti=on slab_nomerge vm_debug=- default_hugepagesz=1G hugepagesz=1G pci={{ grub_pci }}"'
+        state: present
+      register: updategrub
+    - name: update-grub
+      shell: update-grub
+      when: updategrub.changed
+
+    - name: "irqbalance conf"
+      lineinfile:
+        dest: /etc/default/irqbalance
+        regexp: '^IRQBALANCE_BANNED_CPUS=".*"$'
+        line: 'IRQBALANCE_BANNED_CPUS="{{ irqmask }}"'
+        state: present
+      register: irqbalanceconf
+    - name: restart irqbalance
+      ansible.builtin.systemd:
+        name: irqbalance.service
+        enabled: yes
+        state: restarted
+      when: irqbalanceconf.changed
+
+    - name: Copy hugetlb script file
+      ansible.builtin.copy:
+        src: ../src/debian/hugetlb-reserve-pages.sh
+        dest: /usr/local/bin/hugetlb-reserve-pages.sh
+        mode: '0755'
+    - name: Copy hugetlb service file
+      ansible.builtin.copy:
+        src: ../src/debian/hugetlb-gigantic-pages.service
+        dest: /etc/systemd/system/hugetlb-gigantic-pages.service
+        mode: '0644'
+    - name: daemon-reload
+      ansible.builtin.service:
+        daemon_reload: yes
+    - name: enable hugetlb-gigantic-pages.service
+      ansible.builtin.systemd:
+        name: hugetlb-gigantic-pages.service
+        enabled: yes
+        state: started
+
+    - name: customize /etc/environment
+      ansible.builtin.lineinfile:
+        dest: "/etc/environment"
+        state: present
+        regexp: "^{{ item.key }}="
+        line: "{{ item.key }}={{ item.value }}"
+      vars:
+        env_list:
+          HISTSIZE: 2000000
+          HISTFILESIZE: 2000000
+      with_items: "{{ env_list | dict2items }}"
+
+    - name: create systemd slices
+      template:
+        src: ../templates/systemd_slice.j2
+        dest: /etc/systemd/system/{{ item.name }}.slice
+        owner: root
+        group: root
+        mode:  0644
+      with_items:
+        - { name: "machine-rt", description: "VM rt slice", wants: "machine.slice", allowedcpus: "2-5 14-17" }
+        - { name: "machine-nort", description: "VM nonrt slice", wants: "machine.slice", allowedcpus: "6-11 18-23" }
+        - { name: "ovs", description: "ovs slice", wants: "", allowedcpus: "23" }
+
+    - name: start new slices
+      ansible.builtin.systemd:
+        name: "{{ item }}.slice"
+        state: restarted
+        daemon_reload: yes
+      with_items:
+        - "machine-rt"
+        - "machine-nort"
+        - "ovs"
+
+    - name: Create ovs-vswitchd.service.d directory
+      file:
+        path: /etc/systemd/system/ovs-vswitchd.service.d/
+        state: directory
+        owner: root
+        group: root
+        mode: 0755
+    - name: Copy ovs-vswitchd.service drop-in
+      ansible.builtin.copy:
+        src: ../src/debian/ovs-vswitchd_override.conf
+        dest: /etc/systemd/system/ovs-vswitchd.service.d/override.conf
+        owner: root
+        group: root
+        mode: 0644
+      register: ovsvswitchd
+    - name: Restart ovs-vswitchd
+      ansible.builtin.systemd:
+        state: restarted
+        daemon_reload: yes
+        name: ovs-vswitchd
+      when: ovsvswitchd.changed
 
   handlers:
     - name: daemon-reload
