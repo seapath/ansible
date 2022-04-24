@@ -35,7 +35,7 @@
 
     - name: populate the known_hosts files
       known_hosts:
-        path: /etc/ssh/ssh_known_hosts
+        path: /root/.ssh/known_hosts
         name: "{{item}}"
         key: "{{item}} {{ lookup('file','buffer/{{item}}-id_rsa_host.pub')}}"
       with_items: "{{groups['hypervisors']}}"
