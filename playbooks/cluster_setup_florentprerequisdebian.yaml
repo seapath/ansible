@@ -22,13 +22,23 @@
         dest: /etc/systemd/system/votp-config_ovs.service
         mode: '0755'
       register: votpconfigovs
+    - name: Copy votp-taskset.service
+      ansible.builtin.copy:
+        src: ../src/debian/votp-taskset.service
+        dest: /etc/systemd/system/votp-taskset.service
+        mode: '0755'
+      register: votptaskset
     - name: daemon-reload
       ansible.builtin.service:
         daemon_reload: yes
-      when: votpconfigovs.changed
+      when: votpconfigovs.changed or votptaskset.changed
     - name: enable votp-config_ovs.service
       ansible.builtin.systemd:
         name: votp-config_ovs.service
+        enabled: yes
+    - name: enable votp-taskset.service
+      ansible.builtin.systemd:
+        name: votp-taskset.service
         enabled: yes
 
     - name: Synchronization of src vm_manager on the control machine to dest on the remote hosts
@@ -195,8 +205,8 @@
         mode: '0644'
 
     - name: Copy sysfs.d cpumask
-      ansible.builtin.copy:
-        src: ../src/debian/00-workqueue_cpumask.conf
+      template:
+        src: ../templates/00-workqueue_cpumask.conf.j2
         dest: /etc/sysfs.d/00-workqueue_cpumask.conf
         mode: '0644'
       register: sysfscpumask
@@ -221,7 +231,7 @@
       lineinfile:
         dest: /etc/default/grub
         regexp: '^GRUB_CMDLINE_LINUX_DEFAULT=".*"$'
-        line: 'GRUB_CMDLINE_LINUX_DEFAULT="ipv6.disable=1 efi=runtime psi=0 slub_debug=- iommu.passthrough=1 audit=off cpuidle.off=1 cpufreq.off=1 no_debug_objects dma_debug=off powersave=off schedstats=disable pti=on slab_nomerge vm_debug=- default_hugepagesz=1G hugepagesz=1G pci={{ grub_pci }}"'
+        line: 'GRUB_CMDLINE_LINUX_DEFAULT="ipv6.disable=1 efi=runtime processor.max_cstate=1 intel_idle.max_cstate=1 cpufreq.default_governor=performance default_hugepagesz=1G hugepagesz=1G audit=off no_debug_objects intel_pstate=disable nosoftlockup tsc=nowatchdog"'
         state: present
       register: updategrub
     - name: update-grub
@@ -273,6 +283,36 @@
           HISTFILESIZE: 2000000
       with_items: "{{ env_list | dict2items }}"
 
+    - name: "systemd conf"
+      lineinfile:
+        dest: /etc/systemd/system.conf
+        regexp: '^CPUAffinity=.*$'
+        line: "CPUAffinity={{ cpusystem }}"
+        state: present
+
+    - name: Create systemd slices override
+      file:
+        path: /etc/systemd/system.control/{{ item }}.slice.d
+        state: directory
+        owner: root
+        group: root
+        mode: 0755
+      with_items:
+        - "system"
+        - "user"
+        - "machine"
+    - name: create systemd slices override
+      template:
+        src: ../templates/systemd_slice_override.j2
+        dest: /etc/systemd/system.control/{{ item.name }}.slice.d/50-AllowedCPUs.conf
+        owner: root
+        group: root
+        mode:  0644
+      with_items:
+        - { name: "system", description: "system slice", allowedcpus: "{{ cpusystem }}" }
+        - { name: "user", description: "user slice", allowedcpus: "{{ cpuuser }}" }
+        - { name: "machine", description: "machine slice", allowedcpus: "{{ cpumachines }}" }
+ 
     - name: create systemd slices
       template:
         src: ../templates/systemd_slice.j2
@@ -281,9 +321,10 @@
         group: root
         mode:  0644
       with_items:
-        - { name: "machine-rt", description: "VM rt slice", wants: "machine.slice", allowedcpus: "2-5 14-17" }
-        - { name: "machine-nort", description: "VM nonrt slice", wants: "machine.slice", allowedcpus: "6-11 18-23" }
-        - { name: "ovs", description: "ovs slice", wants: "", allowedcpus: "23" }
+        - { name: "machine-rt", description: "VM rt slice", wants: "machine.slice", allowedcpus: "{{ cpumachinesrt }}" }
+        - { name: "machine-nort", description: "VM nonrt slice", wants: "machine.slice", allowedcpus: "{{ cpumachinesnort }}" }
+        - { name: "ovs", description: "ovs slice", wants: "", allowedcpus: "{{ cpuovs }}" }
+      register: newslices
 
     - name: start new slices
       ansible.builtin.systemd:
@@ -294,6 +335,7 @@
         - "machine-rt"
         - "machine-nort"
         - "ovs"
+      when: newslices.changed
 
     - name: Create ovs-vswitchd.service.d directory
       file:

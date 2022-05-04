@@ -1,0 +1,16 @@
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+[Unit]
+Description="taskset of kthreadd at boot time"
+Before=basic.target
+After=local-fs.target sysinit.target
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+ExecStart=/usr/bin/taskset -acp 0,12 2
+
+[Install]
+WantedBy=multi-user.target
