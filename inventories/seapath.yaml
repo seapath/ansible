@@ -232,6 +232,8 @@ all:
     dhcp_bind_interface: TODO
     # The PXE IP address assigned to the "dhcp_bind_interface" interface
     pxe_server_address: TODO
+    # PXE compatibility bios, uefi or dual (default is dual)
+    pxe_compatibility: TODO
     # The DHCP IP range used by the VMs DHCP server
     dhcp_vm_range_begin: TODO
     dhcp_vm_range_end: TODO

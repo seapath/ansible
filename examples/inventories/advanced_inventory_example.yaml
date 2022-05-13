@@ -218,6 +218,8 @@ all:
     dhcp_bind_interface: "eth0"
     # The PXE ip address asigned to the "dhcp_bind_interface" interface
     pxe_server_address: "192.168.111.1"
+    # PXE compatibility bios, uefi or dual (default is dual)
+    pxe_compatibility: "dual"
     # Change the Ansible working folder to a rw accessible folder
     ansible_remote_tmp: /tmp/.ansible/tmp
     # The syslog server IP address where logs are centralized
