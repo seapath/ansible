@@ -36,5 +36,6 @@
           wait_for_connection:
       when: need_to_be_reflashed
 
+- import_playbook: ci_set_efi_boot_entries.yaml
 - import_playbook: cluster_setup_configure_hosts.yaml
 - import_playbook: ci_configure_cluster.yaml
