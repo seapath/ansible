@@ -1,0 +1,20 @@
+# Copyright (C) 2022, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+# This playbook will add SEAPATH EFI boot entries
+
+---
+- name: Configure EFI boot entries
+  hosts: cluster_machines
+  gather_facts: false
+  tasks:
+    - name: Define SEAPATH boot entries if needed
+      script: "../scripts/add_seapath_boot_entries.sh"
+      register: result
+      changed_when: result.rc == 2
+      failed_when: result.rc == 1
+    - name: Reboot on default slot
+      reboot:
+      when: result.rc == 2
+    - name: Wait for host to be online
+      wait_for_connection:
+      when: result.rc == 2
