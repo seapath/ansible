@@ -13,7 +13,7 @@
   tasks:
       - name: Mount the file system
         shell:
-            cmd: mount /dev/disk/by-label/platform /mnt
+            cmd: mount /dev/disk/by-label/rootfs0 /mnt || mount /dev/disk/by-label/platform /mnt
             warn: no
         retries: 3
         delay: 2
