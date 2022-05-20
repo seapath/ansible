@@ -22,16 +22,22 @@
         dest: /etc/systemd/system/votp-config_ovs.service
         mode: '0755'
       register: votpconfigovs
+    - name: Copy votp-taskset.service script
+      ansible.builtin.copy:
+        src: ../src/debian/taskset_boot.sh
+        dest: /usr/local/bin/taskset_boot.sh
+        mode: '0755'
+      register: votptaskset1
     - name: Copy votp-taskset.service
       ansible.builtin.copy:
         src: ../src/debian/votp-taskset.service
         dest: /etc/systemd/system/votp-taskset.service
         mode: '0755'
-      register: votptaskset
+      register: votptaskset2
     - name: daemon-reload
       ansible.builtin.service:
         daemon_reload: yes
-      when: votpconfigovs.changed or votptaskset.changed
+      when: votpconfigovs.changed or votptaskset1.changed or votptaskset2.changed
     - name: enable votp-config_ovs.service
       ansible.builtin.systemd:
         name: votp-config_ovs.service

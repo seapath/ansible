@@ -10,7 +10,7 @@ DefaultDependencies=no
 [Service]
 Type=oneshot
 RemainAfterExit=true
-ExecStart=/usr/bin/taskset -acp 0,12 2
+ExecStart=/usr/local/bin/taskset_boot.sh
 
 [Install]
 WantedBy=multi-user.target
