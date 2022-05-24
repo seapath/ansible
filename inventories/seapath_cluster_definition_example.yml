@@ -1,0 +1,123 @@
+---
+all:
+    children:
+        cluster_machines:
+            children:
+                hypervisors:
+                    hosts:
+                        node1:
+                            ansible_host: 10.10.10.1
+                            network_interface: eno8303 #main interface
+                            main_disk: /dev/sda # disk for system
+                            ip_addr: "{{ ansible_host }}"
+                            subnet: 25 #default is 24, override if necessary
+                            team0_0: "eno12399" # cluster network first interface
+                            team0_1: "eno12409" # cluster network second interface
+                            cluster_next_ip_addr : "192.168.55.2" #node 2 cluster network ip
+                            cluster_previous_ip_addr : "192.168.55.3" #node 3 cluster network ip
+                            cluster_ip_addr: "192.168.55.1"
+                            br_rstp_priority: 12288
+                            brBRIDGE1_ext: eno1234 #physical nic to use with BRIDGE1 (see the ovs topology inventory)
+                        node2:
+                            ansible_host: 10.10.10.2
+                            network_interface: eno8303
+                            main_disk: /dev/sda
+                            ip_addr: "{{ ansible_host }}"
+                            subnet: 25
+                            team0_0: "eno12399"
+                            team0_1: "eno12409"
+                            cluster_next_ip_addr : "192.168.55.3" #node 3 cluster network ip
+                            cluster_previous_ip_addr :  "192.168.55.1" #node 1 cluster network ip
+                            cluster_ip_addr: "192.168.55.2"
+                            ovs_remote_ip: "192.168.55.3"
+                            br_rstp_priority: 16384
+                            brBRIDGE1_ext: eno1234 #physical nic to use with BRIDGE1 (see the ovs topology inventory)
+                        node3:
+                            ansible_host: 10.10.10.3
+                            network_interface: eno8303
+                            main_disk: /dev/sda
+                            ip_addr: "{{ ansible_host }}"
+                            subnet: 25
+                            team0_0: "eno12399"
+                            team0_1: "eno12409"
+                            cluster_next_ip_addr : "192.168.55.1" #ip de hyperviseur 1
+                            cluster_previous_ip_addr :  "192.168.55.2" #ip de l'hyperviseur 2
+                            cluster_ip_addr: "192.168.55.3"
+                            br_rstp_priority: 16384
+                            brBRIDGE1_ext: eno1234 #physical nic to use with BRIDGE1 (see the ovs topology inventory)
+                    vars:
+                        ansible_user: admin
+                        ansible_become: true
+                        ansible_become_method: sudo
+                        ansible_become_flags: "-n -E"
+                        bootloader_config_file: /boot/syslinux.cfg
+        mons:
+            hosts:
+                node1:
+                node2:
+                node3:
+        osds:
+            hosts:
+                node1:
+                node2:
+                node3:
+            vars:
+                ceph_osd_disk: /dev/sdb # CEPH OSD DISK
+        clients:
+            hosts:
+                node1:
+                node2:
+                node3:
+        VMs:
+            hosts:
+                    #centos7SP1:
+                    #centos7SP2:
+                    #centos7SP3:
+            vars:
+                ansible_user: admin
+                ansible_become: true
+                ansible_become_method: sudo
+                ansible_become_flags: "-n -E"
+    vars:
+        ansible_connection: ssh
+        ansible_user: root
+        ansible_python_interpreter: /usr/bin/python3
+        dns_server: 10.10.2.1   # Not valid, just for Ansible
+        gateway_addr: 10.132.159.1 # Not valid, just for Ansible
+        apply_network_config: true
+        ntp_servers: "10.10.10.10"
+        fallback_ntp_servers: 
+        ceph_public_network: "192.168.55.0/24"
+        ceph_cluster_network: "192.168.55.0/24"
+        monitor_address: "{{ ansible_host }}"
+        ci_docker_compose_path: "/opt/docker"
+        eg_ip: "10.10.1.100"
+        eg_passwd: "1"
+        dhcp_range_begin: 10.10.2.34
+        dhcp_range_end: 10.10.2.63
+        dhcp_vm_range_begin: "10.0.24.10"
+        dhcp_vm_range_end: "10.0.24.200"
+        dhcp_bind_interface: "enp2s0"
+        pxe_server_address: "10.10.2.33"
+        dhcp_vm_bind_interface: "ens4f0"
+        ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+        image_directory: "/var/jenkins_home/images"
+        ansible_remote_tmp: /tmp/.ansible/tmp
+        vm_directory: "/mnt/seapath/vm/" 
+        vms_disks_directory: "{{ vm_directory }}"
+        vms_config_directory: "{{ vm_directory }}"
+        syslog_server_ip: "10.10.10.10"
+        mailhost: 10.10.10.10
+        hawkbit_ip_addr: 10.10.10.10
+        logstash_server_ip: 10.10.10.10
+        irqmask: "ffeffe" #IRQBALANCE FORBIDDEN CPU, here it mean 0 and 12 are the only allowed cpus
+        workqueuemask: "1001" #workqueue mask, here it mean 0 and 12 are the only allowed cpus
+        cpusystem: "0,12"
+        cpuuser: "1,13"
+        cpumachines: "2-11,14-23"
+        cpumachinesrt: "2-5,14-17"
+        cpumachinesnort: "6-11,18-23"
+        cpuovs: "23"
+        grub_pci: "noaer,nomsi"
+        email_alert_recipient: "user@domain.com"
+        snmp_trap_server: 10.10.10.10

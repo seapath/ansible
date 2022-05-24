@@ -13,6 +13,7 @@ playbooks/*
 !playbooks/tasks/
 inventories/*
 !inventories/README.adoc
+!inventories/*example*
 
 # Ide
 .idea/
