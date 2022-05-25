@@ -4,14 +4,6 @@
 - import_playbook: cluster_setup_libvirt.yaml
 - import_playbook: cluster_setup_ha.yaml
 - import_playbook: cluster_setup_keys.yaml
-- name: config elastic metricbeat
-  hosts: cluster_machines
-  tasks:
-    - name: lineinfile in hosts file for logstash_seapath
-      lineinfile:
-        dest: /etc/hosts
-        line: "{{ logstash_server_ip }} logstash_seapath"
-        state: present
 - name: Restart all hosts
   hosts: cluster_machines
   tasks:

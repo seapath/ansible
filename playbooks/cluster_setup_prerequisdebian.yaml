@@ -365,6 +365,13 @@
         name: ovs-vswitchd
       when: ovsvswitchd.changed
 
+    - name: lineinfile in hosts file for logstash_seapath
+      lineinfile:
+        dest: /etc/hosts
+        line: "{{ logstash_server_ip }} logstash_seapath"
+        state: present
+
+
   handlers:
     - name: daemon-reload
       ansible.builtin.service:
