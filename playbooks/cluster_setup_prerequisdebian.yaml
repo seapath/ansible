@@ -132,16 +132,20 @@
         mode: 0644
       notify: daemon-reload
       register: pacemaker_corosync
+    - name: Get Pacemaker service Status
+      ansible.builtin.systemd:
+        name: "pacemaker.service"
+      register: pacemaker_service_status
     - name: disable pacemaker (reinstall step 1/2)
       ansible.builtin.systemd:
         name: pacemaker.service
         enabled: no
-      when: pacemaker_corosync.changed
+      when: pacemaker_corosync.changed and pacemaker_service_status.status.UnitFileState == "enabled"
     - name: enable pacemaker (reinstall step 2/2)
       ansible.builtin.systemd:
         name: pacemaker.service
         enabled: yes
-      when: pacemaker_corosync.changed
+      when: pacemaker_corosync.changed and pacemaker_service_status.status.UnitFileState == "enabled"
 
     - name: Synchronization of snmp_ scripts
       ansible.posix.synchronize:
