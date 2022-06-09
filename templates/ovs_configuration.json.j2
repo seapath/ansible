@@ -1,1 +1,2 @@
-{{ ovs_bridges | to_nice_json }}
+{% set OVS_configuration = ({ "bridges": ovs_bridges, "unbind_pci_address": unbind_pci_address | default([]) }) %}
+{{ OVS_configuration | to_nice_json }}
