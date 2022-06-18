@@ -10,4 +10,4 @@
 [submodule "src/debian/vm_manager"]
 	path = src/debian/vm_manager
 	url = https://github.com/seapath/vm_manager.git
-        branch = main
+        branch = debian

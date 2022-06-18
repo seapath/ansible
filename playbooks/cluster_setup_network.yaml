@@ -8,7 +8,7 @@
 
 ---
 - name: Configure OVS
-  hosts: hypervisors
+  hosts: cluster_machines
   vars:
     apply_config: "{{ apply_network_config | default(false) }}"
   tasks:

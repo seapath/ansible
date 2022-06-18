@@ -1,4 +1,8 @@
 [machines]
 hypervisor1 = {{ groups['hypervisors'][0] }}
 hypervisor2 = {{ groups['hypervisors'][1] }}
+{% if ( groups['observers'] is defined) and groups['observers'] %}
+observer = {{ groups['observers'][0] }}
+{% else %}
 hypervisor3 = {{ groups['hypervisors'][2] }}
+{% endif %}

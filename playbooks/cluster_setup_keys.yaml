@@ -4,7 +4,7 @@
   tasks:
     - name: generate SSH key
       user:
-        name: "root"
+        name: "virtu"
         generate_ssh_key: yes
         ssh_key_type: rsa
         ssh_key_bits: 4096
@@ -14,15 +14,15 @@
 
     - name: Fetch the keyfile
       fetch: 
-        src: "~/.ssh/id_rsa.pub"
+        src: "/home/virtu/.ssh/id_rsa.pub"
         dest: "buffer/{{inventory_hostname}}-id_rsa.pub"
         flat: yes
 
     - name: Copy the key add to authorized_keys using Ansible module
       authorized_key:
-        user: root
+        user: virtu
         state: present
-        path: /root/.ssh/authorized_keys
+        path: /home/virtu/.ssh/authorized_keys
         #path: /etc/ssh/root/authorized_keys
         key: "{{ lookup('file','buffer/{{item}}-id_rsa.pub')}}"
       with_items: "{{groups['hypervisors']}}"
@@ -35,7 +35,7 @@
 
     - name: populate the known_hosts files
       known_hosts:
-        path: /root/.ssh/known_hosts
+        path: /home/virtu/.ssh/known_hosts
         name: "{{item}}"
         key: "{{item}} {{ lookup('file','buffer/{{item}}-id_rsa_host.pub')}}"
       with_items: "{{groups['hypervisors']}}"

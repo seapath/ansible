@@ -1,6 +1,6 @@
 - name: Configure debian prerequisites
   hosts:
-      hypervisors
+      cluster_machines
   tasks:
     - name: create src folder on hosts
       file:
@@ -192,6 +192,13 @@
         name: systemd-journald
       when: journaldconf.changed
 
+    - name: Adding user virtu to groups libvirt and haclient
+      user: name=virtu
+        group=virtu
+        shell=/bin/bash
+        groups=libvirt,haclient
+        append=yes
+
     - name: Copy sysctl rules
       ansible.builtin.copy:
         src: ../src/debian/{{ item }}
@@ -291,6 +298,7 @@
         env_list:
           HISTSIZE: 2000000
           HISTFILESIZE: 2000000
+          LIBVIRT_DEFAULT_URI: "qemu:///system"
       with_items: "{{ env_list | dict2items }}"
 
     - name: "systemd conf"
@@ -299,6 +307,18 @@
         regexp: '^CPUAffinity=.*$'
         line: "CPUAffinity={{ cpusystem }}"
         state: present
+
+    - name: "PATH for virtu user"
+      lineinfile:
+        dest: /home/virtu/.bash_profile
+        regexp: '^export PATH'
+        line: "export PATH=$PATH:/usr/sbin:/usr/local/sbin:/sbin"
+        state: present
+        create: yes
+        owner: virtu
+        group: virtu
+        mode: '0644'
+
 
     - name: Create systemd slices override
       file:
