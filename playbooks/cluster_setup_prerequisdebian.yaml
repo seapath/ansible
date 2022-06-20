@@ -154,6 +154,7 @@
         rsync_opts:
         - "--include=snmp_*.sh"
         - "--include=virt-df.sh"
+        - "--exclude=*"
         - "--chmod=F755"
     - name: Snmp config
       ansible.builtin.copy:
