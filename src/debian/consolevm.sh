@@ -12,6 +12,6 @@ else
     echo no hypervisor found for this vm
   else
     echo "$vm is running on $hyp, let's connect !"
-    virsh --connect qemu+ssh://root@$hyp/system console $vm
+    virsh --connect qemu+ssh://virtu@$hyp/system console $vm
   fi
 fi
