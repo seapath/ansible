@@ -1,10 +1,10 @@
 - name: Configure ssh keys between hosts
-  hosts: hypervisors
+  hosts: cluster_machines
   gather_facts: yes
   tasks:
     - name: generate SSH key
       user:
-        name: "virtu"
+        name: "root"
         generate_ssh_key: yes
         ssh_key_type: rsa
         ssh_key_bits: 4096
@@ -14,7 +14,7 @@
 
     - name: Fetch the keyfile
       fetch: 
-        src: "/home/virtu/.ssh/id_rsa.pub"
+        src: "/root/.ssh/id_rsa.pub"
         dest: "buffer/{{inventory_hostname}}-id_rsa.pub"
         flat: yes
 
@@ -25,7 +25,7 @@
         path: /home/virtu/.ssh/authorized_keys
         #path: /etc/ssh/root/authorized_keys
         key: "{{ lookup('file','buffer/{{item}}-id_rsa.pub')}}"
-      with_items: "{{groups['hypervisors']}}"
+      with_items: "{{groups['cluster_machines']}}"
 
     - name: Fetch the keyfile
       fetch: 
@@ -35,8 +35,8 @@
 
     - name: populate the known_hosts files
       known_hosts:
-        path: /home/virtu/.ssh/known_hosts
+        path: /root/.ssh/known_hosts
         name: "{{item}}"
         key: "{{item}} {{ lookup('file','buffer/{{item}}-id_rsa_host.pub')}}"
-      with_items: "{{groups['hypervisors']}}"
+      with_items: "{{groups['cluster_machines']}}"
 
