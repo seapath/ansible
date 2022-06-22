@@ -116,6 +116,21 @@
         group: root
         mode: 0644
       notify: daemon-reload
+    - name: Create corosync.service.d directory
+      file:
+        path: /etc/systemd/system/corosync.service.d/
+        state: directory
+        owner: root
+        group: root
+        mode: 0755
+    - name: Copy corosync.service drop-in
+      ansible.builtin.copy:
+        src: ../src/debian/corosync_override.conf
+        dest: /etc/systemd/system/corosync.service.d/override.conf
+        owner: root
+        group: root
+        mode: 0644
+      notify: daemon-reload
     - name: Create pacemaker.service.d directory
       file:
         path: /etc/systemd/system/pacemaker.service.d/
