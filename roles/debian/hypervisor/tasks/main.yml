@@ -1,0 +1,152 @@
+- name: Copy votp-taskset.service script
+  ansible.builtin.copy:
+    src: ../src/debian/taskset_boot.sh
+    dest: /usr/local/bin/taskset_boot.sh
+    mode: '0755'
+  register: votptaskset1
+- name: Copy votp-taskset.service
+  ansible.builtin.copy:
+    src: ../src/debian/votp-taskset.service
+    dest: /etc/systemd/system/votp-taskset.service
+    mode: '0644'
+  register: votptaskset2
+- name: daemon-reload taskset
+  ansible.builtin.service:
+    daemon_reload: yes
+  when: votptaskset1.changed or votptaskset2.changed
+- name: enable votp-taskset.service
+  ansible.builtin.systemd:
+    name: votp-taskset.service
+    enabled: yes
+
+- name: Copy sysfs.d cpumask
+  template:
+    src: ../templates/00-workqueue_cpumask.conf.j2
+    dest: /etc/sysfs.d/00-workqueue_cpumask.conf
+    mode: '0644'
+  register: sysfscpumask
+- name: restart sysfsutils
+  ansible.builtin.systemd:
+    name: sysfsutils.service
+    state: restarted
+  when: sysfscpumask.changed
+
+- name: "grub conf"
+  lineinfile:
+    dest: /etc/default/grub
+    regexp: '^GRUB_CMDLINE_LINUX_DEFAULT=".*"$'
+    line: 'GRUB_CMDLINE_LINUX_DEFAULT="ipv6.disable=1 efi=runtime processor.max_cstate=1 intel_idle.max_cstate=1 cpufreq.default_governor=performance default_hugepagesz=1G hugepagesz=1G no_debug_objects intel_pstate=disable nosoftlockup tsc=nowatchdog"'
+    state: present
+  register: updategrub
+- name: update-grub
+  shell: update-grub
+  when: updategrub.changed
+
+- name: "irqbalance conf"
+  lineinfile:
+    dest: /etc/default/irqbalance
+    regexp: '^IRQBALANCE_BANNED_CPUS=".*"$'
+    line: 'IRQBALANCE_BANNED_CPUS="{{ irqmask }}"'
+    state: present
+  register: irqbalanceconf
+- name: restart irqbalance
+  ansible.builtin.systemd:
+    name: irqbalance.service
+    enabled: yes
+    state: restarted
+  when: irqbalanceconf.changed
+
+- name: Copy hugetlb script file
+  ansible.builtin.copy:
+    src: ../src/debian/hugetlb-reserve-pages.sh
+    dest: /usr/local/bin/hugetlb-reserve-pages.sh
+    mode: '0755'
+- name: Copy hugetlb service file
+  ansible.builtin.copy:
+    src: ../src/debian/hugetlb-gigantic-pages.service
+    dest: /etc/systemd/system/hugetlb-gigantic-pages.service
+    mode: '0644'
+- name: daemon-reload
+  ansible.builtin.service:
+    daemon_reload: yes
+- name: enable hugetlb-gigantic-pages.service
+  ansible.builtin.systemd:
+    name: hugetlb-gigantic-pages.service
+    enabled: yes
+    state: started
+
+- name: "systemd conf"
+  lineinfile:
+    dest: /etc/systemd/system.conf
+    regexp: '^CPUAffinity=.*$'
+    line: "CPUAffinity={{ cpusystem }}"
+    state: present
+
+- name: Create systemd slices override
+  file:
+    path: /etc/systemd/system.control/{{ item }}.slice.d
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+  with_items:
+    - "system"
+    - "user"
+    - "machine"
+- name: create systemd slices override
+  template:
+    src: ../templates/systemd_slice_override.j2
+    dest: /etc/systemd/system.control/{{ item.name }}.slice.d/50-AllowedCPUs.conf
+    owner: root
+    group: root
+    mode:  0644
+  with_items:
+    - { name: "system", description: "system slice", allowedcpus: "{{ cpusystem }}" }
+    - { name: "user", description: "user slice", allowedcpus: "{{ cpuuser }}" }
+    - { name: "machine", description: "machine slice", allowedcpus: "{{ cpumachines }}" }
+ 
+- name: create systemd slices
+  template:
+    src: ../templates/systemd_slice.j2
+    dest: /etc/systemd/system/{{ item.name }}.slice
+    owner: root
+    group: root
+    mode:  0644
+  with_items:
+    - { name: "machine-rt", description: "VM rt slice", wants: "machine.slice", allowedcpus: "{{ cpumachinesrt }}" }
+    - { name: "machine-nort", description: "VM nonrt slice", wants: "machine.slice", allowedcpus: "{{ cpumachinesnort }}" }
+    - { name: "ovs", description: "ovs slice", wants: "", allowedcpus: "{{ cpuovs }}" }
+  register: newslices
+
+- name: start new slices
+  ansible.builtin.systemd:
+    name: "{{ item }}.slice"
+    state: restarted
+    daemon_reload: yes
+  with_items:
+    - "machine-rt"
+    - "machine-nort"
+    - "ovs"
+  when: newslices.changed
+
+- name: Create ovs-vswitchd.service.d directory
+  file:
+    path: /etc/systemd/system/ovs-vswitchd.service.d/
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+- name: Copy ovs-vswitchd.service drop-in
+  ansible.builtin.copy:
+    src: ../src/debian/ovs-vswitchd_override.conf
+    dest: /etc/systemd/system/ovs-vswitchd.service.d/override.conf
+    owner: root
+    group: root
+    mode: 0644
+  register: ovsvswitchd
+- name: Restart ovs-vswitchd
+  ansible.builtin.systemd:
+    state: restarted
+    daemon_reload: yes
+    name: ovs-vswitchd
+  when: ovsvswitchd.changed

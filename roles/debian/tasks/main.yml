@@ -1,0 +1,284 @@
+- name: create src folder on hosts
+  file:
+    path: /tmp/src
+    state: directory
+    mode: '0755'
+
+- name: Synchronization of src python3-setup-ovs on the control machine to dest on the remote hosts
+  ansible.posix.synchronize:
+    src: ../src/debian/python3-setup-ovs
+    dest: /tmp/src
+- name: Install python3-setup-ovs
+  command:
+    cmd: /usr/bin/python3 setup.py install
+    chdir: /tmp/src/python3-setup-ovs
+- name: Copy votp-config_ovs.service
+  ansible.builtin.copy:
+    src: ../src/debian/votp-config_ovs.service
+    dest: /etc/systemd/system/votp-config_ovs.service
+    mode: '0644'
+  register: votpconfigovs
+- name: daemon-reload votp-config_ovs
+  ansible.builtin.service:
+    daemon_reload: yes
+  when: votpconfigovs.changed
+- name: enable votp-config_ovs.service
+  ansible.builtin.systemd:
+    name: votp-config_ovs.service
+    enabled: yes
+
+- name: Synchronization of src vm_manager on the control machine to dest on the remote hosts
+  ansible.posix.synchronize:
+    src: ../src/debian/vm_manager
+    dest: /tmp/src
+- name: Install vm_manager
+  command:
+    cmd: /usr/bin/python3 setup.py install
+    chdir: /tmp/src/vm_manager
+- name: Create a symbolic link
+  ansible.builtin.file:
+    src: /usr/local/bin/vm_manager_cmd.py
+    dest: /usr/local/bin/vm-mgr
+    state: link
+
+- name: Synchronization of backup-restore folder on the control machine to dest on the remote hosts
+  ansible.posix.synchronize:
+    src: ../src/debian/backup-restore/
+    dest: /usr/bin/
+
+- name: Copy consolevm.sh
+  ansible.builtin.copy:
+    src: ../src/debian/consolevm.sh
+    dest: /usr/local/bin/consolevm
+    mode: '0755'
+
+- name: Copy vimrc.local file
+  ansible.builtin.copy:
+    src: ../src/debian/vimrc.local
+    dest: /etc/vim/vimrc.local
+    mode: '0644'
+
+- name: Copy VirtualDomain file
+  ansible.builtin.copy:
+    src: ../src/debian/VirtualDomain
+    dest: /usr/lib/ocf/resource.d/heartbeat/VirtualDomain
+    mode: '0755'
+
+- name: create /var/log/syslog-ng folder on hosts
+  file:
+    path: /var/log/syslog-ng
+    state: directory
+    mode: '0755'
+- name: Copy syslog-ng conf file
+  template:
+    src: ../templates/syslog-ng.conf.j2
+    dest: /etc/syslog-ng/syslog-ng.conf
+    mode: '0644'
+  register: syslogconf
+- name: Restart syslog-ng
+  ansible.builtin.systemd:
+    state: restarted
+    name: syslog-ng
+  when: syslogconf.changed
+
+- name: Create libvirtd.service.d directory
+  file:
+    path: /etc/systemd/system/libvirtd.service.d/
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+- name: Copy libvirtd.service drop-in
+  ansible.builtin.copy:
+    src: ../src/debian/libvirtd_override.conf
+    dest: /etc/systemd/system/libvirtd.service.d/override.conf
+    owner: root
+    group: root
+    mode: 0644
+  notify: daemon-reload
+- name: Create corosync.service.d directory
+  file:
+    path: /etc/systemd/system/corosync.service.d/
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+- name: Copy corosync.service drop-in
+  ansible.builtin.copy:
+    src: ../src/debian/corosync_override.conf
+    dest: /etc/systemd/system/corosync.service.d/override.conf
+    owner: root
+    group: root
+    mode: 0644
+  notify: daemon-reload
+- name: Create pacemaker.service.d directory
+  file:
+    path: /etc/systemd/system/pacemaker.service.d/
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+- name: Copy pacemaker.service drop-in
+  ansible.builtin.copy:
+    src: ../src/debian/pacemaker_override.conf
+    dest: /etc/systemd/system/pacemaker.service.d/override.conf
+    owner: root
+    group: root
+    mode: 0644
+  notify: daemon-reload
+  register: pacemaker_corosync
+- name: Get Pacemaker service Status
+  ansible.builtin.systemd:
+    name: "pacemaker.service"
+  register: pacemaker_service_status
+- name: disable pacemaker (reinstall step 1/2)
+  ansible.builtin.systemd:
+    name: pacemaker.service
+    enabled: no
+  when: pacemaker_corosync.changed and pacemaker_service_status.status.UnitFileState == "enabled"
+- name: enable pacemaker (reinstall step 2/2)
+  ansible.builtin.systemd:
+    name: pacemaker.service
+    enabled: yes
+  when: pacemaker_corosync.changed and pacemaker_service_status.status.UnitFileState == "enabled"
+
+- name: Synchronization of snmp_ scripts
+  ansible.posix.synchronize:
+    src: ../src/debian/
+    dest: /usr/local/bin/
+    rsync_opts:
+    - "--include=snmp_*.sh"
+    - "--include=virt-df.sh"
+    - "--exclude=*"
+    - "--chmod=F755"
+- name: Snmp config
+  ansible.builtin.copy:
+    src: ../src/debian/snmpd.conf
+    dest: /etc/snmp/snmpd.conf
+    mode: '0644'
+  register: snmpd_conf
+- name: restart snmpd
+  ansible.builtin.systemd:
+    name: snmpd.service
+    state: restarted
+  when: snmpd_conf.changed
+- name: Adding user Debian-snmp to groups libvirt and haclient
+  user: name=Debian-snmp
+    group=Debian-snmp
+    shell=/bin/false
+    groups=libvirt,haclient
+    append=yes
+
+- name: Allow 'virtu' user to sudo
+  lineinfile:
+    dest: /etc/sudoers.d/virtu
+    state: present
+    regexp: 'virtu'
+    line: 'virtu   ALL=NOPASSWD: ALL'
+    validate: visudo -cf %s
+    create: yes
+- name: Allow 'Debian-snmp' user to run snmp_diskusage.sh
+  lineinfile:
+    dest: /etc/sudoers.d/Debian-snmp
+    state: present
+    regexp: '^Debian-snmp'
+    line: 'Debian-snmp     ALL = (root) NOPASSWD: /usr/local/bin/snmp_diskusage.sh'
+    validate: visudo -cf %s
+    create: yes
+- name: remove 'virtu' from sudoers file
+  lineinfile:
+    dest: /etc/sudoers
+    state: absent
+    regexp: '^virtu'
+    validate: visudo -cf %s
+
+- name: Copy journald conf file
+  ansible.builtin.copy:
+    src: ../src/debian/journald.conf
+    dest: /etc/systemd/journald.conf
+    mode: '0644'
+  register: journaldconf
+- name: Restart systemd-journald
+  ansible.builtin.systemd:
+    state: restarted
+    name: systemd-journald
+  when: journaldconf.changed
+
+- name: Adding user virtu to groups libvirt and haclient
+  user: name=virtu
+    group=virtu
+    shell=/bin/bash
+    groups=libvirt,haclient
+    append=yes
+
+- name: Copy sysctl rules
+  ansible.builtin.copy:
+    src: ../src/debian/{{ item }}
+    dest: /etc/sysctl.d/{{ item }}
+    mode: '0644'
+  with_items:
+    - 00-bridge_nf_call.conf
+    - 00-schedrt.conf
+    - 00-panicreboot.conf
+- name: add br_netfilter to /etc/modules
+  lineinfile:
+    dest: /etc/modules
+    state: present
+    regexp: '^br_netfilter$'
+    line: 'br_netfilter'
+
+- name: Copy apparmor libvirt-qemu rules
+  ansible.builtin.copy:
+    src: ../src/debian/etc_apparmor.d_abstractions_libvirt-qemu.conf
+    dest: /etc/apparmor.d/abstractions/libvirt-qemu
+    mode: '0644'
+
+- name: Copy 80-wired networkd file
+  ansible.builtin.copy:
+    src: ../src/debian/80-wired.network
+    dest: /etc/systemd/network/80-wired.network
+    mode: '0640'
+    owner: root
+    group: systemd-network
+
+- name: Copy metricbeat conf file
+  ansible.builtin.copy:
+    src: ../src/debian/metricbeat.yml
+    dest: /etc/metricbeat/metricbeat.yml
+    mode: '0644'
+- name: enable metricbeat
+  ansible.builtin.systemd:
+    name: metricbeat.service
+    enabled: yes
+    state: started
+
+- name: customize /etc/environment
+  ansible.builtin.lineinfile:
+    dest: "/etc/environment"
+    state: present
+    regexp: "^{{ item.key }}="
+    line: "{{ item.key }}={{ item.value }}"
+  vars:
+    env_list:
+      HISTSIZE: 2000000
+      HISTFILESIZE: 2000000
+      LIBVIRT_DEFAULT_URI: "qemu:///system"
+  with_items: "{{ env_list | dict2items }}"
+
+- name: "PATH for virtu user"
+  lineinfile:
+    dest: /home/virtu/.bash_profile
+    regexp: '^export PATH'
+    line: "export PATH=$PATH:/usr/sbin:/usr/local/sbin:/sbin"
+    state: present
+    create: yes
+    owner: virtu
+    group: virtu
+    mode: '0644'
+
+- name: lineinfile in hosts file for logstash_seapath
+  lineinfile:
+    dest: /etc/hosts
+    line: "{{ logstash_server_ip }} logstash_seapath"
+    state: present
+
