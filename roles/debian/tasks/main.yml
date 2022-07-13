@@ -285,6 +285,7 @@
 - name: lineinfile in hosts file for logstash_seapath
   lineinfile:
     dest: /etc/hosts
+    regexp: '.* logstash_seapath$'
     line: "{{ logstash_server_ip }} logstash_seapath"
     state: present
 
