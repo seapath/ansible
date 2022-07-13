@@ -40,6 +40,7 @@ destination d_net {
                 "{{ syslog_server_ip }}"
                 port(5054)
                 transport("tcp")
+		time_zone("UTC")
                 disk-buffer(
                         mem-buf-size(16384000)
                         disk-buf-size(107374182)
