@@ -104,7 +104,7 @@ setup.kibana:
 # ------------------------------ Logstash Output -------------------------------
 output.logstash:
   # The Logstash hosts
-  hosts: ["logstash_seapath:5066"]
+  hosts: ["logstash-seapath:5066"]
 
   # Optional SSL. By default is off.
   # List of root certificates for HTTPS server verifications
