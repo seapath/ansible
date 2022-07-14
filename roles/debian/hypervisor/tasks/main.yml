@@ -75,11 +75,23 @@
     enabled: yes
     state: started
 
-- name: "systemd conf"
+- name: "systemd conf CPUAffinity"
   lineinfile:
     dest: /etc/systemd/system.conf
     regexp: '^CPUAffinity=.*$'
     line: "CPUAffinity={{ cpusystem }}"
+    state: present
+- name: "systemd conf RuntimeWatchdogSec"
+  lineinfile:
+    dest: /etc/systemd/system.conf
+    regexp: '^RuntimeWatchdogSec=.*$'
+    line: "RuntimeWatchdogSec=20"
+    state: present
+- name: "systemd conf RebootWatchdogSec"
+  lineinfile:
+    dest: /etc/systemd/system.conf
+    regexp: '^RebootWatchdogSec=.*$'
+    line: "RebootWatchdogSec=5min"
     state: present
 
 - name: Create systemd slices override
@@ -150,3 +162,47 @@
     daemon_reload: yes
     name: ovs-vswitchd
   when: ovsvswitchd.changed
+
+
+- name: Copy monitor_journalctl.service
+  ansible.builtin.copy:
+    src: ../src/debian/monitor_journalctl.service
+    dest: /etc/systemd/system/monitor_journalctl.service
+    mode: '0644'
+  register: monitor_journalctl_service
+- name: Copy monitor_journalctl service script
+  ansible.builtin.copy:
+    src: ../src/debian/monitor_journalctl.sh
+    dest: /usr/local/sbin/monitor_journalctl.sh
+    mode: '0750'
+  register: monitor_journalctl_script
+- name: daemon-reload monitor_journalctl
+  ansible.builtin.service:
+    daemon_reload: yes
+  when: monitor_journalctl_service.changed or monitor_journalctl_script.changed
+- name: enable monitor_journalctl.service
+  ansible.builtin.systemd:
+    name: monitor_journalctl.service
+    enabled: yes
+
+- name: Copy monitor_journalctl_hard.service
+  ansible.builtin.copy:
+    src: ../src/debian/monitor_journalctl_hard.service
+    dest: /etc/systemd/system/monitor_journalctl_hard.service
+    mode: '0644'
+  register: monitor_journalctl_hard_service
+- name: Copy monitor_journalctl_hard service script
+  ansible.builtin.copy:
+    src: ../src/debian/monitor_journalctl_hard.sh
+    dest: /usr/local/sbin/monitor_journalctl_hard.sh
+    mode: '0750'
+  register: monitor_journalctl_hard_script
+- name: daemon-reload monitor_journalctl_hard
+  ansible.builtin.service:
+    daemon_reload: yes
+  when: monitor_journalctl_hard_service.changed or monitor_journalctl_hard_script.changed
+- name: enable monitor_journalctl_hard.service
+  ansible.builtin.systemd:
+    name: monitor_journalctl_hard.service
+    enabled: yes
+
