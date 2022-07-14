@@ -19,10 +19,10 @@
 - name: config elastic metricbeat
   hosts: cluster_machines
   tasks:
-    - name: lineinfile in hosts file for logstash_seapath
+    - name: lineinfile in hosts file for logstash-seapath
       lineinfile:
         dest: /etc/hosts
-        line: "{{ logstash_server_ip }} logstash_seapath"
+        line: "{{ logstash_server_ip }} logstash-seapath"
         state: present
 - name: config MSMTP
   hosts: cluster_machines
