@@ -48,8 +48,26 @@ while true; do
     shift
 done
 
+errors=0
 for yaml in $(find_yaml "${directory}") ; do
-    echo -n "test $yaml: "
-    yamllint -f parsable "${warns}" "$yaml"
-    echo "ok"
+    output=$(yamllint -f parsable "${warns}" "$yaml")
+    if [ -z "$output" ]
+    then
+        echo "$yaml: $(C green OK)"
+    else
+        echo "$yaml: $(C red KO)"
+        echo $(C red $output)
+        if [ -n "$verbose" ] ; then
+            echo $(C gray "$output")
+        fi
+        ((errors=errors+1))
+    fi
 done
+
+if [ $errors -eq 0 ]
+then
+    exit 0
+else
+    echo "There are $errors errors"
+    exit 1
+fi
