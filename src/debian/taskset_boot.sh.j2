@@ -1,0 +1,6 @@
+#!/bin/bash
+
+/usr/bin/taskset -acp {{ cpusystem }} 2
+/usr/bin/taskset -acp {{ cpusystem }} $(pgrep rcu_preempt)
+/usr/bin/tuna -t rcu* -c {{ cpusystem }} -m
+

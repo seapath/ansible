@@ -1,6 +1,6 @@
 - name: Copy votp-taskset.service script
-  ansible.builtin.copy:
-    src: ../src/debian/taskset_boot.sh
+  template:
+    src: ../src/debian/taskset_boot.sh.j2
     dest: /usr/local/bin/taskset_boot.sh
     mode: '0755'
   register: votptaskset1
@@ -35,7 +35,7 @@
   lineinfile:
     dest: /etc/default/grub
     regexp: '^GRUB_CMDLINE_LINUX_DEFAULT=".*"$'
-    line: 'GRUB_CMDLINE_LINUX_DEFAULT="ipv6.disable=1 efi=runtime processor.max_cstate=1 intel_idle.max_cstate=1 cpufreq.default_governor=performance default_hugepagesz=1G hugepagesz=1G no_debug_objects intel_pstate=disable nosoftlockup tsc=nowatchdog"'
+    line: 'GRUB_CMDLINE_LINUX_DEFAULT="ipv6.disable=1 efi=runtime processor.max_cstate=1 intel_idle.max_cstate=1 cpufreq.default_governor=performance default_hugepagesz=1G hugepagesz=1G no_debug_objects intel_pstate=disable nosoftlockup rcu_nocbs={{ cpumachinesrt }} rcu_nocb_poll rcutree.kthread_prio=10"'
     state: present
   register: updategrub
 - name: update-grub
