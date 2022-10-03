@@ -11,3 +11,9 @@
 	path = src/debian/vm_manager
 	url = https://github.com/seapath/vm_manager.git
         branch = main
+[submodule "src/cukinia-tests"]
+	path = src/cukinia-tests
+	url = https://github.com/seapath/cukinia-tests.git
+[submodule "src/cukinia"]
+	path = src/cukinia
+	url = https://github.com/savoirfairelinux/cukinia.git
