@@ -1,0 +1,15 @@
+# Copyright (C) 2022, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Deploy Cukinia's tests
+  hosts: cluster_machines
+  tasks:
+    - name: Copy Cukinia's tests
+      copy:
+        src: ../src/cukinia-tests/cukinia
+        dest: /etc/
+    - name: Copy Cukinia's includes
+      copy:
+        src: ../src/cukinia-tests/includes/kernel_config_functions
+        dest: /usr/share/cukinia/includes/kernel_config_functions
