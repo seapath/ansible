@@ -10,6 +10,7 @@ playbooks/*
 !playbooks/cluster_setup_*.yaml
 !playbooks/ci_*.yaml
 !playbooks/replace_machine_*.yaml
+!playbooks/test_*.yaml
 !playbooks/tasks/
 inventories/*
 !inventories/README.adoc
