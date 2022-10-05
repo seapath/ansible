@@ -34,3 +34,6 @@ facts/
 
 #private inventories
 inventories_private/
+
+# Ignore Cukinia results
+/*.csv
