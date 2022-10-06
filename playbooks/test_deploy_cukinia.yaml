@@ -15,3 +15,30 @@
         path: /usr/local/bin/cukinia
         regexp: '^#!/bin/sh$'
         replace: "#!/usr/bin/env bash"
+    - name: "Patch cukinia: CAT"
+      lineinfile:
+       path: /usr/local/bin/cukinia
+       line: "	local CAT=zcat"
+       insertafter: 'local line=""'
+    - name: "Patch cukinia: ikconfig test"
+      replace:
+       path: /usr/local/bin/cukinia
+       regexp: '^		_cukinia_prepare "cukinia_kconf.*\n.*return 1'
+       replace: >-
+        \t\tif [ ! -e "/boot/config-$(uname -r)" ] ; then\n
+        \t\t\t_cukinia_prepare "cukinia_kconf: $ikconfig
+        (CONFIG_IKCONFIG_PROC=y) is ${__not:+NOT }required"\n
+        \t\t\treturn 1\n
+        \t\tfi\n
+        \t\tikconfig="/boot/config-$(uname -r)"\n
+        \t\tCAT=cat
+    - name: "Patch cukinia: _cukinia_prepare"
+      replace:
+        path: /usr/local/bin/cukinia
+        regexp: '_cukinia_prepare "cukinia_kconf'
+        replace: '  _cukinia_prepare "cukinia_kconf'
+    - name: "Patch cukinia: zcat"
+      replace:
+       path: /usr/local/bin/cukinia
+       replace: "${CAT} ${ikconfig}"
+       regexp: "zcat /proc/config.gz"
