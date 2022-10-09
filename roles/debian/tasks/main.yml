@@ -232,6 +232,12 @@
     state: present
     regexp: '^br_netfilter$'
     line: 'br_netfilter'
+- name: add raid6_pq to /etc/modules
+  lineinfile:
+    dest: /etc/modules
+    state: present
+    regexp: '^raid6_pq$'
+    line: 'raid6_pq'
 
 - name: Copy apparmor libvirt-qemu rules
   ansible.builtin.copy:
