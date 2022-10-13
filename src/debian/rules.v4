@@ -6,7 +6,10 @@
 :DOCKER-ISOLATION-STAGE-1 - [0:0]
 :DOCKER-ISOLATION-STAGE-2 - [0:0]
 :DOCKER-USER - [0:0]
+-A INPUT -i localbr -j DROP
 -A FORWARD -i br0 -j ACCEPT
+-A DOCKER-USER -i localbr -s 10.1.1.2 -p tcp --dport 80 -j ACCEPT
+-A DOCKER-USER -i localbr -j DROP
 COMMIT
 *nat
 :PREROUTING ACCEPT [15:2930]
