@@ -223,7 +223,6 @@
     dest: /etc/sysctl.d/{{ item }}
     mode: '0644'
   with_items:
-    - 00-bridge_nf_call.conf
     - 00-schedrt.conf
     - 00-panicreboot.conf
 - name: add br_netfilter to /etc/modules
@@ -239,6 +238,21 @@
     regexp: '^raid6_pq$'
     line: 'raid6_pq'
 
+- name: Copy iptables rules
+  ansible.builtin.copy:
+    src: ../src/debian/{{ item }}
+    dest: /etc/iptables/{{ item }}
+    mode: '0644'
+  with_items:
+    - rules.v4
+
+- name: enable netfilter-persistent
+  ansible.builtin.systemd:
+    name: netfilter-persistent
+    enabled: yes
+    state: started
+
+- name: add br_netfilter to /etc/modules
 - name: Copy apparmor libvirt-qemu rules
   ansible.builtin.copy:
     src: ../src/debian/etc_apparmor.d_abstractions_libvirt-qemu.conf
