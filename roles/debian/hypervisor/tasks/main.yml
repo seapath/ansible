@@ -38,9 +38,6 @@
     line: 'GRUB_CMDLINE_LINUX="ipv6.disable=1 efi=runtime processor.max_cstate=1 intel_idle.max_cstate=1 cpufreq.default_governor=performance default_hugepagesz=1G hugepagesz=1G no_debug_objects intel_pstate=disable nosoftlockup rcu_nocbs={{ cpumachinesrt }} rcu_nocb_poll rcutree.kthread_prio=10"'
     state: present
   register: updategrub1
-- name: update-grub
-  shell: update-grub
-  when: updategrub.changed
 - name: "grub conf osprober"
   lineinfile:
     dest: /etc/default/grub
