@@ -1,0 +1,18 @@
+[Unit]
+Description=docker apache/php for serving ptp status to vms
+
+[Service]
+Restart=always
+User=root
+
+Environment="COMPOSE_PROJECT_NAME=ptp_docker"
+Environment="COMPOSE_FILE=/var/local/ptp_docker/compose-ptp_docker.yml"
+
+ExecStartPre=-/usr/bin/bash -c '/usr/bin/sleep 1; docker ps -aq -f status=dead | xargs -r docker rm -f'
+ExecStart=/usr/bin/docker-compose -p ${COMPOSE_PROJECT_NAME} -f ${COMPOSE_FILE} up
+ExecStop=/usr/bin/docker-compose -p ${COMPOSE_PROJECT_NAME} -f ${COMPOSE_FILE} stop
+ExecReload=/usr/bin/docker-compose -p ${COMPOSE_PROJECT_NAME} -f ${COMPOSE_FILE} restart
+
+[Install]
+WantedBy=multi-user.target
+

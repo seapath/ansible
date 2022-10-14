@@ -1,0 +1,10 @@
+[Unit]
+Description=gets ptp status
+
+[Service]
+ExecStartPre=rm -rf /tmp/ptp.status /tmp/ptp.details
+ExecStart=/usr/local/bin/ptpstatus.sh /tmp/ptp.status /tmp/ptp.details
+
+[Install]
+WantedBy=multi-user.target
+WantedBy=ptpdocker.service
