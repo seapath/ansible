@@ -1,0 +1,13 @@
+version: '3.6'
+
+services:
+  ptp_docker:
+    image: php:apache
+    container_name: ptp_docker
+    ports:
+      - 80:80
+    volumes:
+      - /tmp/ptp.status:/tmp/ptp.status
+      - /tmp/ptp.details:/tmp/ptp.details
+      - /var/local/ptp_docker/getptpstatus.php:/var/www/html/getptpstatus.php
+      - /var/local/ptp_docker/getptpdetails.php:/var/www/html/getptpdetails.php

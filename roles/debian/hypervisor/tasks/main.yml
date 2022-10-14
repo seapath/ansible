@@ -213,3 +213,52 @@
     name: monitor_journalctl_hard.service
     enabled: yes
 
+
+- name: create /var/local/ptp_docker folder on hosts
+  file:
+    path: /var/local/ptp_docker
+    state: directory
+    mode: '0755'
+- name: Copy ptp_docker non executable files
+  ansible.builtin.copy:
+    src: ../src/debian/ptp_docker/{{ item }}
+    dest: /var/local/ptp_docker/{{ item }}
+    mode: '0644'
+  with_items:
+    - getptpstatus.php
+    - getptpdetails.php
+    - compose-ptp_docker.yml
+- name: Copy ptp_docker executable files
+  ansible.builtin.copy:
+    src: ../src/debian/ptp_docker/{{ item }}
+    dest: /usr/local/bin/{{ item }}
+    mode: '0755'
+  with_items:
+    - ptpstatus.sh
+
+- name: Copy ptp_status.service
+  ansible.builtin.copy:
+    src: ../src/debian/ptp_docker/ptpstatus.service
+    dest: /etc/systemd/system/ptpstatus.service
+    mode: '0644'
+  register: ptpstatus
+- name: Copy ptp_docker.service
+  ansible.builtin.copy:
+    src: ../src/debian/ptp_docker/ptpdocker.service
+    dest: /etc/systemd/system/ptpdocker.service
+    mode: '0644'
+  register: ptpdocker
+- name: daemon-reload ptpdocker
+  ansible.builtin.service:
+    daemon_reload: yes
+  when: ptpdocker.changed or ptpstatus.changed
+- name: enable ptpstatus.service
+  ansible.builtin.systemd:
+    name: ptpstatus.service
+    enabled: yes
+    state: started
+- name: enable ptpdocker.service
+  ansible.builtin.systemd:
+    name: ptpdocker.service
+    enabled: yes
+    state: started
