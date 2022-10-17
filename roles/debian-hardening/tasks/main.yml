@@ -43,3 +43,20 @@
     state: absent
   notify: update sysfs values using sysctl
   when: revert
+
+- name: "Disable kexec"
+  lineinfile:
+    dest: /etc/sysctl.d/50-kexec.conf
+    regexp: "^kernel.kexec_load_disabled=1$"
+    line: "kernel.kexec_load_disabled=1"
+    create: yes
+    state: present
+  notify: update-sysfs
+  when: not revert
+- name: "Revert kexec disabling"
+  lineinfile:
+    dest: /etc/sysctl.d/50-kexec.conf
+    regexp: "^kernel.kexec_load_disabled=1$"
+    state: absent
+  notify: update-sysfs
+  when: revert
