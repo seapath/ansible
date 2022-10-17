@@ -8,3 +8,4 @@ kernel_params:
  - slab_nomerge
  - pti=on
  - slub_debug=ZF
+ - randomize_kstack_offset=on
