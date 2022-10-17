@@ -9,3 +9,4 @@ kernel_params:
  - pti=on
  - slub_debug=ZF
  - randomize_kstack_offset=on
+ - slab_common.usercopy_fallback=N
