@@ -60,3 +60,20 @@
     state: absent
   notify: update-sysfs
   when: revert
+
+- name: "Disable binfmt_misc"
+  lineinfile:
+    dest: /etc/sysctl.d/50-binfmt_misc.conf
+    regexp: "^fs.binfmt_misc.status=0$"
+    line: "fs.binfmt_misc.status=0"
+    create: yes
+    state: present
+  notify: update-sysfs
+  when: not revert
+- name: "Revert binfmt_misc disabling"
+  lineinfile:
+    dest: /etc/sysctl.d/50-binfmt_misc.conf
+    regexp: "^fs.binfmt_misc.status=0$"
+    state: absent
+  notify: update-sysfs
+  when: revert
