@@ -72,9 +72,6 @@
     - rcu_nocb_poll
     - rcutree.kthread_prio=10
     - "isolcpus=nohz,domain,managed_irq,{{ cpumachinesrt }}"
-    - slab_nomerge
-    - pti=on
-    - slub_debug=ZF
     - skew_tick=1
 - name: "grub conf osprober"
   lineinfile:
@@ -311,18 +308,3 @@
     name: ptpdocker.service
     enabled: yes
     state: started
-- name: enable ptp_vsock.service
-  ansible.builtin.systemd:
-    name: ptp_vsock.service
-    enabled: yes
-    state: started
-- name: restart ptpdocker.service
-  ansible.builtin.systemd:
-    name: ptpdocker
-    state: restarted
-  when: ptpdocker.changed
-- name: restart ptp_vsock.service
-  ansible.builtin.systemd:
-    name: ptp_vsock
-    state: restarted
-  when: ptpvsock.changed
