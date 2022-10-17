@@ -25,3 +25,21 @@
   with_items: "{{ kernel_params }}"
   notify: update-grub
   when: revert
+
+
+- name: "Disable coredumps"
+  lineinfile:
+    dest: /etc/sysctl.d/50-coredump.conf
+    regexp: "^kernel.core_pattern=/dev/null$"
+    line: "kernel.core_pattern=/dev/null"
+    create: yes
+    state: present
+  notify: update sysfs values using sysctl
+  when: not revert
+- name: "Revert coredump disabling"
+  lineinfile:
+    dest: /etc/sysctl.d/50-coredump.conf
+    regexp: "^kernel.core_pattern=/dev/null$"
+    state: absent
+  notify: update sysfs values using sysctl
+  when: revert

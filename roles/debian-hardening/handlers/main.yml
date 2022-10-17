@@ -5,3 +5,7 @@
 - name: update-grub
   shell:
     cmd: update-grub
+
+- name: update sysfs values using sysctl
+  shell:
+    cmd: sysctl --system
