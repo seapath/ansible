@@ -5,8 +5,13 @@ all:
       children:
         hypervisors:
           vars:
-            ovs_bridges:  # this is the object used by ansible to create the json OVS conf that will be uploaded to the nodes, and used by the votp-config_ovs service to create the OVS configuration at each boot    
-              - name: team0 # this is the bridge used to create a "triangle" cluster network between the 3 nodes
+            # this is the object used by ansible to create the json OVS conf
+            # that will be uploaded to the nodes, and used by the
+            # votp-config_ovs service to the OVS configuration at each boot
+            ovs_bridges:
+                # this is the bridge used to create a "triangle" cluster network
+                # between the 3 nodes
+              - name: team0
                 rstp_enable: true
                 other_config: "rstp-priority={{ br_rstp_priority }}"
                 ports:
@@ -39,10 +44,11 @@ all:
                     trunks:
                       - 33
                       - 34
-                 - name: brBRIDGE1_ext # a link to the physical interface for the host
-                   type: system
-                   interface: "{{ brBRIDGE1_ext }}" #this refers to the node inventory
+                    # a link to the physical interface for the host
+                  - name: brBRIDGE1_ext
+                    type: system
+                    # this refers to the node inventory
+                    interface: "{{ brBRIDGE1_ext }}"
                   - name: VM4.0  # a access port (vlan 11) for VM4
                     type: tap
                     tag: 11
-               
