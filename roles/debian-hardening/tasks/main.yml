@@ -51,14 +51,14 @@
     line: "kernel.kexec_load_disabled=1"
     create: yes
     state: present
-  notify: update-sysfs
+  notify: update sysfs values using sysctl
   when: not revert
 - name: "Revert kexec disabling"
   lineinfile:
     dest: /etc/sysctl.d/50-kexec.conf
     regexp: "^kernel.kexec_load_disabled=1$"
     state: absent
-  notify: update-sysfs
+  notify: update sysfs values using sysctl
   when: revert
 
 - name: "Disable binfmt_misc"
@@ -68,12 +68,52 @@
     line: "fs.binfmt_misc.status=0"
     create: yes
     state: present
-  notify: update-sysfs
+  notify: update sysfs values using sysctl
   when: not revert
 - name: "Revert binfmt_misc disabling"
   lineinfile:
     dest: /etc/sysctl.d/50-binfmt_misc.conf
     regexp: "^fs.binfmt_misc.status=0$"
     state: absent
-  notify: update-sysfs
+  notify: update sysfs values using sysctl
+  when: revert
+
+- name: "Install hardened sysfs rules"
+  copy:
+    src: ../src/debian/90-sysctl-hardening.conf
+    dest: /etc/sysctl.d/90-sysctl-hardening.conf
+  notify: update sysfs values using sysctl
+  when: not revert
+- name: "Uninstall hardened sysfs rules"
+  file:
+    path: /etc/sysctl.d/90-sysctl-hardening.conf
+    state: absent
+  notify: update sysfs values using sysctl
+  when: revert
+
+- name: "Install network hardened sysfs rules"
+  copy:
+    src: ../src/debian/99-sysctl-network.conf
+    dest: /etc/sysctl.d/99-sysctl-network.conf
+  notify: update sysfs values using sysctl
+  when: not revert
+- name: "Uninstall network hardened sysfs rules"
+  file:
+    path: /etc/sysctl.d/99-sysctl-network.conf
+    state: absent
+  notify: update sysfs values using sysctl
+  when: revert
+
+- name: "Force loading nf_conntrack at boot"
+  lineinfile:
+    dest: /etc/modules-load.d/modules.conf
+    regexp: "^nf_conntrack$"
+    line: "nf_conntrack"
+    state: present
+  when: not revert
+- name: "Disable force loading nf_conntrack at boot"
+  lineinfile:
+    dest: /etc/modules-load.d/modules.conf
+    regexp: "^nf_conntrack$"
+    state: absent
   when: revert
