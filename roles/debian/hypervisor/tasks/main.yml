@@ -53,7 +53,7 @@
     - "rcu_nocbs={{ cpumachinesrt }}"
     - rcu_nocb_poll
     - rcutree.kthread_prio=10
-    - "isolcpus=nohz,domain,managed_irq={{ cpumachinesrt }}"
+    - "isolcpus=nohz,domain,managed_irq,{{ cpumachinesrt }}"
     - slab_nomerge
     - pti=on
     - slub_debug=ZF
