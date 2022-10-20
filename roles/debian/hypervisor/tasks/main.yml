@@ -57,6 +57,7 @@
     - slab_nomerge
     - pti=on
     - slub_debug=ZF
+    - skew_tick=1
 - name: "grub conf osprober"
   lineinfile:
     dest: /etc/default/grub
