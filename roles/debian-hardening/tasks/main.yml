@@ -117,3 +117,29 @@
     regexp: "^nf_conntrack$"
     state: absent
   when: revert
+
+- name: "Install random-root-passwd.service"
+  copy:
+    src: ../src/debian/random-root-passwd.service
+    dest: /etc/systemd/system/random-root-passwd.service
+  notify: reload systemd
+  when: not revert
+  register: randomRoot
+- name: "enable random-root-passwd.service"
+  ansible.builtin.systemd:
+    name: random-root-passwd.service
+    enabled: yes
+    state: started
+  when: not revert and randomRoot.changed
+- name: "Disable random-root-passwd.service"
+  file:
+    path: /etc/systemd/system/sysinit.target.wants/random-root-passwd.service
+    state: absent
+  when: revert
+- name: "Uninstall random-root-passwd.service"
+  file:
+    path: /etc/systemd/system/random-root-passwd.service
+    state: absent
+  when: revert
+  notify: reload systemd
+  register: randomRoot
