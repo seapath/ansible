@@ -9,3 +9,7 @@
 - name: update sysfs values using sysctl
   shell:
     cmd: sysctl --system
+
+- name: reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: yes
