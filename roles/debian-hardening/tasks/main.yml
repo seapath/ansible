@@ -143,3 +143,14 @@
   when: revert
   notify: reload systemd
   register: randomRoot
+
+- name: "Set bash timeout to 300s"
+  copy:
+    src: ../src/debian/terminal_idle.sh
+    dest: /etc/profile.d/terminal_idle.sh
+  when: not revert
+- name: "Unset bash timeout"
+  file:
+    path: /etc/profile.d/terminal_idle.sh
+    state: absent
+  when: revert
