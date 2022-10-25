@@ -13,3 +13,8 @@
 - name: reload systemd
   ansible.builtin.systemd:
     daemon_reload: yes
+
+- name: restart openssh
+  ansible.builtin.systemd:
+    name: sshd
+    state: restarted

@@ -154,3 +154,16 @@
     path: /etc/profile.d/terminal_idle.sh
     state: absent
   when: revert
+
+- name: Install openssh hardening rules
+  copy:
+    src: ../src/debian/ssh-audit_hardening.conf
+    dest: /etc/ssh/sshd_config.d/ssh-audit_hardening.conf
+  when: not revert
+  notify: restart openssh
+- name: Uninstall openssh hardening rules
+  file:
+    path: /etc/ssh/sshd_config.d/ssh-audit_hardening.conf
+    state: absent
+  when: revert
+  notify: restart openssh
