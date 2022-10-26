@@ -214,3 +214,27 @@
     group: root
     mode: '4755'
   when: revert
+
+- name: "Configure login.defs"
+  lineinfile:
+    dest: /etc/login.defs
+    regexp: "^{{ item }}$"
+    line: "{{ item }}"
+    state: present
+  with_items:
+    - FAIL_DELAY 3
+    - PASS_MAX_DAYS 90
+    - SHA_CRYPT_MAX_ROUNDS 65536
+    - SHA_CRYPT_MIN_ROUNDS 65536
+  when: not revert
+- name: "Unconfigure login.defs"
+  lineinfile:
+    dest: /etc/login.defs
+    regexp: "^{{ item }}$"
+    state: absent
+  with_items:
+    - FAIL_DELAY 3
+    - PASS_MAX_DAYS 90
+    - SHA_CRYPT_MAX_ROUNDS 65536
+    - SHA_CRYPT_MIN_ROUNDS 65536
+  when: revert
