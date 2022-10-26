@@ -238,3 +238,24 @@
     - SHA_CRYPT_MAX_ROUNDS 65536
     - SHA_CRYPT_MIN_ROUNDS 65536
   when: revert
+
+- name: Disable su
+  copy:
+    src: ../src/debian/hardened_pam_su
+    dest: /etc/pam.d/su
+  when: not revert
+- name: Disable su-l
+  copy:
+    src: ../src/debian/hardened_pam_su
+    dest: /etc/pam.d/su-l
+  when: not revert
+- name: Restore su pam setting
+  copy:
+    src: ../src/debian/default_pam_su
+    dest: /etc/pam.d/su
+  when: revert
+- name: Restore su -l pam setting
+  copy:
+    src: ../src/debian/default_pam_su-l
+    dest: /etc/pam.d/su-l
+  when: revert
