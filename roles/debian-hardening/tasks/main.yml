@@ -167,3 +167,50 @@
     state: absent
   when: revert
   notify: restart openssh
+
+- name: Find sudoers files
+  find:
+    paths: /etc/sudoers.d/
+    exclude: README
+  register: sudoers_files
+  when: not revert
+- name: Fix sudoers.d permission
+  file:
+    path: "{{ item.path }}"
+    owner: root
+    group: root
+    mode: '0440'
+  with_items: "{{ sudoers_files.files }}"
+  when: not revert
+
+- name: Create privileged group
+  group:
+    name: privileged
+    state: present
+  when: not revert
+
+- name: adding sudo users to group privileged
+  user:
+    name: "{{ item }}"
+    groups: privileged
+    append: yes
+  with_items:
+   - ceph
+   - Debian-snmp
+   - virtu
+  when: not revert
+
+- name: Configure sudo to be run only users member of the privileged group
+  file:
+    path: /usr/bin/sudo
+    owner: root
+    group: privileged
+    mode: '4750'
+  when: not revert
+- name: Restore sudo permissions
+  file:
+    path: /usr/bin/sudo
+    owner: root
+    group: root
+    mode: '4755'
+  when: revert
