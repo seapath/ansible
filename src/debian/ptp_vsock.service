@@ -1,0 +1,11 @@
+[Unit]
+Description=VSock server for PTP status
+
+[Service]
+DynamicUser=yes
+Restart=always
+
+ExecStart=/usr/local/bin/ptp_vsock.py 9999
+
+[Install]
+WantedBy=multi-user.target
