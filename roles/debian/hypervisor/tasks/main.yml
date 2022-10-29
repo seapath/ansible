@@ -1,3 +1,21 @@
+- name: enable docker.service
+  ansible.builtin.systemd:
+    name: docker.service
+    enabled: yes
+    state: started
+- name: enable docker.socket
+  ansible.builtin.systemd:
+    name: docker.socket
+    enabled: yes
+    state: started
+
+- name: add vhost_vsock to /etc/modules
+  lineinfile:
+    dest: /etc/modules
+    state: present
+    regexp: '^vhost_vsock$'
+    line: 'vhost_vsock'
+
 - name: Copy votp-taskset.service script
   template:
     src: ../src/debian/taskset_boot.sh.j2
@@ -255,6 +273,11 @@
     mode: '0755'
   with_items:
     - ptpstatus.sh
+- name: Copy ptp_vsock executable files
+  ansible.builtin.copy:
+    src: ../src/debian/ptp_vsock.py
+    dest: /usr/local/bin/ptp_vsock.py
+    mode: '0755'
 
 - name: Copy ptp_status.service
   ansible.builtin.copy:
@@ -268,10 +291,16 @@
     dest: /etc/systemd/system/ptpdocker.service
     mode: '0644'
   register: ptpdocker
-- name: daemon-reload ptpdocker
+- name: Copy ptp_vsock.service
+  ansible.builtin.copy:
+    src: ../src/debian/ptp_vsock.service
+    dest: /etc/systemd/system/ptp_vsock.service
+    mode: '0644'
+  register: ptpvsock
+- name: daemon-reload ptp status
   ansible.builtin.service:
     daemon_reload: yes
-  when: ptpdocker.changed or ptpstatus.changed
+  when: ptpdocker.changed or ptpstatus.changed or ptpvsock.changed
 - name: enable ptpstatus.service
   ansible.builtin.systemd:
     name: ptpstatus.service
@@ -282,3 +311,18 @@
     name: ptpdocker.service
     enabled: yes
     state: started
+- name: enable ptp_vsock.service
+  ansible.builtin.systemd:
+    name: ptp_vsock.service
+    enabled: yes
+    state: started
+- name: restart ptpdocker.service
+  ansible.builtin.systemd:
+    name: ptpdocker
+    state: restarted
+  when: ptpdocker.changed
+- name: restart ptp_vsock.service
+  ansible.builtin.systemd:
+    name: ptp_vsock
+    state: restarted
+  when: ptpvsock.changed
