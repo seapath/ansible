@@ -1,0 +1,26 @@
+# Copyright (C) 2022, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# This Ansible playbook configures the number of hugepages available.
+# It is called by the playbook cluster_setup_configure_host.yaml, but can also
+# be called alone.
+# The number of hugepages has to be at least one.
+# The target must be reload for the change to take effect.
+
+---
+- name: Configure hugepages
+  hosts: hypervisors
+  vars:
+    hugepages_number: "{{ hugepages | default('4') }}"
+  tasks:
+    - name: Setup hugepages number
+      copy:
+        content: "{{ hugepages_number }}"
+        dest: /etc/hugepages_nb.conf
+      notify:
+        - Restart hugepages service
+  handlers:
+    - name: Restart hugepages service
+      ansible.builtin.systemd:
+        name: hugetlb-gigantic-pages.service
+        state: restarted
