@@ -8,6 +8,7 @@
 - name: Prepare Ceph installation
   hosts:
       mons
+  become: true
   tasks:
       - name: Create Ceph log directory
         file:
@@ -28,6 +29,7 @@
 - name: Ceph OSD disk
   hosts:
       osds
+  become: true
   tasks:
       - name: Cleanup Ceph OSD disks with ceph-volume
         shell:
@@ -40,6 +42,7 @@
 - name: Disable unwanted Ceph mgr module
   hosts:
       mons
+  become: true
   tasks:
       - name: Disable Ceph mgr restful module
         shell:
@@ -48,6 +51,7 @@
 - name: Configure rbd
   hosts:
       osds
+  become: true
   tasks:
       - name: Disable rbd lock
         shell:
