@@ -8,6 +8,7 @@
 ---
 - name: Configure SEAPATH specific files
   hosts: cluster_machines
+  become: true
   tasks:
   - name: Save cluster machine informations
     template:
@@ -16,6 +17,7 @@
 
 - name: Check if corosync is already setup
   hosts: cluster_machines
+  become: true
   tasks:
     - name: check corosync service status
       systemd:
@@ -42,6 +44,7 @@
 
 - name: Setup Corosync from scratch
   hosts: cluster_machines
+  become: true
   vars_files:
       - ../vars/corosync_vars.yaml
   roles:
@@ -50,6 +53,7 @@
 
 - name: Fetch existing corosync using configuration
   hosts: valid_machine
+  become: true
   vars:
     tmpdir: "/tmp"
   tasks:
@@ -70,6 +74,7 @@
 
 - name: Setup Corosync using existing configuration
   hosts: unconfigured_machine_group
+  become: true
   vars:
     tmpdir: "/tmp"
   tasks:
@@ -97,6 +102,7 @@
 
 - name: Setup Pacemaker
   hosts: unconfigured_machine_group
+  become: true
   tasks:
       - name: Start Pacemaker
         ansible.builtin.systemd:

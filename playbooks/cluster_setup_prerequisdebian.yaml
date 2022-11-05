@@ -1,8 +1,10 @@
 - name: Prerequis machine debian
   hosts: cluster_machines
+  become: true
   roles:
       - debian
 - name: Prerequis hypervisor debian
   hosts: hypervisors
+  become: true
   roles:
       - debian/hypervisor

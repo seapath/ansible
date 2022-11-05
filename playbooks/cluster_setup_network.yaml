@@ -9,6 +9,7 @@
 ---
 - name: configure cluster network
   hosts: cluster_machines
+  become: true
   tasks:
     - name: Remove team0 bridge in OVS
       command: "/usr/bin/ovs-vsctl --if-exists del-br team0"
@@ -25,6 +26,7 @@
 
 - name: Configure OVS
   hosts: cluster_machines
+  become: true
   vars:
     apply_config: "{{ apply_network_config | default(false) }}"
   tasks:
@@ -49,6 +51,7 @@
         - ovs_conf.changed
 
 - name: Configure Network
+  become: true
   hosts: cluster_machines
   vars_files:
     - ../vars/network_vars.yml
@@ -57,6 +60,7 @@
 
 - name: Network configuration
   hosts: cluster_machines
+  become: true
   vars:
     apply_config: "{{ apply_network_config | default(false) }}"
   tasks:
@@ -69,6 +73,7 @@
 
 - name: Configure hosts and hostname
   hosts: cluster_machines
+  become: true
   tasks:
     - name: Set hostname
       hostname:
@@ -85,6 +90,7 @@
 
 - name: Configure NTP
   hosts: cluster_machines
+  become: true
   tasks:
     - name: Set NTP configuration in /etc/systemd/timesyncd.conf
       lineinfile:
@@ -110,6 +116,7 @@
         state: restarted
 - name: Configure syslog-ng
   hosts: cluster_machines
+  become: true
   tasks:
     - name: Set observer IP address in /etc/syslog-ng/syslog-ng.conf
       lineinfile:
@@ -133,6 +140,7 @@
 
 - name: Configure systemd-networkd-wait-online.service
   hosts: hypervisors
+  become: true
   tasks:
     - block:
         - name: Create systemd-networkd-wait-online.service.d directory
@@ -151,6 +159,7 @@
 
 - name: Restart machine if needed
   hosts: cluster_machines
+  become: true
   tasks:
     - block:
         - name: Restart

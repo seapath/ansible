@@ -8,7 +8,7 @@
 ---
 - name: Configure libvirt rbd secret
   hosts: hypervisors
-
+  become: true
   pre_tasks:
       - name: Try to get already defined secret
         shell:
@@ -75,6 +75,7 @@
 
 - name: Create rbd pool
   hosts: hypervisors
+  become: true
   vars:
     rbd_pool_name: "{{ libvirt_rbd_pool | default('rbd') }}"
     pool_name: "{{ libvirt_pool_name | default('ceph') }}"

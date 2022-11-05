@@ -1,5 +1,6 @@
 - name: Configure ssh keys between hosts
   hosts: cluster_machines
+  become: true
   gather_facts: yes
   tasks:
     - name: generate SSH key
