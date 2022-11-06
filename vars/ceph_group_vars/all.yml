@@ -539,6 +539,8 @@ ceph_conf_overrides:
         osd_max_pg_log_entries: 500
     mon:
         auth_allow_insecure_global_id_reclaim: false
+    osd:
+        osd_memory_target: "{{ osd_memory_target }}"
 
 
 #############

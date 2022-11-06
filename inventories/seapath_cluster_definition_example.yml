@@ -77,13 +77,16 @@ all:
         ansible_user: virtu
         ansible_python_interpreter: /usr/bin/python3
         dns_server: 10.10.2.1   # Not valid, just for Ansible
-        gateway_addr: 10.132.159.1 # Not valid, just for Ansible
+        gateway_addr: 10.0.0.1 # Not valid, just for Ansible
         apply_network_config: true
         ntp_servers: "10.10.10.10"
         fallback_ntp_servers: 
         ceph_public_network: "192.168.55.0/24"
         ceph_cluster_network: "192.168.55.0/24"
         monitor_address: "{{ ansible_host }}"
+        osd_pool_default_min_size: 2
+        osd_pool_default_size: 3
+        osd_memory_target: 8000000000
         ci_docker_compose_path: "/opt/docker"
         eg_ip: "10.10.1.100"
         eg_passwd: "1"
