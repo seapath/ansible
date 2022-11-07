@@ -192,12 +192,6 @@
     regexp: '^virtu'
     validate: visudo -cf %s
 
-- name: remove 'debian' from hosts file
-  lineinfile:
-    dest: /etc/hosts
-    state: absent
-    regexp: '^127.*debian'
-
 - name: Copy journald conf file
   ansible.builtin.copy:
     src: ../src/debian/journald.conf

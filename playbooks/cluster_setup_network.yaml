@@ -87,6 +87,12 @@
         state: present
       when: hostvars[item].cluster_ip_addr is defined
       loop: "{{ groups['cluster_machines'] }}"
+    - name: remove 'debian' from hosts file
+      lineinfile:
+        dest: /etc/hosts
+        state: absent
+        regexp: '^127.*debian'
+
 
 - name: Configure NTP
   hosts: cluster_machines
