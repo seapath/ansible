@@ -28,7 +28,9 @@
     backrefs: yes
   register: updategrub
   with_items: "{{ kernel_params }}"
-  notify: update-grub
+  notify:
+    - update-grub
+    - reboot
   when: not revert
 
 - name: "Revert kernel parameters added in grub"
@@ -40,7 +42,9 @@
     backrefs: yes
   register: updategrub
   with_items: "{{ kernel_params }}"
-  notify: update-grub
+  notify:
+    - update-grub
+    - reboot
   when: revert
 
 - name: "Disable coredumps"
