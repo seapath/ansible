@@ -9,6 +9,13 @@
       copy:
         src: ../src/cukinia-tests/cukinia
         dest: /etc/
+    - name: Create /usr/share/cukinia/includes
+      file:
+        path: /usr/share/cukinia/includes
+        state: directory
+        owner: root
+        group: root
+        mode: 0755
     - name: Copy Cukinia's includes
       copy:
         src: ../src/cukinia-tests/includes/kernel_config_functions
