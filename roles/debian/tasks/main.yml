@@ -74,12 +74,31 @@
     src: ../templates/syslog-ng.conf.j2
     dest: /etc/syslog-ng/syslog-ng.conf
     mode: '0644'
-  register: syslogconf
-- name: Restart syslog-ng
-  ansible.builtin.systemd:
-    state: restarted
-    name: syslog-ng
-  when: syslogconf.changed
+  notify: restart syslog-ng
+- name: Create /etc/syslog-ng/cert.d
+  file:
+    path: /etc/syslog-ng/cert.d
+    state: directory
+    mode: '0755'
+  when:
+    - syslog_tls_ca is defined
+    - syslog_tls_key is defined
+- name: copy syslog ca
+  ansible.builtin.copy:
+    src: "{{ syslog_tls_ca }}"
+    dest: /etc/syslog-ng/cert.d/clientcert.pem
+    mode: '0644'
+  when:
+    - syslog_tls_ca is defined
+    - syslog_tls_key is defined
+- name: copy syslog key
+  ansible.builtin.copy:
+    src: "{{ syslog_tls_key }}"
+    dest: /etc/syslog-ng/cert.d/clientkey.pem
+    mode: '0600'
+  when:
+    - syslog_tls_ca is defined
+    - syslog_tls_key is defined
 
 - name: Create libvirtd.service.d directory
   file:

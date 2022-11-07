@@ -45,6 +45,10 @@ all:
                             cluster_ip_addr: "192.168.55.3"
                             br_rstp_priority: 16384
                             brBRIDGE1_ext: eno1234 #physical nic to use with BRIDGE1 (see the ovs topology inventory)
+                    vars:
+                        # Syslog client keys. If not set, syslog will send logs using an unencrypted connection.
+                        #syslog_tls_ca: ../keys/syslog_tls_ca.crt
+                        #syslog_tls_key: ../keys/syslog_tls_key.pem
         mons:
             hosts:
                 node1:
@@ -103,7 +107,7 @@ all:
         vm_directory: "/mnt/seapath/vm/" 
         vms_disks_directory: "{{ vm_directory }}"
         vms_config_directory: "{{ vm_directory }}"
-        syslog_server_ip: "10.10.10.10"
+        syslog_server_ip: "10.10.10.10" # If not set, syslog will not send any logs from network
         mailhost: 10.10.10.10
         hawkbit_ip_addr: 10.10.10.10
         logstash_server_ip: 10.10.10.10

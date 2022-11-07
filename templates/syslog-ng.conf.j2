@@ -1,5 +1,5 @@
 @version: 3.27
-# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# Copyright (C) 2022, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
 # First, set some global options.
@@ -32,15 +32,27 @@ source s_src {
 # Destinations
 ########################
 destination d_syslog { file("/var/log/syslog-ng/syslog.local"); };
+
+{% if syslog_server_ip is defined %}
 # Network destination
 # mem-buff-size is set to 163840000 ~= 156MB (default value)
 # disk-buf-size is set to 1073741824 = 1GB
 destination d_net {
         network(
                 "{{ syslog_server_ip }}"
+{% if syslog_tls_ca is defined and syslog_tls_key is defined %}
+                port(6514)
+                transport("tls")
+                tls(
+                        key-file("/etc/syslog-ng/cert.d/clientkey.pem")
+                        cert-file("/etc/syslog-ng/cert.d/clientcert.pem")
+                        ca-dir("/etc/syslog-ng/ca.d")
+                )
+{% else %}
                 port(5054)
                 transport("tcp")
-		time_zone("UTC")
+{% endif %}
+                time_zone("UTC")
                 disk-buffer(
                         mem-buf-size(16384000)
                         disk-buf-size(107374182)
@@ -49,9 +61,15 @@ destination d_net {
                 )
         );
  };
+{% endif %}
 
 ########################
 # Log paths
 ########################
-#log { source(s_src); destination(d_syslog); };
+{% if syslog_local is defined %}
+log { source(s_src); destination(d_syslog); };
+{% endif %}
+{% if syslog_server_ip is defined %}
 log { source(s_src); destination(d_net); };
+{% endif %}
+
