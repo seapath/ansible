@@ -2,6 +2,23 @@
 # SPDX-License-Identifier: Apache-2.0
 ---
 
+- name: Create groups
+  group:
+    name: "{{ item }}"
+    state: present
+  when: not revert
+  with_items:
+    - ansible
+    - privileged
+
+- name: "Create admin user"
+  user:
+    name: admin
+    comment: Ansible user
+    groups: ansible,privileged
+    append: yes
+  when: not revert
+
 - name: "Add kernel parameters in grub"
   lineinfile:
     dest: /etc/default/grub
@@ -25,7 +42,6 @@
   with_items: "{{ kernel_params }}"
   notify: update-grub
   when: revert
-
 
 - name: "Disable coredumps"
   lineinfile:
@@ -168,6 +184,41 @@
   when: revert
   notify: restart openssh
 
+- name: Install sudo ansible group rules
+  copy:
+    src: ../src/debian/ansible_sudoers
+    dest: /etc/sudoers.d/ansible
+    owner: root
+    group: root
+    mode: '0440'
+  when: not revert
+- name: Uninstall sudo ansible group rules
+  file:
+    path: /etc/sudoers.d/ansible
+    state: absent
+  when:  revert
+
+- name: sudo warning
+  debug:
+    msg:
+      - Give all right to admin user via sudo.
+      - This is not a temporal rules.
+      - Custom sudo rules must be defined to restrict commands availables using sudo.
+  when: not revert
+- name: Install sudo admin rules
+  copy:
+    src: ../src/debian/admin_sudoers
+    dest: /etc/sudoers.d/admin
+    owner: root
+    group: root
+    mode: '0440'
+  when: not revert
+- name: Uninstall sudo admin rules
+  file:
+    path: /etc/sudoers.d/admin
+    state: absent
+  when: revert
+
 - name: Find sudoers files
   find:
     paths: /etc/sudoers.d/
@@ -181,12 +232,6 @@
     group: root
     mode: '0440'
   with_items: "{{ sudoers_files.files }}"
-  when: not revert
-
-- name: Create privileged group
-  group:
-    name: privileged
-    state: present
   when: not revert
 
 - name: adding sudo users to group privileged
