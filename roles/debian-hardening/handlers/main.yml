@@ -18,3 +18,10 @@
   ansible.builtin.systemd:
     name: sshd
     state: restarted
+
+- name: restart services
+  ansible.builtin.systemd:
+    name: "{{ item.item }}.service"
+    state: restarted
+  when: item.changed
+  with_items: "{{ services_to_restart.results }}"
