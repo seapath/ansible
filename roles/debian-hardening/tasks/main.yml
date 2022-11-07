@@ -248,6 +248,19 @@
    - Debian-snmp
    - virtu
   when: not revert
+  register: groups_changed
+
+- name: Reboot to update group changes
+  reboot:
+  when:
+    - not revert
+    - groups_changed.changed
+
+- name: Wait for host to be online
+  wait_for_connection:
+  when:
+    - not revert
+    - groups_changed.changed
 
 - name: Configure sudo to be run only users member of the privileged group
   file:
