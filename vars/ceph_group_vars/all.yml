@@ -535,13 +535,12 @@ ceph_conf_overrides:
         osd_pool_default_pgp_num: 128
         osd_crush_chooseleaf_type: 1
         mon_osd_min_down_reporters: 1
-        osd_min_pg_log_entries: 500
-        osd_max_pg_log_entries: 500
     mon:
         auth_allow_insecure_global_id_reclaim: false
     osd:
-        osd_memory_target: "{{ osd_memory_target }}"
-
+        osd_min_pg_log_entries: 500
+        osd_max_pg_log_entries: 500
+        osd memory target: "{{ osd_memory_target }}"
 
 #############
 # OS TUNING #
