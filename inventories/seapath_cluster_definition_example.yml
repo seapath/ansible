@@ -86,7 +86,7 @@ all:
         monitor_address: "{{ ansible_host }}"
         osd_pool_default_min_size: 2
         osd_pool_default_size: 3
-        osd_memory_target: 8000000000
+        osd_memory_target: 8076326604
         ci_docker_compose_path: "/opt/docker"
         eg_ip: "10.10.1.100"
         eg_passwd: "1"
