@@ -25,7 +25,7 @@
       command: "/usr/bin/ovs-vsctl -- --if-exists del-port {{ team0_1 }} -- add-port team0 {{ team0_1 }}"
 
 - name: Configure OVS
-  hosts: hypervisors
+  hosts: cluster_machines
   vars:
     apply_config: "{{ apply_network_config | default(false) }}"
   tasks:
