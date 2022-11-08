@@ -10,6 +10,7 @@ kernel_params:
  - slub_debug=ZF
  - randomize_kstack_offset=on
  - slab_common.usercopy_fallback=N
+ - iommu=pt
 
 hardened_services:
   - ovs-vswitchd
