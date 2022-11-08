@@ -250,6 +250,20 @@ Or if you use `cqfd`:
 
 The --skip-tags "package-install" is there for ceph-ansible no to try to install packages (they are already installed and if your host has no internet connection, it will make the playbook fail).
 
+=== Hardening ===
+
+SEAPATH cluster security can be improved by running the Hardening playbook
+_playbooks/cluster_setup_hardened_debian.yaml_.
+
+To launch the playbook _cluster_setup_hardened_debian.yaml_ use the following command:
+
+ $ ansible-playbook -i inventories/cluster_inventory.yaml -i inventories/networktopology_inventory.yaml playbooks/cluster_setup_hardened_debian.yaml
+
+Or if you use `cqfd`:
+
+ $ cqfd run ansible-playbook -i inventories/cluster_inventory.yaml -i inventories/networktopology_inventory.yaml playbooks/cluster_setup_hardened_debian.yaml
+
+
 === Generate SEAPATH Ansible modules documentation
 
 The SEAPATH Ansible modules documentation can be generated using the command:
