@@ -322,6 +322,35 @@
     dest: /etc/pam.d/su-l
   when: revert
 
+- name: Create securetty
+  copy:
+    content: ""
+    dest: /etc/securetty
+    force: no
+    group: sys
+    owner: root
+    mode: 0644
+  when: not revert
+- name: Remove securetty
+  file:
+    path: /etc/securetty
+    state: absent
+  when: revert
+
+- name: Enable securetty in pam login
+  lineinfile:
+    dest: /etc/pam.d/login
+    insertafter: 'auth       optional   pam_faildelay.so  delay=3000000'
+    line: "auth		[success=ok ignore=ignore user_unknown=ignore default=die]  	pam_securetty.so"
+  when: not revert
+- name: Disable securetty in pam login
+  lineinfile:
+    dest: /etc/pam.d/login
+    regexp: "^auth		\\[success=ok ignore=ignore user_unknown=ignore default=die\\]  	pam_securetty.so$"
+    state: absent
+  when: revert
+
+
 - name: Create systemd service.d directories
   file:
     path: "/etc/systemd/system/{{ item }}.service.d/"
