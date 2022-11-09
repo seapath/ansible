@@ -13,14 +13,12 @@ RUN apt-get update && apt-get install -y \
 	bash \
 	locales \
 	ruby \
-        vim \
+	vim \
 	git \
 	ssh \
 	python3-libvirt \
 	docker.io \
 	docker-compose \
-	yamllint \
-	ansible \
 	rsync \
 	python3-pip
 
@@ -30,6 +28,5 @@ RUN dpkg-reconfigure locales
 # Asciidoctor PDF generator for generating the manual
 RUN gem install asciidoctor-pdf --pre -v 1.5.0.rc2
 ADD check_yaml.sh /usr/bin/check_yaml
-RUN python3 -m pip install docutils==0.16
-ADD documentation_requirements.txt /tmp/requirements.txt
+ADD requirements.txt /tmp/requirements.txt
 RUN python3 -m pip install -r /tmp/requirements.txt
