@@ -4,3 +4,7 @@ rstcheck
 sphinx
 sphinx-notfound-page
 Pygments >= 2.4.0
+docutils == 0.16
+ansible >=2.9,<2.10
+yamllint
+netaddr
