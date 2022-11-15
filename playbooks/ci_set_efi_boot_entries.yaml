@@ -13,8 +13,5 @@
       changed_when: result.rc == 2
       failed_when: result.rc == 1
     - name: Reboot on default slot
-      reboot:
-      when: result.rc == 2
-    - name: Wait for host to be online
-      wait_for_connection:
+      include_tasks: tasks/soft_restart_machine.yaml
       when: result.rc == 2
