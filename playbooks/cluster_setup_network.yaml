@@ -142,9 +142,5 @@
 - name: Restart machine if needed
   hosts: cluster_machines
   tasks:
-    - block:
-        - name: Restart
-          reboot:
-        - name: Wait for host to be online
-          wait_for_connection:
+    - include_tasks: tasks/soft_restart_machine.yaml
       when: need_reboot is defined and need_reboot
