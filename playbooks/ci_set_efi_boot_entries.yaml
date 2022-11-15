@@ -7,11 +7,13 @@
   hosts: cluster_machines
   gather_facts: false
   tasks:
-    - name: Define SEAPATH boot entries if needed
-      script: "../scripts/add_seapath_boot_entries.sh"
-      register: result
-      changed_when: result.rc == 2
-      failed_when: result.rc == 1
-    - name: Reboot on default slot
-      include_tasks: tasks/soft_restart_machine.yaml
-      when: result.rc == 2
+    - block:
+      - name: Define SEAPATH boot entries if needed
+        script: "../scripts/add_seapath_boot_entries.sh"
+        register: result
+        changed_when: result.rc == 2
+        failed_when: result.rc == 1
+      - name: Reboot on default slot
+        include_tasks: tasks/soft_restart_machine.yaml
+        when: result.rc == 2
+      when: create_efi_entries is defined and create_efi_entries
