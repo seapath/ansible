@@ -1,7 +1,7 @@
 [project]
 org='rte'
 name='ansible'
-flavors='prepare manual module_documentation'
+flavors='prepare manual module_documentation export'
 
 [build]
 command='check_yaml'
@@ -14,3 +14,6 @@ command='asciidoctor-pdf README.adoc OVS_configuration.adoc'
 
 [module_documentation]
 command='./generate_module_documentation.sh'
+
+[export]
+command='rm -f ansible.tar.gz && ./prepare.sh && tar --exclude=ansible.tar.gz --exclude=.git -czf ansible.tar.gz .'
