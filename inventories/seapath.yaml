@@ -119,6 +119,11 @@ all:
             ansible_become_flags: "-n -E"
             kernel_parameters_restart: true
             bootloader_config_file: /boot/syslinux.cfg
+            # Uncomment this variable to create the virtu user and enable VM
+            # live migration.
+            # The virtu user have high privileged, for security reasons enable
+            # it only if you need live migration.
+            # create_virtu_user: yes
             ovs_bridges:
               - name: br0
                 ports:
