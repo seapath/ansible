@@ -8,19 +8,10 @@ all:
             # this is the object used by ansible to create the json OVS conf
             # that will be uploaded to the nodes, and used by the
             # votp-config_ovs service to the OVS configuration at each boot
+            ignored_bridges:
+            # the team0 bridge (cluster network) is created separately by the networking playbook.
+              - "team0"
             ovs_bridges:
-                # this is the bridge used to create a "triangle" cluster network
-                # between the 3 nodes
-              - name: team0
-                rstp_enable: true
-                other_config: "rstp-priority={{ br_rstp_priority }}"
-                ports:
-                  - name: team0_0
-                    type: system
-                    interface: "{{ team0_0 }}"
-                  - name: team0_1
-                    type: system
-                    interface: "{{ team0_1 }}"
               - name: brBRIDGE1
                 rstp_enable: true
                 other_config: "rstp-priority={{ br_rstp_priority }}"
