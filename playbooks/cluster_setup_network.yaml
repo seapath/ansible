@@ -55,18 +55,60 @@
     - ../vars/network_vars.yml
   roles:
     - systemd_networkd
+  vars:
+    apply_config: "{{ apply_network_config | default(false) }}"
+  tasks:
+  - block:
+    - name: add ptp vlan interfaces
+      template:
+        src: "../templates/{{ item }}.j2"
+        dest: "/etc/systemd/network/{{ item }}"
+        group: systemd-network
+      with_items:
+        - 00-ptp.netdev
+        - 01-ptp.network
+      register: ptp_interface
+    - name: Register reboot
+      set_fact:
+        need_reboot: true
+      when:
+        - not apply_config
+        - ptp_interface.changed
+    when:
+      - ptp_vlan_interface is defined
+      - ptp_vlan is defined
+      - ptp_vlan_address is defined
+  - name: Restart systemd-networkd
+    ansible.builtin.systemd:
+      name: systemd-networkd
+      state: restarted
+    when:
+      apply_config
 
-- name: Network configuration
+
+- name: Configure PTP ansible.builtin.service
   hosts: cluster_machines
   vars:
     apply_config: "{{ apply_network_config | default(false) }}"
   tasks:
-    - name: Restart systemd-networkd
-      ansible.builtin.systemd:
-        name: systemd-networkd
-        state: restarted
+    - block:
+      - name: disable systemd-timesyncd service
+        ansible.builtin.systemd:
+          name: systemd-timesyncd.service
+          enabled: no
+          state: stopped
+      - name: Enable ptp service
+        ansible.builtin.systemd:
+          name: ptp4l@ptp.service
+          enabled: yes
+      - name: Start ptp service
+        ansible.builtin.systemd:
+          name: ptp4l@ptp.service
+          state: started
+        when: apply_config or (need_reboot is defined and not need_reboot)
       when:
-        apply_config
+        - ptp_vlan_interface is defined
+        - ptp_vlan is defined
 
 - name: Configure hosts and hostname
   hosts: cluster_machines
@@ -107,14 +149,17 @@
           line: 'NTP={{ ntp_servers }}'
         - regexp: '^\s*#?\s*(FallbackNTP=).*$'
           line: 'FallbackNTP={{ fallback_ntp_servers | default("") }}'
+      when:
+        - ptp_vlan_interface is not defined
+        - ptp_vlan is not defined
       notify:
         - Restart systemd timesyncd
-
   handlers:
     - name: Restart systemd timesyncd
       ansible.builtin.service:
         name: systemd-timesyncd
         state: restarted
+
 - name: Configure syslog-ng
   hosts: cluster_machines
   tasks:
@@ -127,7 +172,6 @@
         state: present
       notify:
         - Restart systemd syslog-ng
-
   handlers:
     - name: Restart systemd syslog-ng
       vars:
@@ -136,7 +180,7 @@
         name: syslog-ng@default
         state: restarted
       when:
-        apply_config
+        apply_config or (need_reboot is defined and not need_reboot)
 
 - name: Configure systemd-networkd-wait-online.service
   hosts: hypervisors

@@ -1,15 +1,20 @@
 # Copyright (C) 2021, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 ---
-systemd_networkd_network_custom: "{{ custom_network |default([]) }}"
+_systemd_networkd_network_custom: ["{{ custom_network |default([]) }}"]
 
-wired_systemd_networkd_network:
+_vlan_conditionnal: "{% if ptp_vlan is defined %}[{'VLAN': 'ptp'}]{% else %}[]{% endif %}"
+
+_network_common:
+  - Gateway: "{{ gateway_addr }}"
+  - Address: "{{ ip_addr }}/{{ subnet | default(24) }}"
+  - DNS: "{{ dns_server }}"
+
+_wired_systemd_networkd_network:
   00-wired:
     - Match:
         - Name: "{{ network_interface }}"
-    - Network:
-        - Gateway: "{{ gateway_addr }}"
-        - Address: "{{ ip_addr }}/{{ subnet | default(24) }}"
-        - DNS: "{{ dns_server }}"
+    - Network: "{{ _network_common + _vlan_conditionnal }}"
 
-systemd_networkd_network: "{{ wired_systemd_networkd_network | combine(systemd_networkd_network_custom) }}"
+
+systemd_networkd_network: "{{ _wired_systemd_networkd_network | combine(_systemd_networkd_network_custom) }}"
