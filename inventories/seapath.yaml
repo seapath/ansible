@@ -58,6 +58,10 @@ all:
               cluster_interface: TODO
               # Set the cluster IP address
               cluster_ip_addr: TODO
+              # Optional PTP VLAN IP address
+              ptp_vlan_address: TODO
+              # The interface used for PTP
+              ptp_vlan_interface: TODO
               # Optional additional network configuration list.
               # For more information see roles/systemd_networkd/README.md
               custom_network:
@@ -94,6 +98,10 @@ all:
               cluster_interface: TODO
               # Set the cluster IP address
               cluster_ip_addr: TODO
+              # Optional PTP VLAN IP address
+              ptp_vlan_address: TODO
+              # The interface use for PTP
+              ptp_vlan_interface: TODO
               # Optional additional Network configuration list
               # For more information see roles/systemd_networkd/README.md
               custom_network:
@@ -152,11 +160,15 @@ all:
               ansible_host: TODO
               # Set the public interface
               network_interface: TODO
+              # The interface used for PTP
+              ptp_vlan_interface: TODO
               ip_addr: "{{ ansible_host }}"
               # Set the cluster interface
               cluster_interface: TODO
               # Set the cluster IP address
               cluster_ip_addr: TODO
+              # Optional PTP VLAN IP address
+              ptp_vlan_address: TODO
               custom_network:
                 10-cluster:
                   - Match:
@@ -245,6 +257,9 @@ all:
     # The VM DHCP server IP address assigned to the "dhcp_bind_interface"
     # interface
     dhcp_vm_bind_interface: TODO
+    # Optional VLAN tag id to create a PTP VLAN
+    ptp_vlan: TODO
+    ptp_vlan_interface: "{{ network_interface }}"
     # Path where the CI must search the images
     # e.g. /var/jenkins_home/images
     image_directory: TODO

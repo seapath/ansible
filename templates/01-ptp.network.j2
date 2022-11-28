@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+
+[Match]
+Name=ptp
+
+[Network]
+Address={{ ptp_vlan_address }}/{{ ptp_vlan_mask | default('24') }}
