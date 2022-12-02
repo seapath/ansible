@@ -14,6 +14,8 @@
 [submodule "src/cukinia-tests"]
 	path = src/cukinia-tests
 	url = https://github.com/seapath/cukinia-tests.git
+        branch = main
 [submodule "src/cukinia"]
 	path = src/cukinia
 	url = https://github.com/savoirfairelinux/cukinia.git
+        branch = master
