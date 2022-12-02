@@ -58,10 +58,16 @@
     dest: /etc/vim/vimrc.local
     mode: '0644'
 
+- name: create /usr/lib/ocf/resource.d/seapath on hosts
+  file:
+    path: /usr/lib/ocf/resource.d/seapath
+    state: directory
+    mode: '0755'
+
 - name: Copy VirtualDomain file
   ansible.builtin.copy:
     src: ../src/debian/VirtualDomain
-    dest: /usr/lib/ocf/resource.d/heartbeat/VirtualDomain
+    dest: /usr/lib/ocf/resource.d/seapath/VirtualDomain
     mode: '0755'
 
 - name: create /var/log/syslog-ng folder on hosts
