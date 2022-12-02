@@ -52,7 +52,7 @@ ansible-galaxy collection install --collections-path="$(pwd)/collections" -r \
     ansible-requirements.yaml
 
 echo "Update git submodules"
-git submodule update --init --force
+git submodule update --init --force --remote
 
 echo "Copy ceph-ansible site.yml"
 cp -vf src/ceph-ansible-site.yaml ceph-ansible/site.yml
