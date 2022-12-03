@@ -206,8 +206,24 @@
   lineinfile:
     dest: /etc/sudoers.d/Debian-snmp
     state: present
-    regexp: '^Debian-snmp'
+    regexp: '^Debian-snmp.*/usr/local/bin/snmp_diskusage.sh'
     line: 'Debian-snmp     ALL = (root) NOPASSWD: /usr/local/bin/snmp_diskusage.sh'
+    validate: visudo -cf %s
+    create: yes
+- name: Allow 'Debian-snmp' user to run snmp_cephstatus.sh
+  lineinfile:
+    dest: /etc/sudoers.d/Debian-snmp
+    state: present
+    regexp: '^Debian-snmp.*/usr/local/bin/snmp_cephstatus.sh'
+    line: 'Debian-snmp     ALL = (root) NOPASSWD: /usr/local/bin/snmp_cephstatus.sh'
+    validate: visudo -cf %s
+    create: yes
+- name: Allow 'Debian-snmp' user to run snmp_cephusage.sh
+  lineinfile:
+    dest: /etc/sudoers.d/Debian-snmp
+    state: present
+    regexp: '^Debian-snmp.*/usr/local/bin/snmp_cephusage.sh'
+    line: 'Debian-snmp     ALL = (root) NOPASSWD: /usr/local/bin/snmp_cephusage.sh'
     validate: visudo -cf %s
     create: yes
 - name: remove 'virtu' from sudoers file
