@@ -73,6 +73,7 @@
     - rcutree.kthread_prio=10
     - "isolcpus=nohz,domain,managed_irq,{{ cpumachinesrt }}"
     - skew_tick=1
+    - tsc=reliable
 - name: "grub conf osprober"
   lineinfile:
     dest: /etc/default/grub
