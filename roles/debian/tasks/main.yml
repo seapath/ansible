@@ -27,6 +27,26 @@
     name: votp-config_ovs.service
     enabled: yes
 
+- name: Create systemd-networkd-wait-online.service.d directory
+  file:
+    path: /etc/systemd/system/systemd-networkd-wait-online.service.d/
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+- name: Copy systemd-networkd-wait-online.service drop-in
+  ansible.builtin.copy:
+    src: ../src/debian/systemd-networkd-wait-online_override.conf
+    dest: /etc/systemd/system/systemd-networkd-wait-online.service.d/override.conf
+    owner: root
+    group: root
+    mode: 0644
+  notify: daemon-reload
+- name: enable systemd-networkd-wait-online.service
+  ansible.builtin.systemd:
+    name: systemd-networkd-wait-online.service
+    enabled: yes
+
 - name: Synchronization of src vm_manager on the control machine to dest on the remote hosts
   ansible.posix.synchronize:
     src: ../src/debian/vm_manager
@@ -117,21 +137,6 @@
   ansible.builtin.copy:
     src: ../src/debian/libvirtd_override.conf
     dest: /etc/systemd/system/libvirtd.service.d/override.conf
-    owner: root
-    group: root
-    mode: 0644
-  notify: daemon-reload
-- name: Create corosync.service.d directory
-  file:
-    path: /etc/systemd/system/corosync.service.d/
-    state: directory
-    owner: root
-    group: root
-    mode: 0755
-- name: Copy corosync.service drop-in
-  ansible.builtin.copy:
-    src: ../src/debian/corosync_override.conf
-    dest: /etc/systemd/system/corosync.service.d/override.conf
     owner: root
     group: root
     mode: 0644
