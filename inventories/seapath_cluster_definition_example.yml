@@ -11,6 +11,7 @@ all:
                             main_disk: /dev/sda # disk for system
                             ip_addr: "{{ ansible_host }}"
                             subnet: 25 #default is 24, override if necessary
+                            ptp_interface: "eno12419"
                             team0_0: "eno12399" # cluster network first interface
                             team0_1: "eno12409" # cluster network second interface
                             cluster_next_ip_addr : "192.168.55.2" #node 2 cluster network ip
@@ -24,6 +25,7 @@ all:
                             main_disk: /dev/sda
                             ip_addr: "{{ ansible_host }}"
                             subnet: 25
+                            ptp_interface: "eno12419"
                             team0_0: "eno12399"
                             team0_1: "eno12409"
                             cluster_next_ip_addr : "192.168.55.3" #node 3 cluster network ip
@@ -38,6 +40,7 @@ all:
                             main_disk: /dev/sda
                             ip_addr: "{{ ansible_host }}"
                             subnet: 25
+                            ptp_interface: "eno12419"
                             team0_0: "eno12399"
                             team0_1: "eno12409"
                             cluster_next_ip_addr : "192.168.55.1" #ip de hyperviseur 1
@@ -83,8 +86,8 @@ all:
         dns_server: 10.10.2.1   # Not valid, just for Ansible
         gateway_addr: 10.0.0.1 # Not valid, just for Ansible
         apply_network_config: true
-        ntp_servers: "10.10.10.10"
-        fallback_ntp_servers: 
+        ntp_primary_server: "185.254.101.25"
+        ntp_secondary_server: "51.145.123.29"
         ceph_public_network: "192.168.55.0/24"
         ceph_cluster_network: "192.168.55.0/24"
         monitor_address: "{{ ansible_host }}"
