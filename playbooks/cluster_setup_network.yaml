@@ -165,20 +165,21 @@
   hosts: hypervisors
   become: true
   tasks:
-    - block:
-        - name: Create systemd-networkd-wait-online.service.d directory
-          file:
-            state: directory
-            path: /etc/systemd/system/systemd-networkd-wait-online.service.d
-            owner: root
-            group: root
-            mode: 644
-        - name: Copy systemd-networkd-wait-online.service overide
-          template:
-            src: ../templates/systemd-networkd-wait-online.service.j2
-            dest: >-
-              /etc/systemd/system/systemd-networkd-wait-online.service.d/override.conf
-      when: cluster_interface is defined
+    - name: Create systemd-networkd-wait-online.service.d directory
+      file:
+        path: /etc/systemd/system/systemd-networkd-wait-online.service.d/
+        state: directory
+        owner: root
+        group: root
+        mode: 0755
+    - name: Copy systemd-networkd-wait-online.service overide
+      template:
+        src: ../templates/systemd-networkd-wait-online.service.j2
+        dest: /etc/systemd/system/systemd-networkd-wait-online.service.d/override.conf
+    - name: enable systemd-networkd-wait-online.service
+      ansible.builtin.systemd:
+        name: systemd-networkd-wait-online.service
+        enabled: yes
 
 - name: Restart machine if needed
   hosts: cluster_machines
