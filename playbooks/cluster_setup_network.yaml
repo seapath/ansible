@@ -97,33 +97,46 @@
         state: absent
         regexp: '^127.*debian'
 
-
-- name: Configure NTP
+- name: Configure TimeMaster
   hosts: cluster_machines
   become: true
   tasks:
-    - name: Set NTP configuration in /etc/systemd/timesyncd.conf
-      lineinfile:
-        dest: /etc/systemd/timesyncd.conf
-        regexp: '{{ item.regexp }}'
-        line: '{{ item.line   }}'
-        insertafter: '\[Time\]'
-        backrefs: true
-        create: true
-        state: present
-      with_items:
-        - regexp: '^\s*#?\s*(NTP=).*$'
-          line: 'NTP={{ ntp_servers }}'
-        - regexp: '^\s*#?\s*(FallbackNTP=).*$'
-          line: 'FallbackNTP={{ fallback_ntp_servers | default("") }}'
-      notify:
-        - Restart systemd timesyncd
-
-  handlers:
-    - name: Restart systemd timesyncd
-      ansible.builtin.service:
-        name: systemd-timesyncd
+    - name: Populate service facts
+      service_facts:
+    - name: stop and disable systemd-timesyncd if it exists
+      service:
+        name: "systemd-timesyncd"
+        state: stopped
+        enabled: false
+      when: "'systemd-timesyncd' in services"
+    - name: stop and disable chrony
+      service:
+        name: "chrony"
+        state: stopped
+        enabled: false
+    - name: Create timemaster configuration
+      template:
+        src: ../templates/timemaster.conf.j2
+        dest: /etc/linuxptp/timemaster.conf
+      register: timemasterconf1
+    - name: comment pool configuration in chrony.conf
+      replace:
+        path: /etc/chrony/chrony.conf
+        regexp: '^(pool .*)'
+        replace: '#\1'
+      register: timemasterconf2
+    - name: start and enable timemaster
+      service:
+        name: "timemaster"
+        state: started
+        enabled: true
+    - name: restart timemaster if necessary
+      service:
+        name: "timemaster"
         state: restarted
+        enabled: true
+      when: timemasterconf1 or timemasterconf2
+
 - name: Configure syslog-ng
   hosts: cluster_machines
   become: true
