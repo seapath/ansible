@@ -135,7 +135,7 @@
         name: "timemaster"
         state: restarted
         enabled: true
-      when: timemasterconf1 or timemasterconf2
+      when: timemasterconf1.changed or timemasterconf2.changed
 
 - name: Configure syslog-ng
   hosts: cluster_machines
