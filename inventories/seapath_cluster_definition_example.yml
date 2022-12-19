@@ -48,6 +48,8 @@ all:
                             cluster_ip_addr: "192.168.55.3"
                             br_rstp_priority: 16384
                             brBRIDGE1_ext: eno1234 #physical nic to use with BRIDGE1 (see the ovs topology inventory)
+                            extra_network_config: # Extra network settings
+                              - VLAN: ptp
                     vars:
                         # Syslog client keys. If not set, syslog will send logs using an unencrypted connection.
                         #syslog_tls_ca: ../keys/syslog_tls_ca.crt

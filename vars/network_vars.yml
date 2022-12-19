@@ -29,8 +29,7 @@ wired_systemd_networkd_network:
   01-wired:
     - Match:
         - Name: "{{ network_interface }}"
-    - Network:
-        - Bridge: "br0"
+    - Network: "{{ [ {'Bridge': 'br0'} ] + extra_network_config | default([]) }}"
   00-team0:
     - Match:
         - Name: "team0"
