@@ -13,8 +13,12 @@
   tasks:
     - name: Remove FAI network configuration
       file:
-        path: /etc/systemd/network/00-fai.network
+        path: /etc/systemd/network/00-init.network
         state: absent
+
+- name: Configure cluster network
+  hosts: cluster_machines
+  tasks:
     - name: Remove team0 bridge in OVS
       command: "/usr/bin/ovs-vsctl --if-exists del-br team0"
     - name: Create team0 bridge in OVS
@@ -61,19 +65,61 @@
     - ../vars/network_vars.yml
   roles:
     - systemd_networkd
+  vars:
+    apply_config: "{{ apply_network_config | default(false) }}"
+  tasks:
+  - block:
+    - name: add ptp vlan interfaces
+      template:
+        src: "../templates/{{ item }}.j2"
+        dest: "/etc/systemd/network/{{ item }}"
+        group: systemd-network
+      with_items:
+        - 00-ptp.netdev
+        - 01-ptp.network
+      register: ptp_interface
+    - name: Register reboot
+      set_fact:
+        need_reboot: true
+      when:
+        - not apply_config
+        - ptp_interface.changed
+    when:
+      - ptp_vlan_interface is defined
+      - ptp_vlan is defined
+      - ptp_vlan_address is defined
+  - name: Restart systemd-networkd
+    ansible.builtin.systemd:
+      name: systemd-networkd
+      state: restarted
+    when:
+      apply_config
 
-- name: Network configuration
+
+- name: Configure PTP ansible.builtin.service
   hosts: cluster_machines
   become: true
   vars:
     apply_config: "{{ apply_network_config | default(false) }}"
   tasks:
-    - name: Restart systemd-networkd
-      ansible.builtin.systemd:
-        name: systemd-networkd
-        state: restarted
+    - block:
+      - name: disable systemd-timesyncd service
+        ansible.builtin.systemd:
+          name: systemd-timesyncd.service
+          enabled: no
+          state: stopped
+      - name: Enable ptp service
+        ansible.builtin.systemd:
+          name: ptp4l@ptp.service
+          enabled: yes
+      - name: Start ptp service
+        ansible.builtin.systemd:
+          name: ptp4l@ptp.service
+          state: started
+        when: apply_config or (need_reboot is defined and not need_reboot)
       when:
-        apply_config
+        - ptp_vlan_interface is defined
+        - ptp_vlan is defined
 
 - name: Configure hosts and hostname
   hosts: cluster_machines
@@ -150,7 +196,6 @@
         state: present
       notify:
         - Restart systemd syslog-ng
-
   handlers:
     - name: Restart systemd syslog-ng
       vars:
@@ -159,7 +204,7 @@
         name: syslog-ng@default
         state: restarted
       when:
-        apply_config
+        apply_config or (need_reboot is defined and not need_reboot)
 
 - name: Configure systemd-networkd-wait-online.service
   hosts: hypervisors
@@ -185,9 +230,5 @@
   hosts: cluster_machines
   become: true
   tasks:
-    - block:
-        - name: Restart
-          reboot:
-        - name: Wait for host to be online
-          wait_for_connection:
+    - include_tasks: tasks/soft_restart_machine.yaml
       when: need_reboot is defined and need_reboot

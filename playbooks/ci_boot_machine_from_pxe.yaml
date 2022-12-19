@@ -46,6 +46,7 @@
     ip: "{{ power_control_ip | default(eg_ip) }}"
     passwd: "{{ power_control_passwd | default(eg_passwd) }}"
     powerup_script: "{{ power_control_script | default('../scripts/eg_pms2_lan_driver_power.sh') }}"
+    pxe_type: "{{ pxe_compatibility | default('dual') }}"
   tasks:
       - name: Create PXE configuration file
         template:
@@ -56,7 +57,7 @@
             recreate: true
             network_mode: host
             volumes:
-                - "{{ playbook_dir }}/../pxe_images:/tftpboot/syslinux/images:ro"
+                - "{{ playbook_dir }}/../pxe_images:/images:ro"
                 - "{{ playbook_dir }}/pxe_extra_config.conf:/etc/dnsmasq.d/pxe_extra_config.conf:ro"
             auto_remove: true
             state: "started"
@@ -70,7 +71,7 @@
                 DHCP_RANGE_END: "{{ dhcp_range_end }}"
                 BIND_INTERFACE: "{{ dhcp_bind_interface }}"
                 SERVER_ADDRESS: "{{ pxe_server_address }}"
-                PXE: "bios"
+                PXE: "{{ pxe_type }}"
       - name: Start machines
         include_tasks: tasks/start_machine.yaml
         with_items: "{{ ports }}"

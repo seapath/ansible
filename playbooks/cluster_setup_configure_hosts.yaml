@@ -3,6 +3,7 @@
 # This Ansible playbook configure cluster machines.
 ---
 - import_playbook: cluster_setup_kernel_params.yaml
+- import_playbook: cluster_setup_configure_hugepages.yaml
 - name: remove the static ip previously setup
   hosts: cluster_machines
   tasks:

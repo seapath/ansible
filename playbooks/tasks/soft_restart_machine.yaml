@@ -1,0 +1,12 @@
+# Copyright (C) 2022, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+---
+
+- name: Restart
+  reboot:
+- name: Wait for host to be online
+  wait_for_connection:
+- name: Wait systemd has finished to boot
+  command: systemctl is-system-running --wait
+  register: system_status
+  failed_when: system_status.rc != 0 and system_status.rc != 1

@@ -4,6 +4,14 @@
 # Ansible playbook that runs Cukinia realtime tests.
 
 ---
+
+- name: Disable RT-Throttling on host
+  hosts: hypervisors
+  tasks:
+    - name: Set sched_rt_period_us to -1 (Disabled)
+      shell:
+        cmd: "echo -1 > /proc/sys/kernel/sched_rt_period_us"
+
 - hosts: "{{ machines_tested | default('VMs') }}"
   name: Realtime tests
   tasks:

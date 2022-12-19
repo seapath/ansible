@@ -1,9 +1,8 @@
 # Copyright (C) 2020, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
-# This Ansible playbook configures the kernel paremeters and the number of
-# hugepages available. It is called by the playbook cluster_setup_main.yaml,
-# but can also be called alone.
+# This Ansible playbook configures the kernel paremeters.
+# It is called by the playbook cluster_setup_main.yaml, but can also be called alone.
 
 ---
 - name: Configure Kernel parameters
@@ -24,19 +23,6 @@
       when:
         - extra_kernel_parameters is defined
         - extra_param_raw.rc == 1
-    - name: Check if we need to change hugepages
-      command:
-        cmd: "grep -q hugepages={{ kernel_parameters_hugepages }} /proc/cmdline"
-      register: hugepages_param_raw
-      failed_when: hugepages_param_raw.rc > 1
-      changed_when: false
-      when: kernel_parameters_hugepages is defined
-    - name: Register result hugepages change check
-      set_fact:
-        hugepages_changes_needed: true
-      when:
-        - kernel_parameters_hugepages is defined
-        - hugepages_param_raw.rc == 1
   tasks:
     - block:
         - name: Mount /boot partition if not mounted
@@ -53,20 +39,8 @@
             regexp: '(root=.*)'
             replace: '\1 {{ extra_kernel_parameters }}'
           when: extra_param_needed is defined
-        - name: Set kernel parameters hugepages
-          replace:
-            path: "{{ config_file }}"
-            regexp: 'hugepages=\d'
-            replace: 'hugepages={{ kernel_parameters_hugepages }}'
-          when: hugepages_changes_needed is defined
-        - name: Restart
-          reboot:
+        - include_tasks: tasks/soft_restart_machine.yaml
           when:
             - kernel_parameters_restart is defined
             - kernel_parameters_restart
-        - name: Wait for host to be online
-          wait_for_connection:
-          when:
-            - kernel_parameters_restart is defined
-            - kernel_parameters_restart
-      when: hugepages_changes_needed is defined or extra_param_needed is defined
+      when: extra_param_needed is defined

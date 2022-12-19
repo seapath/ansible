@@ -37,3 +37,8 @@ inventories_private/
 
 # Ignore Cukinia results
 /*.csv
+# Ignore test template xml
+templates/vm/test.xml.j2
+
+# Ignore exported archive
+/ansible.tar.gz
