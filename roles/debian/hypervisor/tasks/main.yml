@@ -317,3 +317,8 @@
     name: ptpdocker.service
     enabled: yes
     state: started
+- name: enable ptp_vsock.service
+  ansible.builtin.systemd:
+    name: ptp_vsock.service
+    enabled: yes
+    state: started
