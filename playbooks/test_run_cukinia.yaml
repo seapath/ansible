@@ -7,8 +7,8 @@
 - hosts: cluster_machines
   name: Cukinia tests
   vars:
-    tests_format: csv
-    tests_result_name: cukinia.csv
+    tests_format: junitxml
+    tests_result_name: cukinia.xml
     cukinia_test_prefix: ".."
     cukinia_configuration: "/etc/cukinia/cukinia-sec.conf"
   tasks:
