@@ -1,0 +1,13 @@
+# Copyright (C) 2023, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+name: CI debian
+
+on:
+  pull_request:
+    types: [opened, reopened, edited]
+jobs:
+  ci:
+    runs-on: self-hosted
+    steps:
+      - run: CI_DIR=/tmp/seapath-ci-${RANDOM}; mkdir $CI_DIR; cd $CI_DIR; git clone -q --depth 1 -b main https://github.com/seapath/ci ci; ci/launch.sh $GITHUB_REF $GITHUB_SHA
