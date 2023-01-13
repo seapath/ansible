@@ -11,10 +11,6 @@
   hosts: cluster_machines
   become: true
   tasks:
-    - name: Remove FAI network configuration
-      file:
-        path: /etc/systemd/network/00-fai.network
-        state: absent
     - name: Remove team0 bridge in OVS
       command: "/usr/bin/ovs-vsctl --if-exists del-br team0"
     - name: Create team0 bridge in OVS
@@ -68,6 +64,10 @@
   vars:
     apply_config: "{{ apply_network_config | default(false) }}"
   tasks:
+    - name: Remove FAI network configuration
+      file:
+        path: /etc/systemd/network/00-init.network
+        state: absent
     - name: Restart systemd-networkd
       ansible.builtin.systemd:
         name: systemd-networkd
