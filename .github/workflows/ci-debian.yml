@@ -5,7 +5,8 @@ name: CI debian
 
 on:
   pull_request:
-    types: [opened, reopened, edited]
+    types: [opened, reopened, edited, review_requested]
+    branches: [debian-main]
 jobs:
   ci:
     runs-on: self-hosted
