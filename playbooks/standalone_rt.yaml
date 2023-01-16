@@ -1,0 +1,5 @@
+- name: RT debian
+  hosts: standalone
+  become: true
+  roles:
+      - debian/hypervisor
