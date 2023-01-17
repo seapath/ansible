@@ -71,7 +71,6 @@
     - processor.max_cstate=1
     - intel_idle.max_cstate=1
     - cpufreq.default_governor=performance
-    - default_hugepagesz=1G
     - hugepagesz=1G
     - no_debug_objects
     - intel_pstate=disable
@@ -106,25 +105,6 @@
     enabled: yes
     state: restarted
   when: irqbalanceconf.changed
-
-- name: Copy hugetlb script file
-  ansible.builtin.copy:
-    src: ../src/debian/hugetlb-reserve-pages.sh
-    dest: /usr/local/bin/hugetlb-reserve-pages.sh
-    mode: '0755'
-- name: Copy hugetlb service file
-  ansible.builtin.copy:
-    src: ../src/debian/hugetlb-gigantic-pages.service
-    dest: /etc/systemd/system/hugetlb-gigantic-pages.service
-    mode: '0644'
-- name: daemon-reload
-  ansible.builtin.service:
-    daemon_reload: yes
-- name: enable hugetlb-gigantic-pages.service
-  ansible.builtin.systemd:
-    name: hugetlb-gigantic-pages.service
-    enabled: yes
-    state: started
 
 - name: "systemd conf CPUAffinity"
   lineinfile:
@@ -215,66 +195,9 @@
   when: ovsvswitchd.changed
 
 
-- name: Copy monitor_journalctl.service
+- name: Copy ptp_status executable files
   ansible.builtin.copy:
-    src: ../src/debian/monitor_journalctl.service
-    dest: /etc/systemd/system/monitor_journalctl.service
-    mode: '0644'
-  register: monitor_journalctl_service
-- name: Copy monitor_journalctl service script
-  ansible.builtin.copy:
-    src: ../src/debian/monitor_journalctl.sh
-    dest: /usr/local/sbin/monitor_journalctl.sh
-    mode: '0750'
-  register: monitor_journalctl_script
-- name: daemon-reload monitor_journalctl
-  ansible.builtin.service:
-    daemon_reload: yes
-  when: monitor_journalctl_service.changed or monitor_journalctl_script.changed
-- name: enable monitor_journalctl.service
-  ansible.builtin.systemd:
-    name: monitor_journalctl.service
-    enabled: yes
-
-- name: Copy monitor_journalctl_hard.service
-  ansible.builtin.copy:
-    src: ../src/debian/monitor_journalctl_hard.service
-    dest: /etc/systemd/system/monitor_journalctl_hard.service
-    mode: '0644'
-  register: monitor_journalctl_hard_service
-- name: Copy monitor_journalctl_hard service script
-  ansible.builtin.copy:
-    src: ../src/debian/monitor_journalctl_hard.sh
-    dest: /usr/local/sbin/monitor_journalctl_hard.sh
-    mode: '0750'
-  register: monitor_journalctl_hard_script
-- name: daemon-reload monitor_journalctl_hard
-  ansible.builtin.service:
-    daemon_reload: yes
-  when: monitor_journalctl_hard_service.changed or monitor_journalctl_hard_script.changed
-- name: enable monitor_journalctl_hard.service
-  ansible.builtin.systemd:
-    name: monitor_journalctl_hard.service
-    enabled: yes
-
-
-- name: create /var/local/ptp_docker folder on hosts
-  file:
-    path: /var/local/ptp_docker
-    state: directory
-    mode: '0755'
-- name: Copy ptp_docker non executable files
-  ansible.builtin.copy:
-    src: ../src/debian/ptp_docker/{{ item }}
-    dest: /var/local/ptp_docker/{{ item }}
-    mode: '0644'
-  with_items:
-    - getptpstatus.php
-    - getptpdetails.php
-    - compose-ptp_docker.yml
-- name: Copy ptp_docker executable files
-  ansible.builtin.copy:
-    src: ../src/debian/ptp_docker/{{ item }}
+    src: ../src/debian/ptpstatus/{{ item }}
     dest: /usr/local/bin/{{ item }}
     mode: '0755'
   with_items:
@@ -287,16 +210,10 @@
 
 - name: Copy ptp_status.service
   ansible.builtin.copy:
-    src: ../src/debian/ptp_docker/ptpstatus.service
+    src: ../src/debian/ptpstatus/ptpstatus.service
     dest: /etc/systemd/system/ptpstatus.service
     mode: '0644'
   register: ptpstatus
-- name: Copy ptp_docker.service
-  ansible.builtin.copy:
-    src: ../src/debian/ptp_docker/ptpdocker.service
-    dest: /etc/systemd/system/ptpdocker.service
-    mode: '0644'
-  register: ptpdocker
 - name: Copy ptp_vsock.service
   ansible.builtin.copy:
     src: ../src/debian/ptp_vsock.service
@@ -306,15 +223,10 @@
 - name: daemon-reload ptp status
   ansible.builtin.service:
     daemon_reload: yes
-  when: ptpdocker.changed or ptpstatus.changed or ptpvsock.changed
+  when: ptpstatus.changed or ptpvsock.changed
 - name: enable ptpstatus.service
   ansible.builtin.systemd:
     name: ptpstatus.service
-    enabled: yes
-    state: started
-- name: enable ptpdocker.service
-  ansible.builtin.systemd:
-    name: ptpdocker.service
     enabled: yes
     state: started
 - name: enable ptp_vsock.service
