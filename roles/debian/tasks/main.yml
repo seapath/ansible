@@ -279,6 +279,7 @@
     mode: '0644'
   with_items:
     - 00-panicreboot.conf
+    - 00-bridge_nf_call.conf
 - name: add br_netfilter to /etc/modules
   lineinfile:
     dest: /etc/modules
