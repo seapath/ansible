@@ -81,30 +81,36 @@
     dest: /etc/syslog-ng/syslog-ng.conf
     mode: '0644'
   notify: restart syslog-ng
-- name: Create /etc/syslog-ng/cert.d
-  file:
-    path: /etc/syslog-ng/cert.d
-    state: directory
-    mode: '0755'
+- block:
+  - name: Create /etc/syslog-ng/cert.d
+    file:
+      path: /etc/syslog-ng/cert.d
+      state: directory
+      mode: '0755'
+  - name: Create /etc/syslog-ng/ca.d
+    file:
+      path: /etc/syslog-ng/ca.d/
+      state: directory
+      mode: '0755'
+  - name: copy syslog client certificate
+    ansible.builtin.copy:
+      src: "{{ syslog_tls_ca }}"
+      dest: /etc/syslog-ng/cert.d/clientcert.pem
+      mode: '0644'
+  - name: copy syslog key
+    ansible.builtin.copy:
+      src: "{{ syslog_tls_key }}"
+      dest: /etc/syslog-ng/cert.d/clientkey.pem
+      mode: '0400'
+  - name: copy syslog server ca
+    ansible.builtin.copy:
+      src: "{{ syslog_tls_server_ca }}"
+      dest: /etc/syslog-ng/ca.d/serverca.pem
+      mode: '0644'
   when:
     - syslog_tls_ca is defined
     - syslog_tls_key is defined
-- name: copy syslog ca
-  ansible.builtin.copy:
-    src: "{{ syslog_tls_ca }}"
-    dest: /etc/syslog-ng/cert.d/clientcert.pem
-    mode: '0644'
-  when:
-    - syslog_tls_ca is defined
-    - syslog_tls_key is defined
-- name: copy syslog key
-  ansible.builtin.copy:
-    src: "{{ syslog_tls_key }}"
-    dest: /etc/syslog-ng/cert.d/clientkey.pem
-    mode: '0400'
-  when:
-    - syslog_tls_ca is defined
-    - syslog_tls_key is defined
+    - syslog_tls_server_ca is defined
 
 - name: Create libvirtd.service.d directory
   file:
