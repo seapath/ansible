@@ -37,4 +37,18 @@
         dest: /usr/share/testdata
 
 
+- name: Deploy Cukinia's main configuration on observers
+  hosts: observers
+  tasks:
+    - name: Copy cukinia.conf
+      copy:
+        src: ../src/cukinia-tests/cukinia-observer.conf
+        dest: /etc/cukinia/cukinia.conf
 
+- name: Deploy Cukinia's main configuration on hypervisor
+  hosts: hypervisors
+  tasks:
+    - name: Copy cukinia.conf
+      copy:
+        src: ../src/cukinia-tests/cukinia-hypervisor.conf
+        dest: /etc/cukinia/cukinia.conf
