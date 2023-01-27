@@ -1,0 +1,15 @@
+# Copyright (C) 2020, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+logging class "${MACHINENAME:-$(hostname)}"
+
+CONF_FILE=" \
+    cukinia-cluster.conf \
+    cukinia-common.conf \
+    cukinia-hypervisor.conf \
+    cukinia-sec.conf \
+"
+
+for file in $CONF_FILE; do
+    cukinia_conf_include /etc/cukinia/$file
+done

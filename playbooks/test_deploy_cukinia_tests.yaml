@@ -3,12 +3,16 @@
 
 ---
 - name: Deploy Cukinia's tests
-  hosts: cluster_machines
+  hosts: hypervisors
   tasks:
     - name: Copy Cukinia's tests
       copy:
         src: ../src/cukinia-tests/cukinia
         dest: /etc/
+    - name: Copy cukinia.conf
+      template:
+        src: ../templates/cukinia-hypervisor.conf.j2
+        dest: /etc/cukinia/cukinia.conf
     - name: Create /usr/share/cukinia/includes
       file:
         path: /usr/share/cukinia/includes
@@ -36,5 +40,41 @@
         src: ../src/debian/vm_manager/vm_manager/testdata/wrong_vm_config.xml
         dest: /usr/share/testdata
 
-
+- name: Deploy Cukinia's tests
+  hosts: observers
+  tasks:
+    - name: Copy Cukinia's tests
+      copy:
+        src: ../src/cukinia-tests/cukinia
+        dest: /etc/
+    - name: Copy cukinia.conf
+      template:
+        src: ../templates/cukinia-observer.conf.j2
+        dest: /etc/cukinia/cukinia.conf
+    - name: Create /usr/share/cukinia/includes
+      file:
+        path: /usr/share/cukinia/includes
+        state: directory
+        owner: root
+        group: root
+        mode: 0755
+    - name: Copy Cukinia's includes
+      copy:
+        src: ../src/cukinia-tests/includes/kernel_config_functions
+        dest: /usr/share/cukinia/includes/kernel_config_functions
+    - name: Create /usr/share/testdata
+      file:
+        path: /usr/share/testdata
+        state: directory
+        owner: root
+        group: root
+        mode: 0755
+    - name: Copy vm.xml
+      copy:
+        src: ../src/debian/vm_manager/vm_manager/testdata/vm.xml
+        dest: /usr/share/testdata
+    - name: Copy wrong_vm_config.xml
+      copy:
+        src: ../src/debian/vm_manager/vm_manager/testdata/wrong_vm_config.xml
+        dest: /usr/share/testdata
 
