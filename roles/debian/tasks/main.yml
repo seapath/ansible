@@ -8,6 +8,8 @@
   ansible.posix.synchronize:
     src: ../src/debian/python3-setup-ovs
     dest: /tmp/src
+    rsync_opts:
+      - "--chown=root:root"
 - name: Install python3-setup-ovs
   command:
     cmd: /usr/bin/python3 setup.py install
@@ -31,6 +33,8 @@
   ansible.posix.synchronize:
     src: ../src/debian/vm_manager
     dest: /tmp/src
+    rsync_opts:
+      - "--chown=root:root"
 - name: Install vm_manager
   command:
     cmd: /usr/bin/python3 setup.py install
@@ -45,6 +49,8 @@
   ansible.posix.synchronize:
     src: ../src/debian/backup-restore/
     dest: /usr/bin/
+    rsync_opts:
+      - "--chown=root:root"
 
 - name: Copy consolevm.sh
   ansible.builtin.copy:
@@ -202,6 +208,7 @@
     - "--include=virt-df.sh"
     - "--exclude=*"
     - "--chmod=F755"
+    - "--chown=root:root"
 - name: Snmp config
   ansible.builtin.copy:
     src: ../src/debian/snmpd.conf
