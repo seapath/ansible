@@ -38,3 +38,4 @@ inventories_private/
 
 # Ignore Cukinia results
 /*.csv
+/*.xml
