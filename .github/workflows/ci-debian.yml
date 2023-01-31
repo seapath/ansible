@@ -3,12 +3,34 @@
 
 name: CI debian
 
+env:
+  WORK_DIR: /tmp/seapath_ci_${{ github.run_id }}_${{ github.run_attempt }}_${{ github.sha }}
+
 on:
   pull_request:
     types: [opened, reopened, edited, review_requested]
     branches: [debian-main]
+
+
 jobs:
-  ci:
+  CI:
     runs-on: self-hosted
     steps:
-      - run: CI_DIR=/tmp/seapath-ci-${RANDOM}; mkdir $CI_DIR; cd $CI_DIR; git clone -q --depth 1 -b main https://github.com/seapath/ci ci; ci/launch.sh $GITHUB_REF $GITHUB_SHA
+
+      - name: Initialize sources
+        run: mkdir ${{ env.WORK_DIR }}; cd ${{ env.WORK_DIR }};
+             git clone -q --depth 1 -b main https://github.com/seapath/ci ci;
+             echo "CI sources downloaded successfully";
+             ci/launch.sh init;
+
+      - name: Configure Debian
+        run: cd ${{ env.WORK_DIR }};
+             ci/launch.sh conf;
+
+      - name: Launch test
+        run: cd ${{ env.WORK_DIR }};
+             ci/launch.sh test;
+
+      - name: Clean
+        if: always()
+        run: rm -rf $WORK_DIR;
