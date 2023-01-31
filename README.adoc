@@ -272,3 +272,16 @@ The SEAPATH Ansible modules documentation can be generated using the command:
 
 The generated documentation is in HTML format and can be found in
 _module_documentation/index.html_.
+
+
+== Contributing to SEAPATH
+
+=== Continuous integration on the Debian version
+
+A CI is actually running on the debian-main branch. If you want to contribute to the project, this CI will launch your code to configure a cluster and run all non regression tests.
+
+After opening your pull request, the CI is visible as a Github Action on the conversation page. A link to a test report is given at the end of the "Launch test" step. All tests must pass for the pull request to be merged.
+
+For more information please see :
+- [The Wiki](https://wiki.lfenergy.org/display/SEAP/Continuous+integration+on+SEAPATH) for a user oriented guide.
+- [The CI repository](https://github.com/seapath/ci) for technical implementation.
