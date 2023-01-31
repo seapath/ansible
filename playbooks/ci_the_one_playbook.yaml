@@ -8,6 +8,7 @@
 # One Playbook to bring them all
 # and in the darkness bind them
 ---
+- import_playbook: ./ci_restore_snapshot.yaml
 - import_playbook: ./cluster_setup_debian.yaml
 - import_playbook: ./cluster_setup_hardened_debian.yaml
 - import_playbook: ./test_deploy_cukinia.yaml
