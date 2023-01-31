@@ -8,7 +8,7 @@ env:
 
 on:
   pull_request:
-    types: [opened, reopened, edited, review_requested]
+    types: [opened, reopened, synchronize]
     branches: [debian-main]
 
 
