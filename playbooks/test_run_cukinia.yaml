@@ -27,3 +27,17 @@
         src: "{{ tmp_cukinia_dir.path }}/{{ tests_result_name }}"
         dest: "{{ cukinia_test_prefix }}/{{ tests_result_name }}"
         flat: yes
+    - name: Run cluster tests
+      shell:
+        cmd: >-
+          MACHINENAME=cluster
+          cukinia -f {{ tests_format }}
+          -o {{ tmp_cukinia_dir.path }}/cukinia_cluster.xml /etc/cukinia/cukinia-cluster.conf || true
+      run_once: true
+
+    - name: Fetch cluster result
+      fetch:
+        src: "{{ tmp_cukinia_dir.path }}/cukinia_cluster.xml"
+        dest: "{{ cukinia_test_prefix }}/cukinia_cluster.xml"
+        flat: yes
+      run_once: true
