@@ -39,3 +39,6 @@ inventories_private/
 # Ignore Cukinia results
 /*.csv
 /*.xml
+
+# VM folder
+vm_images/*.qcow2
