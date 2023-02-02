@@ -37,18 +37,20 @@
         dest: /usr/share/testdata
 
 
-- name: Deploy Cukinia's main configuration on observers
+- name: Create /etc/cukinia.conf for observers
   hosts: observers
   tasks:
-    - name: Copy cukinia.conf
-      copy:
-        src: ../src/cukinia-tests/cukinia-observer.conf
+    - name: Create a symlink cukinia.conf to cukinia-observer.conf
+      file:
+        src: /etc/cukinia/cukinia-observer.conf
         dest: /etc/cukinia/cukinia.conf
+        state: link
 
-- name: Deploy Cukinia's main configuration on hypervisor
+- name: Create /etc/cukinia.conf for hypervisors
   hosts: hypervisors
   tasks:
-    - name: Copy cukinia.conf
-      copy:
-        src: ../src/cukinia-tests/cukinia-hypervisor.conf
+    - name: Create a symlink cukinia.conf to cukinia-hypervisor.conf
+      file:
+        src: /etc/cukinia/cukinia-hypervisor.conf
         dest: /etc/cukinia/cukinia.conf
+        state: link
