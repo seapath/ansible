@@ -1,8 +1,7 @@
 # Copyright (C) 2020, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
-# This playbook configures and sets up Ceph. It is called by the playbook
-# cluster_setup_main.yaml, but can also be called independently.
+# This playbook configures and sets up Ceph.
 
 ---
 - name: Prepare Ceph installation

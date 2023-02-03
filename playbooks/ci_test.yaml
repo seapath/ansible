@@ -1,0 +1,10 @@
+# Copyright (C) 2023, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# This playbook call all necessary playbooks to deploy the tests and test
+# SEAPATH.
+
+---
+- import_playbook: ./test_deploy_cukinia.yaml
+- import_playbook: ./test_deploy_cukinia_tests.yaml
+- import_playbook: ./test_run_cukinia.yaml
