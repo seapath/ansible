@@ -1,0 +1,22 @@
+# Copyright (C) 2023, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# Ansible playbook that remove a VM.
+---
+
+- hosts: hypervisors
+  name: Stop and remove guest{{ vm_id }}
+  vars:
+    - vm_id: 1
+# Create and start a VM
+  tasks:
+    - name: Stop VM
+      cluster_vm:
+        name: guest{{ vm_id }}
+        command: stop
+        force: true
+    - name: Remove VM
+      cluster_vm:
+        name: guest{{ vm_id }}
+        command: remove
+
