@@ -1,7 +1,0 @@
-# Copyright (C) 2021, RTE (http://www.rte-france.com)
-# SPDX-License-Identifier: Apache-2.0
-# This Ansible playbook will configure machines to form a cluster.
----
-- import_playbook: cluster_setup_ceph.yaml
-- import_playbook: cluster_setup_libvirt.yaml
-- import_playbook: cluster_setup_ha.yaml
