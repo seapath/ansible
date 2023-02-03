@@ -4,6 +4,7 @@
 # This playbook call all necessary playbooks to configure the CI and the SEAPATH
 # cluster
 ---
+- import_playbook: ./ci_cleanup_syslog.yaml
 - import_playbook: ./ci_restore_snapshot.yaml
 - import_playbook: ./cluster_setup_debian.yaml
 - import_playbook: ./cluster_setup_hardened_debian.yaml
