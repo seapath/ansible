@@ -1,0 +1,38 @@
+# Copyright (C) 2023, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# Ansible playbook that creates and starts a VM.
+
+---
+
+# Fetch and create VM config file
+- hosts: hypervisors
+  name: Create and start guest{{ vm_id }}
+  vars:
+    - image_name: vm
+    - vm_id: 3
+    - cpu_set: 6
+    - xml_template: >-
+        {{ vm_config |
+        default('../templates/vm/votp_vm_standard_config.xml.j2') }}
+    - disk_path: "../vm_images/{{ image_name }}.qcow2"
+# Create and start a VM
+  tasks:
+    - name: Copy the disk on target
+      copy:
+        src: "{{ disk_path }}"
+        dest: /tmp/{{ image_name }}.qcow2
+    - name: Create and start VM
+      cluster_vm:
+        name: guest{{ vm_id }}
+        command: create
+        system_image: /tmp/{{ image_name }}.qcow2
+        xml: >-
+          {{ lookup('template', xml_template,
+          template_vars=dict(
+            title='guest{{ vm_id }}',
+            ovs_port='VM{{ vm_id }}.0',
+            cpuset='{{ cpu_set }}',
+            mac_address='52:54:00:42:ab:0{{ vm_id }}', ),
+          errors='strict') }}
+
