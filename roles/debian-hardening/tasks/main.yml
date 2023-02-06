@@ -28,9 +28,6 @@
     backrefs: yes
   register: updategrub
   with_items: "{{ kernel_params }}"
-  notify:
-    - update-grub
-    - reboot
   when: not revert
 
 - name: "Revert kernel parameters added in grub"
@@ -42,9 +39,6 @@
     backrefs: yes
   register: updategrub
   with_items: "{{ kernel_params }}"
-  notify:
-    - update-grub
-    - reboot
   when: revert
 
 - name: "Disable coredumps"
@@ -142,7 +136,6 @@
   copy:
     src: ../src/debian/random-root-passwd.service
     dest: /etc/systemd/system/random-root-passwd.service
-  notify: reload systemd
   when: not revert
   register: randomRoot
 - name: "enable random-root-passwd.service"
@@ -161,7 +154,6 @@
     path: /etc/systemd/system/random-root-passwd.service
     state: absent
   when: revert
-  notify: reload systemd
   register: randomRoot
 
 - name: "Set bash timeout to 300s"
@@ -180,13 +172,11 @@
     src: ../src/debian/ssh-audit_hardening.conf
     dest: /etc/ssh/sshd_config.d/ssh-audit_hardening.conf
   when: not revert
-  notify: restart openssh
 - name: Uninstall openssh hardening rules
   file:
     path: /etc/ssh/sshd_config.d/ssh-audit_hardening.conf
     state: absent
   when: revert
-  notify: restart openssh
 
 - name: Install sudo ansible group rules
   copy:
@@ -365,6 +355,9 @@
     dest: "/etc/systemd/system/{{ item }}.service.d/hardening.conf"
   register: services_to_restart
   with_items: "{{ hardened_services }}"
-  notify:
-    - reload systemd
-    - restart services
+
+- name: Update grub
+  command: update-grub
+
+- name: Final reboot to apply changes
+  reboot:

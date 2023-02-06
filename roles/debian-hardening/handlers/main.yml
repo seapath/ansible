@@ -2,29 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 ---
 
-- name: update-grub
-  shell:
-    cmd: update-grub
-
 - name: update sysfs values using sysctl
   shell:
     cmd: sysctl --system
-
-- name: reload systemd
-  ansible.builtin.systemd:
-    daemon_reload: yes
-
-- name: restart openssh
-  ansible.builtin.systemd:
-    name: sshd
-    state: restarted
-
-- name: restart services
-  ansible.builtin.systemd:
-    name: "{{ item.item }}.service"
-    state: restarted
-  when: item.changed
-  with_items: "{{ services_to_restart.results }}"
-
-- name: reboot
-  reboot:
