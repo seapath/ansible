@@ -9,7 +9,7 @@
     - name: Merge lvm snapshot
       command:
         cmd: lvconvert --merge vg1/root-snap
-    - name: Restart
+    - name: Restart for snapshot rollback
       reboot:
     - name: Refresh LVM
       command:

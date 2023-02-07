@@ -6,5 +6,11 @@
 ---
 - import_playbook: ./ci_cleanup_syslog.yaml
 - import_playbook: ./ci_restore_snapshot.yaml
+- name: CI configure skip reboot
+  hosts: cluster_machines
+  tasks:
+  - name: CI configure skip setup_debian reboot
+    set_fact:
+      skip_reboot_setup_debian: true
 - import_playbook: ./cluster_setup_debian.yaml
 - import_playbook: ./cluster_setup_hardened_debian.yaml
