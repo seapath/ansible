@@ -1,32 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Copyright (C) 2021, RTE (http://www.rte-france.com) -->
+<!-- Copyright (C) 2023, RTE (http://www.rte-france.com) -->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
-
-<!--
-  VM template for test_add_vm.yaml
--->
 
 <domain type="{{ vm_domaine | default('kvm') }}">
     <title>{{ title }}</title>
     <description>
-            VOTP guest without DPDK
+            VOTP guest with RT tweak without DPDK
     </description>
-    <memory unit="MiB">256</memory>
-    <currentMemory unit="MiB">256</currentMemory>
+    <memory unit="KiB">1048576</memory>
+    <currentMemory unit="KiB">1048576</currentMemory>
+    <vcpu placement="static">1</vcpu>
     <os firmware="efi">
-        <type arch="x86_64" machine="pc-q35-3.1">hvm</type>
-        <boot dev="hd" />
-        <bootmenu enable="no" />
-        <bios useserial="yes" rebootTimeout="0" />
-        <smbios mode="emulate" />
+        <type arch="x86_64" machine="pc-q35-5.2">hvm</type>
     </os>
     <features>
-        <acpi />
-        <apic />
-        <vmport state="off" />
+        <acpi/>
+        <apic/>
+        <vmport state="off"/>
     </features>
-    <cpu mode="host-model" check="none">
-        <model fallback="allow" />
+    <cputune>
+        <vcpupin vcpu="0" cpuset="{{ cpuset }}"/>
+        <vcpusched vcpus="0" scheduler="fifo" priority="1" />
+    </cputune>
+    <cpu mode="host-model">
+        <topology sockets="1" dies="1" cores="1" threads="1" />
+        <feature policy="require" name="tsc-deadline" />
     </cpu>
     <clock offset="utc">
         <timer name="rtc" tickpolicy="catchup" />
@@ -60,9 +58,12 @@
         <memballoon model="virtio">
 	    <stats period="5" />
         </memballoon>
-	    <vsock model='virtio'>
+	<vsock model='virtio'>
             <cid auto='yes' />
         </vsock>
         <watchdog model="ib700" action="poweroff" />
     </devices>
+    <resource>
+        <partition>/machine-rt</partition>
+    </resource>
 </domain>
