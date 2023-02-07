@@ -1,4 +1,10 @@
 - import_playbook: cluster_setup_prerequisdebian.yaml
+- name: Setup debian skip setup_network reboot
+  hosts: cluster_machines
+  tasks:
+  - name: Setup debian skip reboot
+    set_fact:
+      skip_reboot_setup_network: true
 - import_playbook: cluster_setup_network.yaml
 - import_playbook: cluster_setup_ceph.yaml
 - import_playbook: cluster_setup_libvirt.yaml
@@ -7,8 +13,9 @@
 - name: Restart all hosts
   hosts: cluster_machines
   tasks:
-    - name: Restart
+    - name: Restart to configure Debian
       reboot:
+      when:
+        - skip_reboot_setup_debian is not defined or not skip_reboot_setup_debian
     - name: Wait for host to be online
       wait_for_connection:
-

@@ -184,8 +184,10 @@
   become: true
   tasks:
     - block:
-        - name: Restart
+        - name: Restart to configure network
           reboot:
         - name: Wait for host to be online
           wait_for_connection:
-      when: need_reboot is defined and need_reboot
+      when:
+        - need_reboot is defined and need_reboot
+        - skip_reboot_setup_network is not defined or not skip_reboot_setup_network
