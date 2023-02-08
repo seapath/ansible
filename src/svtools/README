@@ -1,0 +1,8 @@
+svtools docker archive belongs here.
+In a svtools repository use:
+    $ docker build -f Dockerfile -t svtools .
+    $ docker save --output svtools_{COMMIT_ID}.tar svtools
+    $ cp svtools_{COMMIT_ID}.tar {ANSIBLE_REPO_DIR}/ansible/src/svtools
+
+Then:
+    $ cd {ANSIBLE_REPO_DIR}/ansible/src/svtools
