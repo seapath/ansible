@@ -43,3 +43,7 @@ inventories_private/
 
 # VM folder
 vm_images/*.qcow2
+
+# Src from privates repos
+src/trafgen/*
+!src/trafgen/README

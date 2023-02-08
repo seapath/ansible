@@ -1,0 +1,12 @@
+NOTE: Currently, trafgen repository is a private repository, and so it source
+are not included here. Instead, a trafgen docker archive of sources belongs
+here.
+
+
+In a trafgen repository use:
+    $ docker build --tag trafgen .
+    $ docker save --output trafgen_{COMMIT_ID}.tar trafgen
+    $ cp trafgen_{COMMIT_ID}.tar {ANSIBLE_REPO_DIR}/ansible/src/trafgen
+
+Then:
+    $ cd {ANSIBLE_REPO_DIR}/ansible/src/trafgen
