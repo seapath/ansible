@@ -47,3 +47,5 @@ vm_images/*.qcow2
 # Src from privates repos
 src/trafgen/*
 !src/trafgen/README
+src/svtools/*
+!src/svtools/README
