@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 ---
 - name: Remove a host from pacemaker
-  hosts: "{{ pacemaker_machine | default(cluster_machines) }}"
+  hosts: "{{ pacemaker_machine | default('cluster_machines') }}"
   pre_tasks:
     - name: exit playbook, if no machine was given
       fail:
