@@ -19,14 +19,12 @@
       src: "{{ disk_path }}"
   run_once: true
 - name: Convert and import disk
-  shell:
-      cmd: "qemu-img convert -f qcow2 -O raw /tmp/vmdisk \
+  command: "qemu-img convert -f qcow2 -O raw /tmp/vmdisk \
           rbd:{{ rbd_pool }}/{{ disk_name }}"
   when: disk_format == "qcow2"
   run_once: true
 - name: Import disk
-  shell:
-      cmd: "rbd import -p '{{ rbd_pool }}' /tmp/vmdisk {{ disk_name }}"
+  command: "rbd import -p '{{ rbd_pool }}' /tmp/vmdisk {{ disk_name }}"
   when: disk_format != "qcow2"
   run_once: true
 - name: Remove tempory file
@@ -35,6 +33,5 @@
       state: absent
   run_once: true
 - name: Refresh libvirt pool
-  shell:
-      cmd: "virsh pool-refresh --pool {{ libvirt_pool }}"
+  command: "virsh pool-refresh --pool {{ libvirt_pool }}"
 
