@@ -35,7 +35,7 @@
 - name: Create a new empty disk
   shell:
     cmd: "qemu-img create -f raw rbd:'{{ rbd_pool }}/{{ disk_name }}' \
-         {{ size }}{{ size_unit}}"
+         {{ size }}{{ size_unit }}"
   when: action == "create"
   run_once: true
 - name: Create a disk snapshot

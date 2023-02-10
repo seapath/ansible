@@ -85,7 +85,7 @@
       lineinfile:
         dest: /etc/hosts
         regexp: '.*{{ item }}(| rbd)$'
-        line: "{{ hostvars[item].cluster_ip_addr }} {{item}}{% if item == inventory_hostname %} rbd{% endif %}"
+        line: "{{ hostvars[item].cluster_ip_addr }} {{ item }}{% if item == inventory_hostname %} rbd{% endif %}"
         state: present
       when: hostvars[item].cluster_ip_addr is defined
       loop: "{{ groups['cluster_machines'] }}"
