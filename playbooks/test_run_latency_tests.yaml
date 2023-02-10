@@ -1,0 +1,150 @@
+# Copyright (C) 2023, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# This playbook run latency tests on a standalone publisher machine, with
+# successively hypervisor and VM as subscriber machine.
+
+---
+
+# First, starting hypervisor subscriber
+- hosts: hypervisors
+  name: Hypervisor subscriber tests
+  vars:
+    - svtools_archive_commit_id: 0c7b539
+    - poll_timeout: 5
+    - docker_test_image_name: hyp_sub_tests
+  tasks:
+  - name: Copy svtools archive on target
+    copy:
+      src: ../src/svtools/svtools_{{ svtools_archive_commit_id }}.tar
+      dest: /tmp/
+  - name: Load svtools as Docker image
+    command:
+      docker load --input /tmp/svtools_{{ svtools_archive_commit_id }}.tar
+  - name: Run subscriber tests
+    command:
+      docker run --name {{ docker_test_image_name }} -d --network host --rm
+      -it --cgroup-parent machine-rt.slice --cap-add=sys_nice
+      --cpuset-cpus="0-11" -v /data/:/root/ svtools svtools_subscriber_light
+      -i eth0 -o /root/svtools_out
+
+# Then starting standalone publisher
+- hosts: standalone
+  name: Publisher tests
+  vars:
+    - trafgen_archive_commit_id: a8936ce
+    - poll_timeout: 10
+    - docker_test_image_name: pub_tests
+    - network_interface: dk_8303
+    - network_device: eth0
+    - cpu_set: "2-6"
+  tasks:
+  - name: Copy trafgen archive on target
+    copy:
+      src: ../src/trafgen/trafgen_{{ trafgen_archive_commit_id }}.tar
+      dest: /tmp/
+  - name: Load trafgen as Docker image
+    command:
+      docker load --input /tmp/trafgen_{{ trafgen_archive_commit_id }}.tar
+  - name: Run publisher tests
+    command:
+      docker run --cap-add=sys_nice
+      --cpuset-cpus={{ cpu_set }} --privileged --network {{ network_interface }} --rm -v
+      /tmp/trafgen:/tmp/ trafgen --dev {{ network_device }} --conf /sv_template.cfg -n
+      100000 -t 10us -H
+
+  - name: Get publisher hypervisor tests results
+    fetch:
+      flat: yes
+      src: /tmp/trafgen/out
+      dest: ../tests_results/pub_results_hypervisor_{{ inventory_hostname }}
+
+# Wait and stop subscriber on hypervisor and getting result
+- hosts: hypervisors
+  name: Stop subscriber on hypervisor and getting result
+  tasks:
+  - name: Stop subscriber hypervisor tests
+    command:
+      docker stop hyp_sub_tests
+
+  - name: Remove last line of sub test results file # Needed to resolve a bug of miss generated last line
+    replace:
+      path: /data/svtools_out
+      regexp: '\n.*$'
+      replace: ''
+
+  - name: Get hypervisor subscriber tests results
+    fetch:
+      flat: yes
+      src: /data/svtools_out
+      dest: ../tests_results/sub_results_hypervisor_{{ inventory_hostname }}
+
+# Next, we do the same but with with VM as subscriber
+- hosts: guest1
+  name: VM subscriber tests
+  vars:
+    - svtools_archive_commit_id: 0c7b539
+    - poll_timeout: 5
+    - docker_test_image_name: vm_sub_tests
+  tasks:
+  - name: Copy svtools archive on target
+    copy:
+      src: ../src/svtools/svtools_{{ svtools_archive_commit_id }}.tar
+      dest: /tmp/
+  - name: Load svtools as Docker image
+    command:
+      docker load --input /tmp/svtools_{{ svtools_archive_commit_id }}.tar
+  - name: Run subscriber tests
+    command:
+      docker run --name {{ docker_test_image_name }} -d --network host --rm
+      -it --cgroup-parent machine-rt.slice --cap-add=sys_nice
+      --cpuset-cpus="0-11" -v /data/:/root/ svtools svtools_subscriber_light
+      -i eth0 -o /root/svtools_out
+
+# Then starting standalone publisher
+- hosts: standalone
+  name: Publisher tests
+  vars:
+    - trafgen_archive_commit_id: a8936ce
+    - poll_timeout: 10
+    - docker_test_image_name: pub_tests
+    - network_interface: dk_8303
+    - network_device: eth0
+    - cpu_set: "2-6"
+  tasks:
+  - name: Copy trafgen archive on target
+    copy:
+      src: ../src/trafgen/trafgen_{{ trafgen_archive_commit_id }}.tar
+      dest: /tmp/
+  - name: Load trafgen as Docker image
+    command:
+      docker load --input /tmp/trafgen_{{ trafgen_archive_commit_id }}.tar
+  - name: Run publisher VM tests
+    command:
+      docker run --cap-add=sys_nice
+      --cpuset-cpus={{ cpu_set }} --privileged --network {{ network_interface }} --rm -v
+      /tmp/trafgen:/tmp/ trafgen --dev {{ network_device }} --conf
+      /sv_template.cfg -n 100000 -t 10us -H
+
+  - name: Get publisher VM tests results
+    fetch:
+      flat: yes
+      src: /tmp/trafgen/out
+      dest: ../tests_results/pub_results_vm_{{ inventory_hostname }}
+
+# Stop subscriber on hypervisor and getting result
+- hosts: guest1
+  tasks:
+  - name: Stop subscriber guest1 tests
+    command:
+      docker stop vm_sub_tests
+  - name: Remove last line of sub test results file # Needed to resolve a bug of miss generated last line
+    replace:
+      path: /data/svtools_out
+      regexp: '\n.*$'
+      replace: ''
+  - name: Get vm subscriber tests results
+    fetch:
+      flat: yes
+      src: /data/svtools_out
+      dest: ../tests_results/sub_results_vm_{{ inventory_hostname }}
