@@ -9,8 +9,7 @@
     - set_fact:
         secret_uuid: "{{ secret_uuid_raw.stdout }}"
     - name: generate VM uuid
-      shell:
-        cmd: uuidgen
+      command: uuidgen
       register: vm_uuid_raw
       run_once: true
     - set_fact:

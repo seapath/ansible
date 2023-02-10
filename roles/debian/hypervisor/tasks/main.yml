@@ -89,7 +89,7 @@
     state: present
   register: updategrub2
 - name: update-grub
-  shell: update-grub
+  command: update-grub
   when: updategrub1.changed or updategrub2.changed
 
 - name: "irqbalance conf"

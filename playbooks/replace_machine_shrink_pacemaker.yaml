@@ -11,5 +11,4 @@
   tasks:
     - name: Remove pacemaker node
       run_once: true
-      shell:
-        cmd: "crm_node -R {{ machine_to_remove }} --force"
+      command: "crm_node -R {{ machine_to_remove }} --force"

@@ -3,5 +3,4 @@
 ---
 
 - name: update sysfs values using sysctl
-  shell:
-    cmd: sysctl --system
+  command: sysctl --system
