@@ -29,7 +29,7 @@
             loop: "{{ groups['hypervisors'] }}"
           - debug:
               msg: "Found UUID {{ libvirt_uuid_rbd }}"
-            when: libvirt_uuid_rbd != ''
+            when: libvirt_uuid_rbd
             run_once: true
           - name: Generate secret uuid
             shell:
@@ -37,11 +37,11 @@
             changed_when: false
             register: raw_uuid
             run_once: true
-            when: libvirt_uuid_rbd == ''
+            when: not libvirt_uuid_rbd
           - name: Register uuid
             set_fact:
               libvirt_uuid_rbd: "{{ raw_uuid.stdout }}"
-            when: libvirt_uuid_rbd == ''
+            when: not libvirt_uuid_rbd
           - name: Get Ceph libvirt client key
             shell:
                 cmd: ceph auth get-key client.libvirt
