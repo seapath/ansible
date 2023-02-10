@@ -16,7 +16,7 @@
     - name: Fetch the keyfile
       fetch: 
         src: "/root/.ssh/id_rsa.pub"
-        dest: "buffer/{{inventory_hostname}}-id_rsa.pub"
+        dest: "buffer/{{ inventory_hostname }}-id_rsa.pub"
         flat: yes
 
     - name: Copy the key add to authorized_keys using Ansible module
@@ -25,19 +25,19 @@
         state: present
         path: /home/virtu/.ssh/authorized_keys
         #path: /etc/ssh/root/authorized_keys
-        key: "{{ lookup('file','buffer/{{item}}-id_rsa.pub')}}"
-      with_items: "{{groups['cluster_machines']}}"
+        key: "{{ lookup('file','buffer/{{ item }}-id_rsa.pub') }}"
+      with_items: "{{ groups['cluster_machines'] }}"
 
     - name: Fetch the keyfile
       fetch: 
         src: "/etc/ssh/ssh_host_rsa_key.pub"
-        dest: "buffer/{{inventory_hostname}}-id_rsa_host.pub"
+        dest: "buffer/{{ inventory_hostname }}-id_rsa_host.pub"
         flat: yes
 
     - name: populate the known_hosts files
       known_hosts:
         path: /root/.ssh/known_hosts
-        name: "{{item}}"
-        key: "{{item}} {{ lookup('file','buffer/{{item}}-id_rsa_host.pub')}}"
-      with_items: "{{groups['cluster_machines']}}"
+        name: "{{ item }}"
+        key: "{{ item }} {{ lookup('file','buffer/{{ item }}-id_rsa_host.pub') }}"
+      with_items: "{{ groups['cluster_machines'] }}"
 
