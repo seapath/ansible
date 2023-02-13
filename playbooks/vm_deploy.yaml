@@ -30,9 +30,9 @@
         xml: >-
           {{ lookup('template', xml_template,
           template_vars=dict(
-            title='guest{{ vm_id }}',
-            ovs_port='VM{{ vm_id }}.0',
-            cpuset='{{ cpu_set }}',
-            mac_address='52:54:00:42:ab:0{{ vm_id }}', ),
+            title='guest' + vm_id,
+            ovs_port='VM' + vm_id + '.0',
+            cpuset=cpu_set,
+            mac_address='52:54:00:42:ab:0' + vm_id ),
           errors='strict') }}
 

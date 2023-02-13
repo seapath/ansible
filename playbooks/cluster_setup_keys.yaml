@@ -14,7 +14,7 @@
         force: no
 
     - name: Fetch the keyfile
-      fetch: 
+      fetch:
         src: "/root/.ssh/id_rsa.pub"
         dest: "buffer/{{ inventory_hostname }}-id_rsa.pub"
         flat: yes
@@ -25,7 +25,7 @@
         state: present
         path: /home/virtu/.ssh/authorized_keys
         #path: /etc/ssh/root/authorized_keys
-        key: "{{ lookup('file','buffer/{{ item }}-id_rsa.pub') }}"
+        key: "{{ lookup('file','buffer/' + item + '-id_rsa.pub') }}"
       with_items: "{{ groups['cluster_machines'] }}"
 
     - name: Fetch the keyfile
@@ -38,6 +38,6 @@
       known_hosts:
         path: /root/.ssh/known_hosts
         name: "{{ item }}"
-        key: "{{ item }} {{ lookup('file','buffer/{{ item }}-id_rsa_host.pub') }}"
+        key: "{{ item }} {{ lookup('file','buffer/' + item + '-id_rsa_host.pub') }}"
       with_items: "{{ groups['cluster_machines'] }}"
 
