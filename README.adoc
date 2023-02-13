@@ -285,3 +285,7 @@ After opening your pull request, the CI is visible as a Github Action on the con
 For more information please see :
 - [The Wiki](https://wiki.lfenergy.org/display/SEAP/Continuous+integration+on+SEAPATH) for a user oriented guide.
 - [The CI repository](https://github.com/seapath/ci) for technical implementation.
+
+=== Ansible linter on the Debian version
+
+Ansible-lint is run on every pull request toward the debian-main branch. Some rules are ignored, they can be found in the [configuration file](https://github.com/seapath/ci/blob/main/ansible-lint.conf) on the [CI repository](https://github.com/seapath/ci).
