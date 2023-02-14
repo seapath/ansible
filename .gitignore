@@ -49,3 +49,7 @@ src/trafgen/*
 !src/trafgen/README
 src/svtools/*
 !src/svtools/README
+
+# Tests results
+tests_results/*
+!tests_results/README
