@@ -356,6 +356,19 @@
   register: services_to_restart
   with_items: "{{ hardened_services }}"
 
+- name: Uninstall apt packages not required after installation
+  apt:
+    name:
+      - fdisk
+      - ifupdown
+      - libestr0
+      - libfastjson4
+      - libisc-export1105
+    state: absent
+    purge: yes
+    autoremove: yes
+  when: not revert
+
 - name: Update grub
   command: update-grub
 
