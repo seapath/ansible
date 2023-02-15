@@ -95,12 +95,12 @@
 - name: "Install hardened sysfs rules"
   copy:
     src: ../src/debian/90-sysctl-hardening.conf
-    dest: /etc/sysctl.d/90-sysctl-hardening.conf
+    dest: /etc/sysctl.d/zz-sysctl-hardening.conf
   notify: update sysfs values using sysctl
   when: not revert
 - name: "Uninstall hardened sysfs rules"
   file:
-    path: /etc/sysctl.d/90-sysctl-hardening.conf
+    path: /etc/sysctl.d/zz-sysctl-hardening.conf
     state: absent
   notify: update sysfs values using sysctl
   when: revert
