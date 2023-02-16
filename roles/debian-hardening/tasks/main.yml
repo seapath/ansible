@@ -369,6 +369,17 @@
     autoremove: yes
   when: not revert
 
+- name: Disable unused systemd services
+  systemd:
+    unit: "{{ item }}"
+    state: stopped
+    enabled: no
+    no_block: yes
+  when: not revert
+  with_items:
+    - apt-daily-upgrade.timer
+    - apt-daily.timer
+
 - name: Update grub
   command: update-grub
 
