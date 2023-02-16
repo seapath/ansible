@@ -24,12 +24,22 @@ jobs:
              ci/launch.sh init;
 
       - name: Configure Debian
+        id: conf
         run: cd ${{ env.WORK_DIR }};
              ci/launch.sh conf;
 
-      - name: Launch test
+      - name: Launch system tests
         run: cd ${{ env.WORK_DIR }};
-             ci/launch.sh test;
+             ci/launch.sh system;
+
+      - name: Launch latency tests
+        run: cd ${{ env.WORK_DIR }};
+             ci/launch.sh latency;
+
+      - name: Upload test report
+        if: ${{ always() && steps.conf.conclusion == 'success' }}
+        run: cd ${{ env.WORK_DIR }};
+             ci/launch.sh report;
 
       - name: Clean
         if: always()
