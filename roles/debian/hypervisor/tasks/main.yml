@@ -81,6 +81,7 @@
     - "isolcpus=nohz,domain,managed_irq,{{ cpumachinesrt }}"
     - skew_tick=1
     - tsc=reliable
+    - igb.max_vfs=5
 - name: "grub conf osprober"
   lineinfile:
     dest: /etc/default/grub
