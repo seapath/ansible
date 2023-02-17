@@ -11,6 +11,7 @@ kernel_params:
  - randomize_kstack_offset=on
  - slab_common.usercopy_fallback=N
  - iommu=pt
+ - security=yama
 
 hardened_services:
   - ovs-vswitchd
