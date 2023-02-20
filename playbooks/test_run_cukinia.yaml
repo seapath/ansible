@@ -10,6 +10,7 @@
   vars:
     tests_format: junitxml
     tests_result_name: "cukinia_{{ inventory_hostname }}.xml"
+    cluster_tests_result_name: "cukinia_cluster_{{ inventory_hostname }}.xml"
     cukinia_test_prefix: ".."
   tasks:
     - name: Create temporary Cukinia directory
@@ -27,3 +28,16 @@
         src: "{{ tmp_cukinia_dir.path }}/{{ tests_result_name }}"
         dest: "{{ cukinia_test_prefix }}/{{ tests_result_name }}"
         flat: yes
+    - name: Run tests cluster test
+      shell:
+        cmd: >-
+          cukinia -f {{ tests_format }}
+          -o {{ tmp_cukinia_dir.path }}/{{ cluster_tests_result_name }}
+          /etc/cukinia/cukinia-cluster.conf || true
+      run_once: true
+    - name: Fetch cluster test result
+      fetch:
+        src: "{{ tmp_cukinia_dir.path }}/{{ cluster_tests_result_name }}"
+        dest: "{{ cukinia_test_prefix }}/{{ cluster_tests_result_name }}"
+        flat: yes
+      run_once: true
