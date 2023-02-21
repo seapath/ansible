@@ -403,6 +403,16 @@
     path: /etc/grub.d/01_password
   when: revert
 
+- name: copy syslog.conf
+  copy:
+    src: ../src/debian/syslog.conf
+    dest: /etc/audit/plugins.d/syslog.conf
+
+- name: copy audit.rules
+  copy:
+    src: ../src/debian/audit.rules
+    dest: /etc/audit/rules.d/audit.rules
+
 - name: Update grub
   command: update-grub
 
