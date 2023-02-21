@@ -320,17 +320,6 @@
     owner: root
     group: systemd-network
 
-- name: Copy metricbeat conf file
-  ansible.builtin.copy:
-    src: ../src/debian/metricbeat.yml
-    dest: /etc/metricbeat/metricbeat.yml
-    mode: '0644'
-- name: enable metricbeat
-  ansible.builtin.systemd:
-    name: metricbeat.service
-    enabled: yes
-    state: started
-
 - name: customize /etc/environment
   ansible.builtin.lineinfile:
     dest: "/etc/environment"
