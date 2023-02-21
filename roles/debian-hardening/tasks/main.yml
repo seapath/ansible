@@ -340,7 +340,6 @@
     state: absent
   when: revert
 
-
 - name: Create systemd service.d directories
   file:
     path: "/etc/systemd/system/{{ item }}.service.d/"
@@ -378,6 +377,20 @@
     - apt-daily-upgrade.timer
     - apt-daily.timer
     - systemd-resolved.service
+
+- name: Set grub password
+  template:
+    src: "01_password.j2"
+    dest: /etc/grub.d/01_password
+    group: "root"
+    owner: "root"
+    mode: 0755
+  when: not revert
+- name: Unset grub password
+  file:
+    state: absent
+    path: /etc/grub.d/01_password
+  when: revert
 
 - name: Update grub
   command: update-grub
