@@ -81,7 +81,19 @@
     - "isolcpus=nohz,domain,managed_irq,{{ cpumachinesrt }}"
     - skew_tick=1
     - tsc=reliable
+
+- name: "grub conf sr iov"
+  lineinfile:
+    dest: /etc/default/grub
+    regexp: "^(GRUB_CMDLINE_LINUX=(?!.* {{ item }})\"[^\"]*)(\".*)"
+    line: '\1 {{ item }}\2'
+    state: present
+    backrefs: yes
+  register: updategrub1
+  with_items:
     - igb.max_vfs=5
+  when: no_sr_iov is not defined or not no_sr_iov
+
 - name: "grub conf osprober"
   lineinfile:
     dest: /etc/default/grub
@@ -148,7 +160,7 @@
     - { name: "system", description: "system slice", allowedcpus: "{{ cpusystem }}" }
     - { name: "user", description: "user slice", allowedcpus: "{{ cpuuser }}" }
     - { name: "machine", description: "machine slice", allowedcpus: "{{ cpumachines }}" }
- 
+
 - name: create systemd slices
   template:
     src: ../templates/systemd_slice.j2
