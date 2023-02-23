@@ -117,6 +117,19 @@
         src: ../templates/timemaster.conf.j2
         dest: /etc/linuxptp/timemaster.conf
       register: timemasterconf1
+    - name: Add timemaster ptp systemd after
+      lineinfile:
+        path: /lib/systemd/system/timemaster.service
+        line: 'After=chronyd.service ntpd.service ntpdate.service sntp.service sys-devices-virtual-net-ptp.device'
+        regexp: '^After='
+        state: present
+    - name: Add timemaster ptp systemd wants
+      lineinfile:
+        path: /lib/systemd/system/timemaster.service
+        line: 'Wants=sys-devices-virtual-net-ptp.device'
+        regexp: '^Wants='
+        insertafter: '^After='
+        state: present
     - name: comment pool configuration in chrony.conf
       replace:
         path: /etc/chrony/chrony.conf
