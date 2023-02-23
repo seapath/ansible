@@ -156,6 +156,17 @@
   when: revert
   register: random_root
 
+- name: "Enable private TMPDIR"
+  copy:
+    src: ../src/debian/mktmpdir.sh
+    dest: /etc/profile.d/mktmpdir.sh
+  when: not revert
+- name: "Disable private TMPDIR"
+  file:
+    path: /etc/profile.d/mktmpdir.sh
+    state: absent
+  when: revert
+
 - name: "Set bash timeout to 300s"
   copy:
     src: ../src/debian/terminal_idle.sh
