@@ -361,9 +361,7 @@
     name:
       - fdisk
       - ifupdown
-      - libestr0
-      - libfastjson4
-      - libisc-export1105
+      - libfdisk1
     state: absent
     purge: yes
     autoremove: yes
