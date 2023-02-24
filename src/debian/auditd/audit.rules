@@ -1,0 +1,38 @@
+# Based on recommandation of ANSSI BP-28
+
+# Exécution de insmod , rmmod et modprobe
+-w /sbin/insmod -p x
+-w /sbin/modprobe -p x
+-w /sbin/rmmod -p x
+
+# Sur les distributions GNU/Linux récentes , insmod , rmmod et modprobe sont
+# des liens symboliques de kmod
+-w /bin/kmod -p x
+
+# Journaliser les modifications dans /etc/
+-w /etc/ -p wa
+
+# Surveillance de montage/démontage
+-a exit,always -S mount -S umount2 -k audit_mount
+
+# Appels de syscalls x86 suspects
+-a exit,always -F arch=b64 -S ioperm -S modify_ldt -k audit_syscall
+
+# Appels de syscalls qui doivent être rares et surveillés de près
+-a exit,always -F arch=b64 -S get_kernel_syms -S ptrace -k audit_syscall
+-a exit,always -F arch=b64 -S prctl -k audit_syscall
+
+# Rajout du monitoring pour la création ou suppression de fichiers
+# Ces règles peuvent avoir des conséquences importantes sur les
+# performances du système
+-a exit,always -F arch=b64 -S unlink -S rmdir -S rename
+-a exit,always -F arch=b64 -S creat -S open -S openat -F exit=-EACCES
+-a exit,always -F arch=b64 -S truncate -S ftruncate -F exit=-EACCES
+
+# Rajout du monitoring pour le chargement , le changement et
+# le déchargement de module noyau
+-a exit,always -F arch=b64 -S init_module -S delete_module
+-a exit,always -F arch=b64 -S finit_module
+
+# Verrouillage de la configuration de auditd
+-e 2

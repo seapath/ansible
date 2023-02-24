@@ -405,12 +405,12 @@
 
 - name: copy syslog.conf
   copy:
-    src: ../src/debian/syslog.conf
+    src: ../src/debian/auditd/syslog.conf
     dest: /etc/audit/plugins.d/syslog.conf
 
 - name: copy audit.rules
   copy:
-    src: ../src/debian/audit.rules
+    src: ../src/debian/auditd/audit.rules
     dest: /etc/audit/rules.d/audit.rules
 
 - name: Update grub
