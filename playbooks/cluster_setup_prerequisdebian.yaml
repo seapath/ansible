@@ -1,10 +1,14 @@
 - name: Prerequis machine debian
-  hosts: cluster_machines
+  hosts:
+    - cluster_machines
+    - standalone_machine
   become: true
   roles:
-      - debian
+    - debian
 - name: Prerequis hypervisor debian
-  hosts: hypervisors
+  hosts:
+    - hypervisors
+    - standalone_machine
   become: true
   roles:
-      - debian/hypervisor
+    - debian/hypervisor
