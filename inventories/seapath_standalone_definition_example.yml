@@ -1,0 +1,32 @@
+---
+all:
+    children:
+        standalone_machine:
+                hosts:
+                    machine1:
+                        ansible_host: 10.0.0.2
+                        main_disk: /dev/sda
+                        network_interface: enp1s0
+                        ip_addr: "{{ ansible_host }}"
+                        subnet: 24
+    vars:
+        ansible_user: ansible
+        ansible_python_interpreter: /usr/bin/python3
+        ansible_connection: ssh
+        ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+        dns_server: 10.10.2.1   # Not valid, just for Ansible
+        gateway_addr: 10.0.0.1 # Not valid, just for Ansible
+        apply_network_config: true
+        ntp_primary_server: "ntp.midway.ovh"
+        ntp_secondary_server: "ntp.unice.fr"
+        ansible_remote_tmp: /tmp/.ansible/tmp
+        syslog_server_ip: "10.0.0.10"
+        logstash_server_ip: "10.0.0.11"
+        workqueuemask: "1001"
+        irqmask: "ffeffe"
+        cpusystem: "0,16"
+        cpuuser: "1,17"
+        cpumachines: "2-15,18-31"
+        cpumachinesrt: "2-5,18-21"
+        cpumachinesnort: "6-15,22-31"
+        cpuovs: "23"

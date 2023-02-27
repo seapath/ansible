@@ -50,14 +50,18 @@
 
 - name: Configure Network
   become: true
-  hosts: cluster_machines
+  hosts:
+    - cluster_machines
+    - standalone_machine
   vars_files:
     - ../vars/network_vars.yml
   roles:
     - systemd_networkd
 
 - name: Network configuration
-  hosts: cluster_machines
+  hosts:
+    - cluster_machines
+    - standalone_machine
   become: true
   vars:
     apply_config: "{{ apply_network_config | default(false) }}"
@@ -95,8 +99,29 @@
         state: absent
         regexp: '^127.*debian'
 
+- name: Configure hosts and hostname
+  hosts: standalone_machine
+  become: true
+  tasks:
+    - name: Set hostname
+      hostname:
+        name: "{{ inventory_hostname }}"
+        use: systemd
+    - name: Build hosts file
+      lineinfile:
+        dest: /etc/hosts
+        line: "{{ ip_addr }} {{ inventory_hostname }}"
+        state: present
+    - name: remove 'debian' from hosts file
+      lineinfile:
+        dest: /etc/hosts
+        state: absent
+        regexp: '^127.*debian'
+
 - name: Configure TimeMaster
-  hosts: cluster_machines
+  hosts:
+    - cluster_machines
+    - standalone_machine
   become: true
   tasks:
     - name: Populate service facts
@@ -149,7 +174,9 @@
       when: timemasterconf1.changed or timemasterconf2.changed
 
 - name: Configure syslog-ng
-  hosts: cluster_machines
+  hosts:
+    - cluster_machines
+    - standalone_machine
   become: true
   tasks:
     - name: Set observer IP address in /etc/syslog-ng/syslog-ng.conf
@@ -173,7 +200,9 @@
         apply_config
 
 - name: Configure systemd-networkd-wait-online.service
-  hosts: hypervisors
+  hosts:
+    - cluster_machines
+    - standalone_machine
   become: true
   tasks:
     - name: Create systemd-networkd-wait-online.service.d directory
@@ -193,7 +222,9 @@
         enabled: yes
 
 - name: Restart machine if needed
-  hosts: cluster_machines
+  hosts:
+    - cluster_machines
+    - standalone_machine
   become: true
   tasks:
     - block:
