@@ -11,6 +11,10 @@
         cmd: lvconvert --merge vg1/root-snap
     - name: Restart for snapshot rollback
       reboot:
+    - name: Update grub
+      command: update-grub
+    - name: Reboot after update-grub
+      reboot:
     - name: Refresh LVM
       command:
         cmd:  lvchange --refresh vg1
