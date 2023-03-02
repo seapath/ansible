@@ -30,18 +30,18 @@ this requirements.
 
 `cqfd` is a quick and convenient way to run commands in the current directory,
 but within a pre-defined Docker container. Using `cqfd` allows you to avoids
-installing anything else than Docker and `repo` on your development machine.
+installing anything else than Docker on your development machine.
 
 NOTE: We recommend using this method as it greatly simplifies the build
 configuration management process.
 
 ==== Install cqfd
 
-* Install `repo` and `docker` if it is not already done.
+* Install `docker` if it is not already done.
 
 On Ubuntu, please run:
 
-  $ sudo apt-get install repo docker.io
+  $ sudo apt-get install docker.io
 
 * Install `cqfd`:
 
