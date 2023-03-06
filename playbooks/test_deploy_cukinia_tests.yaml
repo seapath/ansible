@@ -18,8 +18,8 @@
         mode: 0755
     - name: Copy Cukinia's includes
       copy:
-        src: ../src/cukinia-tests/includes/kernel_config_functions
-        dest: /usr/share/cukinia/includes/kernel_config_functions
+        src: ../src/cukinia-tests/includes/
+        dest: /usr/share/cukinia/includes/
     - name: Create /usr/share/testdata
       file:
         path: /usr/share/testdata
