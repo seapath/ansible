@@ -31,7 +31,6 @@ all:
                             cluster_next_ip_addr : "192.168.55.3" #node 3 cluster network ip
                             cluster_previous_ip_addr :  "192.168.55.1" #node 1 cluster network ip
                             cluster_ip_addr: "192.168.55.2"
-                            ovs_remote_ip: "192.168.55.3"
                             br_rstp_priority: 16384
                             brBRIDGE1_ext: eno1234 #physical nic to use with BRIDGE1 (see the ovs topology inventory)
                         node3:
