@@ -161,6 +161,18 @@
         regexp: '^(pool .*)'
         replace: '#\1'
       register: timemasterconf2
+    - name: Create timemaster.service.d directory
+      file:
+        path: /etc/systemd/system/timemaster.service.d/
+        state: directory
+        owner: root
+        group: root
+        mode: 0755
+    - name: Copy timemaster.service overide
+      template:
+        src: ../templates/timemaster.service.j2
+        dest: /etc/systemd/system/timemaster.service.d/override.conf
+      register: timemasterconf3
     - name: start and enable timemaster
       service:
         name: "timemaster"
@@ -171,7 +183,7 @@
         name: "timemaster"
         state: restarted
         enabled: true
-      when: timemasterconf1.changed or timemasterconf2.changed
+      when: timemasterconf1.changed or timemasterconf2.changed or timemasterconf3.changed
 
 - name: Configure syslog-ng
   hosts:
