@@ -22,7 +22,7 @@ include /etc/chrony/chrony.conf
 {% if ptp_interface is defined %}
 server {{ ntp_primary_server }} iburst maxsamples 10
 {% else %}
-server {{ ntp_primary_server }} iburst maxsamples 10 prefer
+server {{ ntp_primary_server }} iburst maxsamples 10 prefer trust
 {% endif %}
 server {{ ntp_secondary_server }} iburst maxsamples 10
 
