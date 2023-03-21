@@ -53,6 +53,12 @@ all:
                             extra_network_config: # Extra network settings
                               - VLAN: ptp
                     vars:
+                        # SRIOV, Optional configuration
+                        sriov_driver: 'igb'
+                        sriov:
+                          'eno12429': 7
+                        sriov_network_pool_interface: eno12429
+                        sriov_network_pool_name: "{{ 'sr-iov-net-' + sriov_network_pool_interface }}"
                         # Syslog client keys. If not set, syslog will send logs using an unencrypted connection.
                         #syslog_tls_ca: ../keys/syslog_tls_ca.crt
                         #syslog_tls_key: ../keys/syslog_tls_key.pem
