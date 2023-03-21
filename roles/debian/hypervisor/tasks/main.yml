@@ -45,6 +45,38 @@
   with_items:
     - 00-schedrt.conf
 
+- name: add sriov driver to /etc/modules
+  lineinfile:
+    dest: /etc/modules
+    state: present
+    regexp: "^{{ sriov_driver }}$"
+    line: "{{ sriov_driver }}"
+  when: sriov_driver is defined
+- name: add sriov apparmor permission for libvirt
+  lineinfile:
+    dest: /etc/apparmor.d/local/abstractions/libvirt-qemu
+    state: present
+    line: '/dev/vfio/* rw,'
+    create: yes
+    mode: 0644
+  when: sriov_driver is defined
+- name: load the sriov module
+  community.general.modprobe:
+    name: "{{ sriov_driver }}"
+    state: present
+  when: sriov_driver is defined
+
+- name: add sriov sysfs rules
+  ansible.builtin.lineinfile:
+    dest: "/etc/sysfs.d/sriov.conf"
+    state: present
+    regexp: "^class/net/{{ item.key }}/device/sriov_numvfs = "
+    line: "class/net/{{ item.key }}/device/sriov_numvfs = {{ item.value }}"
+    create: yes
+    mode: 0644
+  with_items: "{{ sriov | dict2items }}"
+  when: sriov is defined
+  register: sriov_sysfs
 - name: Copy sysfs.d cpumask
   template:
     src: ../templates/00-workqueue_cpumask.conf.j2
@@ -55,7 +87,7 @@
   ansible.builtin.systemd:
     name: sysfsutils.service
     state: restarted
-  when: sysfscpumask.changed
+  when: sysfscpumask.changed or sriov_sysfs.changed
 
 - name: "grub conf"
   lineinfile:
@@ -81,18 +113,6 @@
     - "isolcpus=nohz,domain,managed_irq,{{ cpumachinesrt }}"
     - skew_tick=1
     - tsc=reliable
-
-- name: "grub conf sr iov"
-  lineinfile:
-    dest: /etc/default/grub
-    regexp: "^(GRUB_CMDLINE_LINUX=(?!.* {{ item }})\"[^\"]*)(\".*)"
-    line: '\1 {{ item }}\2'
-    state: present
-    backrefs: yes
-  register: updategrub1
-  with_items:
-    - igb.max_vfs=5
-  when: no_sr_iov is not defined or not no_sr_iov
 
 - name: "grub conf osprober"
   lineinfile:

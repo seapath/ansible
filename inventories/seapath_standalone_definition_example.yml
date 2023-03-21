@@ -11,6 +11,12 @@ all:
                     subnet: 24
                     ptp_interface: "enp1s0f1" #OPTIONAL PTP Interface
                     ptp_vlanid: 100 #OPTIONAL VlanID for PTP
+                    # SRIOV, Optional configuration
+                    sriov_driver: 'igb'
+                    sriov:
+                      'eno12429': 7
+                    sriov_network_pool_interface: eno12429
+                    sriov_network_pool_name: "{{ 'sr-iov-net-' + sriov_network_pool_interface }}"
     vars:
         ansible_user: ansible
         ansible_python_interpreter: /usr/bin/python3
