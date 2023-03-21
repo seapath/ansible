@@ -11,7 +11,8 @@ all:
                             main_disk: /dev/sda # disk for system
                             ip_addr: "{{ ansible_host }}"
                             subnet: 25 #default is 24, override if necessary
-                            ptp_interface: "eno12419"
+                            ptp_interface: "eno12419" #OPTIONAL PTP Interface
+                            ptp_vlanid: 100 #OPTIONAL VlanID for PTP
                             team0_0: "eno12399" # cluster network first interface
                             team0_1: "eno12409" # cluster network second interface
                             cluster_next_ip_addr : "192.168.55.2" #node 2 cluster network ip
@@ -25,7 +26,8 @@ all:
                             main_disk: /dev/sda
                             ip_addr: "{{ ansible_host }}"
                             subnet: 25
-                            ptp_interface: "eno12419"
+                            ptp_interface: "eno12419" #OPTIONAL PTP Interface
+                            ptp_vlanid: 100 #OPTIONAL VlanID for PTP
                             team0_0: "eno12399"
                             team0_1: "eno12409"
                             cluster_next_ip_addr : "192.168.55.3" #node 3 cluster network ip
@@ -39,7 +41,8 @@ all:
                             main_disk: /dev/sda
                             ip_addr: "{{ ansible_host }}"
                             subnet: 25
-                            ptp_interface: "eno12419"
+                            ptp_interface: "eno12419" #OPTIONAL PTP Interface
+                            ptp_vlanid: 100 #OPTIONAL VlanID for PTP
                             team0_0: "eno12399"
                             team0_1: "eno12409"
                             cluster_next_ip_addr : "192.168.55.1" #ip de hyperviseur 1

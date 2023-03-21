@@ -3,7 +3,11 @@
 {% if ptp_interface is defined %}
 [ptp_domain 0]
 ntp_options poll 0
+{% if ptp_vlanid is defined %}
+interfaces {{ ptp_interface + '.' + ptp_vlanid|string }}
+{% else %}
 interfaces {{ ptp_interface }}
+{% endif %}
 delay 1e-9
 # delay:
 # This option sets the NTP delay of the source (in seconds). Half of this value

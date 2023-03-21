@@ -9,6 +9,7 @@
 # First, starting hypervisor subscriber
 - hosts: hypervisors
   name: Hypervisor subscriber tests
+  become: true
   vars:
     - svtools_archive_commit_id: 0c7b539
     - poll_timeout: 5
@@ -31,6 +32,7 @@
 # Then starting standalone publisher
 - hosts: standalone
   name: Publisher tests
+  become: true
   vars:
     - trafgen_archive_commit_id: a8936ce
     - poll_timeout: 10
@@ -62,6 +64,7 @@
 # Wait and stop subscriber on hypervisor and getting result
 - hosts: hypervisors
   name: Stop subscriber on hypervisor and getting result
+  become: true
   tasks:
   - name: Stop subscriber hypervisor tests
     command:
@@ -82,6 +85,7 @@
 # Next, we do the same but with with VM as subscriber
 - hosts: guest1
   name: VM subscriber tests
+  become: true
   vars:
     - svtools_archive_commit_id: 0c7b539
     - poll_timeout: 5
@@ -104,6 +108,7 @@
 # Then starting standalone publisher
 - hosts: standalone
   name: Publisher tests
+  become: true
   vars:
     - trafgen_archive_commit_id: a8936ce
     - poll_timeout: 10
@@ -134,6 +139,7 @@
 
 # Stop subscriber on hypervisor and getting result
 - hosts: guest1
+  become: true
   tasks:
   - name: Stop subscriber guest1 tests
     command:
