@@ -6,15 +6,19 @@
   hosts: cluster_machines
   tasks:
     - name: Copy Cukinia's tests
-      copy:
+      synchronize:
         src: ../src/cukinia-tests/cukinia
         dest: /etc/
+        delete: true
+        rsync_opts:
+          - "--exclude=*.j2"
     - name: Copy Cukinia's tests templates
       template:
         src: ../src/cukinia-tests/cukinia/{{ item.src }}
         dest: /etc/cukinia/{{ item.dest }}
       with_items:
-          - { src: 'common_security_tests.d/apt.conf', dest: 'common_security_tests.d/apt.conf' }
+          - { src: 'common_security_tests.d/apt.conf.j2',
+              dest: 'common_security_tests.d/apt.conf' }
     - name: Create /usr/share/cukinia/includes
       file:
         path: /usr/share/cukinia/includes
