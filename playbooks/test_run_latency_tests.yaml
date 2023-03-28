@@ -30,7 +30,7 @@
       -i eth0 -o /root/svtools_out
 
 # Then starting standalone publisher
-- hosts: standalone
+- hosts: ci-tool
   name: Publisher tests
   become: true
   vars:
@@ -106,7 +106,7 @@
       -i eth0 -o /root/svtools_out
 
 # Then starting standalone publisher
-- hosts: standalone
+- hosts: ci-tool
   name: Publisher tests
   become: true
   vars:
