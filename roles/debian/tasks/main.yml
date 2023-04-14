@@ -210,11 +210,17 @@
     - "--chmod=F755"
     - "--chown=root:root"
 - name: Snmp config
-  ansible.builtin.copy:
-    src: ../src/debian/snmpd.conf
+  ansible.builtin.template:
+    src: ../src/debian/snmpd.conf.j2
     dest: /etc/snmp/snmpd.conf
     mode: '0644'
   register: snmpd_conf
+- name: Wait for DHCP for SNMP
+  lineinfile:
+    dest: /lib/systemd/system/snmpd.service
+    regexp: "^After="
+    line: "After=network-online.target"
+    state: present
 - name: restart snmpd
   ansible.builtin.systemd:
     name: snmpd.service
