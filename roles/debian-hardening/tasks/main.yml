@@ -199,7 +199,7 @@
 
 - name: Install sudo ansible group rules
   copy:
-    src: ../src/debian/ansible_sudoers
+    src: ../src/debian/sudoers/ansible
     dest: /etc/sudoers.d/ansible
     owner: root
     group: root
@@ -220,7 +220,7 @@
   when: not revert
 - name: Install sudo admin rules
   copy:
-    src: ../src/debian/admin_sudoers
+    src: ../src/debian/sudoers/admin
     dest: /etc/sudoers.d/admin
     owner: root
     group: root
