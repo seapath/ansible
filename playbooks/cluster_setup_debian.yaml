@@ -5,7 +5,10 @@
 - import_playbook: cluster_setup_ha.yaml
 - import_playbook: cluster_setup_keys.yaml
 - name: Restart all hosts
-  hosts: cluster_machines
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  become: true
   tasks:
     - name: Restart to configure Debian
       reboot:
