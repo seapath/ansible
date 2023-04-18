@@ -233,44 +233,26 @@
     groups=libvirt,haclient
     append=yes
 
-- name: Allow 'virtu' user to sudo
-  lineinfile:
+- name: Install sudo virtu user rules
+  copy:
+    src: ../src/debian/sudoers/virtu
     dest: /etc/sudoers.d/virtu
-    state: present
-    regexp: 'virtu'
-    line: 'virtu   ALL=NOPASSWD: ALL'
-    validate: visudo -cf %s
-    create: yes
-- name: Allow 'Debian-snmp' user to run snmp_diskusage.sh
-  lineinfile:
-    dest: /etc/sudoers.d/Debian-snmp
-    state: present
-    regexp: '^Debian-snmp.*/usr/local/bin/snmp_diskusage.sh'
-    line: 'Debian-snmp     ALL = (root) NOPASSWD: /usr/local/bin/snmp_diskusage.sh'
-    validate: visudo -cf %s
-    create: yes
-- name: Allow 'Debian-snmp' user to run snmp_cephstatus.sh
-  lineinfile:
-    dest: /etc/sudoers.d/Debian-snmp
-    state: present
-    regexp: '^Debian-snmp.*/usr/local/bin/snmp_cephstatus.sh'
-    line: 'Debian-snmp     ALL = (root) NOPASSWD: /usr/local/bin/snmp_cephstatus.sh'
-    validate: visudo -cf %s
-    create: yes
-- name: Allow 'Debian-snmp' user to run snmp_cephusage.sh
-  lineinfile:
-    dest: /etc/sudoers.d/Debian-snmp
-    state: present
-    regexp: '^Debian-snmp.*/usr/local/bin/snmp_cephusage.sh'
-    line: 'Debian-snmp     ALL = (root) NOPASSWD: /usr/local/bin/snmp_cephusage.sh'
-    validate: visudo -cf %s
-    create: yes
+    owner: root
+    group: root
+    mode: '0440'
 - name: remove 'virtu' from sudoers file
   lineinfile:
     dest: /etc/sudoers
     state: absent
     regexp: '^virtu'
     validate: visudo -cf %s
+- name: Install sudo Debian-snmp user rules
+  copy:
+    src: ../src/debian/sudoers/Debian-snmp
+    dest: /etc/sudoers.d/Debian-snmp
+    owner: root
+    group: root
+    mode: '0440'
 
 - name: Copy journald conf file
   ansible.builtin.copy:
