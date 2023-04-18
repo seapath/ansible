@@ -1,0 +1,3 @@
+Debian-snmp     ALL = (root) NOPASSWD: /usr/local/bin/snmp_diskusage.sh
+Debian-snmp     ALL = (root) NOPASSWD: /usr/local/bin/snmp_cephstatus.sh
+Debian-snmp     ALL = (root) NOPASSWD: /usr/local/bin/snmp_cephusage.sh
