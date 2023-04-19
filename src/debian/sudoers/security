@@ -1,0 +1,5 @@
+Defaults noexec ,requiretty ,use_pty ,umask=0027 ,ignore_dot ,env_reset
+
+# These tags are required by the ANSSI-BP-028-R39
+# This file is integrated as 00-security on the target in order to be read
+# first, all other file should overwrite this default configuration.
