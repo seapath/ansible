@@ -197,20 +197,6 @@
     state: present
   when: not revert
 
-- name: Install sudo ansible group rules
-  copy:
-    src: ../src/debian/sudoers/ansible
-    dest: /etc/sudoers.d/ansible
-    owner: root
-    group: root
-    mode: '0440'
-  when: not revert
-- name: Uninstall sudo ansible group rules
-  file:
-    path: /etc/sudoers.d/ansible
-    state: absent
-  when:  revert
-
 - name: sudo warning
   debug:
     msg:
