@@ -232,6 +232,20 @@
     state: absent
   when: revert
 
+- name: Install sudo special rules following ansi bp28 r39
+  copy:
+    src: ../src/debian/sudoers/security
+    dest: /etc/sudoers.d/00-security
+    owner: root
+    group: root
+    mode: '0440'
+  when: not revert
+- name: Uninstall sudo ansible group rules
+  file:
+    path: /etc/sudoers.d/security
+    state: absent
+  when:  revert
+
 - name: Find sudoers files
   find:
     paths: /etc/sudoers.d/
