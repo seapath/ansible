@@ -368,13 +368,13 @@
   when: updatehddtemp1.changed or updatehddtemp2.changed or updatehddtemp3.changed
 
 - block:
-    - name: Remove all file in /etc/apt/souces.list.d
+    - name: Remove all file in /etc/apt/sources.list.d
       file:
-        path: /etc/apt/souces.list.d/*
+        path: /etc/apt/sources.list.d/*
         state: absent
         force: yes
     - name: Configure apt repositories
       template:
         src: sources.list.j2
-        dest: /etc/sources.list
+        dest: /etc/apt/sources.list
   when: apt_repo is defined
