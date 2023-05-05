@@ -377,3 +377,14 @@
         src: sources.list.j2
         dest: /etc/apt/sources.list
   when: apt_repo is defined
+
+- name: Make libvirt use the "machine-id" way to determine host UUID
+  lineinfile:
+    dest: /etc/libvirt/libvirtd.conf
+    regexp: "^#?host_uuid_source ="
+    line: "host_uuid_source = \"machine-id\""
+    state: present
+- name: restart libvirtd
+  ansible.builtin.systemd:
+    name: libvirtd.service
+    state: restarted

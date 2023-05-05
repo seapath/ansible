@@ -12,3 +12,14 @@
   become: true
   roles:
     - debian/hypervisor
+
+- name: Disable libvirt-guests.service
+  hosts:
+    - cluster_machines
+  become: true
+  tasks:
+    - name: disable libvirt-guests.service
+      ansible.builtin.systemd:
+        name: libvirt-guests.service
+        enabled: no
+        state: stopped
