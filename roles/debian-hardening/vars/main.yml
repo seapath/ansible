@@ -14,6 +14,7 @@ kernel_params:
  - security=yama
  - mce=0
  - rng_core.default_quality=500
+ - lsm=apparmor,lockdown,capability,landlock,yama,bpf
 
 hardened_services:
   - ovs-vswitchd
