@@ -15,6 +15,7 @@ kernel_params:
  - mce=0
  - rng_core.default_quality=500
  - lsm=apparmor,lockdown,capability,landlock,yama,bpf
+ - ipv6.disable=1
 
 hardened_services:
   - ovs-vswitchd

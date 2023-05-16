@@ -98,7 +98,6 @@
     backrefs: yes
   register: updategrub1
   with_items:
-    - ipv6.disable=1
     - efi=runtime
     - processor.max_cstate=1
     - intel_idle.max_cstate=1
