@@ -388,3 +388,31 @@
   ansible.builtin.systemd:
     name: libvirtd.service
     state: restarted
+
+- name: "remove /etc/default/grub.d/20_efi_ipv6.cfg (FAI)"
+  file:
+    path: /etc/default/grub.d/20_efi_ipv6.cfg
+    state: absent
+
+- name: "grub conf"
+  lineinfile:
+    dest: /etc/default/grub
+    regexp: "^(GRUB_CMDLINE_LINUX=(?!.* {{ item }})\"[^\"]*)(\".*)"
+    line: '\1 {{ item }}\2'
+    state: present
+    backrefs: yes
+  register: updategrub1
+  with_items:
+    - ipv6.disable=1
+    - efi=runtime
+
+- name: "grub conf osprober"
+  lineinfile:
+    dest: /etc/default/grub
+    regexp: '^GRUB_DISABLE_OS_PROBER=.*$'
+    line: 'GRUB_DISABLE_OS_PROBER=true'
+    state: present
+  register: updategrub2
+- name: update-grub
+  command: update-grub
+  when: updategrub1.changed or updategrub2.changed
