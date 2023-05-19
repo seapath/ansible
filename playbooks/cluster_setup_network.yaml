@@ -16,7 +16,7 @@
     - name: Enable RSTP on team0 bridge
       command: "/usr/bin/ovs-vsctl set Bridge team0 rstp_enable=true"
     - name: Set RSTP priority on team0 bridge
-      command: "/usr/bin/ovs-vsctl set Bridge team0 other_config=rstp-priority=16384"
+      command: "/usr/bin/ovs-vsctl set Bridge team0 other_config=rstp-priority={{ br_rstp_priority }}"
     - name: Add interface team0_0 to team0 bridge
       command: "/usr/bin/ovs-vsctl -- --if-exists del-port {{ team0_0 }} -- add-port team0 {{ team0_0 }}"
     - name: Add interface team0_1 to team0 bridge
