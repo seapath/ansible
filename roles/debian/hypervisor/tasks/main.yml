@@ -89,7 +89,7 @@
     state: restarted
   when: sysfscpumask.changed or sriov_sysfs.changed
 
-- name: "grub conf"
+- name: "grub conf hypervisor"
   lineinfile:
     dest: /etc/default/grub
     regexp: "^(GRUB_CMDLINE_LINUX=(?!.* {{ item }})\"[^\"]*)(\".*)"
@@ -98,8 +98,6 @@
     backrefs: yes
   register: updategrub1
   with_items:
-    - ipv6.disable=1
-    - efi=runtime
     - processor.max_cstate=1
     - intel_idle.max_cstate=1
     - cpufreq.default_governor=performance
@@ -114,16 +112,9 @@
     - skew_tick=1
     - tsc=reliable
 
-- name: "grub conf osprober"
-  lineinfile:
-    dest: /etc/default/grub
-    regexp: '^GRUB_DISABLE_OS_PROBER=.*$'
-    line: 'GRUB_DISABLE_OS_PROBER=true'
-    state: present
-  register: updategrub2
 - name: update-grub
   command: update-grub
-  when: updategrub1.changed or updategrub2.changed
+  when: updategrub1.changed
 
 - name: "irqbalance conf"
   lineinfile:
