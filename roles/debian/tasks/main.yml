@@ -48,7 +48,7 @@
 - name: Synchronization of backup-restore folder on the control machine to dest on the remote hosts
   ansible.posix.synchronize:
     src: ../src/debian/backup-restore/
-    dest: /usr/bin/
+    dest: /usr/local/bin/
     rsync_opts:
       - "--chown=root:root"
 

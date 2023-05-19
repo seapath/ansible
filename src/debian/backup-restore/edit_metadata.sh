@@ -30,7 +30,7 @@ function editGuest {
   do
     arrVar0=()
     arrVar=()
-    for i in `python3 /usr/bin/get_metadata.py $guest`
+    for i in `python3 /usr/local/bin/get_metadata.py $guest`
     do
       arrVar0+=("$i")
     done
