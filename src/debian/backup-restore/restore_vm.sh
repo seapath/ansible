@@ -40,8 +40,8 @@ echo rsync -ave ssh --progress $remote_dir$fulldatedir/*$guest* $local_tmp_dir/
 rsync -ave ssh --progress $remote_dir$fulldatedir/*$guest* $local_tmp_dir/
 echo
 echo creating vm xml with no disk
-echo python3 /usr/bin/remove_disk_xml.py $local_tmp_dir/system_"$guest"-"$incdate".xml $local_tmp_dir/system_"$guest"-"$incdate"-nodisk.xml
-python3 /usr/bin/remove_disk_xml.py $local_tmp_dir/system_"$guest"-"$incdate".xml $local_tmp_dir/system_"$guest"-"$incdate"-nodisk.xml
+echo python3 /usr/local/bin/remove_disk_xml.py $local_tmp_dir/system_"$guest"-"$incdate".xml $local_tmp_dir/system_"$guest"-"$incdate"-nodisk.xml
+python3 /usr/local/bin/remove_disk_xml.py $local_tmp_dir/system_"$guest"-"$incdate".xml $local_tmp_dir/system_"$guest"-"$incdate"-nodisk.xml
 echo
 echo creating base vm
 echo vm-mgr create -n $guest --force --disable --enable-live-migration --migration-user virtu --xml $local_tmp_dir/system_"$guest"-"$incdate"-nodisk.xml -i $local_tmp_dir/system_"$guest"_"$fulldate".qcow2

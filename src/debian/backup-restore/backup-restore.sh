@@ -100,7 +100,7 @@ function restoreVMChooseIncDate {
   #incdate=${arrVar[$d]}
   d=$(($c-1))
   incdate=${listIncDateRaw[$d]}
-  /usr/bin/restore_vm.sh $local_tmp_dir $remote_serv:$remote_dir $fulldate $vm $incdate
+  /usr/local/bin/restore_vm.sh $local_tmp_dir $remote_serv:$remote_dir $fulldate $vm $incdate
 }
 function writeVar {
   key=$1
@@ -117,13 +117,13 @@ function backupFull {
   getVars
   [ -z "$remote_dir" ] && { whiptail --msgbox "var remote_dir empty" 10 50; return; }
   [ -z "$remote_serv" ] && { whiptail --msgbox "var remote_serv empty" 10 50; return; }
-  /usr/bin/backup_full.sh $local_dir $remote_serv":"$remote_dir
+  /usr/local/bin/backup_full.sh $local_dir $remote_serv":"$remote_dir
 }
 function backupInc {
   getVars
   [ -z "$remote_dir" ] && { whiptail --msgbox "var remote_dir empty" 10 50; return; }
   [ -z "$remote_serv" ] && { whiptail --msgbox "var remote_serv empty" 10 50; return; }
-  /usr/bin/backup_inc.sh $local_dir $remote_serv":"$remote_dir
+  /usr/local/bin/backup_inc.sh $local_dir $remote_serv":"$remote_dir
 }
 function getValueForVar {
    var=$1
