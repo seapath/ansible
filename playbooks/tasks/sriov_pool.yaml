@@ -1,0 +1,25 @@
+---
+- debug:
+    msg: "the network pool name is {{ sriov_network_pool_name }}"
+- name: Try to get sriov network pool
+  shell:
+    cmd: virsh -q net-list --all | awk '{ print $1 }' | grep -q "{{ sriov_network_pool_name }}"
+  register: pool_defined
+  failed_when: pool_defined.rc > 1
+  changed_when: false
+- block:
+    - name: Copy libvirt xml SRIOV network pool file
+      template:
+          src: ../templates/sriov_network_pool.xml.j2
+          dest: /tmp/sriov_network_pool.xml
+    - name: Create libvirt SRIOV network pool
+      command: "virsh net-define /tmp/sriov_network_pool.xml"
+    - name: AutoStart libvirt SRIOV network pool
+      command: "virsh net-autostart {{ sriov_network_pool_name }}"
+    - name: Start libvirt SRIOV network pool
+      command: "virsh net-start {{ sriov_network_pool_name }}"
+    - name: Remove temporary file
+      file:
+          path: /tmp/sriov_network_pool.xml
+          state: absent
+  when: pool_defined.rc != 0
