@@ -63,7 +63,7 @@ function getPtpStatus() {
   local pmcOutput=""
   local -i ptpStatus=$CLOCK_NO_SYNC
 
-  pmcOutput="$($PMC_EXE -s /var/run/timemaster/ptp4l.0.socket -u -b 0 'GET PARENT_DATA_SET' 'GET TIME_STATUS_NP')"
+  pmcOutput="$($PMC_EXE -s /var/run/timemaster/ptp4l.0.socket -u -b 0 'GET PARENT_DATA_SET' 'GET TIME_STATUS_NP' 'GET PORT_DATA_SET')"
   echo "$pmcOutput" > "$PTP_DETAILS_FILE"
   
   PTP_STAT_GMPRESENT=$(echo "$pmcOutput" | grep 'gmPresent'| tr -d '\t' | tr -s ' ' | cut -f2 -d " ")
