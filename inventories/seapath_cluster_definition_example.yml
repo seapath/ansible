@@ -10,6 +10,7 @@ all:
                             network_interface: eno8303 #main interface
                             main_disk: /dev/sda # disk for system
                             ip_addr: "{{ ansible_host }}"
+                            admin_ip_addr: 10.10.11.1 #used for snmp
                             subnet: 25 #default is 24, override if necessary
                             ptp_interface: "eno12419" #OPTIONAL PTP Interface
                             ptp_vlanid: 100 #OPTIONAL VlanID for PTP
@@ -25,6 +26,7 @@ all:
                             network_interface: eno8303
                             main_disk: /dev/sda
                             ip_addr: "{{ ansible_host }}"
+                            admin_ip_addr: 10.10.11.2 #used for snmp
                             subnet: 25
                             ptp_interface: "eno12419" #OPTIONAL PTP Interface
                             ptp_vlanid: 100 #OPTIONAL VlanID for PTP
@@ -40,6 +42,7 @@ all:
                             network_interface: eno8303
                             main_disk: /dev/sda
                             ip_addr: "{{ ansible_host }}"
+                            admin_ip_addr: 10.10.11.3 #used for snmp
                             subnet: 25
                             ptp_interface: "eno12419" #OPTIONAL PTP Interface
                             ptp_vlanid: 100 #OPTIONAL VlanID for PTP
