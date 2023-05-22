@@ -1,0 +1,58 @@
+# Copyright (C) 2023, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- hosts: hypervisors
+  name: Create and start VMs
+  gather_facts: false
+  vars:
+    - disk_path: "../vm_images/guest.qcow2"
+    - disk_pool: "/var/lib/libvirt/images"
+    - disk_copy: true
+  tasks:
+    - name: List all VMs
+      virt:
+        command: list_vms
+      register: all_vms
+    - name: Stop VM
+      virt:
+        state: destroyed
+        name: "{{ item }}"
+      with_items: "{{ groups['VMs'] }}"
+      when: item in all_vms.list_vms
+    - name: Undefined VM
+      command: "virsh undefine --nvram {{ item }}"
+      with_items: "{{ groups['VMs'] }}"
+      when: item in all_vms.list_vms
+    - name: Print info
+      debug:
+        var: hostvars[item]
+        verbosity: 2
+      with_items: "{{ groups['VMs'] }}"
+    - name: Copy the disk on target
+      copy:
+        src: "{{ disk_path }}"
+        dest: "{{ disk_pool }}/{{ hostvars[item].inventory_hostname }}.qcow2"
+      with_items: "{{ groups['VMs'] }}"
+      when: disk_copy | bool
+    - name: export VM config for debug in /tmp
+      template:
+        src: guest.xml.j2
+        dest: "/tmp/{{ hostvars[item].inventory_hostname }}.xml"
+      vars:
+        vm: "{{ hostvars[item] }}"
+      with_items: "{{ groups['VMs'] }}"
+      when: ansible_verbosity >= 2
+    - name: Create VMs
+      virt:
+        command: define
+        xml: >-
+          {{ lookup('template',
+          hostvars[item].vm_template,
+          template_vars=dict(vm=hostvars[item])) }}
+      with_items: "{{ groups['VMs'] }}"
+    - name: Start VMs
+      virt:
+        name: "{{ item }}"
+        state: running
+      with_items: "{{ groups['VMs'] }}"
