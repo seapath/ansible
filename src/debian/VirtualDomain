@@ -764,7 +764,7 @@ VirtualDomain_stop() {
 			fi
 
 			# The "shutdown_timeout" we use here is the operation
-			# timeout specified in the CIB, minus 5 seconds
+			# timeout specified in the CIB, minus 12 seconds
 			shutdown_timeout=$(( $NOW + ($OCF_RESKEY_CRM_meta_timeout/1000) -12 ))
 			# Loop on status until we reach $shutdown_timeout
 			while [ $NOW -lt $shutdown_timeout ]; do
