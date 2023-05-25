@@ -1,4 +1,5 @@
 Defaults:Debian-snmp !requiretty
 Debian-snmp     ALL=NOPASSWD:EXEC: /usr/local/bin/snmp_diskusage.sh ""
+Debian-snmp     ALL=NOPASSWD:EXEC: /usr/local/bin/snmp_virshlist.sh ""
 Debian-snmp     ALL = (ceph) NOPASSWD:EXEC: /usr/local/bin/snmp_cephstatus.sh ""
 Debian-snmp     ALL = (ceph) NOPASSWD:EXEC: /usr/local/bin/snmp_cephusage.sh ""
