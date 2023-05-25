@@ -15,11 +15,11 @@ access MyROGroup ""      any       noauth    exact  all    none   none
 access MyRWGroup ""      any       noauth    exact  all    all    none
 syslocation Unknown (configure /etc/snmp/snmpd.local.conf)
 syscontact Root <root@localhost> (configure /etc/snmp/snmpd.local.conf)
-extend crmstatus /usr/bin/timeout 1s /bin/bash /usr/local/bin/snmp_crmstatus.sh
-extend domstats /usr/bin/timeout 1s /bin/bash /usr/local/bin/snmp_domstats.sh
-extend dommemstat /usr/bin/timeout 1s /bin/bash /usr/local/bin/snmp_dommemstat.sh
-extend diskusage /usr/bin/timeout 40s /usr/bin/sudo /usr/local/bin/snmp_diskusage.sh
+extend crmstatus /usr/bin/timeout 1s /usr/bin/sudo -u hacluster /usr/local/bin/snmp_crmstatus.sh
+extend domstats /usr/bin/timeout 1s /usr/bin/sudo -u libvirt /usr/local/bin/snmp_domstats.sh
+extend dommemstat /usr/bin/timeout 1s /usr/bin/sudo -u libvirt /usr/local/bin/snmp_dommemstat.sh
+extend virshlist /usr/bin/timeout 2s /usr/bin/sudo -u libvirt /usr/local/bin/snmp_virshlist.sh
 extend cephstatus /usr/bin/timeout 2s /usr/bin/sudo -u ceph /usr/local/bin/snmp_cephstatus.sh
 extend cephusage /usr/bin/timeout 2s /usr/bin/sudo -u ceph /usr/local/bin/snmp_cephusage.sh
-extend virshlist /usr/bin/timeout 2s /usr/bin/sudo /usr/local/bin/snmp_virshlist.sh
+extend diskusage /usr/bin/timeout 40s /usr/bin/sudo /usr/local/bin/snmp_diskusage.sh
 agentAddress udp:{{ admin_ip_addr }}:161
