@@ -120,6 +120,40 @@
         state: absent
         regexp: '^127.*debian'
 
+- name: Configure DNS with resolved
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  become: true
+  tasks:
+    - block:
+      - name: configure /etc/systemd/resolved.conf
+        lineinfile:
+          dest: /etc/systemd/resolved.conf
+          regexp: "^#?DNS="
+          line: "DNS={{ dns_servers }}"
+          state: present
+        register: resolved_conf
+      - name: Create resolv.conf stub link
+        ansible.builtin.file:
+          src: /run/systemd/resolve/resolv.conf
+          dest: /etc/resolv.conf
+          state: link
+          force: true
+        register: resolv_conf
+      - name: Enable systemd-resolved
+        ansible.builtin.systemd:
+          name: systemd-resolved
+          state: started
+          enabled: true
+      - name: Restart systemd-resolved
+        ansible.builtin.systemd:
+          name: systemd-resolved
+          state: restarted
+          enabled: true
+        when: resolved_conf.changed or resolv_conf.changed
+      when: dns_servers is defined
+
 - name: Configure TimeMaster
   hosts:
     - cluster_machines
