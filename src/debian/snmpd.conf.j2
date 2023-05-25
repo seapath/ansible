@@ -21,4 +21,5 @@ extend dommemstat /usr/bin/timeout 1s /bin/bash /usr/local/bin/snmp_dommemstat.s
 extend diskusage /usr/bin/timeout 40s /usr/bin/sudo /usr/local/bin/snmp_diskusage.sh
 extend cephstatus /usr/bin/timeout 2s /usr/bin/sudo -u ceph /usr/local/bin/snmp_cephstatus.sh
 extend cephusage /usr/bin/timeout 2s /usr/bin/sudo -u ceph /usr/local/bin/snmp_cephusage.sh
+extend virshlist /usr/bin/timeout 2s /usr/bin/sudo /usr/local/bin/snmp_virshlist.sh
 agentAddress udp:{{ admin_ip_addr }}:161
