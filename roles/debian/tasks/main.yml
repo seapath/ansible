@@ -226,12 +226,6 @@
     name: snmpd.service
     state: restarted
   when: snmpd_conf.changed
-- name: Adding user Debian-snmp to groups libvirt and haclient
-  user: name=Debian-snmp
-    group=Debian-snmp
-    shell=/bin/false
-    groups=libvirt,haclient
-    append=yes
 
 - name: Install sudo virtu user rules
   copy:
@@ -272,6 +266,11 @@
     shell=/bin/bash
     groups=libvirt,haclient
     append=yes
+
+- name: Creating libvirt user with libvirtd permissions
+  user: name=libvirt
+    group=libvirt
+    shell=/bin/false
 
 - name: Copy sysctl rules
   ansible.builtin.copy:
