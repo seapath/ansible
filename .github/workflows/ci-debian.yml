@@ -14,7 +14,7 @@ on:
 
 jobs:
   CI:
-    runs-on: self-hosted
+    runs-on: [self-hosted, runner-RTE]
     steps:
 
       - name: Initialize sources
