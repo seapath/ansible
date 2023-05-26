@@ -1,4 +1,5 @@
 # Copyright (C) 2020, RTE (http://www.rte-france.com)
+# Copyright (C) 2023 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 # This Ansible playbook configures the networks and defines the hostnames. It
@@ -25,7 +26,9 @@
       command: "/usr/bin/ovs-vsctl -- --if-exists del-port {{ team0_1 }} -- add-port team0 {{ team0_1 }}"
 
 - name: Configure OVS
-  hosts: cluster_machines
+  hosts:
+    - cluster_machines
+    - standalone_machine
   vars:
     apply_config: "{{ apply_network_config | default(false) }}"
   tasks:
@@ -50,7 +53,9 @@
         - ovs_conf.changed
 
 - name: Configure Network
-  hosts: cluster_machines
+  hosts:
+    - cluster_machines
+    - standalone_machine
   vars_files:
     - ../vars/network_vars.yml
   roles:
@@ -87,7 +92,9 @@
 
 
 - name: Configure PTP ansible.builtin.service
-  hosts: cluster_machines
+  hosts:
+    - cluster_machines
+    - standalone_machine
   vars:
     apply_config: "{{ apply_network_config | default(false) }}"
   tasks:
@@ -110,13 +117,19 @@
         - ptp_vlan_interface is defined
         - ptp_vlan is defined
 
-- name: Configure hosts and hostname
-  hosts: cluster_machines
+- name: Configure hostname
+  hosts:
+    - cluster_machines
+    - standalone_machine
   tasks:
     - name: Set hostname
       hostname:
         name: "{{ inventory_hostname }}"
         use: systemd
+
+- name: Configure hosts
+  hosts: cluster_machines
+  tasks:
     - name: Build hosts file
       lineinfile:
         dest: /etc/hosts
@@ -133,7 +146,9 @@
       when: cluster_ip_addr is defined
 
 - name: Configure NTP
-  hosts: cluster_machines
+  hosts:
+    - cluster_machines
+    - standalone_machine
   tasks:
     - name: Set NTP configuration in /etc/systemd/timesyncd.conf
       lineinfile:
@@ -161,7 +176,9 @@
         state: restarted
 
 - name: Configure syslog-ng
-  hosts: cluster_machines
+  hosts:
+    - cluster_machines
+    - standalone_machine
   tasks:
     - name: Set observer IP address in /etc/syslog-ng/syslog-ng.conf
       lineinfile:
@@ -201,7 +218,9 @@
       when: cluster_interface is defined
 
 - name: Restart machine if needed
-  hosts: cluster_machines
+  hosts:
+    - cluster_machines
+    - standalone_machine
   tasks:
     - include_tasks: tasks/soft_restart_machine.yaml
       when: need_reboot is defined and need_reboot
