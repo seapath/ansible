@@ -1,7 +1,7 @@
 # Copyright (C) 2021, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND noninteractive
 
@@ -9,24 +9,31 @@ ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US.UTF-8
 ENV LC_ALL en_US.UTF-8
 
-RUN apt-get update && apt-get install -y \
-	bash \
-	locales \
-	ruby \
-	vim \
-	git \
-	ssh \
-	python3-libvirt \
-	docker.io \
-	docker-compose \
-	rsync \
-	python3-pip
+RUN set -x \
+    && apt-get update \
+    && apt-get install -y \
+        bash \
+        docker.io \
+        docker-compose \
+        git \
+        locales \
+        python3-docutils \
+        python3-libvirt \
+        python3-netaddr \
+        python3-pip \
+        python3-pygments \
+        python3-sphinx \
+        python3-sphinx-notfound-page \
+        rstcheck \
+        rsync \
+        ruby-asciidoctor-pdf \
+        ssh \
+        vim \
+        yamllint \
+    && sed -i "s/# en_US\.UTF-8 UTF-8/en_US\.UTF-8 UTF-8/" /etc/locale.gen \
+    && locale-gen \
+    && dpkg-reconfigure locales \
+    && pip install "ansible>=2.9,<2.10,!=2.9.10" \
+    && rm -rf /var/lib/{apt,dpkg,cache,log}/*
 
-RUN sed -i "s/# en_US\.UTF-8 UTF-8/en_US\.UTF-8 UTF-8/" /etc/locale.gen
-RUN locale-gen
-RUN dpkg-reconfigure locales
-# Asciidoctor PDF generator for generating the manual
-RUN gem install asciidoctor-pdf --pre -v 1.5.0.rc2
-ADD check_yaml.sh /usr/bin/check_yaml
-ADD requirements.txt /tmp/requirements.txt
-RUN python3 -m pip install -r /tmp/requirements.txt
+COPY check_yaml.sh /usr/bin/check_yaml
