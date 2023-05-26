@@ -1,4 +1,5 @@
 # Copyright (C) 2020, RTE (http://www.rte-france.com)
+# Copyright (C) 2023 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 # This Ansible playbook configures the kernel paremeters.
@@ -6,7 +7,9 @@
 
 ---
 - name: Configure Kernel parameters
-  hosts: cluster_machines
+  hosts:
+    - cluster_machines
+    - standalone_machine
   vars:
     config_file: "{{ bootloader_config_file |
       default('/boot/EFI/BOOT/grub.cfg') }}"
