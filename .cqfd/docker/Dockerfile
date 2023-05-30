@@ -12,6 +12,7 @@ ENV LC_ALL en_US.UTF-8
 RUN set -x \
     && apt-get update \
     && apt-get install -y \
+        ansible-lint \
         bash \
         docker.io \
         docker-compose \
