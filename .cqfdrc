@@ -1,10 +1,10 @@
 [project]
 org='rte'
 name='ansible'
-flavors='prepare manual module_documentation export'
+flavors='prepare manual module_documentation ansible-lint export'
 
 [build]
-command='check_yaml'
+command='check_yaml && ansible-lint -c ansible-lint.conf'
 
 [prepare]
 command='./prepare.sh'
@@ -14,6 +14,10 @@ command='asciidoctor-pdf README.adoc OVS_configuration.adoc'
 
 [module_documentation]
 command='./generate_module_documentation.sh'
+
+[ansible-lint]
+docker_run_args="-v $(pwd)/examples/inventories/advanced_inventory_example.yaml:/etc/ansible/hosts/hosts.yaml -v $(pwd)/ceph-ansible/roles:/etc/ansible/roles"
+command='ansible-lint -c ansible-lint.conf'
 
 [export]
 command='rm -f ansible.tar.gz && ./prepare.sh && tar --exclude=ansible.tar.gz --exclude=.git -czf ansible.tar.gz .'
