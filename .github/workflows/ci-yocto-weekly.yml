@@ -4,7 +4,7 @@
 # This ensure the main branch is always tested properly.
 # A badge is derived from this workflow.
 
-name: CI Yocto
+name: CI Yocto Weekly
 
 env:
   WORK_DIR: /tmp/seapath_ci_${{ github.run_id }}_${{ github.run_attempt }}_${{ github.sha }}
