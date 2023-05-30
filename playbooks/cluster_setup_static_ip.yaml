@@ -24,6 +24,6 @@
             dest: /mnt/etc/systemd/network/000-static_ip.network
             src: ../templates/000-static-ip.network.j2
       - name: Umount the file system
-        shell:
+        command:
             cmd: umount /mnt
             warn: no

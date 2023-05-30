@@ -48,7 +48,7 @@
             user: virtu
             state: present
             path: /etc/ssh/virtu/authorized_keys
-            key: "{{ lookup('file','buffer/{{ item }}-id_rsa.pub')}}"
+            key: "{{ lookup('file','buffer/' + item + '-id_rsa.pub') }}"
           with_items: "{{ groups['hypervisors'] }}"
         - name: Fetch the ssh keyfile
           fetch:
@@ -59,6 +59,6 @@
           known_hosts:
             path: /home/root/.ssh/known_hosts
             name: "{{ item }}"
-            key: "{{ item }} {{ lookup('file','buffer/{{ item }}-ssh_host_ed25519_key.pub') }}"
+            key: "{{ item }} {{ lookup('file','buffer/' + item + '-ssh_host_ed25519_key.pub') }}"
           with_items: "{{ groups['hypervisors'] }}"
         when: create_virtu_user is defined

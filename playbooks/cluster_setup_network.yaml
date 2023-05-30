@@ -134,7 +134,7 @@
       lineinfile:
         dest: /etc/hosts
         regexp: '.*{{ item }}(| rbd)$'
-        line: "{{ hostvars[item].cluster_ip_addr }} {{item}}{% if item == inventory_hostname %} rbd{% endif %}"
+        line: "{{ hostvars[item].cluster_ip_addr }} {{ item }}{% if item == inventory_hostname %} rbd{% endif %}"
         state: present
       when: hostvars[item].cluster_ip_addr is defined
       loop: "{{ groups['cluster_machines'] }}"
@@ -209,7 +209,7 @@
             path: /etc/systemd/system/systemd-networkd-wait-online.service.d
             owner: root
             group: root
-            mode: 644
+            mode: 0644
         - name: Copy systemd-networkd-wait-online.service overide
           template:
             src: ../templates/systemd-networkd-wait-online.service.j2

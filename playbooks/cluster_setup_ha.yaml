@@ -110,6 +110,6 @@
         retries: 3
         delay: 1
       - name: Disable stonith
-        shell: crm configure property stonith-enabled=false
+        command: crm configure property stonith-enabled=false
         run_once: true
         when: groups['valid_machine'] is undefined

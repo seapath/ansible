@@ -34,7 +34,7 @@
         lineinfile:
             dest: /etc/hosts
             regexp: '.*{{ item }}$'
-            line: "{{ hostvars[item].ip_addr }} {{item}}"
+            line: "{{ hostvars[item].ip_addr }} {{ item }}"
             state: present
         when: hostvars[item].ip_addr is defined
         loop: "{{ groups['cluster_machines'] }}"

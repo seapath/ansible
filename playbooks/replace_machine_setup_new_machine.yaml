@@ -21,7 +21,7 @@
       when: not machine_up.failed
     - name: Register if machine needed to be flashed
       set_fact:
-        need_to_be_reflashed: "{% if not machine_up.failed and ansible_facts['hostname'] == 'votp-flash' %}{{true | bool}}{% else %}{{ false | bool}}{% endif %}"
+        need_to_be_reflashed: "{% if not machine_up.failed and ansible_facts['hostname'] == 'votp-flash' %}{{ true | bool }}{% else %}{{ false | bool }}{% endif %}"
 
 - import_playbook: ci_flash_disk.yaml
   when: need_to_be_reflashed

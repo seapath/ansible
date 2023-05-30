@@ -9,4 +9,6 @@
 - name: Wait systemd has finished to boot
   command: systemctl is-system-running --wait
   register: system_status
+  tags:
+    - skip_ansible_lint
   failed_when: system_status.rc != 0 and system_status.rc != 1

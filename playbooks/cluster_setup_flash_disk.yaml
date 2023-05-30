@@ -21,5 +21,4 @@
             dest: /tmp/disk.wic.bmap
             src: "{{ bmap }}"
       - name: copy the image on disk
-        shell:
-            cmd: flash -i /tmp/disk.wic.gz -d "{{ disk }}"
+        command: flash -i /tmp/disk.wic.gz -d "{{ disk }}"
