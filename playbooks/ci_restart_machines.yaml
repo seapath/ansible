@@ -17,7 +17,7 @@
       include_tasks: tasks/restart_machine.yaml
 
 - name: Wait all cluster machines have finish to boot
-  hosts: "{{ machines }}"
+  hosts: "{{ machines |default('cluster_machines') }}"
   gather_facts: false
   tasks:
     - name: Wait for machine to be online
