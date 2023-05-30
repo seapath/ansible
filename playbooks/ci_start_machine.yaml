@@ -11,8 +11,8 @@
     - include_tasks: tasks/start_machine.yaml
       with_items: "{{ hostvars[machine_to_start]['plug_port'] }}"
 
-- name: "Wait {{ machine_to_start }} has booted"
-  hosts: "{{ machine_to_start }}"
+- name: "Wait machines has booted"
+  hosts: "{{ machine_to_start | default('cluster_machines') }}"
   gather_facts: false
   tasks:
     - name: Wait for machine to be online
