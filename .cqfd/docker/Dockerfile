@@ -26,8 +26,10 @@ RUN set -x \
         python3-sphinx \
         python3-sphinx-notfound-page \
         rstcheck \
+        rsync \
         ruby-asciidoctor-pdf \
         ssh \
+        vim \
         yamllint \
     && sed -i "s/# en_US\.UTF-8 UTF-8/en_US\.UTF-8 UTF-8/" /etc/locale.gen \
     && locale-gen \
