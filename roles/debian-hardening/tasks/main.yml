@@ -336,12 +336,12 @@
   lineinfile:
     dest: /etc/pam.d/login
     insertafter: 'auth       optional   pam_faildelay.so  delay=3000000'
-    line: "auth		[success=ok ignore=ignore user_unknown=ignore default=die]  	pam_securetty.so"
+    line: "auth   [success=ok ignore=ignore user_unknown=ignore default=die]    pam_securetty.so"
   when: not revert
 - name: Disable securetty in pam login
   lineinfile:
     dest: /etc/pam.d/login
-    regexp: "^auth		\\[success=ok ignore=ignore user_unknown=ignore default=die\\]  	pam_securetty.so$"
+    regexp: "^auth    \\[success=ok ignore=ignore user_unknown=ignore default=die\\]    pam_securetty.so"
     state: absent
   when: revert
 
