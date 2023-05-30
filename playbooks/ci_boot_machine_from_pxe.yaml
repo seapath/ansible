@@ -11,8 +11,7 @@
   tasks:
     - name: Check if machine is online
       register: machine_up
-      shell:
-        cmd: "ping -c 1 -t 1 {{ hostvars[item]['ansible_host'] }}"
+      command: "ping -c 1 -t 1 {{ hostvars[item]['ansible_host'] }}"
       failed_when: machine_up.rc > 1
       changed_when: false
       when: 
@@ -81,11 +80,11 @@
 
 - import_playbook: ci_restart_machines.yaml
   vars:
-      machines: "{{ hostvars['localhost'].machines_to_reboot }}"
+      machines: "{{ hostvars['localhost'].machines_to_reboot | default('none') }}"
 
 
 - name: Check all machines have boot on the flash-pxe image
-  hosts: "{{ hostvars['localhost'].machines_to_reboot }}"
+  hosts: "{{ hostvars['localhost'].machines_to_reboot | default('none') }}"
   tasks:
       - name: "Check {{ inventory_hostname }} have boot on the flash-pxe image"
         lineinfile:

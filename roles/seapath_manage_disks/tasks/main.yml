@@ -33,23 +33,19 @@
     - not force
     - action == "copy"
 - name: Create a new empty disk
-  shell:
-    cmd: "qemu-img create -f raw rbd:'{{ rbd_pool }}/{{ disk_name }}' \
-         {{ size }}{{ size_unit}}"
+  command: "qemu-img create -f raw rbd:'{{ rbd_pool }}/{{ disk_name }}' \
+         {{ size }}{{ size_unit }}"
   when: action == "create"
   run_once: true
 - name: Create a disk snapshot
-  shell:
-    cmd: "rbd -p '{{ rbd_pool }}' snap create --image '{{ disk_name }}' --snap \
+  command: "rbd -p '{{ rbd_pool }}' snap create --image '{{ disk_name }}' --snap \
     '{{ new_disk }}'"
   when: action == "snapshot"
   run_once: true
 - name: Copy the disk
-  shell:
-    cmd: "rbd -p '{{ rbd_pool }}' copy '{{ disk_name }}' '{{ new_disk }}'"
+  command: "rbd -p '{{ rbd_pool }}' copy '{{ disk_name }}' '{{ new_disk }}'"
   when: action == "copy"
   run_once: true
 - name: Refresh libvirt pool
-  shell:
-    cmd: "virsh pool-refresh --pool {{ libvirt_pool }}"
+  command: "virsh pool-refresh --pool {{ libvirt_pool }}"
   when: action != "check"

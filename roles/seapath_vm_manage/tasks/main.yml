@@ -4,26 +4,22 @@
 - import_tasks: add_vm.yml
 
 - name: Start VM "{{ vm_name }}"
-  shell:
-    cmd: "crm resource start {{ vm_name }}"
+  command: "crm resource start {{ vm_name }}"
   run_once: true
   when: state == "start"
 
 - name: Stop VM "{{ vm_name }}"
-  shell:
-    cmd: "crm resource stop {{ vm_name }}"
+  command: "crm resource stop {{ vm_name }}"
   run_once: true
   when: state == "stop"
 
 - name: Disable VM "{{ vm_name }}"
-  shell:
-    cmd: "crm resource unmanage {{ vm_name }}"
+  command: "crm resource unmanage {{ vm_name }}"
   run_once: true
   when: state == "disable"
 
 - name: Enable VM "{{ vm_name }}"
-  shell:
-    cmd: "crm resource manage {{ vm_name }}"
+  command: "crm resource manage {{ vm_name }}"
   run_once: true
   when: state == "enable"
 

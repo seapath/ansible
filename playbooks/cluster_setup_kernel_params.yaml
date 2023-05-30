@@ -33,8 +33,7 @@
             cmd: mount | grep '/boot ' || mount /dev/disk/by-label/boot /boot
             warn: false
         - name: "Check that {{ config_file }} exists"
-          shell:
-            cmd: test -f "{{ config_file }}"
+          command: test -f "{{ config_file }}"
           changed_when: false
         - name: Set extra kernel parameters
           replace:

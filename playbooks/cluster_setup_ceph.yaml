@@ -30,8 +30,7 @@
       osds
   tasks:
       - name: Cleanup Ceph OSD disks with ceph-volume
-        shell:
-            cmd: "ceph-volume lvm zap {{ ceph_osd_disk }} --destroy"
+        command: "ceph-volume lvm zap {{ ceph_osd_disk }} --destroy"
         when: new_ceph_installation.changed
 
 - import_playbook: ../ceph-ansible/site.yml
@@ -42,14 +41,12 @@
       mons
   tasks:
       - name: Disable Ceph mgr restful module
-        shell:
-            cmd: ceph mgr module disable restful
+        command: ceph mgr module disable restful
         run_once: true
 - name: Configure rbd
   hosts:
       osds
   tasks:
       - name: Disable rbd lock
-        shell:
-            cmd: rbd config global set global rbd_default_features 'layering, deep-flatten'
+        command: rbd config global set global rbd_default_features 'layering, deep-flatten'
         run_once: true

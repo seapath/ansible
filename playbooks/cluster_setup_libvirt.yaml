@@ -31,22 +31,20 @@
             loop: "{{ groups['hypervisors'] }}"
           - debug:
               msg: "Found UUID {{ libvirt_uuid_rbd }}"
-            when: libvirt_uuid_rbd != ''
+            when: libvirt_uuid_rbd
             run_once: true
           - name: Generate secret uuid
-            shell:
-                cmd: uuidgen
+            command: uuidgen
             changed_when: false
             register: raw_uuid
             run_once: true
-            when: libvirt_uuid_rbd == ''
+            when: not libvirt_uuid_rbd
           - name: Register uuid
             set_fact:
               libvirt_uuid_rbd: "{{ raw_uuid.stdout }}"
-            when: libvirt_uuid_rbd == ''
+            when: not libvirt_uuid_rbd
           - name: Get Ceph libvirt client key
-            shell:
-                cmd: ceph auth get-key client.libvirt
+            command: ceph auth get-key client.libvirt
             changed_when: false
             register: ceph_key
             run_once: true
@@ -58,16 +56,14 @@
                 src: ../templates/secret.xml.j2
                 dest: /tmp/secret.xml
           - name: Create libvirt rbd secret
-            shell:
-                cmd: virsh secret-define /tmp/secret.xml
+            command: virsh secret-define /tmp/secret.xml
             when: not secret_defined.failed
           - name: Remove temporary file
             file:
                 path: /tmp/secret.xml
                 state: absent
           - name: Set key in libvirt secret
-            shell:
-                cmd: 'virsh secret-set-value --secret "{{ libvirt_uuid_rbd }}" --base64 "{{ ceph_key.stdout }}"'
+            command: 'virsh secret-set-value --secret "{{ libvirt_uuid_rbd }}" --base64 "{{ ceph_key.stdout }}"'
         when:
           - create_secret_pool
           - secret_defined.stdout == ''
@@ -101,6 +97,5 @@
           autostart: yes
           name: "{{ pool_name }}"
     - name: Refresh pool
-      shell:
-          cmd: virsh pool-refresh --pool ceph
+      command: virsh pool-refresh --pool ceph
       changed_when: false

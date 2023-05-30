@@ -6,10 +6,10 @@
 - name: Test VM status
   hosts: hypervisors
   vars:
-      -  any_errors_fatal: false
+      any_errors_fatal: false
   tasks:
   - name: Test VM state
-    shell: crm status
+    command: crm status
     register: vm_status
     until: |
       vm_status.stdout.find("FAILED") != -1 or
