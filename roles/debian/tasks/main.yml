@@ -260,6 +260,11 @@
     name: systemd-journald
   when: journaldconf.changed
 
+- name: Create group virtu before the user
+  group :
+    name: virtu
+    state: present
+
 - name: Adding user virtu to groups libvirt and haclient
   user: name=virtu
     group=virtu
