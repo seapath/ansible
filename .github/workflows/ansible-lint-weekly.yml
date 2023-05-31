@@ -4,7 +4,7 @@
 # This ensure the main branch is always linted properly
 # A badge is derived from this workflow
 
-name: Ansible Lint Weekly
+name: Ansible Lint
 
 env:
   WORK_DIR: /tmp/seapath_ci_${{ github.run_id }}_${{ github.run_attempt }}_${{ github.sha }}
