@@ -11,7 +11,7 @@ env:
 
 on:
   schedule:
-    - cron: 0 22 * * SAT
+    - cron: 0 11 * * 3
 
 jobs:
   CI:
