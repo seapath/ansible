@@ -11,7 +11,7 @@ env:
 
 on:
   schedule:
-    - cron: 0 11 * * 3
+    - cron: '0 * * * *'
 
 jobs:
   ansible-lint:
