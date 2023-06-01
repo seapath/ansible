@@ -41,7 +41,7 @@
   hosts:
     - "{{ mon_group_name|default('mons') }}"
     - "{{ osd_group_name|default('osds') }}"
-  become: True
+  become: true
   tasks:
     - name: "Gather facts"
       gather_facts:
