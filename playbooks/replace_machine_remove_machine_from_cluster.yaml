@@ -14,6 +14,7 @@
 
 - name: Try to find OSD
   hosts: cluster_machines
+  become: true
   tasks:
     - name: get OSD to shrink
       script: "../scripts/get_osd.py {{ machine_to_remove }}"
