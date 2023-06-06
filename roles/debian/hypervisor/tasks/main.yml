@@ -111,6 +111,7 @@
     - "isolcpus=nohz,domain,managed_irq,{{ cpumachinesrt }}"
     - skew_tick=1
     - tsc=reliable
+    - console=ttyS0,115200
 
 - name: update-grub
   command: update-grub
