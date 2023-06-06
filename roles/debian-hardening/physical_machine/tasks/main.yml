@@ -40,3 +40,17 @@
    - Debian-snmp
   when: not revert
 
+- name: Create systemd service.d directories
+  file:
+    path: "/etc/systemd/system/{{ item }}.service.d/"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+  with_items: "{{ hardened_services }}"
+- name: Add systemd service hardening rules for physical machines
+  copy:
+    src: "../src/debian/{{ item }}_hardening.conf"
+    dest: "/etc/systemd/system/{{ item }}.service.d/hardening.conf"
+  register: services_to_restart
+  with_items: "{{ hardened_services }}"
