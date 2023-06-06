@@ -388,10 +388,18 @@
     name: libvirtd.service
     state: restarted
 
-- name: "remove /etc/default/grub.d/20_efi_ipv6.cfg (FAI)"
+- name: "find /etc/default/grub.d/*.cfg (FAI)"
+  find:
+    paths: /etc/default/grub.d
+    patterns: '^\d\d.*\.cfg$'
+    use_regex: true
+  register: wildcard_files_to_delete
+
+- name: "remove /etc/default/grub.d/*.cfg (FAI)"
   file:
-    path: /etc/default/grub.d/20_efi_ipv6.cfg
+    path: "{{ item.path }}"
     state: absent
+  with_items: "{{ wildcard_files_to_delete.files }}"
 
 - name: "grub conf"
   lineinfile:
@@ -404,6 +412,7 @@
   with_items:
     - ipv6.disable=1
     - efi=runtime
+    - console=ttyS0,115200
 
 - name: "grub conf osprober"
   lineinfile:
