@@ -17,9 +17,4 @@ kernel_params:
  - lsm=apparmor,lockdown,capability,landlock,yama,bpf
 
 hardened_services:
-  - ovs-vswitchd
-  - ovsdb-server
-  - corosync
-  - pacemaker
   - syslog-ng
-  - ceph-crash

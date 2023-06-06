@@ -1,0 +1,10 @@
+# Copyright (C) 2023, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+---
+
+hardened_services:
+  - ovs-vswitchd
+  - ovsdb-server
+  - corosync
+  - pacemaker
+  - ceph-crash
