@@ -70,8 +70,12 @@
   tasks:
     - name: Remove FAI network configuration
       file:
-        path: /etc/systemd/network/00-init.network
+        path: "/etc/systemd/network/{{ item }}.network"
         state: absent
+      with_items:
+        - 01-init.network
+        - 00-init-dhcp
+        - 00-init
     - name: Restart systemd-networkd
       ansible.builtin.systemd:
         name: systemd-networkd
