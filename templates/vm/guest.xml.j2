@@ -86,16 +86,18 @@
     <devices>
         <emulator>/usr/bin/qemu-system-x86_64</emulator>
         {% if "dpdk" in vm.vm_features %}
+        {% for interface in vm.dpdk %}
         <interface type='vhostuser'>
-            <source type='unix' path='/var/run/openvswitch/vm-sockets/dpdkvhostuser_{{ vm.ovs_port }}' mode='server'/>
-            <mac address="{{ vm.mac_address }}" />
+            <source type='unix' path='/var/run/openvswitch/vm-sockets/dpdkvhostuser_{{ interface.ovs_port }}' mode='server'/>
+            <mac address="{{ interface.mac_address }}" />
             <model type='virtio'/>
             <driver name='vhost' rx_queue_size='1024' tx_queue_size='1024' queues="{{ vm.cpuset | length }}">
                 <host mrg_rxbuf='on'/>
             </driver>
         </interface>
+        {% endfor %}
         {% endif %}
-        {% if "passthrough" in vm.vm_features %}
+        {% if vm.pci_passthrough is defined %}
         {% for pci in vm.pci_passthrough %}
         <hostdev mode="subsystem" type="pci" managed="yes">
             <source>
@@ -105,19 +107,37 @@
         </hostdev>
         {% endfor %}
         {% endif %}
-        {% if "bridge" in vm.vm_features %}
+        {% if vm.bridges is defined %}
+        {% for bridge in vm.bridges %}
         <interface type="bridge">
-            <source bridge="{{ vm.bridge | default('br0') }}"/>
-            <mac address="{{ vm.mac_address }}"/>
+            <source bridge="{{ bridge.name }}"/>
+            <mac address="{{ bridge.mac_address }}"/>
             <model type="virtio"/>
         </interface>
+        {% endfor %}
         {% endif %}
-        {% if "ovs" in vm.vm_features %}
+        {% if vm.ovs is defined %}
+        {% for bridge in vm.ovs %}
         <interface type="ethernet">
-            <mac address="{{ vm.mac_address }}"/>
-            <target dev="{{ vm.ovs_port }}" managed="no"/>
+            <mac address="{{ bridge.mac_address }}"/>
+            <target dev="{{ bridge.ovs_port }}" managed="no"/>
             <model type="virtio"/>
         </interface>
+        {% endfor %}
+        {% endif %}
+        {% if vm.sriov is defined %}
+        {% for interface in vm.sriov %}
+        <interface type="network">
+            <source network="{{ interface }}">
+        </interface>
+        {% endfor %}
+        {% endif %}
+        {% if vm.sriov is defined %}
+        {% for interface in vm.sriov %}
+        <interface type="network">
+            <source network="{{ interface }}">
+        </interface>
+        {% endfor %}
         {% endif %}
         <controller type="pci" index="0" model="pci-root" />
         <serial type="pty">
