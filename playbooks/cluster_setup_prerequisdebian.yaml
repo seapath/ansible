@@ -1,7 +1,11 @@
+# Copyright (C) 2023, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
 - name: Prerequis machine debian
   hosts:
     - cluster_machines
     - standalone_machine
+    - VMs
   become: true
   roles:
     - debian
