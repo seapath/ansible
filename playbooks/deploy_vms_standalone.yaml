@@ -6,7 +6,6 @@
   name: Create and start VMs
   gather_facts: false
   vars:
-    - disk_path: "../vm_images/guest.qcow2"
     - disk_pool: "/var/lib/libvirt/images"
     - disk_copy: true
   tasks:
@@ -31,7 +30,7 @@
       with_items: "{{ groups['VMs'] }}"
     - name: Copy the disk on target
       copy:
-        src: "{{ disk_path }}"
+        src: "{{ hostvars[item].vm_disk }}"
         dest: "{{ disk_pool }}/{{ hostvars[item].inventory_hostname }}.qcow2"
       with_items: "{{ groups['VMs'] }}"
       when: disk_copy | bool
