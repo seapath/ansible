@@ -1,3 +1,11 @@
+# Copyright (C) 2023, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# This playbook setup SEAPATH on a debian machine
+# The machine must previously have been flashed
+# with an iso created by build_debian_iso
+# This playbooks can also configure VMs created with build_debian_iso
+
 - import_playbook: cluster_setup_prerequisdebian.yaml
 - import_playbook: cluster_setup_network.yaml
 - import_playbook: cluster_setup_ceph.yaml
