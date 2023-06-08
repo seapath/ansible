@@ -5,6 +5,7 @@
 ---
 - name: Rollback to the initiale state
   hosts: cluster_machines
+  become: true
   tasks:
     - name: Merge lvm snapshot
       command:

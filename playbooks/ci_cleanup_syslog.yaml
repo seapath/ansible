@@ -5,6 +5,7 @@
 ---
 - name: Cleanup syslog-ng files
   hosts: cluster_machines
+  become: true
   tasks:
     - name: Remove /var/log/syslog-ng
       file:

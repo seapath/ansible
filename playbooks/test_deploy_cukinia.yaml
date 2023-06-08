@@ -4,6 +4,7 @@
 ---
 - name: Install Cukinia
   hosts: cluster_machines
+  become: true
   tasks:
     - name: Copy Cukinia script
       copy:

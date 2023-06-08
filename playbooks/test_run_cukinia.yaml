@@ -7,6 +7,7 @@
 ---
 - hosts: cluster_machines
   name: Cukinia tests
+  become: true
   vars:
     tests_format: junitxml
     tests_result_name: "cukinia_{{ inventory_hostname }}.xml"
