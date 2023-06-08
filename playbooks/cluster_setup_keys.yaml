@@ -1,3 +1,9 @@
+# Copyright (C) 2023, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# This playbook setup the ssh keys of each cluster machines
+# for the triangle cluster. Each machine must have access to the others
+
 - name: Configure ssh keys between hosts
   hosts: cluster_machines
   become: true
