@@ -160,14 +160,6 @@
   with_items:
     - 00-panicreboot.conf
 
-- name: Copy 80-wired networkd file
-  ansible.builtin.copy:
-    src: ../src/debian/80-wired.network
-    dest: /etc/systemd/network/80-wired.network
-    mode: '0640'
-    owner: root
-    group: systemd-network
-
 - name: customize /etc/environment
   ansible.builtin.lineinfile:
     dest: "/etc/environment"
