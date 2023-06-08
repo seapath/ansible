@@ -8,3 +8,9 @@
     revert: true
   roles:
       - debian-hardening
+
+- name: Reboot to apply hardening revert
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  reboot:
