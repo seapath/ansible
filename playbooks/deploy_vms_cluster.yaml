@@ -5,6 +5,7 @@
 - name: Create and start VMs
   hosts: "{{ groups.hypervisors[0] }}"
   gather_facts: false
+  become: true
   vars:
     - disk_copy: true
   tasks:
