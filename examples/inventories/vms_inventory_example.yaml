@@ -11,6 +11,7 @@ all:
           vm_template: "../templates/vm/guest.xml.j2"
           vm_disk: "../vm_images/guest.qcow2"
           vm_features: []
+          preferred_host: pc1 # Optional
           bridges:
             - name: "br0" # Change the bridge name
               mac_address: "52:54:00:c4:ff:02" # change the MAC address
@@ -23,6 +24,7 @@ all:
           rt_priority: 1 # FIFO priority
           mac_address: "52:54:00:c4:ff:03" # change the MAC address
           vm_features: ["rt", "isolated"] # Real time tweaks and CPU pinning
+          pinned_host: pc2 # Optional
           bridges:
             - name: "br0" # Change the bridge name
               mac_address: "52:54:00:c4:ff:03" # change the MAC address
@@ -59,6 +61,11 @@ all:
 #    ** rt: to enable real time tweaks
 #  * cpuset: list of the CPU to use (int list). Use only with isolated.
 #  * memory: the memory to use in Mio (int). Default is 2048.
+#  * pinned_host: the host to pin the VM (string). Optional. A pinned VM will
+#                 never be migrated on another host.
+#  * preferred_host: the host to prefer to run the VM (string). Optional. The VM
+#                    will be run on this host if possible. If not, it will be
+#                    run on another host.
 #  * rt_priority: the FIFO scheduler priority (int). Default is 1. Use only
 #                 with rt.
 #  * pci_passthrough: a list containing dictionaries of the PIC devices to
