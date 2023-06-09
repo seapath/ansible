@@ -245,14 +245,9 @@
   when: not revert
   register: groups_changed
 
-- name: Reboot to update group changes
-  reboot:
-  when:
-    - not revert
-    - groups_changed.changed
-
-- name: Wait for host to be online
-  wait_for_connection:
+- name: Reset ssh connection to allow user changes to affect ansible user
+  ansible.builtin.meta:
+    reset_connection
   when:
     - not revert
     - groups_changed.changed
