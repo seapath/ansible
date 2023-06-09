@@ -5,6 +5,7 @@
 - hosts: hypervisors
   name: Create and start VMs
   gather_facts: false
+  become: true
   vars:
     - disk_pool: "/var/lib/libvirt/images"
     - disk_copy: true
