@@ -58,11 +58,22 @@
     dest: /usr/local/bin/consolevm
     mode: '0755'
 
-- name: Copy vimrc.local file
-  ansible.builtin.copy:
-    src: ../src/debian/vimrc.local
-    dest: /etc/vim/vimrc.local
-    mode: '0644'
+- name: disable vim defaults
+  lineinfile:
+    dest: /etc/vim/vimrc
+    regexp: '^"? *let g:skip_defaults_vim = 1$'
+    line: "let g:skip_defaults_vim = 1"
+    state: present
+- name: vim color syntax
+  lineinfile:
+    dest: /etc/vim/vimrc
+    regexp: '^"? *syntax on$'
+    line: "syntax on"
+    state: present
+- name: remove vimrc.local file
+  file:
+    path: /etc/vim/vimrc.local
+    state: absent
 
 - name: create /usr/lib/ocf/resource.d/seapath on hosts
   file:
