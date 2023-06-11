@@ -376,7 +376,6 @@
   with_items:
     - apt-daily-upgrade.timer
     - apt-daily.timer
-    - systemd-resolved.service
 
 - name: Set grub password
   template:

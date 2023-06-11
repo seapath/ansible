@@ -330,6 +330,8 @@
       HISTFILESIZE: 2000000
       LIBVIRT_DEFAULT_URI: "qemu:///system"
       HISTTIMEFORMAT: '"%F %T "'
+      EDITOR: 'vim'
+      SYSTEMD_EDITOR: 'vim'
   with_items: "{{ env_list | dict2items }}"
 
 - name: "PATH for virtu user"

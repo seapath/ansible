@@ -73,7 +73,7 @@
         path: "/etc/systemd/network/{{ item }}.network"
         state: absent
       with_items:
-        - 01-init.network
+        - 01-init
         - 00-init-dhcp
         - 00-init
     - name: Restart systemd-networkd
@@ -134,17 +134,24 @@
       - name: configure /etc/systemd/resolved.conf
         lineinfile:
           dest: /etc/systemd/resolved.conf
+          regexp: "^#?LLMNR="
+          line: "LLMNR=no"
+          state: present
+        register: resolved_conf1
+      - name: configure /etc/systemd/resolved.conf
+        lineinfile:
+          dest: /etc/systemd/resolved.conf
           regexp: "^#?DNS="
           line: "DNS={{ dns_servers }}"
           state: present
-        register: resolved_conf
+        register: resolved_conf2
       - name: Create resolv.conf stub link
         ansible.builtin.file:
           src: /run/systemd/resolve/resolv.conf
           dest: /etc/resolv.conf
           state: link
           force: true
-        register: resolv_conf
+        register: resolved_conf3
       - name: Enable systemd-resolved
         ansible.builtin.systemd:
           name: systemd-resolved
@@ -155,7 +162,7 @@
           name: systemd-resolved
           state: restarted
           enabled: true
-        when: resolved_conf.changed or resolv_conf.changed
+        when: resolved_conf1.changed or resolved_conf2.changed or resolved_conf3.changed
       when: dns_servers is defined
 
 - name: Configure TimeMaster
