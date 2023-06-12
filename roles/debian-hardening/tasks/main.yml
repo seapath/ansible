@@ -248,9 +248,6 @@
 - name: Reset ssh connection to allow user changes to affect ansible user
   ansible.builtin.meta:
     reset_connection
-  when:
-    - not revert
-    - groups_changed.changed
 
 - name: Configure sudo to be run only users member of the privileged group
   file:
@@ -360,7 +357,13 @@
     name:
       - fdisk
       - ifupdown
-      - libfdisk1
+      - libbpf0
+      - libdns-export1110
+      - libffi7
+      - libisc-export1105
+      - libprocps8
+      - libsepol1
+      - libssl1.1
     state: absent
     purge: yes
     autoremove: yes

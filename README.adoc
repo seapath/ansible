@@ -88,13 +88,13 @@ NOTE: Later you must prefix all ansible command with `cqfd run`.
 === Use Ansible without cqfd
 
 Without `cqfd` you need to install the dependencies manually.
-The client machine that is going to run Ansible must have Ansible 2.9 installed
-an Inventory file and playbook files to play. To install Ansible 2.9 on this
+The client machine that is going to run Ansible must have Ansible 2.10 installed
+an Inventory file and playbook files to play. To install Ansible 2.10 on this
 machine please refer to the Ansible documentation at
 https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html.
 
-*Warning:* Curently only the Ansible version 2.9 is supported. Other versions
-will not work. Ansible 2.9 is the packaged version in Ubuntu 20.04 and Fedora 33.
+*Warning:* Curently only the Ansible version 2.10 is supported. Other versions
+will not work.
 
 Also you must also install the netaddr python3 module.
 

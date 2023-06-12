@@ -204,10 +204,6 @@
         name: Debian-snmp
         uid: 902
         group: Debian-snmp
-    - name: restart snmpd
-      ansible.builtin.systemd:
-        name: snmpd.service
-        state: started
   when: getent_passwd['Debian-snmp'][1] != "902" or getent_group['Debian-snmp'][1] != "902"
 
 - name: Synchronization of snmp_ scripts
@@ -232,11 +228,11 @@
     regexp: "^After="
     line: "After=network-online.target"
     state: present
+
 - name: restart snmpd
   ansible.builtin.systemd:
     name: snmpd.service
     state: restarted
-  when: snmpd_conf.changed
 
 - name: removing or not the virtu user created by the iso
   block:
