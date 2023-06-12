@@ -21,9 +21,9 @@ if ! command -v ansible &>/dev/null ; then
     exit 1
 fi
 
-echo "Test Ansible version is 2.9"
-if ! ansible --version | grep -q 'ansible 2.9' ; then
-    echo "Error: Installed version of ansible must match 2.9" 1>&2
+echo "Test Ansible version is 2.10"
+if ! ansible --version | grep -q 'ansible 2.10' ; then
+    echo "Error: Installed version of ansible must match 2.10" 1>&2
     echo "See README.adoc for instructions" 1>&2
 fi
 

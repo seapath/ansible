@@ -65,10 +65,9 @@ all:
                     # Optional list variable to change apt repositories. All repositories will be overrides.
                     # If defined as empty list [], all apt repositories will be removed
                     apt_repo:
-                        - http://ftp.fr.debian.org/debian bullseye main contrib non-free
-                        - http://security.debian.org/debian-security bullseye-security main contrib non-free
-                        - http://ftp.fr.debian.org/debian bullseye-backports main contrib non-free
-                        - https://download.docker.com/linux/debian bullseye stable
+                        - http://ftp.fr.debian.org/debian bookworm main contrib non-free non-free-firmware
+                        - http://security.debian.org/debian-security bookworm-security main contrib non-free non-free-firmware
+                        - http://ftp.fr.debian.org/debian bookworm-backports main contrib non-free non-free-firmware
                         - https://artifacts.elastic.co/packages/8.x/apt stable main
                     # Default user with admin privileges, and password hash
                     admin_user: virtu
