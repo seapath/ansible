@@ -4,14 +4,29 @@
 
 - name: Add hardened in SEAPATH Debian machines
   become: true
-  hosts: cluster_machines
-  vars:
-    revert: false
-  roles:
-      - debian-hardening
-
-- name: Reboot to apply hardening
   hosts:
     - cluster_machines
     - standalone_machine
-  reboot:
+    - VMs
+  vars:
+    revert: false
+  roles:
+    - debian-hardening
+- name: Add hardened for SEAPATH physical machines
+  become: true
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  vars:
+    revert: false
+  roles:
+    - debian-hardening/physical_machine
+
+- name: Reboot to apply hardening
+  become: true
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  tasks:
+    - name: Reboot
+      reboot:
