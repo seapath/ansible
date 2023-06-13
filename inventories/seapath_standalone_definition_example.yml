@@ -4,46 +4,62 @@ all:
         standalone_machine:
             hosts:
                 machine1:
+
+                    # Ansible variables
                     ansible_host: 10.0.0.2
+                    ansible_user: ansible
+                    ansible_python_interpreter: /usr/bin/python3
+                    ansible_connection: ssh
+                    ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+                    ansible_remote_tmp: /tmp/.ansible/tmp
+
+                    # Disk configuration
                     main_disk: /dev/sda
+
+                    # Main network configuration
                     network_interface: enp1s0
                     ip_addr: "{{ ansible_host }}"
                     subnet: 24
+                    dns_server: 10.10.2.1
+                    gateway_addr: 10.0.0.1
+                    ntp_primary_server: "ntp.midway.ovh"
+                    ntp_secondary_server: "ntp.unice.fr"
+
+                    # Syslog log sending configuration
+                    # Syslog client keys. If not set, syslog will send logs using an unencrypted connection.
+                    syslog_tls_ca: ../keys/syslog_tls_ca.crt
+                    syslog_tls_key: ../keys/syslog_tls_key.pem
+                    syslog_server_ip: "10.10.10.10" # If not set, syslog will not send any logs from network
+                    logstash_server_ip: 10.10.10.10
+
+                    # Other Network configuration
+                    apply_network_config: true # true to apply the network configuration without rebooting
                     ptp_interface: "enp1s0f1" #OPTIONAL PTP Interface
                     ptp_vlanid: 100 #OPTIONAL VlanID for PTP
                     # SRIOV, Optional configuration
                     sriov_driver: 'igb'
                     sriov:
                       'eno12429': 7
-                    sriov_network_pool_interface: eno12429
-                    sriov_network_pool_name: "{{ 'sr-iov-net-' + sriov_network_pool_interface }}"
-    vars:
-        ansible_user: ansible
-        ansible_python_interpreter: /usr/bin/python3
-        ansible_connection: ssh
-        ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
-        dns_server: 10.10.2.1   # Not valid, just for Ansible
-        gateway_addr: 10.0.0.1 # Not valid, just for Ansible
-        apply_network_config: true
-        ntp_primary_server: "ntp.midway.ovh"
-        ntp_secondary_server: "ntp.unice.fr"
-        ansible_remote_tmp: /tmp/.ansible/tmp
-        syslog_server_ip: "10.0.0.10"
-        logstash_server_ip: "10.0.0.11"
-        workqueuemask: "1001"
-        irqmask: "ffeffe"
-        cpusystem: "0,16"
-        cpuuser: "1,17"
-        cpumachines: "2-15,18-31"
-        cpumachinesrt: "2-5,18-21"
-        cpumachinesnort: "6-15,22-31"
-        cpuovs: "23"
-        # The password hash generated with "grub-mkpasswd-pbkdf2 -c 65536 -s 256 -l 64", in this example the pass is "toto"
-        grub_password: grub.pbkdf2.sha512.65536.E291D66AEEB3C22BD6B019C5C3587A3094AE93D61E20D134EC6324925AE5045DCA61EF30B3BD04B4D6F7360B9C9B242AA68B1643CCB269C53658EC959B5964ADB9C9D5FAA280A291D8F95E3F255254A4119A2431AFE797F1949EE4FBBC4C74281C550C83DAED26C254224061BEFCEEBF8091A8D1BE406EBB3A3E8A519E36B4FE161BE191D407193E5DFEBCC09F8822B4060EA9CD1E6B8677D40D32826EF025CA494BCD209032F7CF2A4A2E74717E6D17E87A62AAA93E458C96F983E69FBFC4FD602403988EAF5AADCA4B5B145B0F6C6FFB53F55CD6C56C15C17B2F8A5B3A214F3140470566597760D9388084AE978DB5C0EBF7C868A855DB38DACA47A010417A.FDA0C3188FAC87FFA04D862AC9B1020F29FEEA3B9590BE534330D8C7CAB71444CBF527E39D7DAE640545139202B9CA77822CCE21AB1134110F6AF3EFD793E848
-        # Optional list variable to change apt repositories. All repositories will be overrides.
-        # If defined as empty list [], all apt repositories will be removed
-        apt_repo:
-            - http://ftp.fr.debian.org/debian bullseye main contrib non-free
-            - http://security.debian.org/debian-security bullseye-security main contrib non-free
-            - https://download.docker.com/linux/debian bullseye stable
-            - https://artifacts.elastic.co/packages/8.x/apt stable main
+
+                    # Realtime/CPUs cgroups isolation configuration
+                    irqmask: "ffeffe"
+                    workqueuemask: "1001" #workqueue mask, here it mean 0 and 12 are the only allowed cpus
+                    cpusystem: "0,12" # CPUs reserves for system
+                    cpuuser: "1,13" # CPUs reserves for user applications
+                    cpumachines: "2-11,14-23" # CPUs reserves for VMs
+                    cpumachinesrt: "2-5,14-17" # CPUs reserves for VMs realtime
+                    cpumachinesnort: "6-11,18-23" # CPUs reserves for VMs non realtime
+                    cpuovs: "23" # CPUs reserves for OVS
+
+                    # Grub password
+                    # The password hash generated with "grub-mkpasswd-pbkdf2 -c 65536 -s 256 -l 64", in this example the pass is "toto"
+                    grub_password: grub.pbkdf2.sha512.65536.E291D66AEEB3C22BD6B019C5C3587A3094AE93D61E20D134EC6324925AE5045DCA61EF30B3BD04B4D6F7360B9C9B242AA68B1643CCB269C53658EC959B5964ADB9C9D5FAA280A291D8F95E3F255254A4119A2431AFE797F1949EE4FBBC4C74281C550C83DAED26C254224061BEFCEEBF8091A8D1BE406EBB3A3E8A519E36B4FE161BE191D407193E5DFEBCC09F8822B4060EA9CD1E6B8677D40D32826EF025CA494BCD209032F7CF2A4A2E74717E6D17E87A62AAA93E458C96F983E69FBFC4FD602403988EAF5AADCA4B5B145B0F6C6FFB53F55CD6C56C15C17B2F8A5B3A214F3140470566597760D9388084AE978DB5C0EBF7C868A855DB38DACA47A010417A.FDA0C3188FAC87FFA04D862AC9B1020F29FEEA3B9590BE534330D8C7CAB71444CBF527E39D7DAE640545139202B9CA77822CCE21AB1134110F6AF3EFD793E848
+
+                    # Optional list variable to change apt repositories. All repositories will be overrides.
+                    # If defined as empty list [], all apt repositories will be removed
+                    apt_repo:
+                        - http://ftp.fr.debian.org/debian bullseye main contrib non-free
+                        - http://security.debian.org/debian-security bullseye-security main contrib non-free
+                        - http://ftp.fr.debian.org/debian bullseye-backports main contrib non-free
+                        - https://download.docker.com/linux/debian bullseye stable
+                        - https://artifacts.elastic.co/packages/8.x/apt stable main

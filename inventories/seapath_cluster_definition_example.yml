@@ -6,14 +6,22 @@ all:
                 hypervisors:
                     hosts:
                         node1:
+                            # ansbile variables
                             ansible_host: 10.10.10.1
+
+                            # Main network interface configuration
                             network_interface: eno8303 #main interface
-                            main_disk: /dev/sda # disk for system
                             ip_addr: "{{ ansible_host }}"
-                            admin_ip_addr: 10.10.11.1 #used for snmp
                             subnet: 25 #default is 24, override if necessary
+
+                            # Admin network settings
+                            admin_ip_addr: 10.10.11.1 #used for snmp
+
+                            # PTP network settings
                             ptp_interface: "eno12419" #OPTIONAL PTP Interface
                             ptp_vlanid: 100 #OPTIONAL VlanID for PTP
+
+                            # Cluster network settings
                             team0_0: "eno12399" # cluster network first interface
                             team0_1: "eno12409" # cluster network second interface
                             cluster_next_ip_addr : "192.168.55.2" #node 2 cluster network ip
@@ -21,15 +29,27 @@ all:
                             cluster_ip_addr: "192.168.55.1"
                             br_rstp_priority: 12288
                             brBRIDGE1_ext: eno1234 #physical nic to use with BRIDGE1 (see the ovs topology inventory)
+
+                            # Ceph settings
+                            main_disk: /dev/sda # disk for system
+                            ceph_osd_disk: /dev/sdb # CEPH OSD disk
                         node2:
+                            # ansbile variables
                             ansible_host: 10.10.10.2
+
+                            # Main network interface configuration
                             network_interface: eno8303
-                            main_disk: /dev/sda
                             ip_addr: "{{ ansible_host }}"
-                            admin_ip_addr: 10.10.11.2 #used for snmp
                             subnet: 25
+
+                            # Admin network settings
+                            admin_ip_addr: 10.10.11.2 #used for snmp
+
+                            # PTP network settings
                             ptp_interface: "eno12419" #OPTIONAL PTP Interface
                             ptp_vlanid: 100 #OPTIONAL VlanID for PTP
+
+                            # Cluster network settings
                             team0_0: "eno12399"
                             team0_1: "eno12409"
                             cluster_next_ip_addr : "192.168.55.3" #node 3 cluster network ip
@@ -37,15 +57,27 @@ all:
                             cluster_ip_addr: "192.168.55.2"
                             br_rstp_priority: 16384
                             brBRIDGE1_ext: eno1234 #physical nic to use with BRIDGE1 (see the ovs topology inventory)
+
+                            # Ceph settings
+                            main_disk: /dev/sda # disk for system
+                            ceph_osd_disk: /dev/sdb # CEPH OSD disk
                         node3:
+                            # ansbile variables
                             ansible_host: 10.10.10.3
+
+                            # Main network interface configuration
                             network_interface: eno8303
-                            main_disk: /dev/sda
                             ip_addr: "{{ ansible_host }}"
-                            admin_ip_addr: 10.10.11.3 #used for snmp
                             subnet: 25
+
+                            # Admin network settings
+                            admin_ip_addr: 10.10.11.3 #used for snmp
+
+                             # PTP network settings
                             ptp_interface: "eno12419" #OPTIONAL PTP Interface
                             ptp_vlanid: 100 #OPTIONAL VlanID for PTP
+
+                            # Cluster network settings
                             team0_0: "eno12399"
                             team0_1: "eno12409"
                             cluster_next_ip_addr : "192.168.55.1" #ip de hyperviseur 1
@@ -53,77 +85,90 @@ all:
                             cluster_ip_addr: "192.168.55.3"
                             br_rstp_priority: 16384
                             brBRIDGE1_ext: eno1234 #physical nic to use with BRIDGE1 (see the ovs topology inventory)
-                            extra_network_config: # Extra network settings
-                              - VLAN: ptp
+
+                            # Ceph settings
+                            main_disk: /dev/sda
+                            ceph_osd_disk: /dev/sdb # CEPH OSD disk
+
+                    # hypervisors common vars
                     vars:
                         # SRIOV, Optional configuration
                         sriov_driver: 'igb'
                         sriov:
                           'eno12429': 7
+
+                        # Syslog log sending configuration
                         # Syslog client keys. If not set, syslog will send logs using an unencrypted connection.
-                        #syslog_tls_ca: ../keys/syslog_tls_ca.crt
-                        #syslog_tls_key: ../keys/syslog_tls_key.pem
+                        syslog_tls_ca: ../keys/syslog_tls_ca.crt
+                        syslog_tls_key: ../keys/syslog_tls_key.pem
+                        syslog_server_ip: "10.10.10.10" # If not set, syslog will not send any logs from network
+                        logstash_server_ip: 10.10.10.10
+
+                        # Realtime/CPUs cgroups isolation configuration
+                        irqmask: "ffeffe" #IRQBALANCE FORBIDDEN CPU, here it mean 0 and 12 are the only allowed cpus
+                        workqueuemask: "1001" #workqueue mask, here it mean 0 and 12 are the only allowed cpus
+                        cpusystem: "0,12" # CPUs reserves for system
+                        cpuuser: "1,13" # CPUs reserves for user applications
+                        cpumachines: "2-11,14-23" # CPUs reserves for VMs
+                        cpumachinesrt: "2-5,14-17" # CPUs reserves for VMs realtime
+                        cpumachinesnort: "6-11,18-23" # CPUs reserves for VMs non realtime
+                        cpuovs: "23" # CPUs reserves for OVS
+
+        # Ceph groups
+        # All machines in the cluster must be part of mons groups
         mons:
             hosts:
                 node1:
                 node2:
                 node3:
+        # Machines that will be used as OSDs (which will store data)
         osds:
             hosts:
                 node1:
                 node2:
                 node3:
-            vars:
-                ceph_osd_disk: /dev/sdb # CEPH OSD DISK
+        # Machines that will be used as clients (which will use Ceph)
+        # All machines in the cluster must be part of clients groups
+        # You can also add some administation machines in this group
         clients:
             hosts:
                 node1:
                 node2:
                 node3:
-        VMs:
-            hosts:
-                    #centos7SP1:
-                    #centos7SP2:
-                    #centos7SP3:
-            vars:
-                ansible_user: admin
-                ansible_become: true
-                ansible_become_method: sudo
-                ansible_become_flags: "-n -E"
+    # Common vars for all hosts
     vars:
+        # Ansible vars
         ansible_connection: ssh
         ansible_user: ansible
         ansible_python_interpreter: /usr/bin/python3
         ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
         ansible_remote_tmp: /tmp/.ansible/tmp
+
+        # Main network configuration
         gateway_addr: 10.0.0.1
         dns_servers: "8.8.8.8 8.8.4.4"
         apply_network_config: true
         ntp_primary_server: "185.254.101.25"
         ntp_secondary_server: "51.145.123.29"
+
+        # Ceph settings
         ceph_public_network: "192.168.55.0/24"
         ceph_cluster_network: "192.168.55.0/24"
         monitor_address: "{{ ansible_host }}"
         osd_pool_default_min_size: 2
         osd_pool_default_size: 3
         osd_memory_target: 8076326604
+
+        # Local path variables
         image_directory: "/var/jenkins_home/images"
         vm_directory: "/mnt/seapath/vm/"
         vms_disks_directory: "{{ vm_directory }}"
         vms_config_directory: "{{ vm_directory }}"
-        syslog_server_ip: "10.10.10.10" # If not set, syslog will not send any logs from network
-        logstash_server_ip: 10.10.10.10
-        irqmask: "ffeffe" #IRQBALANCE FORBIDDEN CPU, here it mean 0 and 12 are the only allowed cpus
-        workqueuemask: "1001" #workqueue mask, here it mean 0 and 12 are the only allowed cpus
-        cpusystem: "0,12"
-        cpuuser: "1,13"
-        cpumachines: "2-11,14-23"
-        cpumachinesrt: "2-5,14-17"
-        cpumachinesnort: "6-11,18-23"
-        cpuovs: "23"
 
+        # Grub password
         # The password hash generated with "grub-mkpasswd-pbkdf2 -c 65536 -s 256 -l 64", in this example the pass is "toto"
         grub_password: grub.pbkdf2.sha512.65536.E291D66AEEB3C22BD6B019C5C3587A3094AE93D61E20D134EC6324925AE5045DCA61EF30B3BD04B4D6F7360B9C9B242AA68B1643CCB269C53658EC959B5964ADB9C9D5FAA280A291D8F95E3F255254A4119A2431AFE797F1949EE4FBBC4C74281C550C83DAED26C254224061BEFCEEBF8091A8D1BE406EBB3A3E8A519E36B4FE161BE191D407193E5DFEBCC09F8822B4060EA9CD1E6B8677D40D32826EF025CA494BCD209032F7CF2A4A2E74717E6D17E87A62AAA93E458C96F983E69FBFC4FD602403988EAF5AADCA4B5B145B0F6C6FFB53F55CD6C56C15C17B2F8A5B3A214F3140470566597760D9388084AE978DB5C0EBF7C868A855DB38DACA47A010417A.FDA0C3188FAC87FFA04D862AC9B1020F29FEEA3B9590BE534330D8C7CAB71444CBF527E39D7DAE640545139202B9CA77822CCE21AB1134110F6AF3EFD793E848
+
         # Optional list variable to change apt repositories. All repositories will be overrides.
         # If defined as empty list [], all apt repositories will be removed
         apt_repo:
