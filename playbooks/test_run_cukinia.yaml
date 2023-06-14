@@ -5,13 +5,15 @@
 # CSV.
 
 ---
-- hosts: cluster_machines
+- hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
   name: Cukinia tests
   become: true
   vars:
     tests_format: junitxml
     tests_result_name: "cukinia_{{ inventory_hostname }}.xml"
-    cluster_tests_result_name: "cukinia_cluster_{{ inventory_hostname }}.xml"
     cukinia_test_prefix: ".."
   tasks:
     - name: Create temporary Cukinia directory
@@ -29,6 +31,16 @@
         src: "{{ tmp_cukinia_dir.path }}/{{ tests_result_name }}"
         dest: "{{ cukinia_test_prefix }}/{{ tests_result_name }}"
         flat: yes
+
+- hosts:
+    - cluster_machines
+  name: Cukinia tests
+  become: true
+  vars:
+    tests_format: junitxml
+    cluster_tests_result_name: "cukinia_cluster_{{ inventory_hostname }}.xml"
+    cukinia_test_prefix: ".."
+  tasks:
     - name: Run tests cluster test
       shell:
         cmd: >-
