@@ -11,7 +11,7 @@
   name: Hypervisor subscriber tests
   become: true
   vars:
-    - svtools_archive_commit_id: 0c7b539
+    - svtools_archive_commit_id: "84cc1eb"
     - poll_timeout: 5
     - docker_test_image_name: hyp_sub_tests
   tasks:
@@ -53,8 +53,7 @@
       docker run --cap-add=sys_nice
       --cpuset-cpus={{ cpu_set }} --privileged --network {{ network_interface }} --rm -v
       /tmp/trafgen:/tmp/ trafgen --dev {{ network_device }} --conf /sv_template.cfg -n
-      100000 -t 10us -H
-
+      1000000 -t 15us -H
   - name: Get publisher hypervisor tests results
     fetch:
       flat: yes
@@ -69,13 +68,6 @@
   - name: Stop subscriber hypervisor tests
     command:
       docker stop hyp_sub_tests
-
-  - name: Remove last line of sub test results file # Needed to resolve a bug of miss generated last line
-    replace:
-      path: /data/svtools_out
-      regexp: '\n.*$'
-      replace: ''
-
   - name: Get hypervisor subscriber tests results
     fetch:
       flat: yes
@@ -87,7 +79,7 @@
   name: VM subscriber tests
   become: true
   vars:
-    - svtools_archive_commit_id: 0c7b539
+    - svtools_archive_commit_id: "84cc1eb"
     - poll_timeout: 5
     - docker_test_image_name: vm_sub_tests
   tasks:
@@ -129,7 +121,7 @@
       docker run --cap-add=sys_nice
       --cpuset-cpus={{ cpu_set }} --privileged --network {{ network_interface }} --rm -v
       /tmp/trafgen:/tmp/ trafgen --dev {{ network_device }} --conf
-      /sv_template.cfg -n 100000 -t 10us -H
+      /sv_template.cfg -n 1000000 -t 15us -H
 
   - name: Get publisher VM tests results
     fetch:
@@ -144,11 +136,6 @@
   - name: Stop subscriber guest1 tests
     command:
       docker stop vm_sub_tests
-  - name: Remove last line of sub test results file # Needed to resolve a bug of miss generated last line
-    replace:
-      path: /data/svtools_out
-      regexp: '\n.*$'
-      replace: ''
   - name: Get vm subscriber tests results
     fetch:
       flat: yes
