@@ -36,8 +36,10 @@ read
 rm -rf "$local_tmp_dir"/*
 echo
 echo copying files locally
-echo rsync -ave ssh --progress $remote_dir$fulldatedir/*$guest* $local_tmp_dir/
-rsync -ave ssh --progress $remote_dir$fulldatedir/*$guest* $local_tmp_dir/
+echo rsync -ave ssh --progress $remote_dir$fulldatedir/*_"$guest"-* $local_tmp_dir/
+rsync -ave ssh --progress $remote_dir$fulldatedir/*_"$guest"-* $local_tmp_dir/
+echo rsync -ave ssh --progress $remote_dir$fulldatedir/*_"$guest"_* $local_tmp_dir/
+rsync -ave ssh --progress $remote_dir$fulldatedir/*_"$guest"_* $local_tmp_dir/
 echo
 echo creating vm xml with no disk
 echo python3 /usr/local/bin/remove_disk_xml.py $local_tmp_dir/system_"$guest"-"$incdate".xml $local_tmp_dir/system_"$guest"-"$incdate"-nodisk.xml
