@@ -1,15 +1,15 @@
 [Unit]
 After=network-online.target
 {% if ptp_interface is defined %}{% if ptp_vlanid is defined %}
-After=sys-devices-virtual-net-{{ ptp_interface + '.' + ptp_vlanid|string }}.device
+After=sys-subsystem-net-devices-{{ ptp_interface + '.' + ptp_vlanid|string }}.device
 {% else %}
-After=sys-devices-virtual-net-{{ ptp_interface }}.device
+After=sys-subsystem-net-devices-{{ ptp_interface }}.device
 {% endif %}
 {% endif %}
 Wants=network-online.target
 {% if ptp_interface is defined %}{% if ptp_vlanid is defined %}
-Wants=sys-devices-virtual-net-{{ ptp_interface + '.' + ptp_vlanid|string }}.device
+Wants=sys-subsystem-net-devices-{{ ptp_interface + '.' + ptp_vlanid|string }}.device
 {% else %}
-Wants=sys-devices-virtual-net-{{ ptp_interface }}.device
+Wants=sys-subsystem-net-devices-{{ ptp_interface }}.device
 {% endif %}
 {% endif %}
