@@ -198,17 +198,17 @@
       ansible.builtin.group:
         name: Debian-snmp
         state: present
-        gid: 10002
+        gid: 902
     - name: Ensure user Debian-snmp has correct uid and gid
       user:
         name: Debian-snmp
-        uid: 10002
+        uid: 902
         group: Debian-snmp
     - name: restart snmpd
       ansible.builtin.systemd:
         name: snmpd.service
         state: started
-  when: getent_passwd['Debian-snmp'][1] != "10002" or getent_group['Debian-snmp'][1] != "10002"
+  when: getent_passwd['Debian-snmp'][1] != "902" or getent_group['Debian-snmp'][1] != "902"
 
 - name: Synchronization of snmp_ scripts
   ansible.posix.synchronize:
