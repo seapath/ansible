@@ -23,12 +23,14 @@ ntp_program chronyd
 
 [chrony.conf]
 include /etc/chrony/chrony.conf
-{% if ptp_interface is defined %}
-server {{ ntp_primary_server }} iburst maxsamples 10
-{% else %}
-server {{ ntp_primary_server }} iburst maxsamples 10 prefer trust
+{% if ntp_servers is defined %}
+{%- for line in ntp_servers %}{% if ptp_interface is not defined and loop.index==1 %}server {{ line }} prefer iburst maxsamples 10
+{% else %}server {{ line }} iburst maxsamples 10
+{% endif %}{% endfor %}
+{% else %}{% if ptp_interface is defined %}server {{ ntp_primary_server }} iburst maxsamples 10
+{% else %}server {{ ntp_primary_server }} prefer iburst maxsamples 10 prefer trust
+{% endif %}server {{ ntp_secondary_server }} iburst maxsamples 10
 {% endif %}
-server {{ ntp_secondary_server }} iburst maxsamples 10
 
 [ntp.conf]
 includefile /etc/ntp.conf
