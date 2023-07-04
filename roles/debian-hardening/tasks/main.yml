@@ -240,7 +240,7 @@
   with_items:
    - ceph
    - Debian-snmp
-   - virtu
+   - "{{ admin_user }}"
    - ansible
   when: not revert
   register: groups_changed

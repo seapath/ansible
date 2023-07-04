@@ -21,9 +21,9 @@
 
     - name: Copy the key add to authorized_keys using Ansible module
       authorized_key:
-        user: virtu
+        user: "{{ admin_user }}"
         state: present
-        path: /home/virtu/.ssh/authorized_keys
+        path: "/home/{{ admin_user }}/.ssh/authorized_keys"
         #path: /etc/ssh/root/authorized_keys
         key: "{{ lookup('file','buffer/' + item + '-id_rsa.pub') }}"
       with_items: "{{ groups['cluster_machines'] }}"
