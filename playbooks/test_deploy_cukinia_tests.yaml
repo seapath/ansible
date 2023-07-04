@@ -4,6 +4,7 @@
 ---
 - name: Deploy Cukinia's tests
   hosts: cluster_machines
+  become: true
   tasks:
     - name: Copy Cukinia's tests
       synchronize:
@@ -49,6 +50,7 @@
 
 - name: Create /etc/cukinia.conf for observers
   hosts: observers
+  become: true
   tasks:
     - name: Create a symlink cukinia.conf to cukinia-observer.conf
       file:
@@ -58,6 +60,7 @@
 
 - name: Create /etc/cukinia.conf for hypervisors
   hosts: hypervisors
+  become: true
   tasks:
     - name: Create a symlink cukinia.conf to cukinia-hypervisor.conf
       file:

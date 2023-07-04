@@ -1,0 +1,36 @@
+# Copyright (C) 2023, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Create and start VMs
+  hosts: "{{ groups.hypervisors[0] }}"
+  gather_facts: false
+  become: true
+  vars:
+    - disk_copy: true
+  tasks:
+    - name: copy the disk on target
+      copy:
+        src: "{{ hostvars[item].vm_disk }}"
+        dest: "/tmp/os_{{ item }}.qcow2"
+      with_items: "{{ groups['VMs'] }}"
+      when: disk_copy | bool
+    - name: "Create VM"
+      cluster_vm:
+        name: "{{ item }}"
+        command: create
+        system_image: /tmp/os_{{ item }}.qcow2
+        force: true
+        enable: true
+        pinned_host: "{{ hostvars[item].pinned_host | default(None) }}"
+        preferred_host: "{{ hostvars[item].preferred_host | default(None) }}"
+        xml: >-
+          {{ lookup('template',
+          hostvars[item].vm_template,
+          template_vars=dict(vm=hostvars[item])) }}
+      with_items: "{{ groups['VMs'] }}"
+    - name: Remove temporary file
+      file:
+        path: "/tmp/os_{{ item }}.qcow2"
+        state: absent
+      with_items: "{{ groups['VMs'] }}"

@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 ---
 
-- name: Add hardened in SEAPTAH Debian machines
+- name: Add hardened in SEAPATH Debian machines
+  become: true
   hosts: cluster_machines
   vars:
     revert: false

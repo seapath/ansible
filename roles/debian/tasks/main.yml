@@ -58,11 +58,22 @@
     dest: /usr/local/bin/consolevm
     mode: '0755'
 
-- name: Copy vimrc.local file
-  ansible.builtin.copy:
-    src: ../src/debian/vimrc.local
-    dest: /etc/vim/vimrc.local
-    mode: '0644'
+- name: disable vim defaults
+  lineinfile:
+    dest: /etc/vim/vimrc
+    regexp: '^"? *let g:skip_defaults_vim = 1$'
+    line: "let g:skip_defaults_vim = 1"
+    state: present
+- name: vim color syntax
+  lineinfile:
+    dest: /etc/vim/vimrc
+    regexp: '^"? *syntax on$'
+    line: "syntax on"
+    state: present
+- name: remove vimrc.local file
+  file:
+    path: /etc/vim/vimrc.local
+    state: absent
 
 - name: create /usr/lib/ocf/resource.d/seapath on hosts
   file:
@@ -187,17 +198,17 @@
       ansible.builtin.group:
         name: Debian-snmp
         state: present
-        gid: 10002
+        gid: 902
     - name: Ensure user Debian-snmp has correct uid and gid
       user:
         name: Debian-snmp
-        uid: 10002
+        uid: 902
         group: Debian-snmp
     - name: restart snmpd
       ansible.builtin.systemd:
         name: snmpd.service
         state: started
-  when: getent_passwd['Debian-snmp'][1] != "10002" or getent_group['Debian-snmp'][1] != "10002"
+  when: getent_passwd['Debian-snmp'][1] != "902" or getent_group['Debian-snmp'][1] != "902"
 
 - name: Synchronization of snmp_ scripts
   ansible.posix.synchronize:
@@ -324,6 +335,8 @@
       HISTFILESIZE: 2000000
       LIBVIRT_DEFAULT_URI: "qemu:///system"
       HISTTIMEFORMAT: '"%F %T "'
+      EDITOR: 'vim'
+      SYSTEMD_EDITOR: 'vim'
   with_items: "{{ env_list | dict2items }}"
 
 - name: "PATH for virtu user"
@@ -393,10 +406,18 @@
     name: libvirtd.service
     state: restarted
 
-- name: "remove /etc/default/grub.d/20_efi_ipv6.cfg (FAI)"
+- name: "find /etc/default/grub.d/*.cfg (FAI)"
+  find:
+    paths: /etc/default/grub.d
+    patterns: '^\d\d.*\.cfg$'
+    use_regex: true
+  register: wildcard_files_to_delete
+
+- name: "remove /etc/default/grub.d/*.cfg (FAI)"
   file:
-    path: /etc/default/grub.d/20_efi_ipv6.cfg
+    path: "{{ item.path }}"
     state: absent
+  with_items: "{{ wildcard_files_to_delete.files }}"
 
 - name: "grub conf"
   lineinfile:
@@ -409,6 +430,7 @@
   with_items:
     - ipv6.disable=1
     - efi=runtime
+    - console=ttyS0,115200
 
 - name: "grub conf osprober"
   lineinfile:

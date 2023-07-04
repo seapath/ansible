@@ -13,7 +13,7 @@ playbooks/*
 !playbooks/test_*.yaml
 !playbooks/tasks/
 !playbooks/standalone*
-!playbooks/vm_*.yaml
+!playbooks/deploy_*.yaml
 inventories/*
 !inventories/README.adoc
 !inventories/*example*

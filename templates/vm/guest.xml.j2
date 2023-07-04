@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright (C) 2023, RTE (http://www.rte-france.com) -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
+<!--
+  Generic VM template
+  This file uses a templated to work with a specific VM inventory,
+  see examples/inventories/vms_inventory_example.yaml
+-->
+
+<domain type="kvm">
+    <name>{{ vm.inventory_hostname }}</name>
+    <uuid>{{ vm.uuid |default( 9999999999999999999999 | random | to_uuid) }}</uuid>
+    <description>
+        {{ vm.description |default("Test VM") }}
+    </description>
+    {% if "rt" in vm.vm_features %}
+    <resource>
+        <partition>/machine-rt</partition>
+    </resource>
+    {% endif %}
+    <vcpu placement="static">{{ vm.cpuset | length }}</vcpu>
+    {% if "dpdk" in vm.vm_features %}
+    <memory unit="GiB">1</memory>
+    <currentMemory unit="GiB">1</currentMemory>
+    <memoryBacking>
+        <hugepages>
+            <page size="1" unit="G"/>
+        </hugepages>
+        <nosharepages/>
+    </memoryBacking>
+    {% else %}
+    <memory unit="MiB">{{ vm.memory | default ("2048") }}</memory>
+    <currentMemory unit="MiB">{{ vm.memory | default ("2048") }}</currentMemory>
+    {% endif %}
+    <os firmware="efi">
+        <type arch="x86_64" machine="pc-i440fx-4.1">hvm</type>
+        <boot dev="hd" />
+        <bootmenu enable="no" />
+        <bios useserial="yes" rebootTimeout="0" />
+        <smbios mode="emulate" />
+    </os>
+    <features>
+        <acpi />
+        <apic />
+        <vmport state="off" />
+        {% if "rt" in vm.vm_features %}
+        <pmu state="off" />
+        {% endif %}
+    </features>
+    <cputune>
+        {% for cpu in vm.cpuset %}
+        {% if "isolated" in vm.vm_features %}
+        <vcpupin vcpu="{{ loop.index - 1 }}" cpuset="{{ cpu }}"/>
+        {% endif %}
+        {% if "rt" in vm.vm_features %}
+        <vcpusched vcpus="{{ loop.index - 1 }}" scheduler="fifo" priority="{{ vm.rt_priority |default('1') }}" />
+        {% endif %}
+        {% endfor %}
+    </cputune>
+    {% if "rt" in vm.vm_features %}
+    <cpu mode="host-passthrough">
+    <topology sockets="1" dies="1" cores="{{ vm.cpuset | length }}" threads="1" />
+    <feature policy="require" name="tsc-deadline" />
+    {% else %}
+    <cpu mode="host-model" check="partial">
+    <model fallback="allow" />
+    {% endif %}
+        {% if "dpdk" in vm.vm_features %}
+        <numa>
+            {% if cpuset|length > 1 %}
+            <cell id="0" cpus="0-{{ vm.cpuset|length - 1 }}" memory="1" unit="GiB" memAccess="shared" />
+            {% else %}
+            <cell id="0" cpus="0" memory="1" unit="GiB" memAccess="shared" />
+            {% endif %}
+        </numa>
+        {% endif %}
+    </cpu>
+    <clock offset="utc">
+        <timer name="rtc" tickpolicy="catchup" />
+        <timer name="pit" tickpolicy="delay" />
+        <timer name="hpet" present="no" />
+    </clock>
+    <on_poweroff>destroy</on_poweroff>
+    <on_reboot>restart</on_reboot>
+    <on_crash>destroy</on_crash>
+    <pm>
+        <suspend-to-mem enabled="no" />
+        <suspend-to-disk enabled="no" />
+    </pm>
+    <devices>
+        <emulator>/usr/bin/qemu-system-x86_64</emulator>
+        {% if "dpdk" in vm.vm_features %}
+        {% for interface in vm.dpdk %}
+        <interface type='vhostuser'>
+            <source type='unix' path='/var/run/openvswitch/vm-sockets/dpdkvhostuser_{{ interface.ovs_port }}' mode='server'/>
+            <mac address="{{ interface.mac_address }}" />
+            <model type='virtio'/>
+            <driver name='vhost' rx_queue_size='1024' tx_queue_size='1024' queues="{{ vm.cpuset | length }}">
+                <host mrg_rxbuf='on'/>
+            </driver>
+        </interface>
+        {% endfor %}
+        {% endif %}
+        {% if vm.pci_passthrough is defined %}
+        {% for pci in vm.pci_passthrough %}
+        <hostdev mode="subsystem" type="pci" managed="yes">
+            <source>
+                <!-- The source is the NIC PIC address -->
+                <address domain="{{ pci.domain }}" bus="{{ pci.bus }}" slot="{{ pci.slot }}" function="{{ pci.function }}"/>
+            </source>
+        </hostdev>
+        {% endfor %}
+        {% endif %}
+        {% if vm.bridges is defined %}
+        {% for bridge in vm.bridges %}
+        <interface type="bridge">
+            <source bridge="{{ bridge.name }}"/>
+            <mac address="{{ bridge.mac_address }}"/>
+            <model type="virtio"/>
+        </interface>
+        {% endfor %}
+        {% endif %}
+        {% if vm.ovs is defined %}
+        {% for bridge in vm.ovs %}
+        <interface type="ethernet">
+            <mac address="{{ bridge.mac_address }}"/>
+            <target dev="{{ bridge.ovs_port }}" managed="no"/>
+            <model type="virtio"/>
+        </interface>
+        {% endfor %}
+        {% endif %}
+        {% if vm.sriov is defined %}
+        {% for interface in vm.sriov %}
+        <interface type="network">
+            <source network="{{ interface }}">
+        </interface>
+        {% endfor %}
+        {% endif %}
+        {% if vm.sriov is defined %}
+        {% for interface in vm.sriov %}
+        <interface type="network">
+            <source network="{{ interface }}">
+        </interface>
+        {% endfor %}
+        {% endif %}
+        <controller type="pci" index="0" model="pci-root" />
+        <serial type="pty">
+            <target type="isa-serial" port="0">
+                <model name="isa-serial" />
+            </target>
+        </serial>
+        <console type="pty">
+            <target type="serial" port="0" />
+        </console>
+        <memballoon model="none" />
+        <watchdog model="ib700" action="poweroff" />
+    </devices>
+</domain>

@@ -5,15 +5,25 @@
 ---
 - name: Rollback to the initiale state
   hosts: cluster_machines
+  become: true
   tasks:
+    - name: "grub conf"
+      lineinfile:
+        dest: /etc/default/grub
+        regexp: "^(GRUB_CMDLINE_LINUX=(?!.* {{ item }})\"[^\"]*)(\".*)"
+        line: '\1 {{ item }}\2'
+        state: present
+        backrefs: yes
+      with_items:
+        - ipv6.disable=1
+        - efi=runtime
+        - console=ttyS0,115200
+    - name: Update grub
+      command: update-grub
     - name: Merge lvm snapshot
       command:
         cmd: lvconvert --merge vg1/root-snap
     - name: Restart for snapshot rollback
-      reboot:
-    - name: Update grub
-      command: update-grub
-    - name: Reboot after update-grub
       reboot:
     - name: Refresh LVM
       command:

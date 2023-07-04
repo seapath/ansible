@@ -4,6 +4,7 @@
 ---
 - name: Install Cukinia
   hosts: cluster_machines
+  become: true
   tasks:
     - name: Copy Cukinia script
       copy:
@@ -18,5 +19,5 @@
     - name: "Patch cukinia: CAT"
       lineinfile:
        path: /usr/local/bin/cukinia
-       line: "	local CAT=zcat"
+       line: "local CAT=zcat"
        insertafter: 'local line=""'

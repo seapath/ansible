@@ -70,8 +70,12 @@
   tasks:
     - name: Remove FAI network configuration
       file:
-        path: /etc/systemd/network/00-init.network
+        path: "/etc/systemd/network/{{ item }}.network"
         state: absent
+      with_items:
+        - 01-init
+        - 00-init-dhcp
+        - 00-init
     - name: Restart systemd-networkd
       ansible.builtin.systemd:
         name: systemd-networkd
@@ -130,17 +134,24 @@
       - name: configure /etc/systemd/resolved.conf
         lineinfile:
           dest: /etc/systemd/resolved.conf
+          regexp: "^#?LLMNR="
+          line: "LLMNR=no"
+          state: present
+        register: resolved_conf1
+      - name: configure /etc/systemd/resolved.conf
+        lineinfile:
+          dest: /etc/systemd/resolved.conf
           regexp: "^#?DNS="
           line: "DNS={{ dns_servers }}"
           state: present
-        register: resolved_conf
+        register: resolved_conf2
       - name: Create resolv.conf stub link
         ansible.builtin.file:
           src: /run/systemd/resolve/resolv.conf
           dest: /etc/resolv.conf
           state: link
           force: true
-        register: resolv_conf
+        register: resolved_conf3
       - name: Enable systemd-resolved
         ansible.builtin.systemd:
           name: systemd-resolved
@@ -151,7 +162,7 @@
           name: systemd-resolved
           state: restarted
           enabled: true
-        when: resolved_conf.changed or resolv_conf.changed
+        when: resolved_conf1.changed or resolved_conf2.changed or resolved_conf3.changed
       when: dns_servers is defined
 
 - name: Configure TimeMaster
@@ -178,19 +189,6 @@
         src: ../templates/timemaster.conf.j2
         dest: /etc/linuxptp/timemaster.conf
       register: timemasterconf1
-    - name: Add timemaster ptp systemd after
-      lineinfile:
-        path: /lib/systemd/system/timemaster.service
-        line: 'After=chronyd.service ntpd.service ntpdate.service sntp.service sys-devices-virtual-net-ptp.device'
-        regexp: '^After='
-        state: present
-    - name: Add timemaster ptp systemd wants
-      lineinfile:
-        path: /lib/systemd/system/timemaster.service
-        line: 'Wants=sys-devices-virtual-net-ptp.device'
-        regexp: '^Wants='
-        insertafter: '^After='
-        state: present
     - name: comment pool configuration in chrony.conf
       replace:
         path: /etc/chrony/chrony.conf
