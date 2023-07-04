@@ -306,6 +306,15 @@
     group: root
     mode: '0440'
 
+- name: Adding live-migration user
+  user:
+    name: "{{ livemigration_user }}"
+    shell: /bin/bash
+    group: libvirt
+    uid: 1001
+    append: no
+  when: livemigration_user != admin_user
+
 - name: Creating libvirt user with libvirtd permissions
   user: name=libvirt
     group=libvirt
