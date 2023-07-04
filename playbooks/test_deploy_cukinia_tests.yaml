@@ -20,6 +20,12 @@
       with_items:
           - { src: 'common_security_tests.d/apt.conf.j2',
               dest: 'common_security_tests.d/apt.conf' }
+          - { src: 'hypervisor_security_tests.d/shadow.conf.j2',
+              dest: 'hypervisor_security_tests.d/shadow.conf' }
+          - { src: 'hypervisor_security_tests.d/passwd.conf.j2',
+              dest: 'hypervisor_security_tests.d/passwd.conf' }
+          - { src: 'hypervisor_security_tests.d/groups.conf.j2',
+              dest: 'hypervisor_security_tests.d/groups.conf' }
     - name: Create /usr/share/cukinia/includes
       file:
         path: /usr/share/cukinia/includes

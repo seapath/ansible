@@ -1,3 +1,0 @@
-virtu   ALL=NOPASSWD:EXEC: ALL
-
-# This configuration grant all rights to the virtu user. It should be changed later in developpement

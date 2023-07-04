@@ -53,8 +53,8 @@
       - "--chown=root:root"
 
 - name: Copy consolevm.sh
-  ansible.builtin.copy:
-    src: ../src/debian/consolevm.sh
+  template:
+    src: ../src/debian/consolevm.sh.j2
     dest: /usr/local/bin/consolevm
     mode: '0755'
 
@@ -238,19 +238,25 @@
     state: restarted
   when: snmpd_conf.changed
 
-- name: Install sudo virtu user rules
-  copy:
-    src: ../src/debian/sudoers/virtu
-    dest: /etc/sudoers.d/virtu
-    owner: root
-    group: root
-    mode: '0440'
-- name: remove 'virtu' from sudoers file
-  lineinfile:
-    dest: /etc/sudoers
-    state: absent
-    regexp: '^virtu'
-    validate: visudo -cf %s
+- name: removing or not the virtu user created by the iso
+  block:
+    - name: remove 'virtu' from sudoers file
+      lineinfile:
+        dest: /etc/sudoers
+        state: absent
+        regexp: '^virtu'
+        validate: visudo -cf %s
+    - name: Remove the virtu user 
+      ansible.builtin.user:
+        name: virtu
+        state: absent
+        remove: yes
+    - name: Remove the virtu group 
+      ansible.builtin.group:
+        name: virtu
+        state: absent
+  when: admin_user != "virtu"
+
 - name: Install sudo Debian-snmp user rules
   copy:
     src: ../src/debian/sudoers/Debian-snmp
@@ -271,12 +277,34 @@
     name: systemd-journald
   when: journaldconf.changed
 
-- name: Adding user virtu to groups libvirt and haclient
-  user: name=virtu
-    group=virtu
-    shell=/bin/bash
-    groups=libvirt,haclient
-    append=yes
+- name: Ensure admin group exists
+  ansible.builtin.group:
+    name: "{{ admin_user }}"
+    state: present
+    gid: 1000
+- name: Adding admin user
+  user:
+    name: "{{ admin_user }}"
+    shell: /bin/bash
+    group: "{{ admin_user }}"
+    groups: libvirt,haclient
+    uid: 1000
+    password: "{{ admin_passwd | default(omit) }}"
+    append: no
+- name: Add authorized keys to admin user
+  authorized_key:
+    user: "{{ admin_user }}"
+    key: "{{ item }}"
+  with_items: "{{ admin_ssh_keys }}"
+  when: admin_ssh_keys is defined and admin_ssh_keys is iterable
+- name: Install sudo admin user rules
+  copy:
+    content: |
+      {{ admin_user }}   ALL=NOPASSWD:EXEC: ALL
+    dest: "/etc/sudoers.d/{{ admin_user }}"
+    owner: root
+    group: root
+    mode: '0440'
 
 - name: Creating libvirt user with libvirtd permissions
   user: name=libvirt
@@ -334,15 +362,15 @@
       SYSTEMD_EDITOR: 'vim'
   with_items: "{{ env_list | dict2items }}"
 
-- name: "PATH for virtu user"
+- name: "PATH for admin user"
   lineinfile:
-    dest: /home/virtu/.bash_profile
+    dest: "/home/{{ admin_user }}/.bash_profile"
     regexp: '^export PATH'
     line: "export PATH=$PATH:/usr/sbin:/usr/local/sbin:/sbin"
     state: present
     create: yes
-    owner: virtu
-    group: virtu
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
     mode: '0644'
 
 - name: lineinfile in hosts file for logstash-seapath

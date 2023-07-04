@@ -178,3 +178,11 @@ all:
             - http://ftp.fr.debian.org/debian bullseye-backports main contrib non-free
             - https://download.docker.com/linux/debian bullseye stable
             - https://artifacts.elastic.co/packages/8.x/apt stable main
+
+        # Default user with admin privileges, and password hash
+        admin_user: virtu
+        admin_passwd: "XXXXXX"
+        # SSH public keys for the admin_user
+        admin_ssh_keys:
+          - "ssh-rsa key1XXX"
+          - "ssh-rsa key2XXX"
