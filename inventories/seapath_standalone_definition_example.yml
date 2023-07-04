@@ -69,3 +69,5 @@ all:
                     admin_ssh_keys:
                         - "ssh-rsa key1XXX"
                         - "ssh-rsa key2XXX"
+                    # account used for libvirt live-migration
+                    livemigration_user: livemigration		
