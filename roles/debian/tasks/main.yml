@@ -51,6 +51,16 @@
     dest: /usr/local/bin/
     rsync_opts:
       - "--chown=root:root"
+      - "--exclude=*.j2"
+- name: Copy backup-restore templates
+  template:
+    src: ../src/debian/backup-restore/{{ item.src }}
+    dest: /usr/local/bin/{{ item.dest }}
+  with_items:
+    - src:
+        restore_vm.sh.j2
+      dest:
+        restore_vm.sh
 
 - name: Copy consolevm.sh
   template:

@@ -46,8 +46,8 @@ echo python3 /usr/local/bin/remove_disk_xml.py $local_tmp_dir/system_"$guest"-"$
 python3 /usr/local/bin/remove_disk_xml.py $local_tmp_dir/system_"$guest"-"$incdate".xml $local_tmp_dir/system_"$guest"-"$incdate"-nodisk.xml
 echo
 echo creating base vm
-echo vm-mgr create -n $guest --force --disable --enable-live-migration --migration-user virtu --xml $local_tmp_dir/system_"$guest"-"$incdate"-nodisk.xml -i $local_tmp_dir/system_"$guest"_"$fulldate".qcow2
-vm-mgr create -n $guest --force --disable --enable-live-migration --migration-user virtu --xml $local_tmp_dir/system_"$guest"-"$incdate"-nodisk.xml -i $local_tmp_dir/system_"$guest"_"$fulldate".qcow2
+echo vm-mgr create -n $guest --force --disable --enable-live-migration --migration-user {{ livemigration_user }} --xml $local_tmp_dir/system_"$guest"-"$incdate"-nodisk.xml -i $local_tmp_dir/system_"$guest"_"$fulldate".qcow2
+vm-mgr create -n $guest --force --disable --enable-live-migration --migration-user {{ livemigration_user }} --xml $local_tmp_dir/system_"$guest"-"$incdate"-nodisk.xml -i $local_tmp_dir/system_"$guest"_"$fulldate".qcow2
 echo
 echo creating base snapshot
 echo rbd snap create system_"$guest"@$fulldate
