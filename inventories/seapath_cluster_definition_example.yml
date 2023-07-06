@@ -30,9 +30,7 @@ all:
                             br_rstp_priority: 12288
                             brBRIDGE1_ext: eno1234 #physical nic to use with BRIDGE1 (see the ovs topology inventory)
 
-                            # Ceph settings
                             main_disk: /dev/sda # disk for system
-                            ceph_osd_disk: /dev/sdb # CEPH OSD disk
                         node2:
                             # ansbile variables
                             ansible_host: 10.10.10.2
@@ -58,9 +56,7 @@ all:
                             br_rstp_priority: 16384
                             brBRIDGE1_ext: eno1234 #physical nic to use with BRIDGE1 (see the ovs topology inventory)
 
-                            # Ceph settings
                             main_disk: /dev/sda # disk for system
-                            ceph_osd_disk: /dev/sdb # CEPH OSD disk
                         node3:
                             # ansbile variables
                             ansible_host: 10.10.10.3
@@ -86,9 +82,7 @@ all:
                             br_rstp_priority: 16384
                             brBRIDGE1_ext: eno1234 #physical nic to use with BRIDGE1 (see the ovs topology inventory)
 
-                            # Ceph settings
                             main_disk: /dev/sda
-                            ceph_osd_disk: /dev/sdb # CEPH OSD disk
 
                     # hypervisors common vars
                     vars:
@@ -127,6 +121,19 @@ all:
                 node1:
                 node2:
                 node3:
+            vars:
+                # Ceph settings
+                ceph_osd_disk: /dev/sdb # CEPH OSD disk
+                # Required variables by ceph-ansible:
+#                lvm_volumes: # Optional
+#                    - data: lv_ceph # Name of the logical volume to use for the CEPH OSD volume
+#                      data_vg: vg_ceph # Name of the volume group to use for the CEPH OSD volume
+#                      data_size: 5G # Size of the logical volume, default in megabytes, possible values: [0-9]+[bBsSkKmMgGtTpPeE]
+#                      device: "{{ ceph_osd_disk }}"
+#                      device_number: 1 # Number of the partition in the ceph_osd_disk
+#                      device_size: 7GiB # Size of the partition in the ceph_osd_disk, default in megabytes, possible units: B, KB, KiB, MB, MiB, GB, GiB, TB, TiB
+                devices: # if lvm_volumes is not defined, ceph use the entirely disk
+                    - "{{ ceph_osd_disk }}"
         # Machines that will be used as clients (which will use Ceph)
         # All machines in the cluster must be part of clients groups
         # You can also add some administation machines in this group
@@ -153,9 +160,10 @@ all:
             - "51.145.123.29"
 
         # Ceph settings
+        # Required variables y ceph-ansible
         ceph_public_network: "192.168.55.0/24"
         ceph_cluster_network: "192.168.55.0/24"
-        monitor_address: "{{ ansible_host }}"
+        monitor_address: "{{ cluster_ip_address }}"
         osd_pool_default_min_size: 2
         osd_pool_default_size: 3
         osd_memory_target: 8076326604
