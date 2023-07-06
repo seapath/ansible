@@ -30,9 +30,39 @@
       osds
   become: true
   tasks:
-      - name: Cleanup Ceph OSD disks with ceph-volume
-        command: "ceph-volume lvm zap {{ ceph_osd_disk }} --destroy"
-        when: new_ceph_installation.changed
+      - name: Prepare OSD disk
+        block:
+          - name: Get real path for OSD disk
+            command: "realpath {{ ceph_osd_disk }}"
+            register: ceph_osd_realdisk
+          - name: Cleanup Ceph OSD disks with ceph-volume
+            command: "ceph-volume lvm zap {{ ceph_osd_realdisk.stdout }} --destroy"
+          - name: Create volumes for OSD disk
+            block:
+              - name: Create partition on OSD disks with parted
+                community.general.parted:
+                  device: "{{ lvm_volumes[0].device }}"
+                  number: "{{ lvm_volumes[0].device_number }}"
+                  state: present
+                  unit: MB
+                  part_end: "{{ lvm_volumes[0].device_size }}"
+                register: ceph_osd_result
+              - name: Get disk/by-path of OSD disk
+                command: "find -L /dev/disk/by-path -samefile {{ ceph_osd_result.disk.dev }} -print -quit"
+                register: ceph_osd_finddisk
+              - name: Create volume group on the partition
+                community.general.lvg:
+                  vg: "{{ lvm_volumes[0].data_vg }}"
+                  pvs: "{{ ceph_osd_finddisk.stdout }}-part{{ lvm_volumes[0].device_number }}"
+              - name: Create logical volume in the VG
+                community.general.lvol:
+                  vg: "{{ lvm_volumes[0].data_vg }}"
+                  lv: "{{ lvm_volumes[0].data }}"
+                  size: "{{ lvm_volumes[0].data_size }}"
+            when:
+              - lvm_volumes is defined
+        when:
+          - new_ceph_installation.changed
 
 - import_playbook: ../ceph-ansible/site.yml
 
