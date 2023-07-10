@@ -198,7 +198,7 @@ all:
           osd:
             osd_min_pg_log_entries: 500
             osd_max_pg_log_entries: 500
-            osd_memory_target: 8076326604
+            osd memory target: 8076326604
         dashboard_enabled: false
 
         # Local path variables
