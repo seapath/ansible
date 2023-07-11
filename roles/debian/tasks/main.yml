@@ -461,6 +461,20 @@
     state: absent
   with_items: "{{ wildcard_files_to_delete.files }}"
 
+- name: "remove GRUB_CMDLINE_LINUX_DEFAULT option in grub conf"
+  lineinfile:
+    dest: /etc/default/grub
+    regexp: "^GRUB_CMDLINE_LINUX_DEFAULT="
+    state: absent
+
+- name: "make sure GRUB_CMDLINE_LINUX starts with a space"
+  lineinfile:
+    dest: /etc/default/grub
+    regexp: "^(GRUB_CMDLINE_LINUX=)\"([ ]*)(.*)\""
+    line: '\1" \3"'
+    state: present
+    backrefs: yes
+
 - name: "grub conf"
   lineinfile:
     dest: /etc/default/grub
@@ -472,7 +486,7 @@
   with_items:
     - ipv6.disable=1
     - efi=runtime
-    - console=ttyS0,115200
+    - "{{ grub_append | default([]) }}"
 
 - name: "grub conf osprober"
   lineinfile:
