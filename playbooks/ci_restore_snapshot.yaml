@@ -17,7 +17,7 @@
       with_items:
         - ipv6.disable=1
         - efi=runtime
-        - console=ttyS0,115200
+        - "{{ grub_append | default([]) }}"
     - name: Update grub
       command: update-grub
     - name: Merge lvm snapshot
