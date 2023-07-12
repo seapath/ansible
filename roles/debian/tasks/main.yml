@@ -323,7 +323,7 @@
     group: libvirt
     uid: 1001
     append: no
-  when: livemigration_user != admin_user
+  when: livemigration_user is defined and livemigration_user != admin_user
 
 - name: Creating libvirt user with libvirtd permissions
   user: name=libvirt
