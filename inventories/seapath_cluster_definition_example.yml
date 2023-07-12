@@ -123,7 +123,8 @@ all:
                 node3:
             vars:
                 # Ceph settings
-                ceph_osd_disk: /dev/sdb # CEPH OSD disk
+                # ceph_osd_disk needs to be set to the "/dev/disk/by-path/" link of the disk used by the osd
+                ceph_osd_disk: "/dev/disk/by-path/pci-0000:c3:00.0-scsi-0:0:1:0"
                 # Required variables by ceph-ansible:
 #                lvm_volumes: # Optional
 #                    - data: lv_ceph # Name of the logical volume to use for the CEPH OSD volume
