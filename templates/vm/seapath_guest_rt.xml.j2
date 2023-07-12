@@ -5,13 +5,17 @@
 <domain type="{{ vm_domaine | default('kvm') }}">
     <title>{{ title }}</title>
     <description>
-            VOTP guest with RT tweak without DPDK
+            SEAPATH guest - Realtime
     </description>
     <memory unit="KiB">1048576</memory>
     <currentMemory unit="KiB">1048576</currentMemory>
     <vcpu placement="static">1</vcpu>
     <os firmware="efi">
-        <type arch="x86_64" machine="pc-q35-5.2">hvm</type>
+      <type arch="x86_64" machine="pc-q35-3.1">hvm</type>
+      <bootmenu enable="yes" />
+      <boot dev="hd" />
+      <bios useserial="yes" rebootTimeout="0" />
+      <smbios mode="emulate" />
     </os>
     <features>
         <acpi/>
@@ -61,7 +65,7 @@
 	<vsock model='virtio'>
             <cid auto='yes' />
         </vsock>
-        <watchdog model="ib700" action="poweroff" />
+        <watchdog model="i6300esb" action="poweroff" />
     </devices>
     <resource>
         <partition>/machine-rt</partition>
