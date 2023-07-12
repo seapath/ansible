@@ -21,8 +21,9 @@ all:
                     subnet: 24
                     dns_server: 10.10.2.1
                     gateway_addr: 10.0.0.1
-                    ntp_primary_server: "ntp.midway.ovh"
-                    ntp_secondary_server: "ntp.unice.fr"
+                    ntp_servers: 
+                      - "185.254.101.25"
+                      - "51.145.123.29"
 
                     # Syslog log sending configuration
                     # Syslog client keys. If not set, syslog will send logs using an unencrypted connection.
