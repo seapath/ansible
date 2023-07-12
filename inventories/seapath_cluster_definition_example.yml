@@ -143,7 +143,8 @@ all:
                 node2:
                 node3:
             vars:
-              # Ceph settings
+              # Required variables by ceph-ansible.
+              # These are SEAPATH needed overrides. Do not change unless you know exactly what you are doing
               user_config: true
               rbd:
                 name: "rbd"
@@ -176,19 +177,18 @@ all:
             - "51.145.123.29"
 
         # Ceph settings
-        # Required variables y ceph-ansible
+        # Required variables by ceph-ansible.
+        # These are SEAPATH needed overrides. Do not change unless specified (osd_pool_default*) or you know exactly what you are doing
         configure_firewall: false
         ntp_service_enabled: false
         ceph_origin: distro
-        ceph_public_network: "192.168.55.0/24" # Can be removed
-        ceph_cluster_network: "192.168.55.0/24" # Can be removed
         monitor_address: "{{ cluster_ip_address }}"
-        public_network: "{{ ceph_public_network }}"
-        cluster_network: "{{ ceph_cluster_network }}"
+        public_network: "192.168.55.0/24"
+        cluster_network: "{{ public_network }}"
         ceph_conf_overrides:
           global:
-            osd_pool_default_size: 3
-            osd_pool_default_min_size: 2
+            osd_pool_default_size: 3 # to be set to the number storage nodes
+            osd_pool_default_min_size: 2 # to be set to the number of nodes - the number of nodes we are allowing ourselve to lose = the minimum number of nodes needed online for the pool to be available
             osd_pool_default_pg_num: 128
             osd_pool_default_pgp_num: 128
             osd_crush_chooseleaf_type: 1
