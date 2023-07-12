@@ -32,6 +32,9 @@
   tasks:
       - name: Prepare OSD disk
         block:
+          - name: Refresh LVM VG
+            command:
+              cmd:  vgchange --refresh
           - name: Get real path for OSD disk
             command: "realpath {{ ceph_osd_disk }}"
             register: ceph_osd_realdisk
