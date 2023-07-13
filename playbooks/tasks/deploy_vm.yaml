@@ -19,6 +19,7 @@
     live_migration: "{{ hostvars[item].live_migration | default('') }}"
     migration_user: "{{ hostvars[item].migration_user | default('') }}"
     migrate_to_timeout: "{{ hostvars[item].migrate_to_timeout | default('') }}"
+    enable: "{{ hostvars[item].enable | default(true) }}"
 - name: Remove temporary file
   file:
     path: "/tmp/os.qcow2"

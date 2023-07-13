@@ -108,6 +108,16 @@ all:
                         cpumachinesnort: "6-11,18-23" # CPUs reserves for VMs non realtime
                         cpuovs: "23" # CPUs reserves for OVS
 
+        # VM group: use to deploy and manage guests on the cluster
+        VMs:
+            hosts:
+                test:
+                  live_migration: true
+                  migration_user: "{{ livemigration_user }}"
+                  preferred_host: "node3"
+                  migrate_to_timeout: 180
+                  enable: false
+
         # Ceph groups
         # All machines in the cluster must be part of mons groups
         mons:
