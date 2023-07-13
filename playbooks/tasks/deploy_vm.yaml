@@ -16,6 +16,9 @@
     xml: "{{ lookup('file', vms_config_directory + '/' + item + '.xml') }}"
     pinned_host: "{{ hostvars[item].pinned_host | default('') }}"
     preferred_host: "{{ hostvars[item].preferred_host | default('') }}"
+    live_migration: "{{ hostvars[item].live_migration | default('') }}"
+    migration_user: "{{ hostvars[item].migration_user | default('') }}"
+    migrate_to_timeout: "{{ hostvars[item].migrate_to_timeout | default('') }}"
 - name: Remove temporary file
   file:
     path: "/tmp/os.qcow2"
