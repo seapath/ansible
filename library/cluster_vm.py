@@ -112,6 +112,22 @@ options:
       - Pin the VM on the given host
       - Optional parameter relevant only if I(command) is C(create) or C(clone)
     type: str
+  live_migration:
+    description:
+      - Enable live migration on the guest
+      - Optional parameter relevant only if I(command) is C(create) or C(clone)
+    type: bool
+    default: false
+  migration_user:
+    description:
+      - Unix account to be used to connect using SSH to the destination host
+      - Optional parameter relevant only if I(command) is C(create) or C(clone)
+    type: str
+  migrate_to_timeout:
+    description:
+      - Time given to a guest to live migrate (in seconds)
+      - Optional parameter relevant only if I(command) is C(create) or C(clone)
+    type: str
   clear_constraint:
     description:
       - Do not keep source location constraint
@@ -426,6 +442,9 @@ def run_module():
         purge_number=dict(type="int", require=False),
         preferred_host=dict(type="str", require=False),
         pinned_host=dict(type="str", require=False),
+        live_migration=dict(type="bool", require=False),
+        migration_user=dict(type="str", require=False),
+        migrate_to_timeout=dict(type="str", require=False),
         clear_constraint=dict(type="bool", required=False, default=False),
         strong=dict(type="bool", required=False, default=False),
         colocated_vms=dict(type="list", required=False),
@@ -475,6 +494,9 @@ def run_module():
     purge_number = args.get("purge_number", None)
     preferred_host = args.get("preferred_host", None)
     pinned_host = args.get("pinned_host", None)
+    live_migration = args.get("live_migration", None)
+    migration_user = args.get("migration_user", None)
+    migrate_to_timeout = args.get("migrate_to_timeout", None)
     clear_constraint = args.get("clear_constraint", False)
     strong_constraint = args.get("strong", False)
     colocated_vms = args.get("colocated_vms", [])
@@ -508,6 +530,9 @@ def run_module():
                 metadata=metadata,
                 preferred_host=preferred_host,
                 pinned_host=pinned_host,
+                live_migration=live_migration,
+                migration_user=migration_user,
+                migrate_to_timeout=migrate_to_timeout,
             )
         elif command == "clone":
             vm_manager.clone(
@@ -519,6 +544,9 @@ def run_module():
                 metadata=metadata,
                 preferred_host=preferred_host,
                 pinned_host=pinned_host,
+                live_migration=live_migration,
+                migration_user=migration_user,
+                migrate_to_timeout=migrate_to_timeout,
                 clear_constraint=clear_constraint,
             )
         elif command == "remove":
