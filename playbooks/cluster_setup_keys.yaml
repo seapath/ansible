@@ -19,11 +19,20 @@
         dest: "buffer/{{ inventory_hostname }}-id_rsa.pub"
         flat: yes
 
-    - name: Copy the key add to authorized_keys using Ansible module
+    - name: add the key to livemigration user's authorized_keys using Ansible module
       authorized_key:
         user: "{{ livemigration_user }}"
         state: present
         path: "/home/{{ livemigration_user }}/.ssh/authorized_keys"
+        #path: /etc/ssh/root/authorized_keys
+        key: "{{ lookup('file','buffer/' + item + '-id_rsa.pub') }}"
+      with_items: "{{ groups['cluster_machines'] }}"
+
+    - name: add the key to admin user's authorized_keys using Ansible module
+      authorized_key:
+        user: "{{ admin_user }}"
+        state: present
+        path: "/home/{{ admin_user }}/.ssh/authorized_keys"
         #path: /etc/ssh/root/authorized_keys
         key: "{{ lookup('file','buffer/' + item + '-id_rsa.pub') }}"
       with_items: "{{ groups['cluster_machines'] }}"
