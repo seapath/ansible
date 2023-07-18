@@ -330,6 +330,14 @@
     group=libvirt
     shell=/bin/false
 
+- name: Add extra modules to the kernel
+  lineinfile:
+    dest: /etc/modules
+    state: present
+    regexp: "^{{ item }}$"
+    line: "{{ item }}"
+  with_items: "{{ extra_kernel_modules | default([]) }}"
+
 - name: Copy sysctl rules
   ansible.builtin.copy:
     src: ../src/debian/{{ item }}
