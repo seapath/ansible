@@ -225,6 +225,9 @@ all:
         # Grub option: this will be added to the grub cmdline
         grub_append: "console=ttyS0,115200"
 
+        # Extra kernel modules to be loaded at boot (you may need this depending on your hardware)
+        extra_kernel_modules: []
+
         # Optional list variable to change apt repositories. All repositories will be overrides.
         # If defined as empty list [], all apt repositories will be removed
         apt_repo:
