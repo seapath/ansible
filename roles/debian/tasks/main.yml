@@ -91,11 +91,13 @@
     state: directory
     mode: '0755'
 
-- name: Copy VirtualDomain file
-  ansible.builtin.copy:
-    src: ../src/debian/VirtualDomain
-    dest: /usr/lib/ocf/resource.d/seapath/VirtualDomain
-    mode: '0755'
+- name: Copy Pacemaker Seapath Resource-Agent files
+  ansible.posix.synchronize:
+    src: ../src/debian/pacemaker_ra/
+    dest: /usr/lib/ocf/resource.d/seapath/
+    rsync_opts:
+    - "--chmod=F755"
+    - "--chown=root:root"
 
 - name: create /var/log/syslog-ng folder on hosts
   file:
