@@ -36,3 +36,29 @@
         name: libvirt-guests.service
         enabled: no
         state: stopped
+
+- name: Remove what is not needed after installation
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  become: true
+  tasks:
+    - name: Uninstall apt packages not required after installation
+      apt:
+        name:
+          - fdisk
+          - ifupdown
+          - libfdisk1
+        state: absent
+        purge: yes
+        autoremove: yes
+    - name: Disable unused systemd services
+      systemd:
+        unit: "{{ item }}"
+        state: stopped
+        enabled: no
+        no_block: yes
+      with_items:
+        - apt-daily-upgrade.timer
+        - apt-daily.timer
