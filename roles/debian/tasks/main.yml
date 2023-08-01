@@ -56,6 +56,7 @@
   template:
     src: ../src/debian/backup-restore/{{ item.src }}
     dest: /usr/local/bin/{{ item.dest }}
+    mode: '0755'
   with_items:
     - src:
         restore_vm.sh.j2
