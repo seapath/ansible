@@ -1,4 +1,5 @@
 - name: Prerequis machine debian
+  gather_facts: True
   hosts:
     - cluster_machines
     - standalone_machine
