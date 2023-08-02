@@ -57,6 +57,9 @@
             <cid auto='yes' />
         </vsock>
         <watchdog model="i6300esb" action="poweroff" />
+	<rng model='virtio'>
+            <backend model='random'>/dev/urandom</backend>
+        </rng>
     </devices>
     <resource>
         <partition>/machine/nort</partition>
