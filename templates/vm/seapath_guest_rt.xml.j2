@@ -23,6 +23,7 @@
     </features>
     <cputune>
         <vcpupin vcpu="0" cpuset="{{ cpuset }}"/>
+    	<emulatorpin cpuset="{{ cpuset }}"/>
         <vcpusched vcpus="0" scheduler="fifo" priority="1" />
     </cputune>
     <cpu mode="host-model">
