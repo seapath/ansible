@@ -407,33 +407,6 @@
     line: "{{ logstash_server_ip }} logstash-seapath"
     state: present
 
-- name: lineinfile in /etc/default/hddtemp file for DISKS
-  lineinfile:
-    dest: /etc/default/hddtemp
-    regexp: '^DISKS='
-    line: "DISKS=\"{{ main_disk }} {{ ceph_osd_disk if ceph_osd_disk is defined else none }}\""
-    state: present
-  register: updatehddtemp1
-- name: lineinfile in /etc/default/hddtemp file for RUN_DAEMON
-  lineinfile:
-    dest: /etc/default/hddtemp
-    regexp: '^RUN_DAEMON='
-    line: "RUN_DAEMON=\"true\""
-    state: present
-  register: updatehddtemp2
-- name: lineinfile in /etc/default/hddtemp file for INTERFACE
-  lineinfile:
-    dest: /etc/default/hddtemp
-    regexp: '^INTERFACE='
-    line: "INTERFACE=\"{{ ansible_host }}\""
-    state: present
-  register: updatehddtemp3
-- name: Restart hddtemp
-  ansible.builtin.systemd:
-    state: restarted
-    name: hddtemp
-  when: updatehddtemp1.changed or updatehddtemp2.changed or updatehddtemp3.changed
-
 - block:
     - name: Remove all file in /etc/apt/sources.list.d
       file:

@@ -22,4 +22,5 @@ extend virshlist /usr/bin/timeout 2s /usr/bin/sudo -u libvirt /usr/local/bin/snm
 extend cephstatus /usr/bin/timeout 2s /usr/bin/sudo -u ceph /usr/local/bin/snmp_cephstatus.sh
 extend cephusage /usr/bin/timeout 2s /usr/bin/sudo -u ceph /usr/local/bin/snmp_cephusage.sh
 extend diskusage /usr/bin/timeout 40s /usr/bin/sudo /usr/local/bin/snmp_diskusage.sh
+extend tempdisk /usr/bin/timeout 2s /usr/bin/sudo /usr/local/bin/snmp_tempdisk.sh
 agentAddress udp:{{ admin_ip_addr }}:161
