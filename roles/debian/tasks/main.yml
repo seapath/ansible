@@ -56,6 +56,7 @@
   template:
     src: ../src/debian/backup-restore/{{ item.src }}
     dest: /usr/local/bin/{{ item.dest }}
+    mode: '0755'
   with_items:
     - src:
         restore_vm.sh.j2
@@ -91,11 +92,13 @@
     state: directory
     mode: '0755'
 
-- name: Copy VirtualDomain file
-  ansible.builtin.copy:
-    src: ../src/debian/VirtualDomain
-    dest: /usr/lib/ocf/resource.d/seapath/VirtualDomain
-    mode: '0755'
+- name: Copy Pacemaker Seapath Resource-Agent files
+  ansible.posix.synchronize:
+    src: ../src/debian/pacemaker_ra/
+    dest: /usr/lib/ocf/resource.d/seapath/
+    rsync_opts:
+    - "--chmod=F755"
+    - "--chown=root:root"
 
 - name: create /var/log/syslog-ng folder on hosts
   file:
@@ -479,3 +482,14 @@
 - name: update-grub
   command: update-grub
   when: updategrub1.changed or updategrub2.changed
+
+- name: "add lvm_snapshot_rebooter: script file"
+  ansible.builtin.copy:
+    src: ../src/debian/lvm_snapshot_rebooter.sh
+    dest: /etc/initramfs-tools/scripts/init-premount/lvm_snapshot_rebooter
+    mode: '0755'
+  register: lvm_snapshot_rebooter
+- name: "rebuild initramfs if necessary"
+  command:
+    cmd: /usr/sbin/update-initramfs -u
+  when: lvm_snapshot_rebooter.changed
