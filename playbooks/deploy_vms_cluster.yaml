@@ -27,6 +27,7 @@
         enable: true
         pinned_host: "{{ hostvars[item].pinned_host | default(None) }}"
         preferred_host: "{{ hostvars[item].preferred_host | default(None) }}"
+        crm_config_cmd: "{{ hostvars[item].crm_config_cmd | default(None) }}"
         xml: >-
           {{ lookup('template',
           hostvars[item].vm_template,
