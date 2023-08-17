@@ -113,3 +113,15 @@
         command: crm configure property stonith-enabled=false
         run_once: true
         when: groups['valid_machine'] is undefined
+
+- name: run extra CRM commands
+  hosts: all
+  become: true
+  tasks:
+      - name: run extra CRM configuration commands
+        command: "/usr/sbin/crm configure {{ item }}"
+        when: extra_crm_cmd_to_run is defined
+        run_once: true
+        no_log: true
+        failed_when: 0 == 1
+        loop: "{{ extra_crm_cmd_to_run }}"
