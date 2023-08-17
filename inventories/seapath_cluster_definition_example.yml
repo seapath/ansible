@@ -117,6 +117,11 @@ all:
                   preferred_host: "node3"
                   migrate_to_timeout: 180
                   enable: false
+                  ##Instead of preferred_host or pinned_host, you can add more complex rules here
+                  #crm_config_cmd:
+                  #  - location ntpstatus_location_test test rule ntpstatus: defined ntpstatus
+                  #  - location ptpstatus_location_test test rule ptpstatus: defined ptpstatus
+                  #  - location cli-prefer-test test role=Started 100: virtu-elabo1
 
         # Ceph groups
         # All machines in the cluster must be part of mons groups
@@ -246,3 +251,9 @@ all:
           - "ssh-rsa key2XXX"
         # account used for libvirt live-migration
         livemigration_user: livemigration
+
+        extra_crm_cmd_to_run:
+          - primitive ntpstatus_test ocf:seapath:ntpstatus params host_ip=ntp.unice.fr multiplier=500 op monitor timeout=10 interval=10
+          - primitive ptpstatus_test ocf:seapath:ptpstatus op monitor timeout=10 interval=10 op_params multiplier=1000
+          - clone cl_ntpstatus_test ntpstatus_test meta target-role=Started
+          - clone cl_ptpstatus_test ptpstatus_test meta target-role=Started
