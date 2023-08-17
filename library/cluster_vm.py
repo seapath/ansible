@@ -190,6 +190,11 @@ options:
       - VM list to be be colocated with the VM define in I(name) parameter
       - This parameter is required if I(command) is C(define_colocation)
     type: list
+  crm_config_cmd:
+    description:
+      - list of crm config to run when enabling this guest
+      - This parameter is optional
+    type: list
 
 requirements:
     - python >= 3.7
@@ -324,6 +329,14 @@ EXAMPLES = r"""
     colocated_vms:
      - guest1
      - guest2
+
+# Define a list of crm command to run when enabling the guest
+- name: create a guest and run extra crm commands
+  cluster_vm:
+    name: GUEST1
+    command: create
+    crm_config_cmd:
+     - location ping_test_GUEST1 GUEST1 rule pingd: defined pingd
 """
 
 RETURN = """
@@ -448,6 +461,7 @@ def run_module():
         clear_constraint=dict(type="bool", required=False, default=False),
         strong=dict(type="bool", required=False, default=False),
         colocated_vms=dict(type="list", required=False),
+        crm_config_cmd=dict(type="list", required=False),
     )
     result = {}
     required = [
@@ -500,6 +514,7 @@ def run_module():
     clear_constraint = args.get("clear_constraint", False)
     strong_constraint = args.get("strong", False)
     colocated_vms = args.get("colocated_vms", [])
+    crm_config_cmd = args.get("crm_config_cmd", [])
 
     vm_name_command_list = commands_list.copy()
     vm_name_command_list.remove("list_vms")
@@ -533,6 +548,7 @@ def run_module():
                 live_migration=live_migration,
                 migration_user=migration_user,
                 migrate_to_timeout=migrate_to_timeout,
+                crm_config_cmd=crm_config_cmd,
             )
         elif command == "clone":
             vm_manager.clone(
