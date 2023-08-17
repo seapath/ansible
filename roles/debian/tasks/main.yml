@@ -1,50 +1,3 @@
-- name: create src folder on hosts
-  file:
-    path: /tmp/src
-    state: directory
-    mode: '0755'
-
-- name: Synchronization of src python3-setup-ovs on the control machine to dest on the remote hosts
-  ansible.posix.synchronize:
-    src: ../src/debian/python3-setup-ovs
-    dest: /tmp/src
-    rsync_opts:
-      - "--chown=root:root"
-- name: Install python3-setup-ovs
-  command:
-    cmd: /usr/bin/python3 setup.py install
-    chdir: /tmp/src/python3-setup-ovs
-- name: Copy votp-config_ovs.service
-  ansible.builtin.copy:
-    src: ../src/debian/votp-config_ovs.service
-    dest: /etc/systemd/system/votp-config_ovs.service
-    mode: '0644'
-  register: votpconfigovs
-- name: daemon-reload votp-config_ovs
-  ansible.builtin.service:
-    daemon_reload: yes
-  when: votpconfigovs.changed
-- name: enable votp-config_ovs.service
-  ansible.builtin.systemd:
-    name: votp-config_ovs.service
-    enabled: yes
-
-- name: Synchronization of src vm_manager on the control machine to dest on the remote hosts
-  ansible.posix.synchronize:
-    src: ../src/debian/vm_manager
-    dest: /tmp/src
-    rsync_opts:
-      - "--chown=root:root"
-- name: Install vm_manager
-  command:
-    cmd: /usr/bin/python3 setup.py install
-    chdir: /tmp/src/vm_manager
-- name: Create a symbolic link
-  ansible.builtin.file:
-    src: /usr/local/bin/vm_manager_cmd.py
-    dest: /usr/local/bin/vm-mgr
-    state: link
-
 - name: Synchronization of backup-restore folder on the control machine to dest on the remote hosts
   ansible.posix.synchronize:
     src: ../src/debian/backup-restore/
@@ -63,12 +16,6 @@
       dest:
         restore_vm.sh
 
-- name: Copy consolevm.sh
-  template:
-    src: ../src/debian/consolevm.sh.j2
-    dest: /usr/local/bin/consolevm
-    mode: '0755'
-
 - name: disable vim defaults
   lineinfile:
     dest: /etc/vim/vimrc
@@ -85,20 +32,6 @@
   file:
     path: /etc/vim/vimrc.local
     state: absent
-
-- name: create /usr/lib/ocf/resource.d/seapath on hosts
-  file:
-    path: /usr/lib/ocf/resource.d/seapath
-    state: directory
-    mode: '0755'
-
-- name: Copy Pacemaker Seapath Resource-Agent files
-  ansible.posix.synchronize:
-    src: ../src/debian/pacemaker_ra/
-    dest: /usr/lib/ocf/resource.d/seapath/
-    rsync_opts:
-    - "--chmod=F755"
-    - "--chown=root:root"
 
 - name: create /var/log/syslog-ng folder on hosts
   file:
@@ -142,115 +75,6 @@
     - syslog_tls_key is defined
     - syslog_tls_server_ca is defined
 
-- name: Create libvirtd.service.d directory
-  file:
-    path: /etc/systemd/system/libvirtd.service.d/
-    state: directory
-    owner: root
-    group: root
-    mode: 0755
-- name: Copy libvirtd.service drop-in
-  ansible.builtin.copy:
-    src: ../src/debian/libvirtd_override.conf
-    dest: /etc/systemd/system/libvirtd.service.d/override.conf
-    owner: root
-    group: root
-    mode: 0644
-  notify: daemon-reload
-- name: Create pacemaker.service.d directory
-  file:
-    path: /etc/systemd/system/pacemaker.service.d/
-    state: directory
-    owner: root
-    group: root
-    mode: 0755
-- name: Copy pacemaker.service drop-in
-  ansible.builtin.copy:
-    src: ../src/debian/pacemaker_override.conf
-    dest: /etc/systemd/system/pacemaker.service.d/override.conf
-    owner: root
-    group: root
-    mode: 0644
-  notify: daemon-reload
-  register: pacemaker_corosync
-- name: Get Pacemaker service Status
-  ansible.builtin.systemd:
-    name: "pacemaker.service"
-  register: pacemaker_service_status
-- name: disable pacemaker (reinstall step 1/2)
-  ansible.builtin.systemd:
-    name: pacemaker.service
-    enabled: no
-  when: pacemaker_corosync.changed and pacemaker_service_status.status.UnitFileState == "enabled"
-- name: enable pacemaker (reinstall step 2/2)
-  ansible.builtin.systemd:
-    name: pacemaker.service
-    enabled: yes
-  when: pacemaker_corosync.changed and pacemaker_service_status.status.UnitFileState == "enabled"
-
-- name: get Debian-snmp uid
-  getent:
-    database: passwd
-    key: "Debian-snmp"
-- name: get Debian-snmp gid
-  getent:
-    database: group
-    key: "Debian-snmp"
-- debug:
-    msg:
-      - "user id {{ getent_passwd['Debian-snmp'][1] }}"
-      - "group id {{ getent_group['Debian-snmp'][1] }}"
-
-- name: Set Debian-snmp correct uid/gid
-  block:
-    - name: stop snmpd if needed
-      ansible.builtin.systemd:
-        name: snmpd.service
-        state: stopped
-    - name: Ensure group "Debian-snmp" exists with correct gid
-      ansible.builtin.group:
-        name: Debian-snmp
-        state: present
-        gid: 902
-    - name: Ensure user Debian-snmp has correct uid and gid
-      user:
-        name: Debian-snmp
-        uid: 902
-        group: Debian-snmp
-    - name: restart snmpd
-      ansible.builtin.systemd:
-        name: snmpd.service
-        state: started
-  when: getent_passwd['Debian-snmp'][1] != "902" or getent_group['Debian-snmp'][1] != "902"
-
-- name: Synchronization of snmp_ scripts
-  ansible.posix.synchronize:
-    src: ../src/debian/
-    dest: /usr/local/bin/
-    rsync_opts:
-    - "--include=snmp_*.sh"
-    - "--include=virt-df.sh"
-    - "--exclude=*"
-    - "--chmod=F755"
-    - "--chown=root:root"
-- name: Snmp config
-  ansible.builtin.template:
-    src: ../src/debian/snmpd.conf.j2
-    dest: /etc/snmp/snmpd.conf
-    mode: '0644'
-  register: snmpd_conf
-- name: Wait for DHCP for SNMP
-  lineinfile:
-    dest: /lib/systemd/system/snmpd.service
-    regexp: "^After="
-    line: "After=network-online.target"
-    state: present
-- name: restart snmpd
-  ansible.builtin.systemd:
-    name: snmpd.service
-    state: restarted
-  when: snmpd_conf.changed
-
 - name: removing or not the virtu user created by the iso
   block:
     - name: remove 'virtu' from sudoers file
@@ -269,14 +93,6 @@
         name: virtu
         state: absent
   when: admin_user != "virtu"
-
-- name: Install sudo Debian-snmp user rules
-  copy:
-    src: ../src/debian/sudoers/Debian-snmp
-    dest: /etc/sudoers.d/Debian-snmp
-    owner: root
-    group: root
-    mode: '0440'
 
 - name: Copy journald conf file
   ansible.builtin.copy:
@@ -328,11 +144,6 @@
     append: no
   when: livemigration_user is defined and livemigration_user != admin_user
 
-- name: Creating libvirt user with libvirtd permissions
-  user: name=libvirt
-    group=libvirt
-    shell=/bin/false
-
 - name: Add extra modules to the kernel
   lineinfile:
     dest: /etc/modules
@@ -348,25 +159,6 @@
     mode: '0644'
   with_items:
     - 00-panicreboot.conf
-    - 00-bridge_nf_call.conf
-- name: add br_netfilter to /etc/modules
-  lineinfile:
-    dest: /etc/modules
-    state: present
-    regexp: '^br_netfilter$'
-    line: 'br_netfilter'
-- name: add raid6_pq to /etc/modules
-  lineinfile:
-    dest: /etc/modules
-    state: present
-    regexp: '^raid6_pq$'
-    line: 'raid6_pq'
-
-- name: Copy apparmor libvirt-qemu rules
-  ansible.builtin.copy:
-    src: ../src/debian/etc_apparmor.d_abstractions_libvirt-qemu.conf
-    dest: /etc/apparmor.d/abstractions/libvirt-qemu
-    mode: '0644'
 
 - name: Copy 80-wired networkd file
   ansible.builtin.copy:
@@ -403,13 +195,6 @@
     group: "{{ admin_user }}"
     mode: '0644'
 
-- name: lineinfile in hosts file for logstash-seapath
-  lineinfile:
-    dest: /etc/hosts
-    regexp: '.* logstash-seapath$'
-    line: "{{ logstash_server_ip }} logstash-seapath"
-    state: present
-
 - block:
     - name: Remove all file in /etc/apt/sources.list.d
       file:
@@ -420,17 +205,6 @@
         src: sources.list.j2
         dest: /etc/apt/sources.list
   when: apt_repo is defined
-
-- name: Make libvirt use the "machine-id" way to determine host UUID
-  lineinfile:
-    dest: /etc/libvirt/libvirtd.conf
-    regexp: "^#?host_uuid_source ="
-    line: "host_uuid_source = \"machine-id\""
-    state: present
-- name: restart libvirtd
-  ansible.builtin.systemd:
-    name: libvirtd.service
-    state: restarted
 
 - name: "find /etc/default/grub.d/*.cfg (FAI)"
   find:
