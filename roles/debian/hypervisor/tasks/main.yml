@@ -111,6 +111,20 @@
     enabled: yes
   when: pacemaker_corosync.changed and pacemaker_service_status.status.UnitFileState == "enabled"
 
+- name: Add admin user to libvirt and haclient groups
+  user:
+    name: "{{ admin_user }}"
+    groups: libvirt,haclient
+    append: yes
+- name: Adding live-migration user
+  user:
+    name: "{{ livemigration_user }}"
+    shell: /bin/bash
+    group: libvirt
+    uid: 1001
+    append: no
+  when: livemigration_user is defined and livemigration_user != admin_user
+
 - name: get Debian-snmp uid
   getent:
     database: passwd

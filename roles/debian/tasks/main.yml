@@ -116,7 +116,6 @@
     name: "{{ admin_user }}"
     shell: /bin/bash
     group: "{{ admin_user }}"
-    groups: libvirt,haclient
     uid: 1000
     password: "{{ admin_passwd | default(omit) }}"
     append: no
@@ -134,15 +133,6 @@
     owner: root
     group: root
     mode: '0440'
-
-- name: Adding live-migration user
-  user:
-    name: "{{ livemigration_user }}"
-    shell: /bin/bash
-    group: libvirt
-    uid: 1001
-    append: no
-  when: livemigration_user is defined and livemigration_user != admin_user
 
 - name: Add extra modules to the kernel
   lineinfile:
