@@ -508,3 +508,14 @@
 - name: update-grub
   command: update-grub
   when: updategrub1.changed or updategrub2.changed
+
+- name: "add lvm_snapshot_rebooter: script file"
+  ansible.builtin.copy:
+    src: ../src/debian/lvm_snapshot_rebooter.sh
+    dest: /etc/initramfs-tools/scripts/init-premount/lvm_snapshot_rebooter
+    mode: '0755'
+  register: lvm_snapshot_rebooter
+- name: "rebuild initramfs if necessary"
+  command:
+    cmd: /usr/sbin/update-initramfs -u
+  when: lvm_snapshot_rebooter.changed
