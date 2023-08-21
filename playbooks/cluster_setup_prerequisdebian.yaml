@@ -10,6 +10,14 @@
   become: true
   roles:
     - debian
+- name: Prerequis cluster_machines debian
+  gather_facts: True
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  become: true
+  roles:
+    - debian/cluster_machines
 - name: Prerequis hypervisor debian
   hosts:
     - hypervisors
