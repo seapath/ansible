@@ -1,21 +1,3 @@
-- name: Synchronization of backup-restore folder on the control machine to dest on the remote hosts
-  ansible.posix.synchronize:
-    src: ../src/debian/backup-restore/
-    dest: /usr/local/bin/
-    rsync_opts:
-      - "--chown=root:root"
-      - "--exclude=*.j2"
-- name: Copy backup-restore templates
-  template:
-    src: ../src/debian/backup-restore/{{ item.src }}
-    dest: /usr/local/bin/{{ item.dest }}
-    mode: '0755'
-  with_items:
-    - src:
-        restore_vm.sh.j2
-      dest:
-        restore_vm.sh
-
 - name: disable vim defaults
   lineinfile:
     dest: /etc/vim/vimrc
@@ -133,14 +115,6 @@
     owner: root
     group: root
     mode: '0440'
-
-- name: Add extra modules to the kernel
-  lineinfile:
-    dest: /etc/modules
-    state: present
-    regexp: "^{{ item }}$"
-    line: "{{ item }}"
-  with_items: "{{ extra_kernel_modules | default([]) }}"
 
 - name: Copy sysctl rules
   ansible.builtin.copy:

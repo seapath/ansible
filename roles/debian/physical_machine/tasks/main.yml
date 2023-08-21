@@ -51,6 +51,24 @@
     dest: /usr/local/bin/consolevm
     mode: '0755'
 
+- name: Synchronization of backup-restore folder on the control machine to dest on the remote hosts
+  ansible.posix.synchronize:
+    src: ../src/debian/backup-restore/
+    dest: /usr/local/bin/
+    rsync_opts:
+      - "--chown=root:root"
+      - "--exclude=*.j2"
+- name: Copy backup-restore templates
+  template:
+    src: ../src/debian/backup-restore/{{ item.src }}
+    dest: /usr/local/bin/{{ item.dest }}
+    mode: '0755'
+  with_items:
+    - src:
+        restore_vm.sh.j2
+      dest:
+        restore_vm.sh
+
 - name: create /usr/lib/ocf/resource.d/seapath on hosts
   file:
     path: /usr/lib/ocf/resource.d/seapath
@@ -110,6 +128,14 @@
     name: pacemaker.service
     enabled: yes
   when: pacemaker_corosync.changed and pacemaker_service_status.status.UnitFileState == "enabled"
+
+- name: Add extra modules to the kernel
+  lineinfile:
+    dest: /etc/modules
+    state: present
+    regexp: "^{{ item }}$"
+    line: "{{ item }}"
+  with_items: "{{ extra_kernel_modules | default([]) }}"
 
 - name: Add admin user to libvirt and haclient groups
   user:
