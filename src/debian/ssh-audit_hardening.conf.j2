@@ -34,4 +34,6 @@ ClientAliveCountMax 0
 PermitTunnel no
 PermitOpen none
 ListenAddress {{ ip_addr }}
+{% if cluster_ip_addr is defined %}
 ListenAddress {{ cluster_ip_addr }}
+{% endif %}
