@@ -1,3 +1,28 @@
+- name: Synchronization of src python3-setup-ovs on the control machine to dest on the remote hosts
+  ansible.posix.synchronize:
+    src: ../src/debian/python3-setup-ovs
+    dest: /tmp/src
+    rsync_opts:
+      - "--chown=root:root"
+- name: Install python3-setup-ovs
+  command:
+    cmd: /usr/bin/python3 setup.py install
+    chdir: /tmp/src/python3-setup-ovs
+- name: Copy votp-config_ovs.service
+  ansible.builtin.copy:
+    src: ../src/debian/votp-config_ovs.service
+    dest: /etc/systemd/system/votp-config_ovs.service
+    mode: '0644'
+  register: votpconfigovs
+- name: daemon-reload votp-config_ovs
+  ansible.builtin.service:
+    daemon_reload: yes
+  when: votpconfigovs.changed
+- name: enable votp-config_ovs.service
+  ansible.builtin.systemd:
+    name: votp-config_ovs.service
+    enabled: yes
+
 - name: get Debian-snmp uid
   getent:
     database: passwd
