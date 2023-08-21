@@ -16,6 +16,14 @@
       dest:
         restore_vm.sh
 
+- name: Add extra modules to the kernel
+  lineinfile:
+    dest: /etc/modules
+    state: present
+    regexp: "^{{ item }}$"
+    line: "{{ item }}"
+  with_items: "{{ extra_kernel_modules | default([]) }}"
+
 - name: Synchronization of src python3-setup-ovs on the control machine to dest on the remote hosts
   ansible.posix.synchronize:
     src: ../src/debian/python3-setup-ovs
