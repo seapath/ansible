@@ -205,7 +205,7 @@
 - name: "grub conf osprober"
   lineinfile:
     dest: /etc/default/grub
-    regexp: '^GRUB_DISABLE_OS_PROBER=.*$'
+    regexp: '^#?GRUB_DISABLE_OS_PROBER=.*$'
     line: 'GRUB_DISABLE_OS_PROBER=true'
     state: present
   register: updategrub2
