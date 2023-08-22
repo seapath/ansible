@@ -183,9 +183,9 @@
     group: root
     mode: '0440'
   when: not revert
-- name: Uninstall sudo ansible group rules
+- name: Uninstall sudo special rules
   file:
-    path: /etc/sudoers.d/security
+    path: /etc/sudoers.d/00-security
     state: absent
   when:  revert
 
