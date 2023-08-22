@@ -20,6 +20,8 @@ all:
                             # PTP network settings
                             ptp_interface: "eno12419" #OPTIONAL PTP Interface
                             ptp_vlanid: 100 #OPTIONAL VlanID for PTP
+                            ptp_delay_mechanism: P2P # OPTIONAL E2E or P2P defaut is P2P
+                            ptp_network_transport: L2 # OPTIONAL L2 or UDPv4 default is L2
 
                             # Cluster network settings
                             team0_0: "eno12399" # cluster network first interface
@@ -46,6 +48,8 @@ all:
                             # PTP network settings
                             ptp_interface: "eno12419" #OPTIONAL PTP Interface
                             ptp_vlanid: 100 #OPTIONAL VlanID for PTP
+                            ptp_delay_mechanism: P2P # OPTIONAL E2E or P2P defaut is P2P
+                            ptp_network_transport: L2 # OPTIONAL L2 or UDPv4 default is L2
 
                             # Cluster network settings
                             team0_0: "eno12399"
@@ -72,6 +76,8 @@ all:
                              # PTP network settings
                             ptp_interface: "eno12419" #OPTIONAL PTP Interface
                             ptp_vlanid: 100 #OPTIONAL VlanID for PTP
+                            ptp_delay_mechanism: P2P # OPTIONAL E2E or P2P defaut is P2P
+                            ptp_network_transport: L2 # OPTIONAL L2 or UDPv4 default is L2
 
                             # Cluster network settings
                             team0_0: "eno12399"

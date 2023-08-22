@@ -36,6 +36,8 @@ all:
                     apply_network_config: true # true to apply the network configuration without rebooting
                     ptp_interface: "enp1s0f1" #OPTIONAL PTP Interface
                     ptp_vlanid: 100 #OPTIONAL VlanID for PTP
+                    ptp_delay_mechanism: P2P # OPTIONAL E2E or P2P defaut is P2P
+                    ptp_network_transport: L2 # OPTIONAL L2 or UDPv4 default is L2
                     # SRIOV, Optional configuration
                     sriov_driver: 'igb'
                     sriov:
