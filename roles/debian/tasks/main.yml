@@ -115,6 +115,12 @@
     owner: root
     group: root
     mode: '0440'
+- name: Remove admin sudoers line created by build_debian_iso
+  lineinfile:
+    dest: /etc/sudoers
+    state: absent
+    regexp: '^{{ admin_user }}'
+    validate: visudo -cf %s
 
 - name: Copy sysctl rules
   ansible.builtin.copy:
