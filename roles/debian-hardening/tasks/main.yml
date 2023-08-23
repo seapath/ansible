@@ -110,20 +110,6 @@
   notify: update sysfs values using sysctl
   when: revert
 
-- name: "Force loading nf_conntrack at boot"
-  lineinfile:
-    dest: /etc/modules-load.d/modules.conf
-    regexp: "^nf_conntrack$"
-    line: "nf_conntrack"
-    state: present
-  when: not revert
-- name: "Disable force loading nf_conntrack at boot"
-  lineinfile:
-    dest: /etc/modules-load.d/modules.conf
-    regexp: "^nf_conntrack$"
-    state: absent
-  when: revert
-
 - name: "Install random-root-passwd.service"
   copy:
     src: ../src/debian/random-root-passwd.service
@@ -197,25 +183,11 @@
     group: root
     mode: '0440'
   when: not revert
-- name: Uninstall sudo ansible group rules
+- name: Uninstall sudo special rules
   file:
-    path: /etc/sudoers.d/security
+    path: /etc/sudoers.d/00-security
     state: absent
   when:  revert
-
-- name: Get ceph disk stats
-  stat:
-    path: "{{ ceph_osd_disk }}"
-  register: ceph_osd_disk_stat
-  when: ceph_osd_disk is defined
-- name: Restrict ceph sudoers file
-  template:
-    src: ../src/debian/sudoers/ceph.j2
-    dest: /etc/sudoers.d/ceph-osd-smartctl
-    owner: root
-    group: root
-    mode: '0440'
-  when: not revert
 
 - name: Find sudoers files
   find:
@@ -238,8 +210,6 @@
     groups: privileged
     append: yes
   with_items:
-   - ceph
-   - Debian-snmp
    - "{{ admin_user }}"
    - ansible
   when: not revert
@@ -355,28 +325,6 @@
   register: services_to_restart
   with_items: "{{ hardened_services }}"
 
-- name: Uninstall apt packages not required after installation
-  apt:
-    name:
-      - fdisk
-      - ifupdown
-      - libfdisk1
-    state: absent
-    purge: yes
-    autoremove: yes
-  when: not revert
-
-- name: Disable unused systemd services
-  systemd:
-    unit: "{{ item }}"
-    state: stopped
-    enabled: no
-    no_block: yes
-  when: not revert
-  with_items:
-    - apt-daily-upgrade.timer
-    - apt-daily.timer
-
 - name: Set grub password
   template:
     src: "01_password.j2"
@@ -403,6 +351,3 @@
 
 - name: Update grub
   command: update-grub
-
-- name: Final reboot to apply changes
-  reboot:
