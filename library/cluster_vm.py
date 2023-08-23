@@ -514,7 +514,7 @@ def run_module():
     clear_constraint = args.get("clear_constraint", False)
     strong_constraint = args.get("strong", False)
     colocated_vms = args.get("colocated_vms", [])
-    crm_config_cmd = args.get("crm_config_cmd", [])
+    crm_config_cmd = args.get("crm_config_cmd", None)
 
     vm_name_command_list = commands_list.copy()
     vm_name_command_list.remove("list_vms")
