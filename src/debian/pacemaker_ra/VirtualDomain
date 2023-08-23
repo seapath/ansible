@@ -25,7 +25,11 @@ OCF_RESKEY_migration_network_suffix_default=""
 OCF_RESKEY_force_stop_default=0
 OCF_RESKEY_monitor_scripts_default=""
 OCF_RESKEY_autoset_utilization_cpu_default="true"
+OCF_RESKEY_autoset_utilization_host_memory_default="true"
 OCF_RESKEY_autoset_utilization_hv_memory_default="true"
+OCF_RESKEY_unset_utilization_cpu_default="false"
+OCF_RESKEY_unset_utilization_host_memory_default="false"
+OCF_RESKEY_unset_utilization_hv_memory_default="false"
 OCF_RESKEY_migrateport_default=$(( 49152 + $(ocf_maybe_random) % 64 ))
 OCF_RESKEY_CRM_meta_timeout_default=90000
 OCF_RESKEY_save_config_on_stop_default=false
@@ -35,6 +39,7 @@ OCF_RESKEY_backingfile_default=""
 OCF_RESKEY_stateless_default="false"
 OCF_RESKEY_copyindirs_default=""
 OCF_RESKEY_shutdown_mode_default=""
+OCF_RESKEY_start_resources_default="false"
 OCF_RESKEY_seapath_default="false"
 
 : ${OCF_RESKEY_config=${OCF_RESKEY_config_default}}
@@ -45,7 +50,11 @@ OCF_RESKEY_seapath_default="false"
 : ${OCF_RESKEY_force_stop=${OCF_RESKEY_force_stop_default}}
 : ${OCF_RESKEY_monitor_scripts=${OCF_RESKEY_monitor_scripts_default}}
 : ${OCF_RESKEY_autoset_utilization_cpu=${OCF_RESKEY_autoset_utilization_cpu_default}}
+: ${OCF_RESKEY_autoset_utilization_host_memory=${OCF_RESKEY_autoset_utilization_host_memory_default}}
 : ${OCF_RESKEY_autoset_utilization_hv_memory=${OCF_RESKEY_autoset_utilization_hv_memory_default}}
+: ${OCF_RESKEY_unset_utilization_cpu=${OCF_RESKEY_unset_utilization_cpu_default}}
+: ${OCF_RESKEY_unset_utilization_host_memory=${OCF_RESKEY_unset_utilization_host_memory_default}}
+: ${OCF_RESKEY_unset_utilization_hv_memory=${OCF_RESKEY_unset_utilization_hv_memory_default}}
 : ${OCF_RESKEY_migrateport=${OCF_RESKEY_migrateport_default}}
 : ${OCF_RESKEY_CRM_meta_timeout=${OCF_RESKEY_CRM_meta_timeout_default}}
 : ${OCF_RESKEY_save_config_on_stop=${OCF_RESKEY_save_config_on_stop_default}}
@@ -55,6 +64,7 @@ OCF_RESKEY_seapath_default="false"
 : ${OCF_RESKEY_stateless=${OCF_RESKEY_stateless_default}}
 : ${OCF_RESKEY_copyindirs=${OCF_RESKEY_copyindirs_default}}
 : ${OCF_RESKEY_shutdown_mode=${OCF_RESKEY_shutdown_mode_default}}
+: ${OCF_RESKEY_start_resources=${OCF_RESKEY_start_resources_default}}
 : ${OCF_RESKEY_seapath=${OCF_RESKEY_seapath_default}}
 
 if ocf_is_true ${OCF_RESKEY_sync_config_on_stop}; then
@@ -75,8 +85,8 @@ VirtualDomain_meta_data() {
 		cat <<EOF
 <?xml version="1.0"?>
 <!DOCTYPE resource-agent SYSTEM "ra-api-1.dtd">
-<resource-agent name="VirtualDomain">
-<version>1.1</version>
+<resource-agent name="VirtualDomain" version="1.1">
+<version>1.0</version>
 
 <longdesc lang="en">
 Resource agent for a virtual domain (a.k.a. domU, virtual machine,
@@ -226,6 +236,15 @@ into the CPU utilization of the resource when the monitor is executed.
 <content type="boolean" default="${OCF_RESKEY_autoset_utilization_cpu_default}" />
 </parameter>
 
+<parameter name="autoset_utilization_host_memory" unique="0" required="0">
+<longdesc lang="en">
+If set true, the agent will detect the number of *Max memory* from virsh, and put it
+into the host_memory utilization of the resource when the monitor is executed.
+</longdesc>
+<shortdesc lang="en">Enable auto-setting the host_memory utilization of the resource</shortdesc>
+<content type="boolean" default="${OCF_RESKEY_autoset_utilization_host_memory_default}" />
+</parameter>
+
 <parameter name="autoset_utilization_hv_memory" unique="0" required="0">
 <longdesc lang="en">
 If set true, the agent will detect the number of *Max memory* from virsh, and put it
@@ -233,6 +252,33 @@ into the hv_memory utilization of the resource when the monitor is executed.
 </longdesc>
 <shortdesc lang="en">Enable auto-setting the hv_memory utilization of the resource</shortdesc>
 <content type="boolean" default="${OCF_RESKEY_autoset_utilization_hv_memory_default}" />
+</parameter>
+
+<parameter name="unset_utilization_cpu" unique="0" required="0">
+<longdesc lang="en">
+If set true then the agent will remove the cpu utilization resource when the monitor
+is executed.
+</longdesc>
+<shortdesc lang="en">Enable auto-removing the CPU utilization of the resource</shortdesc>
+<content type="boolean" default="${OCF_RESKEY_unset_utilization_cpu_default}" />
+</parameter>
+
+<parameter name="unset_utilization_host_memory" unique="0" required="0">
+<longdesc lang="en">
+If set true then the agent will remove the host_memory utilization resource when the monitor
+is executed.
+</longdesc>
+<shortdesc lang="en">Enable auto-removing the host_memory utilization of the resource</shortdesc>
+<content type="boolean" default="${OCF_RESKEY_unset_utilization_host_memory_default}" />
+</parameter>
+
+<parameter name="unset_utilization_hv_memory" unique="0" required="0">
+<longdesc lang="en">
+If set true then the agent will remove the hv_memory utilization resource when the monitor
+is executed.
+</longdesc>
+<shortdesc lang="en">Enable auto-removing the hv_memory utilization of the resource</shortdesc>
+<content type="boolean" default="${OCF_RESKEY_unset_utilization_hv_memory_default}" />
 </parameter>
 
 <parameter name="migrateport" unique="0" required="0">
@@ -259,7 +305,7 @@ migration.
 
 <parameter name="save_config_on_stop" unique="0" required="0">
 <longdesc lang="en">
-Changes to a running VM's config are normally lost on stop. 
+Changes to a running VM's config are normally lost on stop.
 This parameter instructs the RA to save the configuration back to the xml file provided in the "config" parameter.
 </longdesc>
 <shortdesc lang="en">Save running VM's config back to its config file</shortdesc>
@@ -332,6 +378,17 @@ Instruct virsh to use specific shutdown mode
 </shortdesc>
 <content type="string" default="${OCF_RESKEY_shutdown_mode_default}"/>
 </parameter>
+
+<parameter name="start_resources">
+<longdesc lang="en">
+Start the virtual storage pools and networks used by the virtual machine before starting it or before live migrating it.
+</longdesc>
+<shortdesc lang="en">
+Ensure the needed virtual storage pools and networks are started
+</shortdesc>
+<content type="boolean" default="${OCF_RESKEY_start_resources_default}"/>
+</parameter>
+
 <parameter name="seapath" unique="0" required="0">
 <longdesc lang="en">
 Work on Seapath cluster.
@@ -375,16 +432,36 @@ set_util_attr() {
 	fi
 }
 
+unset_util_attr() {
+	local attr=$1
+	local cval outp
+
+	outp=$(crm_resource --resource=$OCF_RESOURCE_INSTANCE --utilization --delete-parameter=$attr 2>&1) ||
+	ocf_log warn "crm_resource failed to unset utilization attribute $attr: $outp"
+}
+
 update_utilization() {
 	local dom_cpu dom_mem
 
 	if ocf_is_true "$OCF_RESKEY_autoset_utilization_cpu"; then
-	   dom_cpu=$(LANG=C virsh $VIRSH_OPTIONS dominfo ${DOMAIN_NAME} 2>/dev/null | awk '/CPU\(s\)/{print $2}')
-	   test -n "$dom_cpu" && set_util_attr cpu $dom_cpu
+		dom_cpu=$(LANG=C virsh $VIRSH_OPTIONS dominfo ${DOMAIN_NAME} 2>/dev/null | awk '/CPU\(s\)/{print $2}')
+		test -n "$dom_cpu" && set_util_attr cpu $dom_cpu
+	elif ocf_is_true "$OCF_RESKEY_unset_utilization_cpu"; then
+		unset_util_attr cpu
 	fi
+
+	if ocf_is_true "$OCF_RESKEY_autoset_utilization_host_memory"; then
+		dom_mem=$(LANG=C virsh $VIRSH_OPTIONS dominfo ${DOMAIN_NAME} 2>/dev/null | awk '/Max memory/{printf("%d", $3/1024)}')
+		test -n "$dom_mem" && set_util_attr host_memory "$dom_mem"
+	elif ocf_is_true "$OCF_RESKEY_unset_utilization_host_memory"; then
+		unset_util_attr host_memory
+	fi
+
 	if ocf_is_true "$OCF_RESKEY_autoset_utilization_hv_memory"; then
-	   dom_mem=$(LANG=C virsh $VIRSH_OPTIONS dominfo ${DOMAIN_NAME} 2>/dev/null | awk '/Max memory/{printf("%d", $3/1024)}')
-	   test -n "$dom_mem" && set_util_attr hv_memory "$dom_mem"
+		dom_mem=$(LANG=C virsh $VIRSH_OPTIONS dominfo ${DOMAIN_NAME} 2>/dev/null | awk '/Max memory/{printf("%d", $3/1024)}')
+		test -n "$dom_mem" && set_util_attr hv_memory "$dom_mem"
+	elif ocf_is_true "$OCF_RESKEY_unset_utilization_hv_memory"; then
+		unset_util_attr hv_memory
 	fi
 }
 
@@ -430,14 +507,14 @@ pid_status()
 	case "$emulator" in
 		qemu-kvm|qemu-dm|qemu-system-*)
 			rc=$OCF_NOT_RUNNING
-			ps awx | grep -E "[q]emu-(kvm|dm|system).*-name $DOMAIN_NAME " > /dev/null 2>&1
+			ps awx | grep -E "[q]emu-(kvm|dm|system).*-name ($DOMAIN_NAME|[^ ]*guest=$DOMAIN_NAME(,[^ ]*)?) " > /dev/null 2>&1
 			if [ $? -eq 0 ]; then
 				rc=$OCF_SUCCESS
 			fi
 			;;
 		libvirt_lxc)
 			rc=$OCF_NOT_RUNNING
-			ps awx | grep -E "[l]ibvirt_lxc.*-name $DOMAIN_NAME " > /dev/null 2>&1
+			ps awx | grep -E "[l]ibvirt_lxc.*-name ($DOMAIN_NAME|[^ ]*guest=$DOMAIN_NAME(,[^ ]*)?) " > /dev/null 2>&1
 			if [ $? -eq 0 ]; then
 				rc=$OCF_SUCCESS
 			fi
@@ -458,7 +535,7 @@ pid_status()
 				if [ $? -eq 0 ]; then
 					rc=$OCF_SUCCESS
 				fi
-			else 
+			else
 				ocf_log $loglevel "Unable to determine emulator for $DOMAIN_NAME"
 			fi
 			;;
@@ -510,7 +587,7 @@ VirtualDomain_status() {
 					# During the stop operation, we want to bail out
 					# quickly, so as to be able to force-stop (destroy)
 					# the domain if necessary.
-					ocf_log error "Virtual domain $DOMAIN_NAME has no state during stop operation, bailing out."
+					ocf_exit_reason "Virtual domain $DOMAIN_NAME has no state during stop operation, bailing out."
 					return $OCF_ERR_GENERIC;
 				elif [ "$__OCF_ACTION" = "monitor" ]; then
 					pid_status
@@ -566,6 +643,36 @@ verify_undefined() {
 	fi
 }
 
+start_resources() {
+	local virsh_opts="--connect=$1 --quiet"
+	local pool_state net_state
+	for pool in `sed -n "s/^.*pool=['\"]\([^'\"]\+\)['\"].*\$/\1/gp" ${OCF_RESKEY_config} | sort | uniq`; do
+			pool_state=`LANG=C virsh ${virsh_opts} pool-info ${pool} | sed -n 's/^State: \+\(.*\)$/\1/gp'`
+			if [ "$pool_state" != "running" ]; then
+					virsh ${virsh_opts} pool-start $pool
+					if [ $? -ne 0 ]; then
+							ocf_exit_reason "Failed to start required virtual storage pool ${pool}."
+							return $OCF_ERR_GENERIC
+					fi
+			else
+					virsh ${virsh_opts} pool-refresh $pool
+			fi
+	done
+
+	for net in `sed -n "s/^.*network=['\"]\([^'\"]\+\)['\"].*\$/\1/gp" ${OCF_RESKEY_config} | sort | uniq`; do
+			net_state=`LANG=C virsh ${virsh_opts} net-info ${net} | sed -n 's/^Active: \+\(.*\)$/\1/gp'`
+			if [ "$net_state" != "yes" ]; then
+					virsh ${virsh_opts} net-start $net
+					if [ $? -ne 0 ]; then
+							ocf_exit_reason "Failed to start required virtual network ${net}."
+							return $OCF_ERR_GENERIC
+					fi
+			fi
+	done
+
+	return $OCF_SUCCESS
+}
+
 restore_config() {
 	if ocf_is_true $OCF_RESKEY_seapath  ; then
 		local disk_name=system_$DOMAIN_NAME
@@ -610,6 +717,14 @@ VirtualDomain_start() {
 	# outside of this agent, we have to ensure that the domain
 	# is restored to an 'undefined' state before creating.
 	verify_undefined
+
+	if ocf_is_true "${OCF_RESKEY_start_resources}"; then
+		start_resources ${OCF_RESKEY_hypervisor}
+		rc=$?
+		if [ $rc -eq $OCF_ERR_GENERIC ]; then
+			return $rc
+		fi
+	fi
 
 	if [ -z "${OCF_RESKEY_backingfile}" ]; then
 		virsh $VIRSH_OPTIONS create ${OCF_RESKEY_config}
@@ -823,7 +938,7 @@ mk_migrateuri() {
 				echo "tcp:${migrate_target}:${OCF_RESKEY_migrateport}"
 				;;
 			xen)
-				echo "xenmigr://${migrate_target}"
+				echo "${migrate_target}"
 				;;
 			*)
 				ocf_log warn "$DOMAIN_NAME: Migration via dedicated network currently not supported for ${hypervisor}."
@@ -897,6 +1012,14 @@ VirtualDomain_migrate_to() {
 		# save config if needed
 		if ocf_is_true "$OCF_RESKEY_save_config_on_stop"; then
 			save_config
+		fi
+
+		if ocf_is_true "${OCF_RESKEY_start_resources}"; then
+			start_resources $remoteuri
+			rc=$?
+			if [ $rc -eq $OCF_ERR_GENERIC ]; then
+				return $rc
+			fi
 		fi
 
 		# Live migration speed limit
@@ -991,7 +1114,6 @@ VirtualDomain_monitor() {
 }
 
 VirtualDomain_validate_all() {
-	printenv >> /tmp/log2
 	if ocf_is_true $OCF_RESKEY_force_stop && [ -n "$OCF_RESKEY_snapshot" ]; then
 		ocf_exit_reason "The 'force_stop' and 'snapshot' options can not be used together."
 		return $OCF_ERR_CONFIGURED
@@ -1000,6 +1122,7 @@ VirtualDomain_validate_all() {
 	if [ ! -r $OCF_RESKEY_config ] ; then
 		restore_config
 	fi
+
 	# check if we can read the config file (otherwise we're unable to
 	# deduce $DOMAIN_NAME from it, see below)
 	if [ ! -r $OCF_RESKEY_config ]; then
