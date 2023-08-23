@@ -218,9 +218,6 @@
 - name: Reset ssh connection to allow user changes to affect ansible user
   ansible.builtin.meta:
     reset_connection
-  when:
-    - not revert
-    - groups_changed.changed
 
 - name: Configure sudo to be run only users member of the privileged group
   file:

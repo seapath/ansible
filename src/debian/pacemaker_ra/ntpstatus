@@ -157,7 +157,8 @@ ntpstatus_update() {
     fi
     rc=$?
     case $rc in
-        0) ocf_log info "Updated $OCF_RESKEY_ntpstatus = $status" ;;
+        0) #ocf_log info "Updated $OCF_RESKEY_ntpstatus = $status"
+          ;;
         *) ocf_log warn "Could not update $OCF_RESKEY_ntpstatus = $status: rc=$rc";;
     esac
     if [ $rc -ne 0 ]; then
