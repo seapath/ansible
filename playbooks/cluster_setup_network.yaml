@@ -170,7 +170,6 @@
         when: resolved_conf1.changed or resolved_conf2.changed or resolved_conf3.changed
       when: dns_servers is defined
 
-# TODO : Configure the time management in the Virtual Machine
 - name: Configure TimeMaster
   hosts:
     - cluster_machines
@@ -185,11 +184,6 @@
         state: stopped
         enabled: false
       when: "'systemd-timesyncd' in services"
-    - name: stop and disable chrony
-      service:
-        name: "chrony"
-        state: stopped
-        enabled: false
     - name: Create timemaster configuration
       template:
         src: ../templates/timemaster.conf.j2
@@ -225,6 +219,19 @@
         enabled: true
       when: timemasterconf1.changed or timemasterconf2.changed or timemasterconf3.changed
 
+- name: Stop chrony service
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  become: true
+  tasks:
+    - name: stop and disable chrony
+      service:
+        name: "chrony"
+        state: stopped
+        enabled: false
+
 - name: Configure syslog-ng
   hosts:
     - cluster_machines
@@ -256,7 +263,6 @@
   hosts:
     - cluster_machines
     - standalone_machine
-    - VMs
   become: true
   tasks:
     - name: Create systemd-networkd-wait-online.service.d directory
