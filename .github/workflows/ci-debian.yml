@@ -32,6 +32,10 @@ jobs:
         run: cd ${{ env.WORK_DIR }};
              ci/launch.sh system;
 
+      - name: Launch VM tests
+        run: cd ${{ env.WORK_DIR }};
+             ci/launch.sh vm;
+
       - name: Launch latency tests
         run: cd ${{ env.WORK_DIR }};
              ci/launch.sh latency;

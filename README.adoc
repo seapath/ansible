@@ -292,6 +292,25 @@ Or if you use `cqfd`:
 
  $ cqfd run ansible-playbook -i inventories/cluster_inventory.yaml -i inventories/vm_inventory.yaml playbooks/deploy_vms_cluster.yaml
 
+=== Configuring a virtual machine on seapath
+
+The deployed virtual machine doesn't contains all the configuration of the SEAPATH project. It needs to be configured and hardened.
+
+Launch the configuration with the command:
+
+ $ ansible-playbook -i inventories/cluster_inventory.yaml -i inventories/vm_inventory.yaml playbooks/cluster_setup_debian.yaml --limit VMs
+
+and the hardening with the command:
+
+ $ ansible-playbook -i inventories/cluster_inventory.yaml -i inventories/vm_inventory.yaml playbooks/cluster_setup_hardened_debian.yaml --limit VMs
+
+If you use `cqfd`, you can launch these commands :
+
+ $ cqfd run ansible-playbook -i inventories/cluster_inventory.yaml -i inventories/vm_inventory.yaml playbooks/cluster_setup_debian.yaml --limit VMs
+ $ cqfd run ansible-playbook -i inventories/cluster_inventory.yaml -i inventories/vm_inventory.yaml playbooks/cluster_setup_hardened_debian.yaml --limit VMs
+
+Don't forget the `--limit VMs` at the end of the line, this word allow to target only the VM and not the physical machines.
+The physical machines are already configured at this time so we want the configuration to apply only to the VM.
 
 == Contributing to SEAPATH
 

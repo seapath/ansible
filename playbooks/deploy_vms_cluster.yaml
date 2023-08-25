@@ -21,6 +21,8 @@
         command: create
         system_image: /tmp/os_{{ item }}.qcow2
         force: true
+        live_migration: true
+        migration_user: "{{ livemigration_user }}"
         enable: true
         pinned_host: "{{ hostvars[item].pinned_host | default(None) }}"
         preferred_host: "{{ hostvars[item].preferred_host | default(None) }}"

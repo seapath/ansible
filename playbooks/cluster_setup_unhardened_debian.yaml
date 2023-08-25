@@ -27,6 +27,7 @@
   hosts:
     - cluster_machines
     - standalone_machine
+    - VMs
   tasks:
     - name: Reboot
       reboot:
