@@ -41,7 +41,7 @@ destination d_net {
         network(
                 "{{ syslog_server_ip }}"
 {% if syslog_tls_ca is defined and syslog_tls_key is defined %}
-                port(6514)
+                port({{ syslog_tls_port | default(6514) }})
                 transport("tls")
                 tls(
                         key-file("/etc/syslog-ng/cert.d/clientkey.pem")
@@ -49,7 +49,7 @@ destination d_net {
                         ca-dir("/etc/syslog-ng/ca.d")
                 )
 {% else %}
-                port(5054)
+                port({{ syslog_tcp_port | default(601) }})
                 transport("tcp")
 {% endif %}
                 time_zone("UTC")
