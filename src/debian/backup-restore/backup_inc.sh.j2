@@ -26,4 +26,4 @@ do
   echo backuping metadata
   rbd image-meta list rbd/$i > $latest_full/$i-meta-$d.txt
 done
-rsync -ave ssh --progress $latest_full $remote_dir
+rsync -ave '{{ backuprestore_rsync_remote_shell | default('ssh') }}' --progress $latest_full $remote_dir

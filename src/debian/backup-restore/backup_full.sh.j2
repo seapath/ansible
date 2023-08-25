@@ -31,4 +31,4 @@ do
   qemu-img convert -f raw -O qcow2 rbd:rbd/$i@$d $f/$i"_"$d.qcow2
   echo ----
 done
-rsync -ave ssh --progress $f $remote_dir
+rsync -ave '{{ backuprestore_rsync_remote_shell | default('ssh') }}' --progress $f $remote_dir

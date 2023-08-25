@@ -265,3 +265,6 @@ all:
           - primitive ptpstatus_test ocf:seapath:ptpstatus op monitor timeout=10 interval=10 op_params multiplier=1000
           - clone cl_ntpstatus_test ntpstatus_test meta target-role=Started
           - clone cl_ptpstatus_test ptpstatus_test meta target-role=Started
+
+        #backup-restore uses rsync to connect to the offsite storage server, with the -e (remote shell) option. Default remote shell is "ssh" but you can override it here. This it particularly useful to change the port used by ssh.
+        backuprestore_rsync_remote_shell: "ssh -p 22"

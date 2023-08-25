@@ -60,14 +60,11 @@
       - "--exclude=*.j2"
 - name: Copy backup-restore templates
   template:
-    src: ../src/debian/backup-restore/{{ item.src }}
-    dest: /usr/local/bin/{{ item.dest }}
+    src: "{{ item }}"
+    dest: /usr/local/bin/{{ item | basename | regex_replace('\.j2$', '') }}
     mode: '0755'
-  with_items:
-    - src:
-        restore_vm.sh.j2
-      dest:
-        restore_vm.sh
+  with_fileglob:
+    - ../src/debian/backup-restore/*.j2
 
 - name: create /usr/lib/ocf/resource.d/seapath on hosts
   file:

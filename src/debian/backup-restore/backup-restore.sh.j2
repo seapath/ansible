@@ -15,7 +15,7 @@ function addExitToArray {
 }
 function addIndexToArray {
   local -n myarray=$1
-  for idx in `seq 1 ${#myarray[@]}`; do
+  for idx in `seq 1 ${{ '{#' }}myarray[@]}`; do
     arrVar+=($idx")")
     arrVar+=("${myarray[$(($idx-1))]}")
   done
@@ -41,7 +41,7 @@ function restoreVMChooseFullDate {
     [ -z "$remote_dir" ] && { whiptail --msgbox "var remote_dir empty" 10 50; break; }
     [ -z "$remote_serv" ] && { whiptail --msgbox "var remote_serv empty" 10 50; break; }
 
-    local listFullDate=($(ssh $remote_serv "cd $remote_dir ; ls"))
+    local listFullDate=($({{ backuprestore_rsync_remote_shell | default('ssh') }} $remote_serv "cd $remote_dir ; ls"))
     local arrVar=()
     addIndexToArray listFullDate
     addExitToArray arrVar
@@ -61,7 +61,7 @@ function restoreVMChooseFullDate {
 function restoreVMChooseVM {
   while [ 1 ]
   do
-    local listVM=($(ssh $remote_serv "cd $remote_dir ; cd $fulldate; ls *.qcow2 | grep -E "^system_" | cut -d"_" -f 2 | sort -u"))
+    local listVM=($({{ backuprestore_rsync_remote_shell | default('ssh') }} $remote_serv "cd $remote_dir ; cd $fulldate; ls *.qcow2 | grep -E "^system_" | cut -d"_" -f 2 | sort -u"))
     local arrVar=()
     addIndexToArray listVM
     addExitToArray arrVar
@@ -79,7 +79,7 @@ function restoreVMChooseVM {
   done
 }
 function restoreVMChooseIncDate {
-  local listIncDateRaw=($(ssh $remote_serv "cd $remote_dir ; cd $fulldate; ls *_""$vm""-*.xml | cut -d- -f2 | cut -d. -f1"))
+  local listIncDateRaw=($({{ backuprestore_rsync_remote_shell | default('ssh') }} $remote_serv "cd $remote_dir ; cd $fulldate; ls *_""$vm""-*.xml | cut -d- -f2 | cut -d. -f1"))
   local listIncDate=()
   for idx in ${listIncDateRaw[@]}; do
     e=`echo "$idx" | sed 's/./&-/4;s/./&-/7;s/./& /10;s/./&:/13'`
