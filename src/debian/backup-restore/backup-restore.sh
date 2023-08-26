@@ -32,6 +32,8 @@ function getVarsOld {
   remote_dir=$value
   readVar local_tmp_dir
   local_tmp_dir=$value
+  readVar remote_shell
+  remote_shell=$value
 }
 function restoreVMChooseFullDate {
   while [ 1 ]
@@ -40,8 +42,9 @@ function restoreVMChooseFullDate {
     [ -z "$local_tmp_dir" ] && { whiptail --msgbox "var local_tmp_dir empty" 10 50; break; }
     [ -z "$remote_dir" ] && { whiptail --msgbox "var remote_dir empty" 10 50; break; }
     [ -z "$remote_serv" ] && { whiptail --msgbox "var remote_serv empty" 10 50; break; }
+    [ -z "$remote_shell" ] && { whiptail --msgbox "var remote_shell empty" 10 50; break; }
 
-    local listFullDate=($(ssh $remote_serv "cd $remote_dir ; ls"))
+    local listFullDate=($($remote_shell $remote_serv "cd $remote_dir ; ls"))
     local arrVar=()
     addIndexToArray listFullDate
     addExitToArray arrVar
@@ -61,7 +64,7 @@ function restoreVMChooseFullDate {
 function restoreVMChooseVM {
   while [ 1 ]
   do
-    local listVM=($(ssh $remote_serv "cd $remote_dir ; cd $fulldate; ls *.qcow2 | grep -E "^system_" | cut -d"_" -f 2 | sort -u"))
+    local listVM=($($remote_shell $remote_serv "cd $remote_dir ; cd $fulldate; ls *.qcow2 | grep -E "^system_" | cut -d"_" -f 2 | sort -u"))
     local arrVar=()
     addIndexToArray listVM
     addExitToArray arrVar
@@ -79,7 +82,7 @@ function restoreVMChooseVM {
   done
 }
 function restoreVMChooseIncDate {
-  local listIncDateRaw=($(ssh $remote_serv "cd $remote_dir ; cd $fulldate; ls *_""$vm""-*.xml | cut -d- -f2 | cut -d. -f1"))
+  local listIncDateRaw=($($remote_shell $remote_serv "cd $remote_dir ; cd $fulldate; ls *_""$vm""-*.xml | cut -d- -f2 | cut -d. -f1"))
   local listIncDate=()
   for idx in ${listIncDateRaw[@]}; do
     e=`echo "$idx" | sed 's/./&-/4;s/./&-/7;s/./& /10;s/./&:/13'`
@@ -100,7 +103,7 @@ function restoreVMChooseIncDate {
   #incdate=${arrVar[$d]}
   d=$(($c-1))
   incdate=${listIncDateRaw[$d]}
-  /usr/local/bin/restore_vm.sh $local_tmp_dir $remote_serv:$remote_dir $fulldate $vm $incdate
+  /usr/local/bin/restore_vm.sh $local_tmp_dir "$remote_shell" $remote_serv:$remote_dir $fulldate $vm $incdate
 }
 function writeVar {
   key=$1
@@ -116,14 +119,16 @@ function readVar {
 function backupFull {
   getVars
   [ -z "$remote_dir" ] && { whiptail --msgbox "var remote_dir empty" 10 50; return; }
+  [ -z "$remote_shell" ] && { whiptail --msgbox "var remote_shell empty" 10 50; return; }
   [ -z "$remote_serv" ] && { whiptail --msgbox "var remote_serv empty" 10 50; return; }
-  /usr/local/bin/backup_full.sh $local_dir $remote_serv":"$remote_dir
+  /usr/local/bin/backup_full.sh $local_dir "$remote_shell" $remote_serv":"$remote_dir
 }
 function backupInc {
   getVars
   [ -z "$remote_dir" ] && { whiptail --msgbox "var remote_dir empty" 10 50; return; }
+  [ -z "$remote_shell" ] && { whiptail --msgbox "var remote_shell empty" 10 50; return; }
   [ -z "$remote_serv" ] && { whiptail --msgbox "var remote_serv empty" 10 50; return; }
-  /usr/local/bin/backup_inc.sh $local_dir $remote_serv":"$remote_dir
+  /usr/local/bin/backup_inc.sh $local_dir "$remote_shell" $remote_serv":"$remote_dir
 }
 function getValueForVar {
    var=$1
@@ -142,6 +147,7 @@ function settings {
           "2)" "change value remote_serv, currently \"$remote_serv\""   \
           "3)" "change value remote_dir, currently \"$remote_dir\""   \
           "4)" "change value local_tmp_dir, currently \"$local_tmp_dir\""   \
+          "5)" "change value remote_shell, currently \"$remote_shell\""   \
           3>&2 2>&1 1>&3
     )
     [[ "$?" = 1 ]] && break
@@ -153,6 +159,8 @@ function settings {
       "3)") getValueForVar remote_dir
       ;;
       "4)") getValueForVar local_tmp_dir
+      ;;
+      "5)") getValueForVar remote_shell
       ;;
     esac
   done

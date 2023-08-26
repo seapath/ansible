@@ -60,14 +60,28 @@
       - "--exclude=*.j2"
 - name: Copy backup-restore templates
   template:
-    src: ../src/debian/backup-restore/{{ item.src }}
-    dest: /usr/local/bin/{{ item.dest }}
+    src: "{{ item }}"
+    dest: /usr/local/bin/{{ item | basename | regex_replace('\.j2$', '') }}
     mode: '0755'
-  with_items:
-    - src:
-        restore_vm.sh.j2
-      dest:
-        restore_vm.sh
+  with_fileglob:
+    - ../src/debian/backup-restore/*.j2
+- name: create /etc/backup-restore.conf file
+  file:
+    path: "/etc/backup-restore.conf"
+    state: touch
+    mode: 0644
+    owner: root
+    group: root
+- name: check configuration of backup-restore.sh tool (remote_shell)
+  shell: 'grep -c "^remote_shell=" /etc/backup-restore.conf || true'
+  register: check_remote_shell
+- name: add default configuration of backup-restore.sh tool (remote_shell)
+  lineinfile:
+    dest: /etc/backup-restore.conf
+    regexp: "^remote_shell="
+    line: "remote_shell=\"ssh\""
+    state: present
+  when: check_remote_shell.stdout == "0"
 
 - name: create /usr/lib/ocf/resource.d/seapath on hosts
   file:
