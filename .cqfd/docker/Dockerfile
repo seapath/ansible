@@ -1,40 +1,26 @@
 # Copyright (C) 2021, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
-FROM ubuntu:22.04
+FROM debian:12
 
-ENV DEBIAN_FRONTEND noninteractive
-
-ENV LANG en_US.UTF-8
-ENV LANGUAGE en_US.UTF-8
-ENV LC_ALL en_US.UTF-8
+ENV DEBIAN_FRONTEND=noninteractive \
+    LANG=en_US.UTF-8 \
+    LANGUAGE=en_US.UTF-8 \
+    LC_ALL=en_US.UTF-8
 
 RUN set -x \
     && apt-get update \
     && apt-get install -y \
-        ansible-lint \
-        bash \
-        docker.io \
-        docker-compose \
         git \
-        locales \
-        python3-docutils \
-        python3-libvirt \
-        python3-netaddr \
-        python3-pip \
-        python3-pygments \
-        python3-sphinx \
-        python3-sphinx-notfound-page \
+        python3-full \
         rstcheck \
         rsync \
         ruby-asciidoctor-pdf \
-        ssh \
         vim \
-        yamllint \
-    && sed -i "s/# en_US\.UTF-8 UTF-8/en_US\.UTF-8 UTF-8/" /etc/locale.gen \
-    && locale-gen \
-    && dpkg-reconfigure locales \
-    && pip install "ansible>=2.9,<2.10,!=2.9.10" \
+    && python3 -m venv --system-site-packages /env \
+    && /env/bin/pip install ansible==2.9.27 ansible-lint==5.4.0 yamllint six netaddr \
     && rm -rf /var/lib/{apt,dpkg,cache,log}/*
+
+ENV PATH="$PATH:/env/bin:/env/usr/bin:/env/sbin:/env/usr/sbin"
 
 COPY check_yaml.sh /usr/bin/check_yaml
