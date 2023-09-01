@@ -35,7 +35,7 @@ if ! command -v ansible-galaxy &>/dev/null ; then
 fi
 
 echo "Test python3 netaddr module is installed"
-if ! cat << EOF | python3 &>/dev/null
+if ! cat << EOF | /env/bin/python3 &>/dev/null
 import netaddr
 EOF
 then
