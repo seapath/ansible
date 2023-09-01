@@ -55,7 +55,7 @@ echo "Update git submodules"
 git submodule update --init --force
 
 echo "Copy ceph-ansible site.yml"
-cp -vf src/ceph-ansible-site.yaml ceph-ansible/site.yml
+cp -vf ceph-ansible/site.yml.sample ceph-ansible/site.yml
 
 echo "Patch ceph-ansible"
 find src/ceph-ansible-patches -type f -name "*.diff" -exec git -C ceph-ansible \
