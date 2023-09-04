@@ -17,16 +17,13 @@ esac
 
 . /scripts/functions
 
-# TIMEOUT=600 # How much time to wait for the merge to complete before panic'ing (empty/undef for unlimited)
-# TODO make a proper config entry? (/conf/initramfs.conf)
-
 if [ ! -x "/sbin/lvm" ]; then
    panic "lvs executable not found"
 fi
 
-is_lvm_snapshot_merging() {
-	lv_merging_nb=$(/sbin/lvm lvs --select 'lv_merging!=0' | /usr/bin/wc -l)
-	test $lv_merging_nb -ne 0
+get_lv_snapshot_merging() {
+	# This will print a list of "vg/lv" marked for merging
+	/sbin/lvm lvs --select 'lv_merging!=0' --noheadings --separator '/' -o vg_name,lv_name
 }
 
 log_begin_msg "Starting LVM Snapshot rebooter"
@@ -34,19 +31,15 @@ log_begin_msg "Starting LVM Snapshot rebooter"
 # Wait for LVM elements to appear and be activated by udev
 wait_for_udev 10
 
-if is_lvm_snapshot_merging; then
+lv_merging=$(get_lv_snapshot_merging)
+if [ -n "$lv_merging" ] ; then
 	log_end_msg
-	/sbin/lvm vgchange -a y
-	log_begin_msg "Waiting for snapshot merging to complete..."
-	count=0
-	while is_lvm_snapshot_merging; do
-		count=$(( count + 1 ))
-		sleep 1
-		if [ -n "$TIMEOUT" ] && [ "$count" -gt "$TIMEOUT" ]; then
-			panic "Timeout while waiting for LVM snapshot merging!"
-		fi
+	for lv in $lv_merging; do
+		log_begin_msg "  Merging $lv"
+		/sbin/lvm lvchange --sysinit -ay "$lv" # lvmpolld/dmeventd no yet available
+		/sbin/lvm lvpoll --polloperation merge --interval 1 --config activation/monitoring=0 "$lv"
+		log_end_msg
 	done
-
 	log_success_msg "Snapshot merging complete, rebooting..."
 	sleep 3 # To allow display on console
 
@@ -56,4 +49,3 @@ else
 fi
 
 exit 0
-
