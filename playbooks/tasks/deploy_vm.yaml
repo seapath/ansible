@@ -15,7 +15,7 @@
 
   - name: "Copy {{ item }} system disk on target"
     copy:
-      src: "{{ vms_disks_directory }}/{{ item }}.qcow2"
+      src: "{{ hostvars[item].qcow2_path | default(vms_disks_directory + '/' + item + '.qcow2') }}"
       dest: /tmp/os.qcow2
     # if you change the destination, you must think about also changing the temporary upload folder. Beware, ansible needs write privilege to this folder
     #vars:
@@ -26,7 +26,7 @@
       command: create
       system_image: /tmp/os.qcow2
       force: true
-      xml: "{{ lookup('file', vms_config_directory + '/' + item + '.xml') }}"
+      xml: "{{ lookup('file', hostvars[item].xml_path | default(vms_disks_directory + '/' + item + '.xml')) }}"
       pinned_host: "{{ hostvars[item].pinned_host | default('') }}"
       preferred_host: "{{ hostvars[item].preferred_host | default('') }}"
       live_migration: "{{ hostvars[item].live_migration | default('') }}"
