@@ -3,27 +3,40 @@
 # Task to deploy a VM
 
 ---
-- name: "Copy {{ item }} system disk on target"
-  copy:
-    src: "{{ vms_disks_directory }}/{{ item }}.qcow2"
-    dest: /data/os.qcow2
-  vars:
-    ansible_remote_tmp: "/data/.ansible"
-- name: "Create {{ item }}"
+- name: "check presence of vm before copy"
   cluster_vm:
+    command: status
     name: "{{ item }}"
-    command: create
-    system_image: /data/os.qcow2
-    force: true
-    xml: "{{ lookup('file', vms_config_directory + '/' + item + '.xml') }}"
-    pinned_host: "{{ hostvars[item].pinned_host | default('') }}"
-    preferred_host: "{{ hostvars[item].preferred_host | default('') }}"
-    live_migration: "{{ hostvars[item].live_migration | default('') }}"
-    migration_user: "{{ hostvars[item].migration_user | default('') }}"
-    migrate_to_timeout: "{{ hostvars[item].migrate_to_timeout | default('') }}"
-    crm_config_cmd: "{{ hostvars[item].crm_config_cmd | default(omit) }}"
-    enable: "{{ hostvars[item].enable | default(true) }}"
-- name: Remove temporary file
-  file:
-    path: "/data/os.qcow2"
-    state: absent
+  register: presencevm
+- debug:
+    var: presencevm
+
+- block:
+
+  - name: "Copy {{ item }} system disk on target"
+    copy:
+      src: "{{ vms_disks_directory }}/{{ item }}.qcow2"
+      dest: /tmp/os.qcow2
+    # if you change the destination, you must think about also changing the temporary upload folder. Beware, ansible needs write privilege to this folder
+    #vars:
+    #  ansible_remote_tmp: "/data/.ansible"
+  - name: "Create {{ item }}"
+    cluster_vm:
+      name: "{{ item }}"
+      command: create
+      system_image: /tmp/os.qcow2
+      force: true
+      xml: "{{ lookup('file', vms_config_directory + '/' + item + '.xml') }}"
+      pinned_host: "{{ hostvars[item].pinned_host | default('') }}"
+      preferred_host: "{{ hostvars[item].preferred_host | default('') }}"
+      live_migration: "{{ hostvars[item].live_migration | default('') }}"
+      migration_user: "{{ hostvars[item].migration_user | default('') }}"
+      migrate_to_timeout: "{{ hostvars[item].migrate_to_timeout | default('') }}"
+      crm_config_cmd: "{{ hostvars[item].crm_config_cmd | default(omit) }}"
+      enable: "{{ hostvars[item].enable | default(true) }}"
+  - name: Remove temporary file
+    file:
+      path: "/tmp/os.qcow2"
+      state: absent
+
+  when: presencevm.status == "Undefined" or (hostvars[item].force is defined and hostvars[item].force)
