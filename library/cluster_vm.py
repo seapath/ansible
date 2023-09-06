@@ -577,8 +577,6 @@ def run_module():
             result["status"] = vm_manager.status(vm_name)
         elif command == "enable":
             vm_manager.enable_vm(vm_name)
-        elif command == "status":
-            result["status"] = vm_manager.status(vm_name)
         elif command == "create_snapshot":
             vm_manager.create_snapshot(vm_name, snapshot_name)
         elif command == "purge_image":
