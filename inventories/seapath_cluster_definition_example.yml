@@ -228,6 +228,9 @@ all:
         vm_directory: "/mnt/seapath/vm/"
         vms_disks_directory: "{{ vm_directory }}"
         vms_config_directory: "{{ vm_directory }}"
+        # qcow2tmpuploadfolder: folder to store the qcow2 file while importing a guest.
+        #qcow2tmpuploadfolder: "/data/.ansible"
+
 
         # Grub password
         # The password hash generated with "grub-mkpasswd-pbkdf2 -c 65536 -s 256 -l 64", in this example the pass is "toto"
