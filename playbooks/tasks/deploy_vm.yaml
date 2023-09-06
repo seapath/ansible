@@ -6,12 +6,14 @@
 - name: "Copy {{ item }} system disk on target"
   copy:
     src: "{{ vms_disks_directory }}/{{ item }}.qcow2"
-    dest: /tmp/os.qcow2
+    dest: /data/os.qcow2
+  vars:
+    ansible_remote_tmp: "/data/.ansible"
 - name: "Create {{ item }}"
   cluster_vm:
     name: "{{ item }}"
     command: create
-    system_image: /tmp/os.qcow2
+    system_image: /data/os.qcow2
     force: true
     xml: "{{ lookup('file', vms_config_directory + '/' + item + '.xml') }}"
     pinned_host: "{{ hostvars[item].pinned_host | default('') }}"
@@ -23,5 +25,5 @@
     enable: "{{ hostvars[item].enable | default(true) }}"
 - name: Remove temporary file
   file:
-    path: "/tmp/os.qcow2"
+    path: "/data/os.qcow2"
     state: absent
