@@ -32,7 +32,6 @@ all:
                             br_rstp_priority: 12288
                             brBRIDGE1_ext: eno1234 #physical nic to use with BRIDGE1 (see the ovs topology inventory)
 
-                            main_disk: /dev/sda # disk for system
                         node2:
                             # ansbile variables
                             ansible_host: 10.10.10.2
@@ -60,7 +59,6 @@ all:
                             br_rstp_priority: 16384
                             brBRIDGE1_ext: eno1234 #physical nic to use with BRIDGE1 (see the ovs topology inventory)
 
-                            main_disk: /dev/sda # disk for system
                         node3:
                             # ansbile variables
                             ansible_host: 10.10.10.3
@@ -88,7 +86,6 @@ all:
                             br_rstp_priority: 16384
                             brBRIDGE1_ext: eno1234 #physical nic to use with BRIDGE1 (see the ovs topology inventory)
 
-                            main_disk: /dev/sda
 
                     # hypervisors common vars
                     vars:
