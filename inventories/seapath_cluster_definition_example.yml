@@ -127,9 +127,9 @@ all:
                   enable: false
                   ##Instead of preferred_host or pinned_host, you can add more complex rules here
                   #crm_config_cmd:
-                  #  - location ntpstatus_location_test test rule ntpstatus: defined ntpstatus
-                  #  - location ptpstatus_location_test test rule ptpstatus: defined ptpstatus
-                  #  - location cli-prefer-test test role=Started 100: virtu-elabo1
+                  #  - "location ntpstatus_location_test test rule ntpstatus: defined ntpstatus"
+                  #  - "location ptpstatus_location_test test rule ptpstatus: defined ptpstatus"
+                  #  - "location cli-prefer-test test role=Started 100: virtu-elabo1"
 
         # Ceph groups
         # All machines in the cluster must be part of mons groups
@@ -206,7 +206,7 @@ all:
         configure_firewall: false
         ntp_service_enabled: false
         ceph_origin: distro
-        monitor_address: "{{ cluster_ip_address }}"
+        monitor_address: "{{ cluster_ip_addr }}"
         public_network: "192.168.55.0/24"
         cluster_network: "{{ public_network }}"
         ceph_conf_overrides:
