@@ -125,11 +125,12 @@ all:
                   preferred_host: "node3"
                   migrate_to_timeout: 180
                   enable: false
+                  force: false #Optionnal, default=false
                   ##Instead of preferred_host or pinned_host, you can add more complex rules here
                   #crm_config_cmd:
-                  #  - "location ntpstatus_location_test test rule ntpstatus: defined ntpstatus"
-                  #  - "location ptpstatus_location_test test rule ptpstatus: defined ptpstatus"
-                  #  - "location cli-prefer-test test role=Started 100: virtu-elabo1"
+                  #  - "location cli-prefer-{{ inventory_hostname}} {{ inventory_hostname}} role=Started 100: virtu-elabo1"
+                  #  - "location ntpstatus_location_{{ inventory_hostname}} {{ inventory_hostname}} rule ntpstatus: defined ntpstatus"
+                  #  - "location ptpstatus_location_{{ inventory_hostname}} {{ inventory_hostname}} rule ptpstatus: defined ptpstatus"
 
         # Ceph groups
         # All machines in the cluster must be part of mons groups
