@@ -7,5 +7,5 @@ After=ceph.target
 WantedBy=corosync.service
 
 [Service]
-TimeoutStopSec=2min
+TimeoutStopSec={{ pacemaker_shutdown_timeout | default("2min") }}
 TimeoutStartSec=60s

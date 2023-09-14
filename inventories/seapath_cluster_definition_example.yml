@@ -261,6 +261,7 @@ all:
         # account used for libvirt live-migration
         livemigration_user: livemigration
 
+        #pacemaker_shutdown_timeout: "2min"
         extra_crm_cmd_to_run:
           - primitive ntpstatus_test ocf:seapath:ntpstatus params host_ip=ntp.unice.fr multiplier=500 op monitor timeout=10 interval=10
           - primitive ptpstatus_test ocf:seapath:ptpstatus op monitor timeout=10 interval=10 op_params multiplier=1000
