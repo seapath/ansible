@@ -120,8 +120,8 @@
     group: root
     mode: 0755
 - name: Copy pacemaker.service drop-in
-  ansible.builtin.copy:
-    src: ../src/debian/pacemaker_override.conf
+  template:
+    src: ../src/debian/pacemaker_override.conf.j2
     dest: /etc/systemd/system/pacemaker.service.d/override.conf
     owner: root
     group: root
