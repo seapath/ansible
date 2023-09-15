@@ -33,7 +33,7 @@
       command: create
       system_image: "{{ qcow2tmpuploadfolder | default('/tmp') + '/' + 'os.qcow2' }}"
       force: true
-      xml: "{{ lookup('file', hostvars[item].xml_path | default(vms_disks_directory + '/' + item + '.xml')) }}"
+      xml: "{{ lookup('file', hostvars[item].xml_path | default(vms_disks_directory + '/' + item + '.xml')) | replace('\n', '') }}"
       pinned_host: "{{ hostvars[item].pinned_host | default('') }}"
       preferred_host: "{{ hostvars[item].preferred_host | default('') }}"
       live_migration: "{{ hostvars[item].live_migration | default('') }}"
