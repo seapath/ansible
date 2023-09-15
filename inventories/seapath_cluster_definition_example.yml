@@ -101,6 +101,7 @@ all:
                         syslog_server_ip: "10.10.10.10" # If not set, syslog will not send any logs from network
                         syslog_tls_port: 6514 #optional: default is 6514
                         syslog_tcp_port: 514 #optional: default is 601. Used only if syslog_tls_ca and syslog_tls_key are not defined
+                        #OPTIONAL
                         logstash_server_ip: 10.10.10.10
 
                         # Realtime/CPUs cgroups isolation configuration

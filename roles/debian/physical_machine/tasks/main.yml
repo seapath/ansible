@@ -270,6 +270,7 @@
     regexp: '.* logstash-seapath$'
     line: "{{ logstash_server_ip }} logstash-seapath"
     state: present
+  when: logstash_server_ip is defined
 
 - name: Make libvirt use the "machine-id" way to determine host UUID
   lineinfile:
