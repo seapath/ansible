@@ -23,4 +23,8 @@ extend cephstatus /usr/bin/timeout 2s /usr/bin/sudo -u ceph /usr/local/bin/snmp_
 extend cephusage /usr/bin/timeout 2s /usr/bin/sudo -u ceph /usr/local/bin/snmp_cephusage.sh
 extend diskusage /usr/bin/timeout 40s /usr/bin/sudo /usr/local/bin/snmp_diskusage.sh
 extend tempdisk /usr/bin/timeout 2s /usr/bin/sudo /usr/local/bin/snmp_tempdisk.sh
+extend ipmisensor /usr/bin/timeout 10s /usr/bin/sudo /usr/local/bin/snmp_ipmitool_sensor.sh
+extend ipmisensorv /usr/bin/timeout 10s /usr/bin/sudo /usr/local/bin/snmp_ipmitool_sensor_v.sh
+extend ipmisdrlist /usr/bin/timeout 10s /usr/bin/sudo /usr/local/bin/snmp_ipmitool_sdrlist.sh
+extend ipmisdrlistv /usr/bin/timeout 10s /usr/bin/sudo /usr/local/bin/snmp_ipmitool_sdrlist_v.sh
 agentAddress udp:{{ admin_ip_addr }}:161
