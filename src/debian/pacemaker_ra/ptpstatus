@@ -137,7 +137,12 @@ $(env | sort)
 }
 
 ptpstatus_update() {
-    status=`/usr/bin/chronyc sources | grep "#\* PTP0" | wc -l`
+    status=`/usr/bin/chronyc -n sources | grep "#\* PTP0" | wc -l`
+    case "${status#[+]}" in
+        ''|*[!0-9]*)
+            status=0
+          ;;
+    esac
     status=$(expr $status \* $OCF_RESKEY_multiplier)
     if [ "$__OCF_ACTION" = "start" ] ; then
         attrd_updater -n "$OCF_RESKEY_ptpstatus" -B "$status" -d "$OCF_RESKEY_dampen" $attrd_options
