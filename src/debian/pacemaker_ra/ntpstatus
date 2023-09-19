@@ -148,7 +148,12 @@ ntpstatus_update() {
     # get the 5th column from chrony sources output (reach), convert from octal to binary and get the last digit (last contact with server)
     # 1 --> last contact fine
     # 0 --> last contact problem
-    status=`/usr/bin/chronyc sources | grep -E "$OCF_RESKEY_host_ip" | awk '{print $5}' | python3 -c "import sys;print(\"{0:b}\".format(int(input(),8))[-1])"`
+    status=`echo $(/usr/bin/chronyc -n sources | grep -E "$OCF_RESKEY_host_ip" | awk '{print $5}') | python3 -c "print(\"{0:b}\".format(int(input() or \"0\",8))[-1])"`
+    case "${status#[+]}" in
+        ''|*[!0-9]*)
+            status=0
+          ;;
+    esac
     status=$(expr $status \* $OCF_RESKEY_multiplier)
     if [ "$__OCF_ACTION" = "start" ] ; then
         attrd_updater -n "$OCF_RESKEY_ntpstatus" -B "$status" -d "$OCF_RESKEY_dampen" $attrd_options
