@@ -195,7 +195,7 @@ all:
         gateway_addr: 10.0.0.1
         dns_servers: "8.8.8.8 8.8.4.4"
         apply_network_config: true
-        ntp_servers: 
+        ntp_servers:
             - "185.254.101.25"
             - "51.145.123.29"
 
@@ -264,7 +264,8 @@ all:
 
         #pacemaker_shutdown_timeout: "2min"
         extra_crm_cmd_to_run:
-          - primitive ntpstatus_test ocf:seapath:ntpstatus params host_ip=ntp.unice.fr multiplier=500 op monitor timeout=10 interval=10
+          # for ntp status monitoting, be sure host_ip is the ip address of the server and not its hostname
+          - primitive ntpstatus_test ocf:seapath:ntpstatus params host_ip=10.10.10.10 multiplier=500 op monitor timeout=10 interval=10
           - primitive ptpstatus_test ocf:seapath:ptpstatus op monitor timeout=10 interval=10 op_params multiplier=1000
           - clone cl_ntpstatus_test ntpstatus_test meta target-role=Started
           - clone cl_ptpstatus_test ptpstatus_test meta target-role=Started
