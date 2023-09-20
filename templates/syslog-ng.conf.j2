@@ -67,9 +67,20 @@ destination d_net {
 # Log paths
 ########################
 {% if syslog_local is defined %}
-log { source(s_src); destination(d_syslog); };
+log { 
+    source(s_src);
+    destination(d_syslog);
+};
 {% endif %}
 {% if syslog_server_ip is defined %}
-log { source(s_src); destination(d_net); };
+log { 
+    source(s_src);
+{% if ansible_distribution == 'Debian' and ansible_distribution_version | int < 12 %}
+    if (program("libvirtd")) {
+      rewrite { set-facility("daemon"); };
+    };
+{% endif %}
+    destination(d_net);
+};
 {% endif %}
 
