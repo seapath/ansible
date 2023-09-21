@@ -136,14 +136,14 @@
   become: true
   tasks:
     - block:
-      - name: configure /etc/systemd/resolved.conf
+      - name: configure LLMNR /etc/systemd/resolved.conf
         lineinfile:
           dest: /etc/systemd/resolved.conf
           regexp: "^#?LLMNR="
           line: "LLMNR=no"
           state: present
         register: resolved_conf1
-      - name: configure /etc/systemd/resolved.conf
+      - name: configure DNS /etc/systemd/resolved.conf
         lineinfile:
           dest: /etc/systemd/resolved.conf
           regexp: "^#?DNS="
