@@ -211,6 +211,8 @@
     src: ../src/debian/snmpd.conf.j2
     dest: /etc/snmp/snmpd.conf
     mode: '0644'
+    owner: root
+    group: root
   register: snmpd_conf
 - name: Wait for DHCP for SNMP
   lineinfile:
