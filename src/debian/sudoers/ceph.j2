@@ -10,4 +10,6 @@
 # The replace directive add an escape backslash before the colon character
 # for the file to be properly parsed.
 
-ceph ALL=NOPASSWD: /usr/sbin/smartctl -a --json=o {{ ceph_osd_disk_stat.stat.lnk_source if ceph_osd_disk is defined else none }}
+{% if ceph_osd_disk is defined %}
+ceph ALL=NOPASSWD: /usr/sbin/smartctl -a --json=o {{ ceph_osd_disk_stat.stat.lnk_source }}
+{% endif %}
