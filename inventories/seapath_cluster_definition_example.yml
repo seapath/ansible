@@ -27,6 +27,7 @@ all:
                             # Cluster network settings
                             team0_0: "eno12399" # cluster network first interface
                             team0_1: "eno12409" # cluster network second interface
+                            #hsr_mac_address: "70:FF:76:1C:0E:8C" # if using HSR for cluster network, you need to specify the mac address for each host
                             cluster_next_ip_addr : "192.168.55.2" #node 2 cluster network ip
                             cluster_previous_ip_addr : "192.168.55.3" #node 3 cluster network ip
                             cluster_ip_addr: "192.168.55.1"
@@ -66,6 +67,7 @@ all:
                             # Cluster network settings
                             team0_0: "eno12399"
                             team0_1: "eno12409"
+                            #hsr_mac_address: "70:FF:76:1C:0E:8D" # if using HSR for cluster network, you need to specify the mac address for each host
                             cluster_next_ip_addr : "192.168.55.3" #node 3 cluster network ip
                             cluster_previous_ip_addr :  "192.168.55.1" #node 1 cluster network ip
                             cluster_ip_addr: "192.168.55.2"
@@ -93,6 +95,7 @@ all:
                             # Cluster network settings
                             team0_0: "eno12399"
                             team0_1: "eno12409"
+                            #hsr_mac_address: "70:FF:76:1C:0E:8E" # if using HSR for cluster network, you need to specify the mac address for each host
                             cluster_next_ip_addr : "192.168.55.1" #ip de hyperviseur 1
                             cluster_previous_ip_addr :  "192.168.55.2" #ip de l'hyperviseur 2
                             cluster_ip_addr: "192.168.55.3"
@@ -289,3 +292,5 @@ all:
           GUEST2: [159,160] #trunk port on vlan 159 and 160
           GUEST3: [1-4094]  # no filtering, excluding untagged trafic
           GUEST4: []        # no filtering, including untagged trafic
+
+        #cluster_protocol: "HSR" # RSTP or HSR, default is RSTP
