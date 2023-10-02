@@ -1,0 +1,17 @@
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+[Unit]
+Description="configure HSR interface for cluster network"
+Before=basic.target
+After=local-fs.target sysinit.target
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+ExecStart=/usr/local/sbin/hsr.sh
+ExecStop=/usr/local/sbin/hsrstop.sh
+
+[Install]
+WantedBy=multi-user.target

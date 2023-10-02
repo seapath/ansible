@@ -1,0 +1,21 @@
+#!/bin/bash
+ETH0={{ team0_0 }}
+ETH1={{ team0_1 }}
+PRP=hsr0
+MTU=9000
+MAC={{ hsr_mac_address }}
+IP={{ cluster_ip_addr }}/24
+SUPERVISION=45
+ip link set dev $PRP  down
+ip link del dev $PRP
+ip link set dev $ETH0 down
+ip link set dev $ETH1 down
+ip link set dev $ETH0 mtu $MTU
+ip link set dev $ETH1 mtu $MTU
+ip link set dev $ETH0 address $MAC
+ip link set dev $ETH1 address $MAC
+ip link set dev $ETH0 up
+ip link set dev $ETH1 up
+ip link add name $PRP type hsr slave1 $ETH0 slave2 $ETH1 supervision $SUPERVISION proto 0 version 1
+ip a add dev $PRP $IP
+ip link set dev $PRP up

@@ -1,0 +1,8 @@
+#!/bin/bash
+ETH0={{ team0_0 }}
+ETH1={{ team0_1 }}
+PRP=hsr0
+ip link set dev $PRP  down
+ip link del dev $PRP
+ip link set dev $ETH0 down
+ip link set dev $ETH1 down
