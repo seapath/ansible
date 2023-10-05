@@ -31,6 +31,18 @@ all:
                             cluster_ip_addr: "192.168.55.1"
                             br_rstp_priority: 12288
                             brBRIDGE1_ext: eno1234 #physical nic to use with BRIDGE1 (see the ovs topology inventory)
+                            custom_network:
+                              - 01-enp24s0_sriov:
+                                - Match:
+                                  - Name: "enp24s0*"
+                                - SR-IOV:
+                                  - VirtualFunction: 0
+                                  - Trust: 1
+                                  - LinkState: on
+                                - SR-IOV:
+                                  - VirtualFunction: 1
+                                  - Trust: 1
+                                  - LinkState: on
 
                         node2:
                             # ansbile variables
@@ -246,11 +258,11 @@ all:
         # Optional list variable to change apt repositories. All repositories will be overrides.
         # If defined as empty list [], all apt repositories will be removed
         apt_repo:
-            - http://ftp.fr.debian.org/debian bullseye main contrib non-free
-            - http://security.debian.org/debian-security bullseye-security main contrib non-free
-            - http://ftp.fr.debian.org/debian bullseye-backports main contrib non-free
-            - https://download.docker.com/linux/debian bullseye stable
-            - https://artifacts.elastic.co/packages/8.x/apt stable main
+          - http://ftp.fr.debian.org/debian bullseye main contrib non-free
+          - http://security.debian.org/debian-security bullseye-security main contrib non-free
+          - http://ftp.fr.debian.org/debian bullseye-backports main contrib non-free
+          - https://download.docker.com/linux/debian bullseye stable
+          - https://artifacts.elastic.co/packages/8.x/apt stable main
 
         # Default user with admin privileges, and password hash
         admin_user: virtu
