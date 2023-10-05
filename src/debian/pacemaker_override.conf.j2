@@ -1,7 +1,6 @@
 [Unit]
-After=rbdmap.service
-After=libvirt-guests.service
-After=ceph.target
+Wants=libvirtd.service
+After=libvirtd.service
 
 [Install]
 WantedBy=corosync.service

@@ -97,6 +97,23 @@
     - "--chmod=F755"
     - "--chown=root:root"
 
+- name: Copy chrony-wait.service
+  template:
+    src: ../src/debian/chrony-wait.service.j2
+    dest: /etc/systemd/system/chrony-wait.service
+    owner: root
+    group: root
+    mode: '0644'
+  register: chronywait
+- name: daemon-reload chrony-wait.service
+  ansible.builtin.service:
+    daemon_reload: yes
+  when: chronywait.changed
+- name: enable chrony-wait.service
+  ansible.builtin.systemd:
+    name: chrony-wait.service
+    enabled: yes
+
 - name: Create libvirtd.service.d directory
   file:
     path: /etc/systemd/system/libvirtd.service.d/
