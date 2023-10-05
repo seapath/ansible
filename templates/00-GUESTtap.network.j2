@@ -1,0 +1,22 @@
+[Match]
+Name={{ item.key }}tap
+
+[Network]
+Bridge=br0
+
+[BridgeVLAN]
+{% if item.value.__class__.__name__ == 'list' %}
+{% if item.value|length==0 %}
+VLAN=1-4094
+PVID=4094
+EgressUntagged=4094
+{% else %}
+{% for vid in item.value %}
+VLAN={{ vid }}
+{% endfor %}
+{% endif %}
+{% else %}
+VLAN={{ item.value }}
+PVID={{ item.value }}
+EgressUntagged={{ item.value }}
+{% endif %}

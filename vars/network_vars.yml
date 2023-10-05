@@ -5,23 +5,63 @@
 systemd_networkd_network_custom: "{{ custom_network | default([]) }}"
 systemd_networkd_netdev_custom: "{{ custom_netdev | default([]) }}"
 
-wired_systemd_networkd_netdev:
+br0vlan_systemd_networkd_netdev:
+  00-br0:
+    - NetDev:
+        - Name: "br0"
+        - Kind: "bridge"
+    - Bridge:
+        - DefaultPVID: "none"
+        - VLANFiltering: "yes"
+  00-br0vlan:
+    - NetDev:
+        - Name: "vlan{{ br0vlan | default('') }}"
+        - Kind: "vlan"
+    - VLAN:
+        - Id: "{{ br0vlan | default('') }}"
+br0vlan_systemd_networkd_network:
+  00-br0vlan:
+    - Match:
+        - Name: "vlan{{ br0vlan | default('') }}"
+    - Network:
+        - Gateway: "{{ gateway_addr }}"
+        - Address: "{{ ip_addr }}/{{ subnet | default(24) }}"
+  00-br0:
+    - Match:
+        - Name: "br0"
+    - Network:
+        - VLAN: "vlan{{ br0vlan | default('') }}"
+    - BridgeVLAN:
+        - VLAN: "{{ br0vlan | default('') }}"
+  00-wired:
+    - Match:
+        - Name: "{{ network_interface }}"
+    - Network: "{{ [ {'Bridge': 'br0'} ] + extra_network_config | default([]) }}"
+    - BridgeVLAN:
+        - VLAN: 159
+        - PVID: 4094
+        - EgressUntagged: 4094
+
+br0_systemd_networkd_netdev:
   00-br0:
     - NetDev:
         - Name: "br0"
         - Kind: "bridge"
 
-wired_systemd_networkd_network:
-  01-br0:
+br0_systemd_networkd_network:
+  00-br0:
     - Match:
         - Name: "br0"
     - Network:
         - Gateway: "{{ gateway_addr }}"
         - Address: "{{ ip_addr }}/{{ subnet | default(24) }}"
-  01-wired:
+  00-wired:
     - Match:
         - Name: "{{ network_interface }}"
     - Network: "{{ [ {'Bridge': 'br0'} ] + extra_network_config | default([]) }}"
+
+wired_systemd_networkd_netdev: "{{ br0vlan_systemd_networkd_netdev if br0vlan is defined else br0_systemd_networkd_netdev }}"
+wired_systemd_networkd_network: "{{ br0vlan_systemd_networkd_network if br0vlan is defined else br0_systemd_networkd_network }}"
 
 systemd_networkd_netdev_nocluster: "{{ wired_systemd_networkd_netdev | combine(systemd_networkd_netdev_custom) }}"
 systemd_networkd_network_nocluster: "{{ wired_systemd_networkd_network | combine(systemd_networkd_network_custom) }}"
@@ -43,5 +83,5 @@ team0_systemd_networkd_network:
     - Link:
         - MTUBytes: 1800
 
-systemd_networkd_network: "{% if cluster_ip_addr is defined %}{{ systemd_networkd_network_nocluster|combine(team0_systemd_networkd_network) }}{% else %}{{ systemd_networkd_network_nocluster}}{% endif %}"
+systemd_networkd_network: "{{ systemd_networkd_network_nocluster|combine(team0_systemd_networkd_network) if cluster_ip_addr is defined else systemd_networkd_network_nocluster}}"
 systemd_networkd_netdev: "{{ systemd_networkd_netdev_nocluster }}"
