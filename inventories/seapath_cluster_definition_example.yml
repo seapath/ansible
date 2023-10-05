@@ -294,3 +294,4 @@ all:
           GUEST4: []        # no filtering, including untagged trafic
 
         #cluster_protocol: "HSR" # RSTP or HSR, default is RSTP
+        chrony_wait_timeout_sec: 180 #time in seconds the boot sequence will wait for chrony to sync
