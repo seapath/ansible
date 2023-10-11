@@ -210,7 +210,8 @@ all:
         # Main network configuration
         gateway_addr: 10.0.0.1
         dns_servers: "8.8.8.8 8.8.4.4"
-        apply_network_config: true
+        apply_network_config: false # do we restart the ovs_config script to apply the changes to the ovs topology (default: false)
+        skip_reboot_setup_network: true # if we do no apply the changes (apply_network_config=false), then the network playbook will reboot the servers at the end. You can choose to skip this reboot here (default: false)
         ntp_servers:
             - "185.254.101.25"
             - "51.145.123.29"
