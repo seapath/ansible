@@ -231,7 +231,7 @@
         name: "systemd-timesyncd"
         state: stopped
         enabled: false
-      when: "'systemd-timesyncd' in services"
+      when: "'systemd-timesyncd.service' in services"
     - name: Create timemaster configuration
       template:
         src: ../templates/timemaster.conf.j2
