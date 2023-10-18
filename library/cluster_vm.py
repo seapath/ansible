@@ -123,6 +123,11 @@ options:
       - Unix account to be used to connect using SSH to the destination host
       - Optional parameter relevant only if I(command) is C(create) or C(clone)
     type: str
+  stop_timeout:
+    description:
+      - Time given to a guest to stop (in seconds)
+      - Optional parameter relevant only if I(command) is C(create) or C(clone)
+    type: str
   migrate_to_timeout:
     description:
       - Time given to a guest to live migrate (in seconds)
@@ -457,6 +462,7 @@ def run_module():
         pinned_host=dict(type="str", require=False),
         live_migration=dict(type="bool", require=False),
         migration_user=dict(type="str", require=False),
+        stop_timeout=dict(type="str", require=False),
         migrate_to_timeout=dict(type="str", require=False),
         clear_constraint=dict(type="bool", required=False, default=False),
         strong=dict(type="bool", required=False, default=False),
@@ -510,6 +516,7 @@ def run_module():
     pinned_host = args.get("pinned_host", None)
     live_migration = args.get("live_migration", None)
     migration_user = args.get("migration_user", None)
+    stop_timeout = args.get("stop_timeout", None)
     migrate_to_timeout = args.get("migrate_to_timeout", None)
     clear_constraint = args.get("clear_constraint", False)
     strong_constraint = args.get("strong", False)
@@ -547,6 +554,7 @@ def run_module():
                 pinned_host=pinned_host,
                 live_migration=live_migration,
                 migration_user=migration_user,
+                stop_timeout=stop_timeout,
                 migrate_to_timeout=migrate_to_timeout,
                 crm_config_cmd=crm_config_cmd,
             )
@@ -562,6 +570,7 @@ def run_module():
                 pinned_host=pinned_host,
                 live_migration=live_migration,
                 migration_user=migration_user,
+                stop_timeout=stop_timeout,
                 migrate_to_timeout=migrate_to_timeout,
                 clear_constraint=clear_constraint,
             )
