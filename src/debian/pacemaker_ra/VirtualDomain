@@ -875,25 +875,39 @@ VirtualDomain_stop() {
 				if [ -n "${OCF_RESKEY_CRM_shutdown_mode}" ]; then
 					shutdown_opts="--mode ${OCF_RESKEY_CRM_shutdown_mode}"
 				fi
-				virsh $VIRSH_OPTIONS shutdown ${DOMAIN_NAME} $shutdown_opts
+				ocf_log info "virsh $VIRSH_OPTIONS shutdown ${DOMAIN_NAME} $shutdown_opts"
+				timeout 1s virsh $VIRSH_OPTIONS shutdown ${DOMAIN_NAME} $shutdown_opts
+				virsh_timeout_status=$?
+				if [ $virsh_timeout_status -eq 124 ] #timeout, there's something wrong with the guest
+				then
+					# Something went wrong, break from switch case, and resort to forced stop (destroy).
+					ocf_log info "${DOMAIN_NAME} shutdown problem, force_stop"
+					force=1
+				else
+					force=0
+				fi
 			fi
 
 			# The "shutdown_timeout" we use here is the operation
-			# timeout specified in the CIB, minus 12 seconds
-			shutdown_timeout=$(( $NOW + ($OCF_RESKEY_CRM_meta_timeout/1000) -12 ))
+			# timeout specified in the CIB, minus 17 seconds (because it has been seen cases where the destroy operation takes more than 15s)
+			shutdown_timeout=$(( $NOW + ($OCF_RESKEY_CRM_meta_timeout/1000) -17 ))
 			# Loop on status until we reach $shutdown_timeout
-			while [ $NOW -lt $shutdown_timeout ]; do
+                        ocf_log info "${DOMAIN_NAME} shutdown_timeout=$shutdown_timeout, NOW=$NOW"
+			while [ $NOW -lt $shutdown_timeout -a $force -ne 1 ]; do
 				VirtualDomain_status
 				status=$?
+                                ocf_log info "${DOMAIN_NAME} VirtualDomain_status $status"
 				case $status in
 					$OCF_NOT_RUNNING)
 						# This was a graceful shutdown.
+                                                ocf_log info "${DOMAIN_NAME} This was a graceful shutdown."
 						return $OCF_SUCCESS
 						;;
 					$OCF_SUCCESS)
 						# Domain is still running, keep
 						# waiting (until shutdown_timeout
 						# expires)
+                                                ocf_log info "${DOMAIN_NAME} sleep 1."
 						sleep 1
 						;;
 					*)
@@ -912,6 +926,7 @@ VirtualDomain_stop() {
 	# OK. Now if the above graceful shutdown hasn't worked, kill
 	# off the domain with destroy. If that too does not work,
 	# have the LRM time us out.
+        ocf_log info "${DOMAIN_NAME} force_stop"
 	force_stop
 }
 
