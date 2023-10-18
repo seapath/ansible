@@ -9,7 +9,7 @@ env:
 on:
   pull_request:
     types: [opened, reopened, synchronize]
-    branches: [debian-main]
+    branches: [debian11]
 
 
 jobs:
