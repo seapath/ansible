@@ -323,3 +323,10 @@
   command:
     cmd: /usr/sbin/update-initramfs -u
   when: udevlvm.changed or lvm_snapshot_rebooter.changed
+
+- name: "add rbd type to lvm.conf"
+  ansible.builtin.lineinfile:
+    path: /etc/lvm/lvm.conf
+    insertafter: 'devices {'
+    line: "        types = [ \"rbd\", 1024 ]"
+    state: present
