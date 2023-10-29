@@ -245,13 +245,15 @@ regroups the other playbooks.
 
 To launch the playbook _cluster_setup_debian.yaml_ use the following command:
 
- $ ansible-playbook -i inventories/cluster_inventory.yaml -i inventories/networktopology_inventory.yaml --skip-tags "package-install" playbooks/cluster_setup_debian.yaml
+ $ ansible-playbook -i inventories/cluster_inventory.yaml -i inventories/networktopology_inventory.yaml --skip-tags "package-install" --limit cluster_machines playbooks/cluster_setup_debian.yaml
 
 Or if you use `cqfd`:
 
- $ cqfd run ansible-playbook -i inventories/cluster_inventory.yaml -i inventories/networktopology_inventory.yaml --skip-tags "package-install" playbooks/cluster_setup_debian.yaml
+ $ cqfd run ansible-playbook -i inventories/cluster_inventory.yaml -i inventories/networktopology_inventory.yaml --skip-tags "package-install" --limit cluster_machines playbooks/cluster_setup_debian.yaml
 
 The --skip-tags "package-install" is there for ceph-ansible no to try to install packages (they are already installed and if your host has no internet connection, it will make the playbook fail).
+
+The --limit cluster_machines is there not to take into account the guests or standalone machines in the inventory.
 
 === Hardening ===
 
