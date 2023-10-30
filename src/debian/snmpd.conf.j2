@@ -27,4 +27,6 @@ extend ipmisensor /usr/bin/timeout 10s /usr/bin/sudo /usr/local/bin/snmp_ipmitoo
 extend ipmisensorv /usr/bin/timeout 10s /usr/bin/sudo /usr/local/bin/snmp_ipmitool_sensor_v.sh
 extend ipmisdrlist /usr/bin/timeout 10s /usr/bin/sudo /usr/local/bin/snmp_ipmitool_sdrlist.sh
 extend ipmisdrlistv /usr/bin/timeout 10s /usr/bin/sudo /usr/local/bin/snmp_ipmitool_sdrlist_v.sh
+extend lvs /usr/bin/timeout 2s /usr/bin/sudo /usr/local/bin/snmp_lvs.sh
+extend smartctl /usr/bin/timeout 2s /usr/bin/sudo /usr/local/bin/snmp_smartctl.sh
 agentAddress udp:{{ admin_ip_addr }}:161
