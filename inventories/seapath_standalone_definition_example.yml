@@ -12,8 +12,8 @@ all:
                     ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
                     ansible_remote_tmp: /tmp/.ansible/tmp
 
-                    # Disk configuration
-                    main_disk: /dev/sda
+                    # Admin network settings
+                    admin_ip_addr: 10.10.11.1 #used for snmp
 
                     # Main network configuration
                     network_interface: enp1s0
