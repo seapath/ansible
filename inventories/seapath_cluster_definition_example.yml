@@ -6,7 +6,7 @@ all:
                 hypervisors:
                     hosts:
                         node1:
-                            # ansbile variables
+                            # ansible variables
                             ansible_host: 10.10.10.1
 
                             # Main network interface configuration
