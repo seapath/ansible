@@ -1,0 +1,37 @@
+// Copyright (C) 2023 Savoir-faire Linux, Inc.
+// SPDX-License-Identifier: CC-BY-4.0
+
+Setup Yocto standalone CI
+=========================
+
+== Prerequisites
+
+* A machine that meets SEAPATH requirements
+* An USB drive
+
+== USB driver setup
+
+* Generate the SEAPATH flasher image with `cqfd -b flasher`. Make sure
+  SEAPATH_AUTO_FLASH with the disk to be flash, is enable in seapath.conf
+  (read https://github.com/seapath/yocto-bsp/blob/kirkstone/seapath.conf.sample[seapath.conf.sample]).
+* Flash SEAPATH flasher image on your USB driver
+* Genrate a SEAPATH hypervisor image with `cqfd -b host_efi`
+* Copy the generated image file (the wic.gz and wic.bmap) file inside the flasher_data partition.
+  Renamed it `seapath.wic.gz` and `seapath.wic.bmap`.
+
+For images generation and flashing, refer to the https://github.com/seapath/yocto-bsp/blob/kirkstone/README.adoc[SEAPATH Yocto documentation].
+
+== Hypervisor setup
+
+* Plug the USB driver on the hypervisor
+* Boot on the USB driver. It will reboot when the hypervisor will be setup.
+* Do not remove the USB driver.
+* Run a CI job
+
+== Update the hypervisor
+
+* Generate your new image as usual.
+* Copy the generated image file (the wic.gz and wic.bmap) file inside the
+  `flasher_data` partition.
+  Renamed it `seapath.wic.gz` and `seapath.wic.bmap`.
+* Run a CI job
