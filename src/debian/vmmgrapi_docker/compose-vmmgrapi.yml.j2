@@ -1,0 +1,11 @@
+version: '3.6'
+
+services:
+  vmmgrapi:
+    image: php:apache
+    container_name: vmmgrapi
+    ports:
+      - {{ cluster_ip }}:8080:80
+    volumes:
+      - /run/vmmgr.pipe:/run/vmmgr.pipe
+      - /var/local/vmmgrapi/api.php:/var/www/html/api.php:ro

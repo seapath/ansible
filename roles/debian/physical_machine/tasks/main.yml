@@ -330,3 +330,73 @@
     insertafter: 'devices {'
     line: "        types = [ \"rbd\", 1024 ]"
     state: present
+
+- name: install vm-mgr http interface
+  block:
+    - name: create /var/local/vmmgrapi folder on hosts
+      file:
+        path: /var/local/vmmgrapi
+        state: directory
+        mode: '0755'
+    - name: Copy vmmgrapi docker files
+      ansible.builtin.copy:
+        src: ../src/debian/vmmgrapi_docker/{{ item }}
+        dest: /var/local/vmmgrapi/{{ item }}
+        mode: '0644'
+      with_items:
+        - api.php
+      register: vmmgrapidocker_files
+    - name: Copy vmmgrapi docker templates
+      ansible.builtin.template:
+        src: ../src/debian/vmmgrapi_docker/{{ item }}.j2
+        dest: /var/local/vmmgrapi/{{ item }}
+        mode: '0644'
+      with_items:
+        - compose-vmmgrapi.yml
+      register: vmmgrapidocker_templates
+    - name: Copy vmmgrapi pipe run files
+      ansible.builtin.copy:
+        src: ../src/debian/vmmgrapi_docker/{{ item }}
+        dest: /usr/local/bin/{{ item }}
+        mode: '0755'
+      with_items:
+        - vmmgrapipiperun.sh
+      register: vmmgrapipiperun_files
+
+    - name: Copy vmmgrapi pipe run service
+      ansible.builtin.copy:
+        src: ../src/debian/vmmgrapi_docker/vmmgrapipiperun.service
+        dest: /etc/systemd/system/vmmgrapipiperun.service
+        mode: '0644'
+      register: vmmgrapipiperun_service
+    - name: Copy vmmgrapi apache php docker service
+      ansible.builtin.copy:
+        src: ../src/debian/vmmgrapi_docker/vmmgrapidocker.service
+        dest: /etc/systemd/system/vmmgrapidocker.service
+        mode: '0644'
+      register: vmmgrapidocker_service
+
+    - name: daemon-reload vmmgrapi
+      ansible.builtin.service:
+        daemon_reload: yes
+      when: vmmgrapipiperun_service.changed or vmmgrapidocker_service.changed
+
+  when: enable_vmmgr_http_api is defined and enable_vmmgr_http_api is true
+
+- name: disable vm-mgr http interface if needed
+  block:
+    - name: Populate service facts
+      service_facts:
+    - name: stop and disable vmmgrapipiperun.service
+      ansible.builtin.systemd:
+        name: vmmgrapipiperun.service
+        enabled: no
+        state: stopped
+      when: "'vmmgrapipiperun.service' in services"
+    - name: stop and disable vmmgrapidocker.service
+      ansible.builtin.systemd:
+        name: vmmgrapidocker.service
+        enabled: no
+        state: stopped
+      when: "'vmmgrapidocker.service' in services"
+  when: enable_vmmgr_http_api is not defined or enable_vmmgr_http_api is false

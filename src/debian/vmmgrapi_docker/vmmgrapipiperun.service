@@ -1,0 +1,11 @@
+[Unit]
+Description="run vm-mgr api pipe cmds"
+PartOf=vmmgrapidocker.service
+
+[Service]
+Restart=always
+Type=simple
+ExecStart=/usr/local/bin/vmmgrapipiperun.sh
+
+[Install]
+WantedBy=multi-user.target
