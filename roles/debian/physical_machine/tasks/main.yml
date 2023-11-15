@@ -376,6 +376,7 @@
   ansible.builtin.systemd:
     name: snmpd.service
     state: restarted
+    enabled: yes
 
 - name: Install sudo Debian-snmp user rules
   copy:
