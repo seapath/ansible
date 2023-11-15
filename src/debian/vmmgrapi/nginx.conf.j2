@@ -1,0 +1,44 @@
+worker_processes 1;
+user www-data www-data;
+error_log  /var/log/nginx/error.log warn;
+pid /var/run/nginx.pid;
+events {
+  worker_connections 1024;
+}
+http {
+  access_log /var/log/nginx/access.log combined;
+  upstream app_server {
+    server unix:/run/gunicorn.sock fail_timeout=0;
+  }
+  server {
+    listen {{ admin_cluster_ip }}:{{ vmmgr_http_port }} ssl;
+    ssl_certificate {{ vmmgrapi_certs_dir }}/seapath.crt;
+    ssl_certificate_key {{ vmmgrapi_certs_dir }}/seapath.key;
+
+    {% if vmmgr_http_api_acl is defined -%}
+    {{ vmmgr_http_api_acl | indent( width=4, first=False) }}
+    {%- endif %}
+
+    server_name seapath;
+    keepalive_timeout 5;
+    location / {
+      {% if vmmgr_http_local_auth_file is defined -%}
+      auth_basic           "RESTRICTED Area";
+      auth_basic_user_file {{ vmmgr_http_local_auth_file }};
+      {%- endif %}
+
+      try_files $uri @proxy_to_app;
+    }
+    location @proxy_to_app {
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+      proxy_set_header Host $http_host;
+      proxy_redirect off;
+      proxy_pass http://app_server;
+    }
+    error_page 500 502 503 504 /500.html;
+    location = /500.html {
+      root /path/to/app/current/public;
+    }
+  }
+}
