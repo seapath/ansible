@@ -295,3 +295,14 @@ all:
 
         #cluster_protocol: "HSR" # RSTP or HSR, default is RSTP
         chrony_wait_timeout_sec: 180 #time in seconds the boot sequence will wait for chrony to sync
+
+        #enable_vmmgr_http_api: false
+        #admin_cluster_ip: "10.10.11.4"
+        #vmmgr_http_port: 8080
+        #vmmgr_http_tls_crt_path: "../keys/vmmgr_http_tls_crt.pem"
+        #vmmgr_http_tls_key_path: "../keys/vmmgr_http_tls_key.pem"
+        #vmmgr_http_api_acl: |
+        #  allow  10.10.12.12/32;
+        #  allow  {{ admin_cluster_ip }}/32;
+        #  deny   all;
+        #vmmgr_http_local_auth_file: "/var/local/vmmgrapi/.htpasswd"
