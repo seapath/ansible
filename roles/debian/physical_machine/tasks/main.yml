@@ -1,3 +1,9 @@
+# We need to restart nginx if it's running and know if gunicorn socket is present
+- name: Populate service facts
+  service_facts:
+#- name: Print service facts
+#  ansible.builtin.debug:
+#    var: ansible_facts.services
 - name: install vm-mgr http interface
   vars:
     vmmgrapi_certs_dir: "/var/local/vmmgrapi/certs"
@@ -58,19 +64,12 @@
         mode: '0600'
       register: nginx_conf
 
-    # We need to restart nginx if it's running
-    - name: Populate service facts
-      service_facts:
-    #- name: Print service facts
-    #  ansible.builtin.debug:
-    #    var: ansible_facts.services
-
     - name: restart nginx if needed
       ansible.builtin.systemd:
         name: nginx.service
         enabled: no
         state: stopped
-      when: 
+      when:
         - nginx_conf.changed
         - services['nginx.service']['state'] == "running"
 
@@ -117,13 +116,21 @@
 
   when: enable_vmmgr_http_api is defined and enable_vmmgr_http_api is true
 
-- name: disable vm-mgr http interface if needed
+- name: disable gunicorn.socket if http flask api is not enabled
   ansible.builtin.systemd:
     name: gunicorn.socket
     enabled: no
     state: stopped
-  when: enable_vmmgr_http_api is not defined or enable_vmmgr_http_api is false
+  when:
+    - enable_vmmgr_http_api is not defined or enable_vmmgr_http_api is false
+    - services['gunicorn.socket'] is defined
 
+- name: disable gunicorn.service all the time, if it exists
+  ansible.builtin.systemd:
+    name: gunicorn.service
+    enabled: no
+  when:
+    - services['gunicorn.service'] is defined
 
 - name: create src folder on hosts
   file:
