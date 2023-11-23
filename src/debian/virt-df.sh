@@ -36,6 +36,10 @@ do
   do
     /usr/bin/mount -o ro,noload $part /t 2>/dev/null
     returncode=$?
+    if [ $returncode -ne 0 ]; then
+      /usr/bin/mount -o ro,ufstype=ufs2 -t ufs $part /t 2>/dev/null
+      returncode=$?
+    fi
     if [ $returncode -eq 0 ]; then
       /usr/bin/df -k | grep -E "\/t$" | /usr/bin/awk -v guest="$guest" '{ print guest ":" $1 " total:" $2 " used:" $3 " available:" $4 " disk-usage:" $5 }'
     fi
