@@ -6,6 +6,8 @@
 # call.
 
 ---
-- import_playbook: ci_flash_disk.yaml
-- import_playbook: ci_configure_hosts.yaml
-- import_playbook: ci_configure_cluster.yaml
+- import_playbook: cluster_setup_configure_hosts.yaml
+- import_playbook: cluster_setup_ceph.yaml
+- import_playbook: cluster_setup_libvirt.yaml
+- import_playbook: cluster_setup_add_virtu_user.yaml
+- import_playbook: cluster_setup_ha.yaml
