@@ -4,9 +4,11 @@ name='ansible'
 flavors='prepare manual module_documentation ansible-lint export'
 
 [build]
+docker_run_args="-v $(pwd)/examples/inventories/advanced_inventory_example.yaml:/etc/ansible/hosts/hosts.yaml -v $(pwd)/ceph-ansible/roles:/etc/ansible/roles"
 command='check_yaml && ansible-lint -c ansible-lint.conf'
 
 [prepare]
+docker_run_args=""
 command='./prepare.sh'
 
 [manual]
