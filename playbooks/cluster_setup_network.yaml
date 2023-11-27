@@ -174,9 +174,6 @@
           line: 'NTP={{ ntp_servers }}'
         - regexp: '^\s*#?\s*(FallbackNTP=).*$'
           line: 'FallbackNTP={{ fallback_ntp_servers | default("") }}'
-      when:
-        - ptp_vlan_interface is not defined
-        - ptp_vlan is not defined
       notify:
         - Restart systemd timesyncd
   handlers:
