@@ -8,20 +8,22 @@
 - name: Configure ssh keys between hosts
   hosts: hypervisors
   gather_facts: true
+  vars:
+    livemigration_user: "{{ livemigrationuser | default('virtu') }}"
   tasks:
       - block:
-        - name: Create virtu user
+        - name: Create live migration user
           user:
-            name: virtu
+            name: "{{ livemigration_user }}"
             shell: /bin/sh
             system: true
-            groups: qemu,haclient,admincluster
+            groups: qemu,haclient,admincluster,libvirt
             create_home: false
         - name: Unlock the user
           replace:
               path: /etc/shadow
-              regexp: '^virtu:!:'
-              replace: 'virtu:*:'
+              regexp: '^{{ livemigration_user }}:!:'
+              replace: '{{ livemigration_user }}:*:'
         - name: generate SSH key
           user:
             name: "root"
@@ -33,11 +35,11 @@
             force: false
         - name: create ssh directory
           file:
-            path: /etc/ssh/virtu
+            path: "/etc/ssh/{{ livemigration_user }}"
             state: directory
             mode: '0755'
-            owner: virtu
-            group: virtu
+            owner: "{{ livemigration_user }}"
+            group: "{{ livemigration_user }}"
         - name: Fetch the root keyfile
           fetch:
             src: "/home/root/.ssh/id_rsa.pub"
@@ -45,9 +47,9 @@
             flat: true
         - name: Copy the key add to authorized_keys using Ansible module
           authorized_key:
-            user: virtu
+            user: "{{ livemigration_user }}"
             state: present
-            path: /etc/ssh/virtu/authorized_keys
+            path: "/etc/ssh/{{ livemigration_user }}/authorized_keys"
             key: "{{ lookup('file','buffer/' + item + '-id_rsa.pub') }}"
           with_items: "{{ groups['hypervisors'] }}"
         - name: Fetch the ssh keyfile
