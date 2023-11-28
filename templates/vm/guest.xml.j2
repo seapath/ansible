@@ -58,8 +58,8 @@
     <topology sockets="1" dies="1" cores="{{ vm.cpuset | length }}" threads="1" />
     <feature policy="require" name="tsc-deadline" />
     {% else %}
-    <cpu mode="host-model" check="partial">
-    <model fallback="allow" />
+    <cpu mode="custom" match="exact" check="none">
+        <model fallback="allow">kvm64</model>
     {% endif %}
         {% if "dpdk" in vm.vm_features %}
         <numa>
