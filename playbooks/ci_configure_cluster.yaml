@@ -4,5 +4,5 @@
 ---
 - import_playbook: cluster_setup_ceph.yaml
 - import_playbook: cluster_setup_libvirt.yaml
-- import_playbook: cluster_setup_add_virtu_user.yaml
+- import_playbook: cluster_setup_add_livemigration_user.yaml
 - import_playbook: cluster_setup_ha.yaml
