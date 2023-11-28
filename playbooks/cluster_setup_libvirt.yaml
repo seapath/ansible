@@ -99,3 +99,26 @@
     - name: Refresh pool
       command: virsh pool-refresh --pool ceph
       changed_when: false
+
+- name: Update libvirtd configuration
+  hosts: hypervisors
+  tasks:
+    - name: Create libvirt group
+      group:
+          name: libvirt
+          state: present
+          system: yes
+    - name: Copy libvirtd.conf
+      template:
+          src: ../templates/libvirtd.conf.j2
+          dest: /etc/libvirt/libvirtd.conf
+          owner: root
+          group: root
+          mode: 0644
+      notify:
+          - restart libvirtd
+  handlers:
+    - name: restart libvirtd
+      service:
+          name: libvirtd
+          state: restarted
