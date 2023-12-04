@@ -206,6 +206,8 @@
   with_items:
     - ipv6.disable=1
     - efi=runtime
+    - fsck.mode=force
+    - fsck.repair=yes
     - "{{ grub_append | default([]) }}"
 
 - name: "grub conf osprober"
