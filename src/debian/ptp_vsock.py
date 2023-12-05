@@ -11,9 +11,9 @@ def client_handler(connection):
     data = connection.recv(2048)
     message = data.decode('utf-8')
     if message == 'STATUS':
-      file = open("/var/run/ptpstatus/ptp.status", "r")
+      file = open("/var/run/ptpstatus/ptp_state", "r")
     if message == 'DETAILS':
-      file = open("/var/run/ptpstatus/ptp.details", "r")
+      file = open("/var/run/ptpstatus/ptp_status", "r")
     data = file.read()
     connection.sendall(data.encode("utf-8"))
     connection.close()
