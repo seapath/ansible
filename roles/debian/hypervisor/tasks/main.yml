@@ -103,10 +103,10 @@
     - cpufreq.default_governor=performance
     - intel_pstate=disable
     - nosoftlockup
-    - "rcu_nocbs={{ cpumachinesrt }}"
+    - "rcu_nocbs={{ isolcpus }}"
     - rcu_nocb_poll
     - rcutree.kthread_prio=10
-    - "isolcpus=nohz,domain,managed_irq,{{ cpumachinesrt }}"
+    - "isolcpus=nohz,domain,managed_irq,{{ isolcpus }}"
     - skew_tick=1
     - tsc=reliable
 
@@ -126,8 +126,8 @@
 - name: "irqbalance conf"
   lineinfile:
     dest: /etc/default/irqbalance
-    regexp: '^IRQBALANCE_BANNED_CPUS=".*"$'
-    line: 'IRQBALANCE_BANNED_CPUS="{{ irqmask }}"'
+    regexp: '^IRQBALANCE_BANNED_CPULIST=".*"$'
+    line: 'IRQBALANCE_BANNED_CPULIST="{{ isolcpus }}"'
     state: present
   register: irqbalanceconf
 - name: restart irqbalance
