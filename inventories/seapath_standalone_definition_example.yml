@@ -24,6 +24,8 @@ all:
                     ntp_servers: 
                       - "185.254.101.25"
                       - "51.145.123.29"
+                    #ovs_vsctl_cmds: # Extra ovs-vsctl commands to be run by the network playbook
+                    #  - "set Bridge brBRIDGE1 netflow=@nf0 -- --id=@nf0 create NetFlow targets=\\\"192.168.10.1:2055\\\" add_id_to_interface=true"
 
                     # Syslog log sending configuration
                     # Syslog client keys. If not set, syslog will send logs using an unencrypted connection.

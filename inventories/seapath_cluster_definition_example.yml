@@ -33,6 +33,8 @@ all:
                             cluster_ip_addr: "192.168.55.1"
                             br_rstp_priority: 12288
                             brBRIDGE1_ext: eno1234 #physical nic to use with BRIDGE1 (see the ovs topology inventory)
+                            ovs_vsctl_cmds: # Extra ovs-vsctl commands to be run by the network playbook
+                              - "set Bridge brBRIDGE1 netflow=@nf0 -- --id=@nf0 create NetFlow targets=\\\"192.168.10.1:2055\\\" add_id_to_interface=true"
                             custom_network:
                               - 01-enp24s0_sriov:
                                 - Match:
