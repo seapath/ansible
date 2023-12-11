@@ -35,6 +35,11 @@ ovs_bridges:
     rstp_enable: bool
     enable_ipv6: bool
     other_config: string | [ string ]
+    flows_override: |
+      table=0,priority=1,action=drop
+      table=0,priority=10,arp,action=normal
+      table=0,priority=100,ip,ct_state=-trk,action=ct(table=1)
+      table=1,nw_src=10.0.0.1,nw_dst=10.0.0.2,ip,icmp,ct_state=+trk+new,action=ct(commit),normal
     ports:
       - name: string
         type: internal | system | dpdk | dpdkvhostuserclient | tap | vxlan
@@ -56,7 +61,8 @@ The ovs_bridges takes a bridge list with the following mandatory attributes:
 
 * *name*: the interface bridge name
 * *rstp_enable*: set to true to enable RSTP on the bridge. Default is false.
-* *enable_ipv6*: if false all ipv6 paquet will be dropped. Default is false.
+* *enable_ipv6*: if false all ipv6 paquet will be dropped. Default is false. Ignored when flows_override is defined.
+* *flows_override*: if defined, then the list of flows will override the normal openflow created based on enable_ipv6 and mac/ip variables
 * *other_config*: optional OVS configuration for the bridge as you can pass with
   _other_config=_ when running the command `ovs-vsctl`.
 
@@ -126,11 +132,11 @@ Each port has the following attributes:
     will not have an 802.1Q header.
 * *mac*:
   Ingresses source MAC address accepted. All others sources will be dropped. +
-  Only works with tap or dpdkvhostuserclient.
+  Only works with tap or dpdkvhostuserclient. Ignored when flows_override is defined.
 * *ip*:
   Ingresses source IP addresses accepted list. All others sources will be
   dropped. +
-  Only works with tap or dpdkvhostuserclient.
+  Only works with tap or dpdkvhostuserclient. Ignored when flows_override is defined.
 * *remote_ip*:
   vxlan remote IP to connect.
 * *remote_port*:
