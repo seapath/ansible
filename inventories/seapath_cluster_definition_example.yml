@@ -123,7 +123,7 @@ all:
                         logstash_server_ip: 10.10.10.10
 
                         # Realtime/CPUs cgroups isolation configuration
-                        isolcpus: "2-5,14-17" # CPUs to isolate (isolcpus, irqbalance)
+                        isolcpus: "2-5,14-17" # CPUs to isolate (isolcpus, irqbalance on debian 12)
                         workqueuemask: "1001" #workqueue mask, here it mean 0 and 12 are the only allowed cpus
                         cpusystem: "0,12" # CPUs reserves for system
                         cpuuser: "1,13" # CPUs reserves for user applications
