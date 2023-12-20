@@ -38,9 +38,7 @@ br0vlan_systemd_networkd_network:
         - Name: "{{ network_interface }}"
     - Network: "{{ [ {'Bridge': 'br0'} ] + extra_network_config | default([]) }}"
     - BridgeVLAN:
-        - VLAN: 159
-        - PVID: 4094
-        - EgressUntagged: 4094
+        - VLAN: "1-4094"
 
 br0_systemd_networkd_netdev:
   00-br0:
