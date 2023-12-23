@@ -5,9 +5,14 @@
 # can be used on cluster machines and VMs.
 
 ---
-- name: configure cluster network
-  hosts: cluster_machines
+- name: Network configuration basics
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
   become: true
+  vars:
+    apply_config: "{{ apply_network_config | default(false) }}"
   tasks:
     - block:
       - name: wipe the /etc/systemd/network/ directory content 1/2, list files
@@ -21,6 +26,49 @@
           state: absent
         with_items: "{{ networkd_files_to_delete.files }}"
       when: remove_all_networkd_config is defined and remove_all_networkd_config is true
+    - name: Remove FAI network configuration
+      file:
+        path: "/etc/systemd/network/{{ item }}.network"
+        state: absent
+      with_items:
+        - 01-init
+        - 00-init-dhcp
+        - 00-init
+    - name: Copy 80-wired networkd file
+      ansible.builtin.copy:
+        src: ../src/debian/80-wired.network
+        dest: /etc/systemd/network/80-wired.network
+        mode: '0640'
+        owner: root
+        group: systemd-network
+
+- name: Apply systemd-networkd config with role
+  become: true
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  vars_files:
+    - ../vars/network_vars.yml
+  roles:
+    - systemd_networkd
+
+- name: Apply .link files change (udev)
+  become: true
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  tasks:
+    - name: Restart systemd-udev-trigger
+      ansible.builtin.systemd:
+        name: systemd-udev-trigger
+        state: restarted
+
+- name: configure cluster network
+  hosts: cluster_machines
+  become: true
+  tasks:
     - name: Populate service facts
       service_facts:
     - block:
@@ -86,6 +134,22 @@
         when: hsr1.changed or hsr2.changed or hsr3.changed or hsrservice.changed
       when: cluster_protocol is defined and cluster_protocol == "HSR" and hsr_mac_address is defined
 
+- name: Apply systemd-networkd configuration
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  become: true
+  vars:
+    apply_config: "{{ apply_network_config | default(false) }}"
+  tasks:
+    - name: Restart systemd-networkd
+      ansible.builtin.systemd:
+        name: systemd-networkd
+        state: restarted
+      when:
+        apply_config
+
 - name: Configure OVS
   hosts:
     - cluster_machines
@@ -119,48 +183,6 @@
       when:
         - ovs_vsctl_cmds is defined
       loop: "{{ ovs_vsctl_cmds }}"
-
-- name: Configure Network
-  become: true
-  hosts:
-    - cluster_machines
-    - standalone_machine
-    - VMs
-  vars_files:
-    - ../vars/network_vars.yml
-  roles:
-    - systemd_networkd
-
-- name: Network configuration
-  hosts:
-    - cluster_machines
-    - standalone_machine
-    - VMs
-  become: true
-  vars:
-    apply_config: "{{ apply_network_config | default(false) }}"
-  tasks:
-    - name: Remove FAI network configuration
-      file:
-        path: "/etc/systemd/network/{{ item }}.network"
-        state: absent
-      with_items:
-        - 01-init
-        - 00-init-dhcp
-        - 00-init
-    - name: Copy 80-wired networkd file
-      ansible.builtin.copy:
-        src: ../src/debian/80-wired.network
-        dest: /etc/systemd/network/80-wired.network
-        mode: '0640'
-        owner: root
-        group: systemd-network
-    - name: Restart systemd-networkd
-      ansible.builtin.systemd:
-        name: systemd-networkd
-        state: restarted
-      when:
-        apply_config
 
 - name: Configure hosts and hostname
   hosts: cluster_machines
