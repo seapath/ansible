@@ -35,6 +35,9 @@ ovs_bridges:
     rstp_enable: bool
     enable_ipv6: bool
     other_config: string | [ string ]
+    ovsvsctl_extra_cmds:
+      - "set Bridge brTEST netflow=@nf0 -- --id=@nf0 create NetFlow targets=\"192.168.56.201:2055\" add_id_to_interface=true"
+      - "-- --id=@sflow create sflow agent=br0 target=\"192.168.56.201:6343\" header=128 sampling=64 polling=10 -- set bridge brTEST sflow=@sflow"
     flows_override: |
       table=0,priority=1,action=drop
       table=0,priority=10,arp,action=normal
@@ -65,6 +68,8 @@ The ovs_bridges takes a bridge list with the following mandatory attributes:
 * *flows_override*: if defined, then the list of flows will override the normal openflow created based on enable_ipv6 and mac/ip variables
 * *other_config*: optional OVS configuration for the bridge as you can pass with
   _other_config=_ when running the command `ovs-vsctl`.
+
+* *ovsvsctl_extra_cmds*: if defined, the setup_ovs tool will run these commands after creating the bridge
 
 * *ports*: the list of OVS ports in the bridge
 
