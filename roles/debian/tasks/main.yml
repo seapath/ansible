@@ -220,12 +220,3 @@
 - name: update-grub
   command: update-grub
   when: updategrub1.changed or updategrub2.changed
-
-- name: Copy 80-wired networkd file
-  ansible.builtin.copy:
-    src: ../src/debian/80-wired.network
-    dest: /etc/systemd/network/80-wired.network
-    mode: '0640'
-    owner: root
-    group: systemd-network
-
