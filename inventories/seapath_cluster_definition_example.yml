@@ -296,6 +296,7 @@ all:
           GUEST3: [1-4094]  # no filtering, excluding untagged trafic
           GUEST4: []        # no filtering, including untagged trafic
 
+        iptables_rules_path: "../inventories/iptables_rules_example.txt" #when defined, it uploads this file to /etc/iptables/rules.v4 and loads those rules
         #cluster_protocol: "HSR" # RSTP or HSR, default is RSTP
         chrony_wait_timeout_sec: 180 #time in seconds the boot sequence will wait for chrony to sync
 

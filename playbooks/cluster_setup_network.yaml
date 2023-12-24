@@ -358,6 +358,22 @@
         state: restarted
       when: guest_br0_netdev.changed or guest_br0_network.changed
 
+- name: push iptables rules
+  hosts: cluster_machines
+  become: true
+  tasks:
+    - name: copy iptables rules file
+      ansible.builtin.copy:
+        src: "{{ iptables_rules_path }}"
+        dest: /etc/iptables/rules.v4
+        mode: "0644"
+      when: iptables_rules_path is defined
+      register: iptables_rules
+    - name: reload iptables rules if needed
+      ansible.builtin.shell:
+        cmd: "/usr/sbin/iptables-restore < /etc/iptables/rules.v4"
+      when: iptables_rules.changed
+
 - name: Restart machine if needed
   hosts:
     - cluster_machines
