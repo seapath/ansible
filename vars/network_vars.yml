@@ -6,34 +6,34 @@ systemd_networkd_network_custom: "{{ custom_network | default([]) }}"
 systemd_networkd_netdev_custom: "{{ custom_netdev | default([]) }}"
 
 br0vlan_systemd_networkd_netdev:
-  00-br0:
+  79-br0:
     - NetDev:
         - Name: "br0"
         - Kind: "bridge"
     - Bridge:
         - DefaultPVID: "none"
         - VLANFiltering: "yes"
-  00-br0vlan:
+  79-br0vlan:
     - NetDev:
         - Name: "vlan{{ br0vlan | default('') }}"
         - Kind: "vlan"
     - VLAN:
         - Id: "{{ br0vlan | default('') }}"
 br0vlan_systemd_networkd_network:
-  00-br0vlan:
+  79-br0vlan:
     - Match:
         - Name: "vlan{{ br0vlan | default('') }}"
     - Network:
         - Gateway: "{{ gateway_addr }}"
         - Address: "{{ ip_addr }}/{{ subnet | default(24) }}"
-  00-br0:
+  79-br0:
     - Match:
         - Name: "br0"
     - Network:
         - VLAN: "vlan{{ br0vlan | default('') }}"
     - BridgeVLAN:
         - VLAN: "{{ br0vlan | default('') }}"
-  00-wired:
+  79-wired:
     - Match:
         - Name: "{{ network_interface }}"
     - Network: "{{ [ {'Bridge': 'br0'} ] + extra_network_config | default([]) }}"
@@ -41,19 +41,19 @@ br0vlan_systemd_networkd_network:
         - VLAN: "1-4094"
 
 br0_systemd_networkd_netdev:
-  00-br0:
+  79-br0:
     - NetDev:
         - Name: "br0"
         - Kind: "bridge"
 
 br0_systemd_networkd_network:
-  00-br0:
+  79-br0:
     - Match:
         - Name: "br0"
     - Network:
         - Gateway: "{{ gateway_addr }}"
         - Address: "{{ ip_addr }}/{{ subnet | default(24) }}"
-  00-wired:
+  79-wired:
     - Match:
         - Name: "{{ network_interface }}"
     - Network: "{{ [ {'Bridge': 'br0'} ] + extra_network_config | default([]) }}"
@@ -65,17 +65,17 @@ systemd_networkd_netdev_nocluster: "{{ wired_systemd_networkd_netdev | combine(s
 systemd_networkd_network_nocluster: "{{ wired_systemd_networkd_network | combine(systemd_networkd_network_custom) }}"
 
 team0_systemd_networkd_network:
-  00-team0:
+  79-team0:
     - Match:
         - Name: "team0"
     - Network:
         - Address: "{{ cluster_ip_addr|default('0') }}/{{ subnet | default(24) }}"
-  00-team0_0:
+  79-team0_0:
     - Match:
         - Name: "{{ team0_0|default('0') }}"
     - Link:
         - MTUBytes: 1800
-  00-team0_1:
+  79-team0_1:
     - Match:
         - Name: "{{ team0_1|default('0') }}"
     - Link:
