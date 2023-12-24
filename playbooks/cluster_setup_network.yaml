@@ -9,6 +9,18 @@
   hosts: cluster_machines
   become: true
   tasks:
+    - block:
+      - name: wipe the /etc/systemd/network/ directory content 1/2, list files
+        find:
+          paths: /etc/systemd/network/
+          patterns: "*"
+        register: networkd_files_to_delete
+      - name: wipe the /etc/systemd/network/ directory content 2/2, remove files
+        file:
+          path: "{{ item.path }}"
+          state: absent
+        with_items: "{{ networkd_files_to_delete.files }}"
+      when: remove_all_networkd_config is defined and remove_all_networkd_config is true
     - name: Populate service facts
       service_facts:
     - block:

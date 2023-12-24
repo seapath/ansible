@@ -215,6 +215,8 @@ all:
         apply_network_config: false # do we restart the ovs_config script to apply the changes to the ovs topology (default: false)
         skip_reboot_setup_network: true # if we do no apply the changes (apply_network_config=false), then the network playbook will reboot the servers at the end. You can choose to skip this reboot here (default: false)
         skip_recreate_team0_config: false # if defined and true, the network playbook won't try to destroy and recreate the team0 (cluster) bridge configuration (default is false)
+        remove_all_networkd_config: true  # if defined and true, the network playbook will start by wiping the /etc/systemd/network/ directory content, this can help cleaning old conflicting files. THIS MUST NOT BE USED WITH skip_recreate_team0_config at the same time or the cluster network config won't be recreated
+
         ntp_servers:
             - "185.254.101.25"
             - "51.145.123.29"
