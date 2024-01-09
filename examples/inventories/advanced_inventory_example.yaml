@@ -1,4 +1,5 @@
 # Copyright (C) 2020, RTE (http://www.rte-france.com)
+# Copyright (C) 2024, SFL (https://savoirfairelinux.com)
 # SPDX-License-Identifier: Apache-2.0
 
 # Ansible inventory example containing a description of the variables used.
@@ -8,6 +9,8 @@
 ---
 all:
   children:
+    # This inventory describes a cluster, there is no standalone machines.
+    standalone_machines:
     cluster_machines:
       children:
         hypervisors:
@@ -27,8 +30,6 @@ all:
               gateway_addr: 192.168.217.1
               # The Subnetwork. Optional variable, default is 24
               subnet: 16
-              # The smart plug port associated to the machine
-              plug_port: 4
               # Optional additional network configuration list
               # For more information see roles/systemd_networkd/README.md
               # Set the cluster interface
@@ -58,7 +59,7 @@ all:
               ip_addr: 192.168.217.16
               gateway_addr: 192.168.217.1
               # Number of hugepages to reserve. Optional default is 4
-              kernel_parameters_hugepages: 3
+              hugepages: 3
               # Optional variable to append extra kernel parameters. Use it to
               # add vfio_iommu_type1.allow_unsafe_interrupts=1 for old machines
               # like HP Z800
@@ -189,9 +190,9 @@ all:
     ansible_user: root
     # Use python3
     ansible_python_interpreter: /usr/bin/python3
-    # Set this optional variable to true if we want to apply the network
-    # configuration. Otherwise the network configuration will be apply during
-    # the next reboot
+    # Set it to true in order to apply the network configuration. Otherwise
+    # it will be apply during the next reboot
+    # This variable is optional (default: false)
     apply_network_config: true
     # NTP server to use
     ntp_servers: 192.168.217.1
@@ -208,7 +209,7 @@ all:
     # Ceph internal cluster network. It can be the same as public network or a
     # specific one
     ceph_cluster_network: "192.168.217.0/24"
-    # The Ceph monitor intial IP address. Usaly the public IP address our the
+    # The Ceph monitor intial IP address. Usualy the public IP address is the
     # cluster IP address.
     monitor_address: "{{ ansible_host }}"
     # The DHCP plage used by the PXE
@@ -224,3 +225,6 @@ all:
     ansible_remote_tmp: /tmp/.ansible/tmp
     # The syslog server IP address where logs are centralized
     syslog_server_ip: "192.168.220.6"
+    # The vlan ID of the PTP. Remove the variable if the ptp frames
+    # are not in a VLAN
+    ptp_vlanid: 100
