@@ -63,4 +63,4 @@
             name: "{{ item }}"
             key: "{{ item }} {{ lookup('file','buffer/' + item + '-ssh_host_ed25519_key.pub') }}"
           with_items: "{{ groups['hypervisors'] }}"
-        when: create_virtu_user is defined
+        when: create_livemigration_user is defined
