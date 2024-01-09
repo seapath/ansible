@@ -1,4 +1,5 @@
 # Copyright (C) 2020-2023, RTE (http://www.rte-france.com)
+# Copyright (C) 2024, SFL (https://savoirfairelinux.com)
 # SPDX-License-Identifier: Apache-2.0
 
 all:
@@ -54,6 +55,7 @@ all:
 #  * vm_template: the VM template to use (string). Default is
 #                 templates/vm/guest.xml.j2. In most cases, you should not
 #                 change this.
+#  * vm_disk: the image to use for the VM creation
 #  * vm_features: the VM feature (list). Can contained one or more of the
 #                 following items.
 #    ** isolated: to enable CPU pinning
@@ -68,7 +70,7 @@ all:
 #                    run on another host.
 #  * rt_priority: the FIFO scheduler priority (int). Default is 1. Use only
 #                 with rt.
-#  * pci_passthrough: a list containing dictionaries of the PIC devices to
+#  * pci_passthrough: a list containing dictionaries of the PCI devices to
 #                     passthrough.
 #    ** domain: PCI domain (int)
 #    ** bus: PCI bus (int)
