@@ -177,21 +177,6 @@ all:
       hosts:
         votp1:
         votp2:
-    pxe_machines:
-      hosts:
-        pxe_votp1:
-          ansible_host: 192.168.217.111
-          static_ip: 192.168.217.15
-        pxe_votp2:
-          ansible_host: 192.168.217.112
-          static_ip: 192.168.217.16
-        pxe_observer:
-          ansible_host: 192.168.217.113
-          static_ip: 192.168.217.11
-      vars:
-        image_path: "/tmp/seapath-bios-dbg-image-votp.wic.gz"
-        root_disk: "/dev/vda"
-        network_interface: "eth0"
 
   vars:
     # Use Ansible through SSH
@@ -222,15 +207,6 @@ all:
     # The Ceph monitor intial IP address. Usualy the public IP address is the
     # cluster IP address.
     monitor_address: "{{ ansible_host }}"
-    # The DHCP plage used by the PXE
-    dhcp_range_begin: "192.168.111.50"
-    dhcp_range_end: "192.168.111.100"
-    # The network interace to bind with the PXE
-    dhcp_bind_interface: "eth0"
-    # The PXE ip address asigned to the "dhcp_bind_interface" interface
-    pxe_server_address: "192.168.111.1"
-    # PXE compatibility bios, uefi or dual (default is dual)
-    pxe_compatibility: "dual"
     # Change the Ansible working folder to a rw accessible folder
     ansible_remote_tmp: /tmp/.ansible/tmp
     # The syslog server IP address where logs are centralized
