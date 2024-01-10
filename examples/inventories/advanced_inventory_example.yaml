@@ -228,3 +228,11 @@ all:
     # The vlan ID of the PTP. Remove the variable if the ptp frames
     # are not in a VLAN
     ptp_vlanid: 100
+    # Set to true to authorize VMs livemigration (default is false)
+    livemigration: true
+    # The name of the user used for the livemigration (default is virtu)
+    livemigrationuser: username
+    # Set to true to create the livemigration user with ansible (default is
+    # false). Let the variable to false if the user was already created during
+    # the build process
+    create_livemigration_user: true
