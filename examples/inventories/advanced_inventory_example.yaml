@@ -30,12 +30,21 @@ all:
               gateway_addr: 192.168.217.1
               # The Subnetwork. Optional variable, default is 24
               subnet: 16
+
               # Optional additional network configuration list
               # For more information see roles/systemd_networkd/README.md
               # Set the cluster interface
+              # If you use the triangle cluster, this variable should be set
+              # to "team0"
               cluster_interface: "ens0p2"
               # Set the cluster IP address
               cluster_ip_addr: "10.0.27.2"
+              # The interface used to connect to one machine in the cluster.
+              # Use it only in a case of triangle cluster
+              team0_0: enp1s0f0
+              # The interface used to connect to the other machine in the
+              # cluster. Use it only in a case of triangle cluster
+              team0_1: enp1s0f1
               custom_network:
                 # Arbitrary list name. Must begin with 00-
                 00-br0ExternalPort:
@@ -46,6 +55,7 @@ all:
                       # The interface IP address with it
                       # subnetwork
                       - Address: "10.0.24.3/24"
+                # The interface used to configure the cluster
                 00-cluster:
                   - Match:
                       - Name: "{{ cluster_interface }}"
