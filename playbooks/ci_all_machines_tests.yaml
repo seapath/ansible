@@ -21,6 +21,6 @@
       fetch:
         src: '{{ tmp_cukinia_dir.path }}/cukinia.xml'
         dest: >-
-          {{ cukinia_test_prefix | default('.') }}/all/{{ inventory_hostname
-          }}/cukinia.xml
+          {{ cukinia_test_prefix | default('..') }}/cukinia_{{ inventory_hostname
+          }}.xml
         flat: yes
