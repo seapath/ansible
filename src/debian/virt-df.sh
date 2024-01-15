@@ -26,7 +26,7 @@ do
     /usr/bin/mount -o ro,noload /dev/$vgname/$lvname /t 2>/dev/null
     returncode=$?
     if [ $returncode -eq 0 ]; then
-      /usr/bin/df -k | grep -E "\/t$" | /usr/bin/awk -v guest="$guest" '{ print guest ":" $1 " total:" $2 " used:" $3 " available:" $4 " disk-usage:" $5 }'
+      /usr/bin/df -k /t | grep -E "\/t$" | /usr/bin/awk -v guest="$guest" '{ print guest ":" $1 " total:" $2 " used:" $3 " available:" $4 " disk-usage:" $5 }'
     fi
     /usr/bin/umount /t 2>/dev/null
     /usr/sbin/lvchange -an /dev/$vgname/$lvname
@@ -41,7 +41,7 @@ do
       returncode=$?
     fi
     if [ $returncode -eq 0 ]; then
-      /usr/bin/df -k | grep -E "\/t$" | /usr/bin/awk -v guest="$guest" '{ print guest ":" $1 " total:" $2 " used:" $3 " available:" $4 " disk-usage:" $5 }'
+      /usr/bin/df -k /t | grep -E "\/t$" | /usr/bin/awk -v guest="$guest" '{ print guest ":" $1 " total:" $2 " used:" $3 " available:" $4 " disk-usage:" $5 }'
     fi
     /usr/bin/umount /t 2>/dev/null
   done
