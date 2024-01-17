@@ -124,23 +124,27 @@
   become: true
   tasks:
       - name: run extra CRM configuration commands
-        command: "/usr/sbin/crm configure {{ item }}"
+        command:
+          cmd: crm -d config load update -
+          stdin: "{{ extra_crm_cmd_to_run }}"
         when: extra_crm_cmd_to_run is defined
         run_once: true
-        no_log: true
-        failed_when: 0 == 1
-        loop: "{{ extra_crm_cmd_to_run }}"
+        register: extra_crm_cmd_to_run_task
+        changed_when: "'CIB commit successful' in extra_crm_cmd_to_run_task.stdout"
       - name: run extra CRM configuration commands for vm-mgr http api
-        command: "/usr/sbin/crm configure {{ item }}"
+        command:
+          cmd: crm -d config load update -
+          stdin: "{{ vmmgrapi_cmd_list }}"
         when:
           - enable_vmmgr_http_api is defined
           - enable_vmmgr_http_api is true
           - admin_cluster_ip is defined
         run_once: true
-        no_log: true
-        failed_when: 0 == 1
-        loop:
-          - "primitive ClusterIP IPaddr2 params ip={{ admin_cluster_ip }} cidr_netmask=32 op monitor interval=30s meta target-role=Started"
-          - "primitive vmmgrapi systemd:nginx.service  op monitor interval=30s"
-          - "colocation vmmgrapi_colocation inf: ClusterIP vmmgrapi"
+        register: vmmgrapi_cmd_list_task
+        changed_when: "'CIB commit successful' in vmmgrapi_cmd_list_task.stdout"
+        vars:
+          vmmgrapi_cmd_list: |
+            primitive ClusterIP IPaddr2 params ip={{ admin_cluster_ip }} cidr_netmask=32 op monitor interval=30s meta target-role=Started
+            primitive vmmgrapi systemd:nginx.service  op monitor interval=30s
+            colocation vmmgrapi_colocation inf: ClusterIP vmmgrapi
 
