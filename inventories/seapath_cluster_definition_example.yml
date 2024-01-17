@@ -284,12 +284,12 @@ all:
         livemigration_user: livemigration
 
         #pacemaker_shutdown_timeout: "2min"
-        extra_crm_cmd_to_run:
+        extra_crm_cmd_to_run: |
           # for ntp status monitoting, be sure host_ip is the ip address of the server and not its hostname
-          - primitive ntpstatus_test ocf:seapath:ntpstatus params host_ip=10.10.10.10 multiplier=500 op monitor timeout=10 interval=10
-          - primitive ptpstatus_test ocf:seapath:ptpstatus op monitor timeout=10 interval=10 op_params multiplier=1000
-          - clone cl_ntpstatus_test ntpstatus_test meta target-role=Started
-          - clone cl_ptpstatus_test ptpstatus_test meta target-role=Started
+          primitive ntpstatus_test ocf:seapath:ntpstatus params host_ip=10.10.10.10 multiplier=500 op monitor timeout=10 interval=10
+          primitive ptpstatus_test ocf:seapath:ptpstatus op monitor timeout=10 interval=10 op_params multiplier=1000
+          clone cl_ntpstatus_test ntpstatus_test meta target-role=Started
+          clone cl_ptpstatus_test ptpstatus_test meta target-role=Started
 
         # if br0vlan is set, then the host's remote access network ip is on a vlan, but a trunk port has been given to the host so that guests can connect to other vlans. You create the interfaces for those guests here:
         guests_on_br0:
