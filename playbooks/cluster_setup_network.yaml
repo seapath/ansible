@@ -86,8 +86,6 @@
         command: "/usr/bin/ovs-vsctl -- --if-exists del-port {{ team0_0 }} -- add-port team0 {{ team0_0 }}"
       - name: Add interface team0_1 to team0 bridge
         command: "/usr/bin/ovs-vsctl -- --if-exists del-port {{ team0_1 }} -- add-port team0 {{ team0_1 }}"
-      - name: Change MacAddress of team0 bridge internal interface
-        command: "/usr/bin/ovs-vsctl set bridge team0 other-config:hwaddr=\\\"{{ '02:00:00' | community.general.random_mac(seed=inventory_hostname+'team0') }}\\\""
       - name: Enable RSTP on team0 bridge
         command: "/usr/bin/ovs-vsctl set Bridge team0 rstp_enable=true"
       - name: Set RSTP priority on team0 bridge
