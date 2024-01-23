@@ -22,6 +22,8 @@ function addIndexToArray {
 }
 function getVars {
   source ${conffile}
+  include_vm=${include_vm:-".*"}
+  exclude_vm=${exclude_vm:-NonExistingGuestNameForDefault}
 }
 function getVarsOld {
   readVar local_dir
@@ -121,14 +123,14 @@ function backupFull {
   [ -z "$remote_dir" ] && { whiptail --msgbox "var remote_dir empty" 10 50; return; }
   [ -z "$remote_shell" ] && { whiptail --msgbox "var remote_shell empty" 10 50; return; }
   [ -z "$remote_serv" ] && { whiptail --msgbox "var remote_serv empty" 10 50; return; }
-  /usr/local/bin/backup_full.sh $local_dir "$remote_shell" $remote_serv":"$remote_dir
+  /usr/local/bin/backup_full.sh $local_dir "$remote_shell" $remote_serv":"$remote_dir "$include_vm" "$exclude_vm"
 }
 function backupInc {
   getVars
   [ -z "$remote_dir" ] && { whiptail --msgbox "var remote_dir empty" 10 50; return; }
   [ -z "$remote_shell" ] && { whiptail --msgbox "var remote_shell empty" 10 50; return; }
   [ -z "$remote_serv" ] && { whiptail --msgbox "var remote_serv empty" 10 50; return; }
-  /usr/local/bin/backup_inc.sh $local_dir "$remote_shell" $remote_serv":"$remote_dir
+  /usr/local/bin/backup_inc.sh $local_dir "$remote_shell" $remote_serv":"$remote_dir "$include_vm" "$exclude_vm"
 }
 function getValueForVar {
    var=$1
@@ -148,6 +150,8 @@ function settings {
           "3)" "change value remote_dir, currently \"$remote_dir\""   \
           "4)" "change value local_tmp_dir, currently \"$local_tmp_dir\""   \
           "5)" "change value remote_shell, currently \"$remote_shell\""   \
+          "6)" "change value include_vm, currently \"$include_vm\""   \
+          "7)" "change value exclude_vm, currently \"$exclude_vm\""   \
           3>&2 2>&1 1>&3
     )
     [[ "$?" = 1 ]] && break
@@ -162,8 +166,20 @@ function settings {
       ;;
       "5)") getValueForVar remote_shell
       ;;
+      "6)") getValueForVar include_vm
+      ;;
+      "7)") getValueForVar exclude_vm
+      ;;
     esac
   done
+}
+
+function estimate {
+    getVars
+    CMD="/usr/local/bin/backup_du.py \"${include_vm}\" \"${exclude_vm}\""
+    echo "Estimating backup volume, please wait"
+    echo
+    whiptail --title "Estimated Volume for a FULL Backup" --msgbox "$(${CMD})" --scrolltext 15 78
 }
 
 while [ 1 ]
@@ -174,6 +190,7 @@ do
     "2)" "backup inc"   \
     "3)" "restore vm"   \
     "4)" "change settings"   \
+    "5)" "estimate backup volume"   \
     3>&2 2>&1 1>&3
   )
   [[ "$?" = 1 ]] && break
@@ -186,6 +203,8 @@ do
     "3)") restoreVMChooseFullDate
     ;;
     "4)") settings
+    ;;
+    "5)") estimate
     ;;
   esac
 done
