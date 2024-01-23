@@ -3,6 +3,8 @@
 local_dir=$1
 remote_shell=$2
 remote_dir=$3
+include_vm=$4
+exclude_vm=$5
 
 [ -z "$local_dir" ] && { echo "var local_dir empty"; exit 1; }
 [ -z "$remote_shell" ] && { echo "var remote_shell empty"; exit 2; }
@@ -16,7 +18,19 @@ d=`date +%Y%m%d%H%M`
 latest_full=`ls -d "$local_dir"* | tail -n 1`
 [ ! -d "$latest_full" ] && { echo "latest full backup not found"; exit 3; }
 
-rbd list | while read i
+echo "Include VM : $include_vm"
+echo "Exclude VM : $exclude_vm"
+echo "------------------------------------"
+L_VM=$( rbd list | grep -E "($include_vm)"  | grep -E -v "($exclude_vm)" | sed -e "s/system_//g" )
+echo "List of Guests to backup: " $L_VM
+echo "------------------------------------"
+echo "press enter to proceed"
+read
+
+#rbd list | while read i
+CMD="rbd list"
+LIST_VM=$( $CMD | grep -E "($include_vm)"  | grep -E -v "($exclude_vm)" )
+for i in $LIST_VM
 do
   echo $i
   latest=`rbd snap list rbd/$i | tail -n 1 | awk '{ print $2 }'`
