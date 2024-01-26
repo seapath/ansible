@@ -102,7 +102,7 @@ https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.ht
 *Warning:* Curently only the Ansible version 2.9 is supported. Other versions
 will not work. Ansible 2.9 is the packaged version in Ubuntu 20.04 and Fedora 33.
 
-Also you must also install the netaddr python3 module.
+Also you must also install the `netaddr` and `six` python3 module as well as the `rsync` package.
 
 === Additional components
 
