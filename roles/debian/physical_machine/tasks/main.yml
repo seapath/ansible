@@ -34,14 +34,14 @@
         - "{{ vmmgrapi_certs_dir }}/seapath.crt"
         - "{{ vmmgrapi_certs_dir }}/seapath.key"
 
-    - name: Modification des droits des certificat
+    - name: Correct certificates rights
       file:
         path: "{{ vmmgrapi_certs_dir }}/{{ item }}"
         mode: 0644
       loop:
         - "seapath.crt"
 
-    - name: Modification des droits des clés privées
+    - name: Correct private keys rights
       file:
         path: "{{ vmmgrapi_certs_dir }}/{{ item }}"
         mode: 0640
