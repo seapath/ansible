@@ -96,7 +96,7 @@ https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.ht
 *Warning:* Curently only the Ansible version 2.10 is supported. Other versions
 will not work.
 
-Also you must also install the netaddr python3 module.
+Also you must also install the `netaddr` and `six` python3 module as well as the `rsync` package.
 
 === Additional components
 
