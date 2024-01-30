@@ -86,7 +86,7 @@
 
 - name: "Install hardened sysfs rules"
   copy:
-    src: ../src/debian/90-sysctl-hardening.conf
+    src: ../src/debian/sysctl/90-sysctl-hardening.conf
     dest: /etc/sysctl.d/zz-sysctl-hardening.conf
   notify: update sysfs values using sysctl
   when: not revert
@@ -99,13 +99,13 @@
 
 - name: "Install network hardened sysfs rules"
   copy:
-    src: ../src/debian/99-sysctl-network.conf
+    src: ../src/debian/sysctl/99-sysctl-network.conf
     dest: /etc/sysctl.d/99-sysctl-network.conf
   notify: update sysfs values using sysctl
   when: not revert
 - name: "Uninstall network hardened sysfs rules"
   file:
-    path: /etc/sysctl.d/99-sysctl-network.conf
+    path: /etc/sysctl.d/sysctl/99-sysctl-network.conf
     state: absent
   notify: update sysfs values using sysctl
   when: revert

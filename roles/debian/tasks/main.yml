@@ -124,7 +124,7 @@
 
 - name: Copy sysctl rules
   ansible.builtin.copy:
-    src: ../src/debian/{{ item }}
+    src: ../src/debian/sysctl/{{ item }}
     dest: /etc/sysctl.d/{{ item }}
     mode: '0644'
   with_items:
