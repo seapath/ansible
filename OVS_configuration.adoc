@@ -52,6 +52,7 @@ ovs_bridges:
         mac: string
         ip: string | [ string ]
         interface: string
+        ofport_request: integer
         other_config: string | [ string ]
         remote_ip: string
         remote_port: interger
@@ -66,6 +67,7 @@ The ovs_bridges takes a bridge list with the following mandatory attributes:
 * *rstp_enable*: set to true to enable RSTP on the bridge. Default is false.
 * *enable_ipv6*: if false all ipv6 paquet will be dropped. Default is false. Ignored when flows_override is defined.
 * *flows_override*: if defined, then the list of flows will override the normal openflow created based on enable_ipv6 and mac/ip variables
+* *ofport_request*: if defined, create the port with the ofport_request option set (request a specific openflow port number)
 * *other_config*: optional OVS configuration for the bridge as you can pass with
   _other_config=_ when running the command `ovs-vsctl`.
 
