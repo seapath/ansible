@@ -399,6 +399,15 @@
   with_items:
     - 00-bridge_nf_call.conf
 
+- name: enable ip_forward if required
+  ansible.builtin.copy:
+    src: ../src/debian/sysctl/{{ item }}
+    dest: /etc/sysctl.d/{{ item }}
+    mode: '0644'
+  with_items:
+    - 00-ipforward.conf
+  when: ip_forward is defined and ip_forward is true
+
 - name: add br_netfilter to /etc/modules
   lineinfile:
     dest: /etc/modules
