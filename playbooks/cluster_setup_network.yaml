@@ -415,6 +415,32 @@
         cmd: "/usr/sbin/iptables-restore < /etc/iptables/rules.v4"
       when: iptables_rules.changed
 
+- name: push proxyarp configuration
+  hosts: cluster_machines
+  become: true
+  tasks:
+    - block:
+        - name: copy proxyarp.sh scripts
+          template:
+            src: ../src/debian/proxyarp/proxyarp.sh.j2
+            dest: "/usr/local/sbin/proxyarp{{ item.IF }}.sh"
+            mode: 0755
+            owner: root
+            group: root
+          loop: "{{ proxyarpdict }}"
+        - name: copy proxyarp systemd service files
+          template:
+            src: ../src/debian/proxyarp/proxyarp.service.j2
+            dest: "/etc/systemd/system/proxyarp{{ item.IF }}.service"
+            mode: '0644'
+            owner: root
+            group: root
+          loop: "{{ proxyarpdict }}"
+        - name: daemon-reload proxyarp
+          ansible.builtin.service:
+            daemon_reload: yes
+      when: proxyarpdict is defined
+
 - name: Restart machine if needed
   hosts:
     - cluster_machines

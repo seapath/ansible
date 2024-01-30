@@ -1,0 +1,24 @@
+#!/bin/bash
+
+if [ $# -ne 1 ]
+  then
+    echo "No arguments supplied"
+fi
+
+action=$1
+IF={{ item.IF }}
+IF1="$IF".1
+MAC={{ item.MAC }}
+IP={{ item.IP }}
+
+if [ $action == "start" ]; then
+  ip link add link $IF address $MAC $IF1 type macvlan
+  ip link set $IF1 up
+  echo 1 > /proc/sys/net/ipv4/conf/$IF1/proxy_arp
+  ip addr add $IP dev $IF1
+elif [ $action == "stop" ]; then
+  ip addr flush $IF1
+  ip link set $IF1 down
+  echo 0 > /proc/sys/net/ipv4/conf/$IF1/proxy_arp
+  ip link del link $IF address $MAC $IF1 type macvlan
+fi

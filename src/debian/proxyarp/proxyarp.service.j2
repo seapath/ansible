@@ -1,0 +1,9 @@
+[Unit]
+Description="configure proxyarp interface {{ item.IF }}"
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+ExecStart=/usr/local/sbin/proxyarp{{ item.IF }}.sh start
+ExecStop=/usr/local/sbin/proxyarp{{ item.IF }}.sh stop
