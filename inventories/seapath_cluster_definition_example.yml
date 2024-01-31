@@ -265,6 +265,11 @@ all:
         # Extra kernel modules to be loaded at boot (you may need this depending on your hardware)
         extra_kernel_modules: []
 
+        # Extra sysctl kernel configuration items pour physical machines (content of file /etc/sysctl.d/00-seapathextra_physicalmachines.conf)
+        #extra_sysctl_physical_machines: |
+        #  net.ipv4.ip_forward = 1
+        #  net.ipv4.conf.all.promote_secondaries = 1
+
         # Optional list variable to change apt repositories. All repositories will be overrides.
         # If defined as empty list [], all apt repositories will be removed
         apt_repo:
