@@ -141,10 +141,10 @@
   vars:
     apply_config: "{{ apply_network_config | default(false) }}"
   tasks:
-    - name: Restart systemd-networkd
-      ansible.builtin.systemd:
+    - name: Reload systemd-networkd configuration
+      ansible.builtin.service:
         name: systemd-networkd
-        state: restarted
+        state: reloaded
       when:
         apply_config
 
@@ -393,10 +393,10 @@
       with_items: "{{ guests_on_br0 | dict2items }}"
       when: guests_on_br0 is defined
       register: guest_br0_network
-    - name: Restart systemd-networkd
-      ansible.builtin.systemd:
+    - name: Reload systemd-networkd configuration
+      ansible.builtin.service:
         name: systemd-networkd
-        state: restarted
+        state: reloaded
       when: guest_br0_netdev.changed or guest_br0_network.changed
 
 - name: push iptables rules
