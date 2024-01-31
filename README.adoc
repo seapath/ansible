@@ -122,10 +122,9 @@ their configurations. Hosts can be grouped into groups.
 Ansible Inventory documentation is available at
 https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html.
 
-In the _examples/inventories_ directory you can find the file
-_inventory_example.yaml_ which is a basic example file of Ansible inventory to
-work with SEAPATH cluster composed of 2 hypervisors, an observer and a virtual
-machine. This file is in YAML format.
+In the _inventories_ directory you can find various examples for a seapath
+cluster, a standalone machine and a virtual machine.
+
 Other formats are valid for inventory file but in this document we will only
 cover the YAML format. This file also contains some commented examples of common
 variables that can be used with Ansible, but does not contain the variables used
@@ -186,8 +185,8 @@ To check only *host3*:
 
  $ ansible -i cluster.yaml host3 -m ping
 
-In the _examples/inventories_ folder there is also another inventory example:
-_advanced_inventory_example.yaml_. This example adds the variables with their
+In the _inventories_ folder there is also another inventory example:
+_seapath_cluster_definitio_example.yaml_. This example adds the variables with their
 descriptions used by the SEAPATH playbooks. This inventory file should be used
 as a starting point for writing your inventory file.
 
@@ -285,7 +284,7 @@ A basic virtual machine for SEAPATH based on debian can be created using the htt
 
 To deploy this machine on the cluster, follow these steps :
 - Place the generated qcow2 file in the `vm_images` directory with the name `guest.qcow2`.
-- Create an inventory describing your virtual machines. An example can be found in `examples/inventories`
+- Create an inventory describing your virtual machines. Follow the example `inventories/seapath_vm_definition_example.yml`
 - Call the playbook `playbooks/deploy_vms_cluster.yaml`
 
  $ ansible-playbook -i inventories/cluster_inventory.yaml -i inventories/vm_inventory.yaml playbooks/deploy_vms_cluster.yaml
