@@ -1,14 +1,14 @@
 # Copyright (C) 2020, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
-# Create the VM test0 based on examples/vm_template_example.xml.j2.
+# Create the VM test0 based on examples/vm_templates/vm_template_example.xml.j2.
 
 ---
 - hosts: hypervisors
   vars:
      - vm_name: test0
      - state: create
-     - xml_template: ./examples/vm_template_example.xml.j2
+     - xml_template: ./examples/vm_templates/vm_template_example.xml.j2
      - rbd_pool: rbd
      - os_disk: os0
      - data_disk: data0
