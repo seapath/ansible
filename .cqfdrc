@@ -16,5 +16,5 @@ command='asciidoctor-pdf README.adoc OVS_configuration.adoc'
 command='./generate_module_documentation.sh'
 
 [ansible-lint]
-docker_run_args="-v $(pwd)/examples/inventories/advanced_inventory_example.yaml:/etc/ansible/hosts/hosts.yaml -v $(pwd)/ceph-ansible/roles:/etc/ansible/roles"
+docker_run_args="-v $(pwd)/inventories/seapath_cluster_definition_example.yml:/etc/ansible/hosts/hosts.yaml -v $(pwd)/ceph-ansible/roles:/etc/ansible/roles"
 command='ansible-lint -c ansible-lint.conf'
