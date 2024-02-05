@@ -155,7 +155,7 @@ all:
         host1:
     vars:
         my_global_var: variable_content
-    chlidren:
+    children:
         group1:
             hosts:
                 host2:
