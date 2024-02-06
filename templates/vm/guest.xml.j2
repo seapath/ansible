@@ -8,13 +8,15 @@
   see examples/inventories/vms_inventory_example.yaml
 -->
 
+{% set cpu_nb = (vm.cpuset | length) if vm.cpuset is defined else vm.nb_cpu | default(1) %}
+
 <domain type="kvm">
     <name>{{ vm.inventory_hostname }}</name>
     <uuid>{{ vm.uuid |default( 9999999999999999999999 | random | to_uuid) }}</uuid>
     <description>
         {{ vm.description |default("Test VM") }}
     </description>
-    <vcpu placement="static">{{ vm.cpuset | length }}</vcpu>
+    <vcpu placement="static">{{ cpu_nb }}</vcpu>
     {% if "dpdk" in vm.vm_features %}
     <memory unit="GiB">1</memory>
     <currentMemory unit="GiB">1</currentMemory>
@@ -44,18 +46,20 @@
         {% endif %}
     </features>
     <cputune>
+    {% if vm.cpuset is defined %}
         {% for cpu in vm.cpuset %}
-        {% if "isolated" in vm.vm_features %}
-        <vcpupin vcpu="{{ loop.index - 1 }}" cpuset="{{ cpu }}"/>
-        {% endif %}
-        {% if "rt" in vm.vm_features %}
-        <vcpusched vcpus="{{ loop.index - 1 }}" scheduler="fifo" priority="{{ vm.rt_priority |default('1') }}" />
-        {% endif %}
+            {% if "isolated" in vm.vm_features %}
+            <vcpupin vcpu="{{ loop.index - 1 }}" cpuset="{{ cpu }}"/>
+            {% endif %}
+            {% if "rt" in vm.vm_features %}
+            <vcpusched vcpus="{{ loop.index - 1 }}" scheduler="fifo" priority="{{ vm.rt_priority |default('1') }}" />
+            {% endif %}
         {% endfor %}
+    {% endif %}
     </cputune>
     {% if "rt" in vm.vm_features %}
     <cpu mode="host-passthrough">
-    <topology sockets="1" dies="1" cores="{{ vm.cpuset | length }}" threads="1" />
+    <topology sockets="1" dies="1" cores="{{ cpu_nb }}" threads="1" />
     <feature policy="require" name="tsc-deadline" />
     {% else %}
     <cpu mode="custom" match="exact" check="none">
@@ -63,8 +67,8 @@
     {% endif %}
         {% if "dpdk" in vm.vm_features %}
         <numa>
-            {% if cpuset|length > 1 %}
-            <cell id="0" cpus="0-{{ vm.cpuset|length - 1 }}" memory="1" unit="GiB" memAccess="shared" />
+            {% if cpu_nb > 1 %}
+            <cell id="0" cpus="0-{{ cpu_nb - 1 }}" memory="1" unit="GiB" memAccess="shared" />
             {% else %}
             <cell id="0" cpus="0" memory="1" unit="GiB" memAccess="shared" />
             {% endif %}
@@ -99,7 +103,7 @@
             <source type='unix' path='/var/run/openvswitch/vm-sockets/dpdkvhostuser_{{ interface.ovs_port }}' mode='server'/>
             <mac address="{{ interface.mac_address }}" />
             <model type='virtio'/>
-            <driver name='vhost' rx_queue_size='1024' tx_queue_size='1024' queues="{{ vm.cpuset | length }}">
+            <driver name='vhost' rx_queue_size='1024' tx_queue_size='1024' queues="{{ cpu_nb }}">
                 <host mrg_rxbuf='on'/>
             </driver>
         </interface>
