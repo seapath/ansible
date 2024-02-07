@@ -85,6 +85,14 @@
     </pm>
     <devices>
         <emulator>/usr/bin/qemu-system-x86_64</emulator>
+        {% if vm.local_disk is defined %}
+        {% for disk in vm.local_disk %}
+        <disk type="file" device="disk">
+           <driver name="qemu" type="qcow2"/>
+           <source file="/var/lib/libvirt/images/{{ disk.disk_file }}"/>
+           <target dev="vda" bus="virtio"/>
+        </disk>
+        {% endfor %}
         {% if "dpdk" in vm.vm_features %}
         {% for interface in vm.dpdk %}
         <interface type='vhostuser'>
