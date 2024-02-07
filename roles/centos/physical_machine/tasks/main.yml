@@ -442,16 +442,31 @@
     name: libvirtd.service
     state: restarted
 
+- name: enable virtsecretd
+  ansible.builtin.systemd:
+    name: virtsecretd.service
+    enabled: yes
+    state: started
+
+
 - name: enable docker.service
   ansible.builtin.systemd:
     name: docker.service
 
 - name: "add lvm_snapshot_rebooter: script file"
-  ansible.builtin.copy:
-    src: ../src/debian/lvm_snapshot_rebooter.sh
-    dest: /etc/initramfs-tools/scripts/init-premount/lvm_snapshot_rebooter
-    mode: '0755'
-  register: lvm_snapshot_rebooter
+  block:
+    - name: dracut module dir
+      file:
+        path: /usr/lib/dracut/modules.d/75lvm-snapshot-rebooter
+        state: directory
+        mode: 0755
+    - name: Copy lvm_snapshot_rebooter script
+      ansible.builtin.copy:
+        src: ../src/debian/lvm_snapshot_rebooter.sh
+        dest: /usr/lib/dracut/modules.d/75lvm-snapshot-rebooter/lvm_snapshot_rebooter
+        mode: '0755'
+      register: lvm_snapshot_rebooter
+
 - name: "add udev rules for lvm2 limitation"
   ansible.builtin.copy:
     src: ../src/debian/69-lvm.rules
@@ -461,7 +476,7 @@
   register: udevlvm
 - name: "rebuild initramfs if necessary"
   command:
-    cmd: /usr/sbin/update-initramfs -u
+    cmd: /usr/bin/dracut --regenerate-all --force
   when: udevlvm.changed or lvm_snapshot_rebooter.changed
 
 - name: "add rbd type to lvm.conf"
