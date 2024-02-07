@@ -486,4 +486,26 @@
     line: "        types = [ \"rbd\", 1024 ]"
     state: present
 
+- name: "Configure firewalld for ceph"
+  block:
+    - name: "Configure firewalld for ceph monitor"
+      ansible.posix.firewalld:
+        port: 3300/tcp
+        permanent: true
+        state: enabled
+    - name: "Configure firewalld for ceph monitor legacy v1 port"
+      ansible.posix.firewalld:
+        port: 6789/tcp
+        permanent: true
+        state: enabled
+    - name: "Configure firewalld for ceph OSD"
+      ansible.posix.firewalld:
+        port: 6800-7300/tcp
+        permanent: true
+        state: enabled
 
+- name: "Configure firewalld for high-availability services"
+  ansible.posix.firewalld:
+    service: high-availability
+    permanent: true
+    state: enabled
