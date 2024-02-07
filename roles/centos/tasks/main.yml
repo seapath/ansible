@@ -157,29 +157,6 @@
     group: "{{ admin_user }}"
     mode: '0644'
 
-- block:
-    - name: Remove all file in /etc/apt/sources.list.d
-      file:
-        path: /etc/apt/sources.list.d
-        state: absent
-    - name: Configure apt repositories
-      template:
-        src: sources.list.j2
-        dest: /etc/apt/sources.list
-  when: apt_repo is defined
-
-- name: "find /etc/default/grub.d/*.cfg (FAI)"
-  find:
-    paths: /etc/default/grub.d
-    patterns: '^\d\d.*\.cfg$'
-    use_regex: true
-  register: wildcard_files_to_delete
-
-- name: "remove /etc/default/grub.d/*.cfg (FAI)"
-  file:
-    path: "{{ item.path }}"
-    state: absent
-  with_items: "{{ wildcard_files_to_delete.files }}"
 
 - name: "remove GRUB_CMDLINE_LINUX_DEFAULT option in grub conf"
   lineinfile:
@@ -218,5 +195,5 @@
     state: present
   register: updategrub2
 - name: update-grub
-  command: update-grub
+  command: grub2-mkconfig -o /boot/grub2/grub.cfg
   when: updategrub1.changed or updategrub2.changed
