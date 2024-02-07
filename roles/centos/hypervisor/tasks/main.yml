@@ -251,3 +251,10 @@
     name: ptp_vsock.service
     enabled: yes
     state: started
+
+
+- name: enable libvirtd.service
+  ansible.builtin.systemd:
+    name: libvirtd.service
+    enabled: yes
+    state: started
