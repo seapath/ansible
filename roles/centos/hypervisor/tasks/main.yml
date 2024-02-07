@@ -106,7 +106,7 @@
 #    - rcu_nocb_poll
 
 - name: update-grub
-  command: update-grub
+  command: grub2-mkconfig -o /boot/grub2/grub.cfg
   when: updategrub1.changed
 
 - name: "irqbalance conf"
