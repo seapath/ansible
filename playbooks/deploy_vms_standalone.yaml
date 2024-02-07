@@ -37,7 +37,7 @@
       when: disk_copy | bool
     - name: export VM config for debug in /tmp
       template:
-        src: guest.xml.j2
+        src: "{{ hostvars[item].vm_template }}"
         dest: "/tmp/{{ hostvars[item].inventory_hostname }}.xml"
       vars:
         vm: "{{ hostvars[item] }}"
