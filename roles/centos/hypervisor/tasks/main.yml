@@ -9,12 +9,13 @@
     enabled: yes
     state: started
 
-- name: add vhost_vsock to /etc/modules
-  lineinfile:
-    dest: /etc/modules
-    state: present
-    regexp: '^vhost_vsock$'
-    line: 'vhost_vsock'
+- name: add vhost_vsock to /etc/modules-load.d
+  ansible.builtin.copy:
+    src: ../src/debian/modules/vhost_vsock.conf
+    dest: /etc/modules-load.d/vhost_vsock.conf
+    owner: root
+    group: root
+    mode: 0751
 
 - name: Copy votp-taskset.service script
   template:
@@ -45,20 +46,13 @@
   with_items:
     - 00-schedrt.conf
 
-- name: add sriov driver to /etc/modules
-  lineinfile:
-    dest: /etc/modules
-    state: present
-    regexp: "^{{ sriov_driver }}$"
-    line: "{{ sriov_driver }}"
-  when: sriov_driver is defined
-- name: add sriov apparmor permission for libvirt
-  lineinfile:
-    dest: /etc/apparmor.d/local/abstractions/libvirt-qemu
-    state: present
-    line: '/dev/vfio/* rw,'
-    create: yes
-    mode: 0644
+- name: add sriov driver to /etc/modules-load.d
+  ansible.builtin.copy:
+    src: ../src/debian/modules/sriov_driver.conf
+    dest: /etc/modules-load.d/sriov_driver.conf
+    owner: root
+    group: root
+    mode: 0751
   when: sriov_driver is defined
 - name: load the sriov module
   community.general.modprobe:
