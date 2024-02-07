@@ -1,7 +1,8 @@
 # Copyright (C) 2021, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 ---
-_systemd_networkd_network_custom: ["{{ custom_network |default([]) }}"]
+_systemd_networkd_network_custom: ["{{ custom_network | default([]) }}"]
+_systemd_networkd_netdev_custom: ["{{ custom_netdev | default([]) }}"]
 
 _vlan_conditionnal: "{% if ptp_vlan is defined %}[{'VLAN': 'ptp'}]{% else %}[]{% endif %}"
 
@@ -16,5 +17,24 @@ _wired_systemd_networkd_network:
         - Name: "{{ network_interface }}"
     - Network: "{{ _network_common + _vlan_conditionnal }}"
 
+_br0_systemd_networkd_netdev:
+  79-br0:
+    - NetDev:
+      - Name: "br0"
+      - Kind: "bridge"
 
-systemd_networkd_network: "{{ _wired_systemd_networkd_network | combine(_systemd_networkd_network_custom) }}"
+_br0_systemd_networkd_network:
+  79-br0:
+    - Match:
+      - Name: "br0"
+    - Network:
+      - Gateway: "{{ gateway_addr }}"
+      - Address: "{{ ip_addr }}/{{ subnet | default(24) }}"
+  79-wired:
+    - Match:
+      - Name: "{{ network_interface }}"
+    - Network: "{{ [ {'Bridge': 'br0'} ] | default([]) }}"
+
+systemd_networkd_network: "{{  _br0_systemd_networkd_network if create_br0_bridge is defined and create_br0_bridge else _wired_systemd_networkd_network | combine(_systemd_networkd_network_custom) }}"
+systemd_networkd_netdev: "{{  _br0_systemd_networkd_netdev if create_br0_bridge is defined and create_br0_bridge else [] | combine(_systemd_networkd_netdev_custom)}}"
+
