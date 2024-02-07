@@ -1,0 +1,11 @@
+# Copyright (C) 2024, Red Hat
+# SPDX-License-Identifier: Apache-2.0
+
+---
+path_timemaster_conf: "/etc/linuxptp/timemaster.conf"
+path_chrony_conf: "/etc/chrony/chrony.conf"
+
+service_name_chrony: "chrony"
+crm_command_path: "crm"
+cukinia_command_path: "cukinia"
+setup_ovs_command_path: "setup_ovs.py"
