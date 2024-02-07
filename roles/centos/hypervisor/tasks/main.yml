@@ -1,0 +1,267 @@
+- name: enable docker.service
+  ansible.builtin.systemd:
+    name: docker.service
+    enabled: yes
+    state: started
+- name: enable docker.socket
+  ansible.builtin.systemd:
+    name: docker.socket
+    enabled: yes
+    state: started
+
+- name: add vhost_vsock to /etc/modules
+  lineinfile:
+    dest: /etc/modules
+    state: present
+    regexp: '^vhost_vsock$'
+    line: 'vhost_vsock'
+
+- name: Copy votp-taskset.service script
+  template:
+    src: ../src/debian/taskset_boot.sh.j2
+    dest: /usr/local/bin/taskset_boot.sh
+    mode: '0755'
+  register: votptaskset1
+- name: Copy votp-taskset.service
+  ansible.builtin.copy:
+    src: ../src/debian/votp-taskset.service
+    dest: /etc/systemd/system/votp-taskset.service
+    mode: '0644'
+  register: votptaskset2
+- name: daemon-reload taskset
+  ansible.builtin.service:
+    daemon_reload: yes
+  when: votptaskset1.changed or votptaskset2.changed
+- name: enable votp-taskset.service
+  ansible.builtin.systemd:
+    name: votp-taskset.service
+    enabled: yes
+
+- name: Copy sysctl RT rules
+  ansible.builtin.copy:
+    src: ../src/debian/sysctl/{{ item }}
+    dest: /etc/sysctl.d/{{ item }}
+    mode: '0644'
+  with_items:
+    - 00-schedrt.conf
+
+- name: add sriov driver to /etc/modules
+  lineinfile:
+    dest: /etc/modules
+    state: present
+    regexp: "^{{ sriov_driver }}$"
+    line: "{{ sriov_driver }}"
+  when: sriov_driver is defined
+- name: add sriov apparmor permission for libvirt
+  lineinfile:
+    dest: /etc/apparmor.d/local/abstractions/libvirt-qemu
+    state: present
+    line: '/dev/vfio/* rw,'
+    create: yes
+    mode: 0644
+  when: sriov_driver is defined
+- name: load the sriov module
+  community.general.modprobe:
+    name: "{{ sriov_driver }}"
+    state: present
+  when: sriov_driver is defined
+
+- name: add sriov sysfs rules
+  ansible.builtin.lineinfile:
+    dest: "/etc/sysfs.d/sriov.conf"
+    state: present
+    regexp: "^class/net/{{ item.key }}/device/sriov_numvfs = "
+    line: "class/net/{{ item.key }}/device/sriov_numvfs = {{ item.value }}"
+    create: yes
+    mode: 0644
+  with_items: "{{ sriov | dict2items }}"
+  when: sriov is defined
+  register: sriov_sysfs
+- name: Copy sysfs.d cpumask
+  template:
+    src: ../templates/00-workqueue_cpumask.conf.j2
+    dest: /etc/sysfs.d/00-workqueue_cpumask.conf
+    mode: '0644'
+  register: sysfscpumask
+- name: restart sysfsutils
+  ansible.builtin.systemd:
+    name: sysfsutils.service
+    state: restarted
+  when: sysfscpumask.changed or sriov_sysfs.changed
+
+- name: "grub conf hypervisor"
+  lineinfile:
+    dest: /etc/default/grub
+    regexp: '^(GRUB_CMDLINE_LINUX=(?:(?![" ]{{ item.split("=")[0] }}=?).)*"?)\s*(?:{{ item.split("=")[0] }}(?:=\S+)?\s*)?(.*")$'
+    line: '\1 {{ item.split("=")[0] + (("="+item.split("=")[1]) if item.split("=")|length>1 and item.split("=")[1] != None and item.split("=")[1] != "" else "") }} \2'
+    state: present
+    backrefs: yes
+  register: updategrub1
+  with_items:
+    - processor.max_cstate=1
+    - intel_idle.max_cstate=1
+    - cpufreq.default_governor=performance
+    - intel_pstate=disable
+    - nosoftlockup
+    - "rcu_nocbs={{ isolcpus }}"
+    - rcu_nocb_poll
+    - rcutree.kthread_prio=10
+    - "isolcpus=nohz,domain,managed_irq,{{ isolcpus }}"
+    - skew_tick=1
+    - tsc=reliable
+
+# Another way would be to use a dictionnary so that the regexp is a bit simpler
+#  lineinfile:
+#    regexp: '^(GRUB_CMDLINE_LINUX=(?:(?![" ]{{ item.key }}=?).)*"?)\s*(?:{{ item.key }}(?:=\S+)?\s*)?(.*")$'
+#    line: '\1 {{ item.key + ("="+item.value|string if item.value != None else "") }} \2'
+#  with_items:
+#    - processor.max_cstate: "1"
+#    - intel_idle.max_cstate: "1"
+#    - rcu_nocb_poll
+
+- name: update-grub
+  command: update-grub
+  when: updategrub1.changed
+
+- name: "irqbalance conf"
+  lineinfile:
+    dest: /etc/default/irqbalance
+    regexp: '^IRQBALANCE_BANNED_CPULIST=".*"$'
+    line: 'IRQBALANCE_BANNED_CPULIST="{{ isolcpus }}"'
+    state: present
+  register: irqbalanceconf
+- name: restart irqbalance
+  ansible.builtin.systemd:
+    name: irqbalance.service
+    enabled: yes
+    state: restarted
+  when: irqbalanceconf.changed
+
+- name: "systemd conf CPUAffinity"
+  lineinfile:
+    dest: /etc/systemd/system.conf
+    regexp: '^CPUAffinity=.*$'
+    line: "CPUAffinity={{ cpusystem }}"
+    state: present
+- name: "systemd conf RuntimeWatchdogSec"
+  lineinfile:
+    dest: /etc/systemd/system.conf
+    regexp: '^RuntimeWatchdogSec=.*$'
+    line: "RuntimeWatchdogSec=20"
+    state: present
+- name: "systemd conf RebootWatchdogSec"
+  lineinfile:
+    dest: /etc/systemd/system.conf
+    regexp: '^RebootWatchdogSec=.*$'
+    line: "RebootWatchdogSec=5min"
+    state: present
+
+- name: Create systemd slices override
+  file:
+    path: /etc/systemd/system.control/{{ item }}.slice.d
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+  with_items:
+    - "system"
+    - "user"
+    - "machine"
+- name: create systemd slices override
+  template:
+    src: ../templates/systemd_slice_override.j2
+    dest: /etc/systemd/system.control/{{ item.name }}.slice.d/50-AllowedCPUs.conf
+    owner: root
+    group: root
+    mode:  0644
+  with_items:
+    - { name: "system", description: "system slice", allowedcpus: "{{ cpusystem }}" }
+    - { name: "user", description: "user slice", allowedcpus: "{{ cpuuser }}" }
+    - { name: "machine", description: "machine slice", allowedcpus: "{{ cpumachines }}" }
+
+- name: create systemd slices
+  template:
+    src: ../templates/systemd_slice.j2
+    dest: /etc/systemd/system/{{ item.name }}.slice
+    owner: root
+    group: root
+    mode:  0644
+  with_items:
+    - { name: "machine-rt", description: "VM rt slice", wants: "machine.slice", allowedcpus: "{{ cpumachinesrt }}" }
+    - { name: "machine-nort", description: "VM nonrt slice", wants: "machine.slice", allowedcpus: "{{ cpumachinesnort }}" }
+    - { name: "ovs", description: "ovs slice", wants: "", allowedcpus: "{{ cpuovs }}" }
+  register: newslices
+
+- name: start new slices
+  ansible.builtin.systemd:
+    name: "{{ item }}.slice"
+    state: restarted
+    daemon_reload: yes
+  with_items:
+    - "machine-rt"
+    - "machine-nort"
+    - "ovs"
+  when: newslices.changed
+
+- name: Create ovs-vswitchd.service.d directory
+  file:
+    path: /etc/systemd/system/ovs-vswitchd.service.d/
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+- name: Copy ovs-vswitchd.service drop-in
+  ansible.builtin.copy:
+    src: ../src/debian/ovs-vswitchd_override.conf
+    dest: /etc/systemd/system/ovs-vswitchd.service.d/override.conf
+    owner: root
+    group: root
+    mode: 0644
+  register: ovsvswitchd
+- name: Restart ovs-vswitchd
+  ansible.builtin.systemd:
+    state: restarted
+    daemon_reload: yes
+    name: ovs-vswitchd
+  when: ovsvswitchd.changed
+
+
+- name: Copy ptp_status executable files
+  ansible.builtin.copy:
+    src: ../src/debian/ptpstatus/{{ item }}
+    dest: /usr/local/bin/{{ item }}
+    mode: '0755'
+  with_items:
+    - ptpstatus.sh
+- name: Copy ptp_vsock executable files
+  ansible.builtin.copy:
+    src: ../src/debian/ptp_vsock.py
+    dest: /usr/local/bin/ptp_vsock.py
+    mode: '0755'
+
+- name: Copy ptp_status.service
+  ansible.builtin.copy:
+    src: ../src/debian/ptpstatus/ptpstatus.service
+    dest: /etc/systemd/system/ptpstatus.service
+    mode: '0644'
+  register: ptpstatus
+- name: Copy ptp_vsock.service
+  ansible.builtin.copy:
+    src: ../src/debian/ptp_vsock.service
+    dest: /etc/systemd/system/ptp_vsock.service
+    mode: '0644'
+  register: ptpvsock
+- name: daemon-reload ptp status
+  ansible.builtin.service:
+    daemon_reload: yes
+  when: ptpstatus.changed or ptpvsock.changed
+- name: enable ptpstatus.service
+  ansible.builtin.systemd:
+    name: ptpstatus.service
+    enabled: yes
+    state: started
+- name: enable ptp_vsock.service
+  ansible.builtin.systemd:
+    name: ptp_vsock.service
+    enabled: yes
+    state: started

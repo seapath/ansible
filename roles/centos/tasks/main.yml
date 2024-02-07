@@ -1,0 +1,222 @@
+- name: disable vim defaults
+  lineinfile:
+    dest: /etc/vim/vimrc
+    regexp: '^"? *let g:skip_defaults_vim = 1$'
+    line: "let g:skip_defaults_vim = 1"
+    state: present
+- name: vim color syntax
+  lineinfile:
+    dest: /etc/vim/vimrc
+    regexp: '^"? *syntax on$'
+    line: "syntax on"
+    state: present
+- name: remove vimrc.local file
+  file:
+    path: /etc/vim/vimrc.local
+    state: absent
+
+- name: create /var/log/syslog-ng folder on hosts
+  file:
+    path: /var/log/syslog-ng
+    state: directory
+    mode: '0755'
+- name: Copy syslog-ng conf file
+  template:
+    src: ../templates/syslog-ng.conf.j2
+    dest: /etc/syslog-ng/syslog-ng.conf
+    mode: '0644'
+  notify: restart syslog-ng
+- block:
+  - name: Create /etc/syslog-ng/cert.d
+    file:
+      path: /etc/syslog-ng/cert.d
+      state: directory
+      mode: '0755'
+  - name: Create /etc/syslog-ng/ca.d
+    file:
+      path: /etc/syslog-ng/ca.d/
+      state: directory
+      mode: '0755'
+  - name: copy syslog client certificate
+    ansible.builtin.copy:
+      src: "{{ syslog_tls_ca }}"
+      dest: /etc/syslog-ng/cert.d/clientcert.pem
+      mode: '0644'
+  - name: copy syslog key
+    ansible.builtin.copy:
+      src: "{{ syslog_tls_key }}"
+      dest: /etc/syslog-ng/cert.d/clientkey.pem
+      mode: '0400'
+  - name: copy syslog server ca
+    ansible.builtin.copy:
+      src: "{{ syslog_tls_server_ca }}"
+      dest: /etc/syslog-ng/ca.d/serverca.pem
+      mode: '0644'
+  when:
+    - syslog_tls_ca is defined
+    - syslog_tls_key is defined
+    - syslog_tls_server_ca is defined
+
+- name: removing or not the virtu user created by the iso
+  block:
+    - name: remove 'virtu' from sudoers file
+      lineinfile:
+        dest: /etc/sudoers
+        state: absent
+        regexp: '^virtu'
+        validate: visudo -cf %s
+    - name: Remove the virtu user 
+      ansible.builtin.user:
+        name: virtu
+        state: absent
+        remove: yes
+    - name: Remove the virtu group 
+      ansible.builtin.group:
+        name: virtu
+        state: absent
+  when: admin_user != "virtu"
+
+- name: Copy journald conf file
+  ansible.builtin.copy:
+    src: ../src/debian/journald.conf
+    dest: /etc/systemd/journald.conf
+    mode: '0644'
+  register: journaldconf
+- name: Restart systemd-journald
+  ansible.builtin.systemd:
+    state: restarted
+    name: systemd-journald
+  when: journaldconf.changed
+
+- name: Ensure admin group exists
+  ansible.builtin.group:
+    name: "{{ admin_user }}"
+    state: present
+    gid: 1000
+- name: Adding admin user
+  user:
+    name: "{{ admin_user }}"
+    shell: /bin/bash
+    group: "{{ admin_user }}"
+    uid: 1000
+    password: "{{ admin_passwd | default(omit) }}"
+    append: no
+- name: Add authorized keys to admin user
+  authorized_key:
+    user: "{{ admin_user }}"
+    key: "{{ item }}"
+  with_items: "{{ admin_ssh_keys }}"
+  when: admin_ssh_keys is defined and admin_ssh_keys is iterable
+- name: Install sudo admin user rules
+  copy:
+    content: |
+      {{ admin_user }}   ALL=NOPASSWD:EXEC: ALL
+    dest: "/etc/sudoers.d/{{ admin_user }}"
+    owner: root
+    group: root
+    mode: '0440'
+- name: Remove admin sudoers line created by build_debian_iso
+  lineinfile:
+    dest: /etc/sudoers
+    state: absent
+    regexp: '^{{ admin_user }}'
+    validate: visudo -cf %s
+
+- name: Copy sysctl rules
+  ansible.builtin.copy:
+    src: ../src/debian/sysctl/{{ item }}
+    dest: /etc/sysctl.d/{{ item }}
+    mode: '0644'
+  with_items:
+    - 00-panicreboot.conf
+
+- name: customize /etc/environment
+  ansible.builtin.lineinfile:
+    dest: "/etc/environment"
+    state: present
+    regexp: "^{{ item.key }}="
+    line: "{{ item.key }}={{ item.value }}"
+  vars:
+    env_list:
+      HISTSIZE: 2000000
+      HISTFILESIZE: 2000000
+      LIBVIRT_DEFAULT_URI: "qemu:///system"
+      HISTTIMEFORMAT: '"%F %T "'
+      EDITOR: 'vim'
+      SYSTEMD_EDITOR: 'vim'
+  with_items: "{{ env_list | dict2items }}"
+
+- name: "PATH for admin user"
+  lineinfile:
+    dest: "/home/{{ admin_user }}/.bash_profile"
+    regexp: '^export PATH'
+    line: "export PATH=$PATH:/usr/sbin:/usr/local/sbin:/sbin"
+    state: present
+    create: yes
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: '0644'
+
+- block:
+    - name: Remove all file in /etc/apt/sources.list.d
+      file:
+        path: /etc/apt/sources.list.d
+        state: absent
+    - name: Configure apt repositories
+      template:
+        src: sources.list.j2
+        dest: /etc/apt/sources.list
+  when: apt_repo is defined
+
+- name: "find /etc/default/grub.d/*.cfg (FAI)"
+  find:
+    paths: /etc/default/grub.d
+    patterns: '^\d\d.*\.cfg$'
+    use_regex: true
+  register: wildcard_files_to_delete
+
+- name: "remove /etc/default/grub.d/*.cfg (FAI)"
+  file:
+    path: "{{ item.path }}"
+    state: absent
+  with_items: "{{ wildcard_files_to_delete.files }}"
+
+- name: "remove GRUB_CMDLINE_LINUX_DEFAULT option in grub conf"
+  lineinfile:
+    dest: /etc/default/grub
+    regexp: "^GRUB_CMDLINE_LINUX_DEFAULT="
+    state: absent
+
+- name: "make sure GRUB_CMDLINE_LINUX starts with a space"
+  lineinfile:
+    dest: /etc/default/grub
+    regexp: "^(GRUB_CMDLINE_LINUX=)\"([ ]*)(.*)\""
+    line: '\1" \3"'
+    state: present
+    backrefs: yes
+
+- name: "grub conf"
+  lineinfile:
+    dest: /etc/default/grub
+    regexp: "^(GRUB_CMDLINE_LINUX=(?!.* {{ item }})\"[^\"]*)(\".*)"
+    line: '\1 {{ item }}\2'
+    state: present
+    backrefs: yes
+  register: updategrub1
+  with_items:
+    - ipv6.disable=1
+    - efi=runtime
+    - fsck.mode=force
+    - fsck.repair=yes
+    - "{{ grub_append | default([]) }}"
+
+- name: "grub conf osprober"
+  lineinfile:
+    dest: /etc/default/grub
+    regexp: '^#?GRUB_DISABLE_OS_PROBER=.*$'
+    line: 'GRUB_DISABLE_OS_PROBER=true'
+    state: present
+  register: updategrub2
+- name: update-grub
+  command: update-grub
+  when: updategrub1.changed or updategrub2.changed
