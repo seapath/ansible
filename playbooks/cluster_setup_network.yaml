@@ -149,6 +149,7 @@
         apply_config
 
 - name: Configure OVS
+  gather_facts: True
   hosts:
     - cluster_machines
     - standalone_machine
@@ -156,11 +157,15 @@
   vars:
     apply_config: "{{ apply_network_config | default(false) }}"
   tasks:
+    - include_vars: ../vars/debian_paths.yml
+      when: ansible_distribution == 'Debian'
+    - include_vars: ../vars/centos_paths.yml
+      when: ansible_distribution == 'CentOS'
     - name: Create OVS configuration
       template:
         src: ../templates/ovs_configuration.json.j2
         dest: /etc/ovs_configuration.json
-        validate: setup_ovs.py -v -c -f %s
+        validate: "{{ setup_ovs_command_path }} -v -c -f %s"
       register: ovs_conf
     - name: Restart votp-config_ovs
       ansible.builtin.systemd:
@@ -268,11 +273,16 @@
       when: dns_servers is defined
 
 - name: Configure TimeMaster
+  gather_facts: True
   hosts:
     - cluster_machines
     - standalone_machine
   become: true
   tasks:
+    - include_vars: ../vars/debian_paths.yml
+      when: ansible_distribution == 'Debian'
+    - include_vars: ../vars/centos_paths.yml
+      when: ansible_distribution == 'CentOS'
     - name: Populate service facts
       service_facts:
     - name: stop and disable systemd-timesyncd if it exists
@@ -284,11 +294,11 @@
     - name: Create timemaster configuration
       template:
         src: ../templates/timemaster.conf.j2
-        dest: /etc/linuxptp/timemaster.conf
+        dest: "{{ path_timemaster_conf }}"
       register: timemasterconf1
     - name: comment pool configuration in chrony.conf
       replace:
-        path: /etc/chrony/chrony.conf
+        path: "{{ path_chrony_conf }}"
         regexp: '^(pool .*)'
         replace: '#\1'
       register: timemasterconf2
@@ -317,15 +327,20 @@
       when: timemasterconf1.changed or timemasterconf2.changed or timemasterconf3.changed
 
 - name: Stop chrony service
+  gather_facts: True
   hosts:
     - cluster_machines
     - standalone_machine
     - VMs
   become: true
   tasks:
+    - include_vars: ../vars/debian_paths.yml
+      when: ansible_distribution == 'Debian'
+    - include_vars: ../vars/centos_paths.yml
+      when: ansible_distribution == 'CentOS'
     - name: stop and disable chrony
       service:
-        name: "chrony"
+        name: "{{ service_name_chrony }}"
         state: stopped
         enabled: false
 
