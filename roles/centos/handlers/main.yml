@@ -1,0 +1,8 @@
+- name: daemon-reload
+  ansible.builtin.service:
+    daemon_reload: yes
+
+- name: restart syslog-ng
+  ansible.builtin.systemd:
+    name: syslog-ng
+    state: restarted
