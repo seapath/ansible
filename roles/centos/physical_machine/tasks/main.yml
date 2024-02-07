@@ -295,12 +295,21 @@
   when: pacemaker_corosync.changed and pacemaker_service_status.status.UnitFileState == "enabled"
 
 - name: Add extra modules to the kernel
-  lineinfile:
-    dest: /etc/modules
-    state: present
-    regexp: "^{{ item }}$"
-    line: "{{ item }}"
-  with_items: "{{ extra_kernel_modules | default([]) }}"
+  block:
+    - name: create extra modules conf file
+      ansible.builtin.file:
+        path: /etc/modules-load.d/extra_modules.conf
+        owner: root
+        group: root
+        mode: 0751
+        state: touch
+    - name: add extra modules to conf file
+      lineinfile:
+        dest: /etc/modules-load.d/extra_modules.conf
+        state: present
+        regexp: "^{{ item }}$"
+        line: "{{ item }}"
+      with_items: "{{ extra_kernel_modules | default([]) }}"
 
 - name: Add admin user to libvirt and haclient groups
   user:
@@ -406,24 +415,13 @@
     content: "{{ extra_sysctl_physical_machines }}"
   when: extra_sysctl_physical_machines is defined
 
-- name: add br_netfilter to /etc/modules
-  lineinfile:
-    dest: /etc/modules
-    state: present
-    regexp: '^br_netfilter$'
-    line: 'br_netfilter'
-- name: add raid6_pq to /etc/modules
-  lineinfile:
-    dest: /etc/modules
-    state: present
-    regexp: '^raid6_pq$'
-    line: 'raid6_pq'
-
-- name: Copy apparmor libvirt-qemu rules
+- name: add br_netfilter to /etc/modules-load.d
   ansible.builtin.copy:
-    src: ../src/debian/etc_apparmor.d_abstractions_libvirt-qemu.conf
-    dest: /etc/apparmor.d/abstractions/libvirt-qemu
-    mode: '0644'
+    src: ../src/debian/modules/netfilter.conf
+    dest: /etc/modules-load.d/netfilter.conf
+    owner: root
+    group: root
+    mode: 0751
 
 - name: lineinfile in hosts file for logstash-seapath
   lineinfile:
