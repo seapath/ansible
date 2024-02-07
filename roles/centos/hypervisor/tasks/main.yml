@@ -61,27 +61,19 @@
   when: sriov_driver is defined
 
 - name: add sriov sysfs rules
-  ansible.builtin.lineinfile:
-    dest: "/etc/sysfs.d/sriov.conf"
-    state: present
-    regexp: "^class/net/{{ item.key }}/device/sriov_numvfs = "
-    line: "class/net/{{ item.key }}/device/sriov_numvfs = {{ item.value }}"
-    create: yes
-    mode: 0644
+  template:
+    src: ../templates/sriov.conf.j2
+    dest: /etc/tmpfiles.d/sriov.conf
+    mode: '0644'
   with_items: "{{ sriov | dict2items }}"
   when: sriov is defined
-  register: sriov_sysfs
+  register: sriov_tmpfiles
 - name: Copy sysfs.d cpumask
   template:
-    src: ../templates/00-workqueue_cpumask.conf.j2
-    dest: /etc/sysfs.d/00-workqueue_cpumask.conf
+    src: ../templates/tmpfiles-workqueue_cpumask.conf.j2
+    dest: /etc/tmpfiles.d/tmpfiles-workqueue_cpumask.conf
     mode: '0644'
-  register: sysfscpumask
-- name: restart sysfsutils
-  ansible.builtin.systemd:
-    name: sysfsutils.service
-    state: restarted
-  when: sysfscpumask.changed or sriov_sysfs.changed
+  register: tmpfiles_cpumask
 
 - name: "grub conf hypervisor"
   lineinfile:
