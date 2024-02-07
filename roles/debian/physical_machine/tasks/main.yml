@@ -316,75 +316,78 @@
     append: no
   when: livemigration_user is defined and livemigration_user != admin_user
 
-- name: get Debian-snmp uid
-  getent:
-    database: passwd
-    key: "Debian-snmp"
-- name: get Debian-snmp gid
-  getent:
-    database: group
-    key: "Debian-snmp"
-- debug:
-    msg:
-      - "user id {{ getent_passwd['Debian-snmp'][1] }}"
-      - "group id {{ getent_group['Debian-snmp'][1] }}"
-
-- name: Set Debian-snmp correct uid/gid
+- name: configure snmp
   block:
-    - name: stop snmpd if needed
-      ansible.builtin.systemd:
-        name: snmpd.service
-        state: stopped
-    - name: Ensure group "Debian-snmp" exists with correct gid
-      ansible.builtin.group:
-        name: Debian-snmp
-        state: present
-        gid: 902
-    - name: Ensure user Debian-snmp has correct uid and gid
-      user:
-        name: Debian-snmp
-        uid: 902
-        group: Debian-snmp
-  when: getent_passwd['Debian-snmp'][1] != "902" or getent_group['Debian-snmp'][1] != "902"
+  - name: get Debian-snmp uid
+    getent:
+      database: passwd
+      key: "Debian-snmp"
+  - name: get Debian-snmp gid
+    getent:
+      database: group
+      key: "Debian-snmp"
+  - debug:
+      msg:
+        - "user id {{ getent_passwd['Debian-snmp'][1] }}"
+        - "group id {{ getent_group['Debian-snmp'][1] }}"
 
-- name: Synchronization of snmp_ scripts
-  ansible.posix.synchronize:
-    src: ../src/debian/
-    dest: /usr/local/bin/
-    rsync_opts:
-    - "--include=snmp_*.sh"
-    - "--include=virt-df.sh"
-    - "--exclude=*"
-    - "--chmod=F755"
-    - "--chown=root:root"
-- name: Snmp config
-  ansible.builtin.template:
-    src: ../src/debian/snmpd.conf.j2
-    dest: /etc/snmp/snmpd.conf
-    mode: '0644'
-    owner: root
-    group: root
-  register: snmpd_conf
-- name: Wait for DHCP for SNMP
-  lineinfile:
-    dest: /lib/systemd/system/snmpd.service
-    regexp: "^After="
-    line: "After=network-online.target"
-    state: present
+  - name: Set Debian-snmp correct uid/gid
+    block:
+      - name: stop snmpd if needed
+        ansible.builtin.systemd:
+          name: snmpd.service
+          state: stopped
+      - name: Ensure group "Debian-snmp" exists with correct gid
+        ansible.builtin.group:
+          name: Debian-snmp
+          state: present
+          gid: 902
+      - name: Ensure user Debian-snmp has correct uid and gid
+        user:
+          name: Debian-snmp
+          uid: 902
+          group: Debian-snmp
+    when: getent_passwd['Debian-snmp'][1] != "902" or getent_group['Debian-snmp'][1] != "902"
 
-- name: restart snmpd
-  ansible.builtin.systemd:
-    name: snmpd.service
-    state: restarted
-    enabled: yes
+  - name: Synchronization of snmp_ scripts
+    ansible.posix.synchronize:
+      src: ../src/debian/
+      dest: /usr/local/bin/
+      rsync_opts:
+      - "--include=snmp_*.sh"
+      - "--include=virt-df.sh"
+      - "--exclude=*"
+      - "--chmod=F755"
+      - "--chown=root:root"
+  - name: Snmp config
+    ansible.builtin.template:
+      src: ../src/debian/snmpd.conf.j2
+      dest: /etc/snmp/snmpd.conf
+      mode: '0644'
+      owner: root
+      group: root
+    register: snmpd_conf
+  - name: Wait for DHCP for SNMP
+    lineinfile:
+      dest: /lib/systemd/system/snmpd.service
+      regexp: "^After="
+      line: "After=network-online.target"
+      state: present
 
-- name: Install sudo Debian-snmp user rules
-  copy:
-    src: ../src/debian/sudoers/Debian-snmp
-    dest: /etc/sudoers.d/Debian-snmp
-    owner: root
-    group: root
-    mode: '0440'
+  - name: restart snmpd
+    ansible.builtin.systemd:
+      name: snmpd.service
+      state: restarted
+      enabled: yes
+
+  - name: Install sudo Debian-snmp user rules
+    copy:
+      src: ../src/debian/sudoers/Debian-snmp
+      dest: /etc/sudoers.d/Debian-snmp
+      owner: root
+      group: root
+      mode: '0440'
+  when: snmp_admin_ip_addr is defined
 
 - name: Creating libvirt user with libvirtd permissions
   user: name=libvirt

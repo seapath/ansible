@@ -30,15 +30,19 @@
     mode: '0440'
   when: not revert
 
-- name: adding sudo users to group privileged
+- name: adding ceph user to group privileged
   user:
-    name: "{{ item }}"
+    name: "ceph"
     groups: privileged
     append: yes
-  with_items:
-   - ceph
-   - Debian-snmp
   when: not revert
+
+- name: adding Debian-snmp user to group privileged
+  user:
+    name: "Debian-snmp"
+    groups: privileged
+    append: yes
+  when: not revert and snmp_admin_ip_addr is defined
 
 - name: Create systemd service.d directories
   file:
