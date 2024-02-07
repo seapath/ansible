@@ -15,8 +15,8 @@ all:
                             subnet: 25 #default is 24, override if necessary
                             #br0vlan: 159 #if the main interface on br0 is on a vlan that the host must manage
 
-                            # Admin network settings
-                            admin_ip_addr: 10.10.11.1 #used for snmp
+                            # snmp network settings
+                            snmp_admin_ip_addr: 10.10.11.1 #used to listen to snmp requests
 
                             # PTP network settings
                             ptp_interface: "eno12419" #OPTIONAL PTP Interface
@@ -57,8 +57,8 @@ all:
                             ip_addr: "{{ ansible_host }}"
                             subnet: 25
 
-                            # Admin network settings
-                            admin_ip_addr: 10.10.11.2 #used for snmp
+                            # snmp network settings
+                            snmp_admin_ip_addr: 10.10.11.1 #used to listen to snmp requests
 
                             # PTP network settings
                             ptp_interface: "eno12419" #OPTIONAL PTP Interface
@@ -85,8 +85,8 @@ all:
                             ip_addr: "{{ ansible_host }}"
                             subnet: 25
 
-                            # Admin network settings
-                            admin_ip_addr: 10.10.11.3 #used for snmp
+                            # snmp network settings
+                            snmp_admin_ip_addr: 10.10.11.1 #used to listen to snmp requests
 
                              # PTP network settings
                             ptp_interface: "eno12419" #OPTIONAL PTP Interface

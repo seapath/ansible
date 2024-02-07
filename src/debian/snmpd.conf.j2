@@ -29,4 +29,4 @@ extend ipmisdrlist /usr/bin/timeout 10s /usr/bin/sudo /usr/local/bin/snmp_ipmito
 extend ipmisdrlistv /usr/bin/timeout 10s /usr/bin/sudo /usr/local/bin/snmp_ipmitool_sdrlist_v.sh
 extend lvs /usr/bin/timeout 2s /usr/bin/sudo /usr/local/bin/snmp_lvs.sh
 extend smartctl /usr/bin/timeout 2s /usr/bin/sudo /usr/local/bin/snmp_smartctl.sh
-agentAddress udp:{{ admin_ip_addr }}:161
+agentAddress udp:{{ snmp_admin_ip_addr }}:161
