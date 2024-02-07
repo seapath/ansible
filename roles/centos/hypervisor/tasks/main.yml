@@ -111,7 +111,7 @@
 
 - name: "irqbalance conf"
   lineinfile:
-    dest: /etc/default/irqbalance
+    dest: /etc/sysconfig/irqbalance
     regexp: '^IRQBALANCE_BANNED_CPULIST=".*"$'
     line: 'IRQBALANCE_BANNED_CPULIST="{{ isolcpus }}"'
     state: present
