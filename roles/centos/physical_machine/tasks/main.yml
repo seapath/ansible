@@ -325,36 +325,36 @@
     append: no
   when: livemigration_user is defined and livemigration_user != admin_user
 
-- name: get Debian-snmp uid
+- name: get Centos-snmp uid
   getent:
     database: passwd
-    key: "Debian-snmp"
-- name: get Debian-snmp gid
+    key: "Centos-snmp"
+- name: get Centos-snmp gid
   getent:
     database: group
-    key: "Debian-snmp"
+    key: "Centos-snmp"
 - debug:
     msg:
-      - "user id {{ getent_passwd['Debian-snmp'][1] }}"
-      - "group id {{ getent_group['Debian-snmp'][1] }}"
+      - "user id {{ getent_passwd['Centos-snmp'][1] }}"
+      - "group id {{ getent_group['Centos-snmp'][1] }}"
 
-- name: Set Debian-snmp correct uid/gid
+- name: Set Centos-snmp correct uid/gid
   block:
     - name: stop snmpd if needed
       ansible.builtin.systemd:
         name: snmpd.service
         state: stopped
-    - name: Ensure group "Debian-snmp" exists with correct gid
+    - name: Ensure group "Centos-snmp" exists with correct gid
       ansible.builtin.group:
-        name: Debian-snmp
+        name: Centos-snmp
         state: present
         gid: 902
-    - name: Ensure user Debian-snmp has correct uid and gid
+    - name: Ensure user Centos-snmp has correct uid and gid
       user:
-        name: Debian-snmp
+        name: Centos-snmp
         uid: 902
-        group: Debian-snmp
-  when: getent_passwd['Debian-snmp'][1] != "902" or getent_group['Debian-snmp'][1] != "902"
+        group: Centos-snmp
+  when: getent_passwd['Centos-snmp'][1] != "902" or getent_group['Centos-snmp'][1] != "902"
 
 - name: Synchronization of snmp_ scripts
   ansible.posix.synchronize:
@@ -387,10 +387,10 @@
     state: restarted
     enabled: yes
 
-- name: Install sudo Debian-snmp user rules
+- name: Install sudo Centos-snmp user rules
   copy:
-    src: ../src/debian/sudoers/Debian-snmp
-    dest: /etc/sudoers.d/Debian-snmp
+    src: ../src/debian/sudoers/Centos-snmp
+    dest: /etc/sudoers.d/Centos-snmp
     owner: root
     group: root
     mode: '0440'
