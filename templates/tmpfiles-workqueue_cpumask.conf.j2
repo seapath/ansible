@@ -1,0 +1,6 @@
+#Type  Path                                                   Mode User Group Age Argument…
+w     /sys/bus/workqueue/devices/writeback/cpumask   -    -    -     -   {{ workqueuemask }}
+w     /sys/devices/virtual/workqueue/cpumask         -    -    -     -   {{ workqueuemask }}
+w     /sys/devices/virtual/workqueue/*/cpumask       -    -    -     -   {{ workqueuemask }}
+w     /sys/devices/system/machinecheck/machinecheck*/ignore_ce -    -    -     -   1
+w     /sys/module/kvm/parameters/halt_poll_ns        -    -    -     -   0
