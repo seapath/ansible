@@ -196,6 +196,7 @@
         state: present
       notify:
         - Restart systemd syslog-ng
+      when: syslog_server_ip is defined
   handlers:
     - name: Restart systemd syslog-ng
       vars:
