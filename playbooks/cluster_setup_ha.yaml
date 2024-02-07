@@ -100,22 +100,27 @@
       when: groups['valid_machine'] is defined
 
 - name: Setup Pacemaker
+  gather_facts: True
   hosts: unconfigured_machine_group
   become: true
   tasks:
+      - include_vars: ../vars/debian_paths.yml
+        when: ansible_distribution == 'Debian'
+      - include_vars: ../vars/centos_paths.yml
+        when: ansible_distribution == 'CentOS'
       - name: Start Pacemaker
         ansible.builtin.systemd:
             name: pacemaker
             state: started
             enabled: true
       - name: wait for pacemaker
-        command: crm status
+        command: "{{ crm_command_path }} status"
         register: result
         until: result.rc == 0
         retries: 3
         delay: 1
       - name: Disable stonith
-        command: crm configure property stonith-enabled=false
+        command: "{{ crm_command_path }} configure property stonith-enabled=false"
         run_once: true
         when: groups['valid_machine'] is undefined
 
