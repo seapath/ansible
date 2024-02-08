@@ -4,7 +4,7 @@ name='ansible'
 flavors='prepare manual module_documentation ansible-lint export'
 
 [build]
-docker_run_args="-v $(pwd)/examples/inventories/advanced_inventory_example.yaml:/etc/ansible/hosts/hosts.yaml -v $(pwd)/ceph-ansible/roles:/etc/ansible/roles"
+docker_run_args="-v $(pwd)/examples/inventories/advanced_inventory_cluster_example.yaml:/etc/ansible/hosts/hosts.yaml -v $(pwd)/ceph-ansible/roles:/etc/ansible/roles"
 command='check_yaml && ansible-lint -c ansible-lint.conf'
 
 [prepare]
@@ -18,7 +18,7 @@ command='asciidoctor-pdf README.adoc OVS_configuration.adoc'
 command='./generate_module_documentation.sh'
 
 [ansible-lint]
-docker_run_args="-v $(pwd)/examples/inventories/advanced_inventory_example.yaml:/etc/ansible/hosts/hosts.yaml -v $(pwd)/ceph-ansible/roles:/etc/ansible/roles"
+docker_run_args="-v $(pwd)/examples/inventories/advanced_inventory_cluster_example.yaml:/etc/ansible/hosts/hosts.yaml -v $(pwd)/ceph-ansible/roles:/etc/ansible/roles"
 command='ansible-lint -c ansible-lint.conf'
 
 [export]

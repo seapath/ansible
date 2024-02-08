@@ -9,8 +9,6 @@
 ---
 all:
   children:
-    # This inventory describes a cluster, there is no standalone machines.
-    standalone_machines:
     cluster_machines:
       children:
         hypervisors:
