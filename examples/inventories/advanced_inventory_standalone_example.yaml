@@ -1,0 +1,73 @@
+# Copyright (C) 2020, RTE (http://www.rte-france.com)
+# Copyright (C) 2024, SFL (https://savoirfairelinux.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# Ansible inventory example containing a description of the variables used.
+# This inventory is there to illustrate the variables and cannot be used
+# directly.
+
+---
+all:
+  children:
+    # This inventory describes a standalone machine.
+    standalone_machine:
+      children:
+        hypervisors:
+          hosts:
+            votp1:
+              # Change IP address according to your setup
+              ansible_host: 192.168.216.15
+              # The IP address to be set to enbridge0. Don't forget to change
+              # ansible host if this IP doesn't match with the one define in
+              # ansible_host
+              ip_addr: "{{ ansible_host }}"
+              # The network interface that will be used by the hypervisor to
+              # communicate across the network
+              network_interface: enp5s0f0
+              # Gateway IP Addr. The variable must be define but
+              # can be empty
+              gateway_addr: 192.168.216.1
+              # NTP server to use
+              ntp_servers: 192.168.216.1
+              # Set true to restart after setting kernel parameters (default is
+              # false)
+              kernel_parameters_restart: true
+              # OVS bridges and ports description.
+              # See OVS_configuration.adoc for more details.
+              ovs_bridges:
+                - name: obr0
+                  ports:
+                    - name: obr0P0
+                      type: tap
+                    - name: obr0P1
+                      type: tap
+                    - name: obr0P2
+                      type: tap
+                    - name: obr0P3
+                      type: tap
+                    - name: obr0P4
+                      type: tap
+                    - name: br0External
+                      type: system
+                      interface: "enp5s0f0"
+  vars:
+    # Use Ansible through SSH
+    ansible_connection: ssh
+    # Ansible use root account on target
+    ansible_user: admin
+    # Use python3
+    ansible_python_interpreter: /usr/bin/python3
+    # Set it to true in order to apply the network configuration. Otherwise
+    # it will be apply during the next reboot
+    # This variable is optional (default: false)
+    apply_network_config: true
+    # DNS server ip. The variable must be defined but can be empty.
+    dns_server:
+    # Change the Ansible working folder to a rw accessible folder
+    ansible_remote_tmp: /tmp/.ansible/tmp
+    # The syslog server IP address where logs are centralized
+    syslog_server_ip: "192.168.216.1"
+    ansible_become: true
+    ansible_become_method: sudo
+    ansible_become_flags: "-n -E"
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
