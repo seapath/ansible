@@ -235,18 +235,21 @@ https://docs.ansible.com/ansible/2.9/user_guide/playbooks_reuse_roles.html
 === Write your inventory file
 
 Before you can start using playbooks to configure and manage your SEAPATH
-cluster you need to write the inventory file describing your cluster. To do
-this you can rely on the example file _advanced_inventory_example.yaml_ in the
-_examples_ folder.
+you need to write the inventory file describing your cluster or your
+standalone version. To do this you can rely on the example file
+_advanced_inventory_example_cluster.yaml_ or
+_advanced_inventory_example_standalone.yaml_ in the _examples_ folder.
 
 You can place your inventory file in the _inventories_ folder provided for this
 purpose.
 
 In the rest of the document we will consider that the cluster inventory file
-will be called _cluster_inventory.yaml_ and will be placed in the _inventories_
-folder.
+will be called _cluster_inventory.yaml_ and in the same way
+_standalone_inventory.yaml_ for standalone and will be placed in the
+_inventories_ folder.
 
-=== Setting up the cluster
+=== Set-up
+==== Setting up the cluster
 
 To set up the cluster you can use the playbook _cluster_setup_main.yaml_ which
 regroups the other playbooks.
@@ -258,6 +261,21 @@ To launch the playbook _cluster_setup_main.yaml_ use the following command:
 Or if you use `cqfd`:
 
  $ cqfd run ansible-playbook -i inventories/cluster_inventory.yaml playbooks/cluster_setup_main.yaml
+
+==== Setting up a standalone machine
+
+To set up a standalone machine, you can use the playbook
+_cluster_setup_configure_hosts.yaml_, which is the only playbook we are
+interested in among those grouped by _cluster_setup_main.yaml_.
+
+To lauch the playbook _cluster_setup_configure_hosts.yaml_ use the following
+command :
+
+ $ ansible-playbook -i inventories/standalone_inventory.yaml playbooks/cluster_setup_configure_hosts.yaml
+
+Or if you use `cqfd`:
+
+ $ cqfd run ansible-playbook -i inventories/standalone_inventory.yaml playbooks/cluster_setup_configure_hosts.yaml
 
 === Generate SEAPATH Ansible modules documentation
 
@@ -273,14 +291,27 @@ _module_documentation/index.html_.
 
 A basic virtual machine for SEAPATH based on debian can be created using the https://github.com/seapath/build_debian_iso#build-a-virtual-machine-image[build_debian_iso] repository.
 
+You can also create a yocto VM using the flavour cqfd _guest_efi_, as described in the https://github.com/seapath/yocto-bsp[yocto-bsp] repository, in the following way:
+
+ $ cqfd -b guest_efi
+
 To deploy this machine on the cluster, follow these steps :
 - Place the generated qcow2 file in the `vm_images` directory with the name `guest.qcow2`.
 - Create an inventory describing your virtual machines. An example can be found in `examples/inventories`
-- Call the playbook `playbooks/deploy_vms_cluster.yaml`
+- For a cluster, call the playbook `playbooks/deploy_vms_cluster.yaml`
 
  $ ansible-playbook -i inventories/cluster_inventory.yaml -i inventories/vm_inventory.yaml playbooks/deploy_vms_cluster.yaml
 
 Or if you use `cqfd`:
 
  $ cqfd run ansible-playbook -i inventories/cluster_inventory.yaml -i inventories/vm_inventory.yaml playbooks/deploy_vms_cluster.yaml
+
+Otherwise, for the standalone, call the playbook `playbooks/deploy_vms_standalone.yaml`
+
+ $ ansible-playbook -i inventories/standalone_inventory.yaml -i inventories/vm_inventory.yaml playbooks/deploy_vms_standalone.yaml
+
+Or if you use `cqfd`:
+
+ $ cqfd run ansible-playbook -i inventories/standalone_inventory.yaml -i inventories/vm_inventory.yaml playbooks/deploy_vms_standalone.yaml
+
 
