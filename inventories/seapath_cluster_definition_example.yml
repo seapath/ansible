@@ -48,6 +48,11 @@ all:
                                   - Trust: 1
                                   - LinkState: on
 
+                            # Affinity
+                            nics_affinity: # Optional, only useful with RT containers or macvtag VMs
+                            - eth0: 0-3,4-7 # NICs and their associated CPUs list
+                            - eth1: 8-11,12-15 # NICs and their associated CPUs list
+
                         node2:
                             # ansbile variables
                             ansible_host: 10.10.10.2
@@ -76,6 +81,10 @@ all:
                             br_rstp_priority: 16384
                             brBRIDGE1_ext: eno1234 #physical nic to use with BRIDGE1 (see the ovs topology inventory)
 
+                            # Affinity
+                            nics_affinity: # Optional, only useful with RT containers or macvtag VMs
+                            - eth0: 0-3,4-7 # NICs and their associated CPUs list
+                            - eth1: 8-11,12-15 # NICs and their associated CPUs list
                         node3:
                             # ansbile variables
                             ansible_host: 10.10.10.3
@@ -103,6 +112,11 @@ all:
                             cluster_ip_addr: "192.168.55.3"
                             br_rstp_priority: 16384
                             brBRIDGE1_ext: eno1234 #physical nic to use with BRIDGE1 (see the ovs topology inventory)
+
+                            # Affinity
+                            nics_affinity: # Optional, only useful with RT containers or macvtag VMs
+                            - eth0: 0-3,4-7 # NICs and their associated CPUs list
+                            - eth1: 8-11,12-15 # NICs and their associated CPUs list
 
 
                     # hypervisors common vars
