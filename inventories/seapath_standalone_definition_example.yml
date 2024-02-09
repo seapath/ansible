@@ -55,7 +55,12 @@ all:
                     cpumachines: "2-11,14-23" # CPUs reserves for VMs
                     cpumachinesrt: "2-5,14-17" # CPUs reserves for VMs realtime
                     cpumachinesnort: "6-11,18-23" # CPUs reserves for VMs non realtime
-                    cpuovs: "23" # CPUs reserves for OVS
+                    cpuovs: "23" # CPUs reserves for OVSps -eTo comm:50,tid,pid,cls,pri,psr
+
+                    # Affinity
+                    nics_affinity: # Optional, only useful with RT containers or macvtag VMs
+                    - eth0: 0-3,4-7 # NICs and their associated CPUs list
+                    - eth1: 8-11,12-15 # NICs and their associated CPUs list
 
                     # Grub password
                     # The password hash generated with "grub-mkpasswd-pbkdf2 -c 65536 -s 256 -l 64", in this example the pass is "toto"
