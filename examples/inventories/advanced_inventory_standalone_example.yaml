@@ -32,6 +32,12 @@ all:
               # Set true to restart after setting kernel parameters (default is
               # false)
               kernel_parameters_restart: true
+              # Automatic creation of a Linux bridge. The hypervisor is
+              # connnected to the bridge via the interface "network interface".
+              # VMs can therefore communicate with the hypervisor via this
+              # bridge, and it also allows hypervisors and VMs to be configured
+              # via a single interface.
+              create_br0_bridge: true
               # OVS bridges and ports description.
               # See OVS_configuration.adoc for more details.
               ovs_bridges:
