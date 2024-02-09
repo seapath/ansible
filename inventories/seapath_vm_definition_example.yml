@@ -52,6 +52,8 @@ all:
 #    ** dpdk: to use link to VM with a OVS/DPDK bridge
 #    ** rt: to enable real time tweaks
 #  * cpuset: list of the CPU to use (int list). Use only with isolated.
+#  * nb_cpu: the number of cpu to use when the vm is not isolated.
+#            otherwise the length of cpuset is used. Optional (default : 1)
 #  * memory: the memory to use in Mio (int). Default is 2048.
 #  * pinned_host: the host to pin the VM (string). Optional. A pinned VM will
 #                 never be migrated on another host.
