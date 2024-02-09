@@ -77,6 +77,12 @@ all:
               # /boot/syslinux.cfg on BIOS machine. Default is
               # /boot/EFI/BOOT/grub.cfg used by UEFI machines.
               bootloader_config_file: /boot/syslinux.cfg
+              # Configure Host NICs IRQs affinity.
+              # Optional, only useful with RT containers or macvtag VMs
+              nics_affinity:
+              - eth0: 0-3,4-7
+              - eth1: 8-11,12-15
+
 
 
           # hypervisors groupe variables

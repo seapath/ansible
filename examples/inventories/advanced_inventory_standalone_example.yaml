@@ -38,6 +38,11 @@ all:
               # bridge, and it also allows hypervisors and VMs to be configured
               # via a single interface.
               create_br0_bridge: true
+              # Configure Host NICs IRQs affinity.
+              # Optional, only useful with RT containers or macvtag VMs
+              nics_affinity:
+              - eth0: 0-3,4-7
+              - eth1: 8-11,12-15
               # OVS bridges and ports description.
               # See OVS_configuration.adoc for more details.
               ovs_bridges:
