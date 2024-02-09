@@ -12,6 +12,7 @@ playbooks/*
 !playbooks/replace_machine_*.yaml
 !playbooks/tasks/
 !playbooks/deploy_*.yaml
+!playbooks/update*.yaml
 inventories/*
 !inventories/README.adoc
 
