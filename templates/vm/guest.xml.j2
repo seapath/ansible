@@ -97,6 +97,7 @@
            <target dev="vda" bus="virtio"/>
         </disk>
         {% endfor %}
+        {% endif %}
         {% if "dpdk" in vm.vm_features %}
         {% for interface in vm.dpdk %}
         <interface type='vhostuser'>
