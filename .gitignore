@@ -35,3 +35,7 @@ templates/vm/test.xml.j2
 # Ignore swu images
 swu_images/*
 !swu_images/README
+
+# Ignore vm images
+vm_images/*
+!vm_images/README
