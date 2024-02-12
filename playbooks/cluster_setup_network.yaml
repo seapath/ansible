@@ -132,7 +132,7 @@
       - name: Start ptp service
         ansible.builtin.systemd:
           name: ptp4l@ptp.service
-          state: started
+          state: restarted
         when: apply_config or (need_reboot is defined and not need_reboot)
       - name: Enable phc2sys service
         ansible.builtin.systemd:
@@ -141,7 +141,7 @@
       - name: Start phc2sys service
         ansible.builtin.systemd:
           name: phc2sys@ptp.service
-          state: started
+          state: restarted
         when: apply_config or (need_reboot is defined and not need_reboot)
 
       when: ptp_vlan is defined
