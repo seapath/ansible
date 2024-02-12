@@ -103,10 +103,32 @@
           name: systemd-timesyncd.service
           enabled: no
           state: stopped
+      - name: Add the ptp4l configuration file
+        copy:
+          src: ../src/ptp4l.conf
+          dest: /etc/ptp4l.conf
+          owner: root
+          group: root
+          mode: 0644
+      - name: Ensure /etc/systemd/system/ptp4l@.service.d directory exists
+        file:
+          path: /etc/systemd/system/ptp4l@.service.d
+          state: directory
+          owner: root
+          group: root
+          mode: 0755
+      - name: Configure ptp4l service to use a configuration file
+        copy:
+          src: ../src/ptp4l.service.override
+          dest: /etc/systemd/system/ptp4l@.service.d/override.conf
+          owner: root
+          group: root
+          mode: 0644
       - name: Enable ptp service
         ansible.builtin.systemd:
           name: ptp4l@ptp.service
           enabled: yes
+          daemon_reload: yes
       - name: Start ptp service
         ansible.builtin.systemd:
           name: ptp4l@ptp.service
