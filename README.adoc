@@ -315,3 +315,30 @@ Or if you use `cqfd`:
  $ cqfd run ansible-playbook -i inventories/standalone_inventory.yaml -i inventories/vm_inventory.yaml playbooks/deploy_vms_standalone.yaml
 
 
+=== Update a machine
+
+Machines are updated using https://github.com/sbabic/swupdate[software update].
+
+First, create a swu file using the https://github.com/seapath/yocto-bsp[yocto-bsp] repository.
+
+Then, the update will be deployed by ansible. You need to pass two variables in the command line :
+- `machine_to_update` is the name of the machine that ansible will update
+- `swu_image` is the name of the swu file that was created in yocto-bsp.
+
+Note: The swu image must be placed in the `swu_images` directory.
+
+For the update of a machine in the cluster, call the playbook `playbooks/update_machine_cluster.yaml`
+
+ $ ansible-playbook -i inventories/cluster_inventory.yaml -e "machine_to_update=node1 swu_image=update.swu" playbooks/update_machine_cluster.yaml
+
+Or if you use `cqfd`:
+
+ $ cqfd run ansible-playbook -i inventories/cluster_inventory.yaml -e "machine_to_update=node swu_image=update.swu" playbooks/update_machine_cluster.yaml
+
+Otherwise, for the standalone, call the playbook `playbooks/update_machine_standalone.yaml`
+
+ $ ansible-playbook -i inventories/standalone_inventory.yaml e "machine_to_update=node1 swu_image=update.swu" playbooks/update_machine_standalone.yaml
+
+Or if you use `cqfd`:
+
+ $ cqfd run ansible-playbook -i inventories/standalone_inventory.yaml e "machine_to_update=node swu_image=update.swu" playbooks/update_machine_standalone.yaml
