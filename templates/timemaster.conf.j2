@@ -75,5 +75,6 @@ path /usr/sbin/phc2sys
 
 [ptp4l]
 path /usr/sbin/ptp4l
-# make ptp4l really verbose (to see synchro values)
-options -l 6 --step_threshold 0.00001
+# -l 4: "Reasonable" loglevel (synchronisation status change, init, ...)
+# -l 6: debug loglevel (PHC regulation values, offset every second)
+options --step_threshold 0.00001 -l 4
