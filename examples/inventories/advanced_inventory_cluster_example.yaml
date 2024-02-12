@@ -220,6 +220,7 @@ all:
     # Change the Ansible working folder to a rw accessible folder
     ansible_remote_tmp: /tmp/.ansible/tmp
     # The syslog server IP address where logs are centralized
+    # Optional, if not given, no log will be sent
     syslog_server_ip: "192.168.220.6"
     # The vlan ID of the PTP. Remove the variable if the ptp frames
     # are not in a VLAN
