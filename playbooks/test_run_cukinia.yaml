@@ -29,7 +29,7 @@
       shell:
         cmd: >-
           MACHINENAME={{ cukinia_namespace | default(inventory_hostname) }}
-          {{ path_command_path }} -f {{ tests_format }}
+          {{ cukinia_command_path }} -f {{ tests_format }}
           -o {{ tmp_cukinia_dir.path }}/{{ tests_result_name }} || true
     - name: Fetch result
       fetch:
@@ -54,7 +54,7 @@
     - name: Run tests cluster test
       shell:
         cmd: >-
-          {{ path_command_path }} -f {{ tests_format }}
+          {{ cukinia_command_path }} -f {{ tests_format }}
           -o {{ tmp_cukinia_dir.path }}/{{ cluster_tests_result_name }}
           /etc/cukinia/cukinia-cluster.conf || true
       run_once: true
