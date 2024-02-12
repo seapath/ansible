@@ -31,3 +31,7 @@ templates/vm/test.xml.j2
 
 # Ignore exported archive
 /ansible.tar.gz
+
+# Ignore swu images
+swu_images/*
+!swu_images/README
