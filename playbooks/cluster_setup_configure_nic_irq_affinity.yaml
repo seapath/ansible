@@ -1,0 +1,15 @@
+# Copyright (C) 2024 Savoir-faire Linux, Inc
+# SPDX-License-Identifier: Apache-2.0
+
+# Configure the hosts NICs IRQs affinity
+# This is useful is you use macvlan driver for your containers or VMs
+
+---
+- name: Configure NICs IRQs affinity
+  hosts: hypervisors
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Run the NICs IRQs affinity configuration tasks
+      include_tasks: tasks/setup_nic_irq_affinity.yaml
+      when: nics_affinity is defined
