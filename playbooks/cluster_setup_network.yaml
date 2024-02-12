@@ -80,7 +80,6 @@
         - not apply_config
         - ptp_interface.changed
     when:
-      - ptp_vlan_interface is defined
       - ptp_vlan is defined
       - ptp_vlan_address is defined
   - name: Restart systemd-networkd
@@ -123,9 +122,7 @@
           state: started
         when: apply_config or (need_reboot is defined and not need_reboot)
 
-      when:
-        - ptp_vlan_interface is defined
-        - ptp_vlan is defined
+      when: ptp_vlan is defined
 
 - name: Configure hostname
   hosts:
