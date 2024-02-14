@@ -1,7 +1,7 @@
 # Copyright (C) 2023, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
-name: Ansible Lint
+name: Ansible Lint Debian
 
 env:
   WORK_DIR: /tmp/seapath_ci_${{ github.run_id }}_${{ github.run_attempt }}_${{ github.sha }}
@@ -10,7 +10,7 @@ on:
   pull_request:
     types: [opened, reopened, synchronize]
     branches: [debian-main]
-
+  workflow_call:
 
 jobs:
   ansible-lint:
