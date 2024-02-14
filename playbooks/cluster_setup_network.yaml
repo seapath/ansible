@@ -80,7 +80,6 @@
         - not apply_config
         - ptp_interface.changed
     when:
-      - ptp_vlan_interface is defined
       - ptp_vlan is defined
       - ptp_vlan_address is defined
   - name: Restart systemd-networkd
@@ -104,14 +103,36 @@
           name: systemd-timesyncd.service
           enabled: no
           state: stopped
+      - name: Add the ptp4l configuration file
+        copy:
+          src: ../src/ptp4l.conf
+          dest: /etc/ptp4l.conf
+          owner: root
+          group: root
+          mode: 0644
+      - name: Ensure /etc/systemd/system/ptp4l@.service.d directory exists
+        file:
+          path: /etc/systemd/system/ptp4l@.service.d
+          state: directory
+          owner: root
+          group: root
+          mode: 0755
+      - name: Configure ptp4l service to use a configuration file
+        copy:
+          src: ../src/ptp4l.service.override
+          dest: /etc/systemd/system/ptp4l@.service.d/override.conf
+          owner: root
+          group: root
+          mode: 0644
       - name: Enable ptp service
         ansible.builtin.systemd:
           name: ptp4l@ptp.service
           enabled: yes
+          daemon_reload: yes
       - name: Start ptp service
         ansible.builtin.systemd:
           name: ptp4l@ptp.service
-          state: started
+          state: restarted
         when: apply_config or (need_reboot is defined and not need_reboot)
       - name: Enable phc2sys service
         ansible.builtin.systemd:
@@ -120,12 +141,10 @@
       - name: Start phc2sys service
         ansible.builtin.systemd:
           name: phc2sys@ptp.service
-          state: started
+          state: restarted
         when: apply_config or (need_reboot is defined and not need_reboot)
 
-      when:
-        - ptp_vlan_interface is defined
-        - ptp_vlan is defined
+      when: ptp_vlan is defined
 
 - name: Configure hostname
   hosts:

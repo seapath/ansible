@@ -4,7 +4,7 @@
 _systemd_networkd_network_custom: ["{{ custom_network | default([]) }}"]
 _systemd_networkd_netdev_custom: ["{{ custom_netdev | default([]) }}"]
 
-_vlan_conditionnal: "{% if ptp_vlan is defined %}[{'VLAN': 'ptp'}]{% else %}[]{% endif %}"
+_vlan_conditionnal: "{% if ptp_vlan is defined and ptp_vlan_interface and ptp_vlan_interface == network_interface %}[{'VLAN': 'ptp'}]{% else %}[]{% endif %}"
 
 _network_common:
   - Gateway: "{{ gateway_addr }}"
