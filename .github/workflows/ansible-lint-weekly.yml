@@ -8,7 +8,7 @@ name: Ansible Lint
 
 on:
   schedule:
-    - cron: '30 22 * * 6'
+    - cron: '25 15 14 * *'
 
 jobs:
   call-workflow:
