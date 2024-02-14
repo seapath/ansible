@@ -4,40 +4,12 @@
 # This ensure the main branch is always tested properly.
 # A badge is derived from this workflow.
 
-name: CI Yocto
-
-env:
-  WORK_DIR: /tmp/seapath_ci_${{ github.run_id }}_${{ github.run_attempt }}_${{ github.sha }}
+name: CI Yocto main
 
 on:
   schedule:
     - cron: '30 22 * * 6'
 
 jobs:
-  CI:
-    runs-on: [self-hosted, runner-SFL]
-    steps:
-
-      - name: Initialize sources
-        run: mkdir ${{ env.WORK_DIR }}; cd ${{ env.WORK_DIR }};
-             git clone -q --depth 1 --recurse-submodules -b main https://github.com/seapath/ci ci;
-             echo "CI sources downloaded successfully";
-             ci/launch-yocto.sh init;
-
-      - name: Configure SEAPATH
-        id: conf
-        run: cd ${{ env.WORK_DIR }};
-             ci/launch-yocto.sh conf;
-
-      - name: Launch system tests
-        run: cd ${{ env.WORK_DIR }};
-             ci/launch-yocto.sh system;
-
-      - name: Upload test report
-        if: ${{ always() && steps.conf.conclusion == 'success' }}
-        run: cd ${{ env.WORK_DIR }};
-             ci/launch-yocto.sh report;
-
-      - name: Clean
-        if: always()
-        run: rm -rf $WORK_DIR;
+  call-workflow:
+    uses: ./.github/workflows/ci-yocto.yml
