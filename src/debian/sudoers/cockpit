@@ -1,0 +1,2 @@
+Cmnd_Alias    NOTTYCMDS = /usr/bin/cockpit-bridge --privileged
+Defaults!NOTTYCMDS    !requiretty
