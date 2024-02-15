@@ -219,6 +219,24 @@
   ansible.builtin.meta:
     reset_connection
 
+- name: Check if cockpit is installed
+  command:
+    which cockpit-bridge
+  register: cockpit_status
+  ignore_errors: true
+
+- name: Disable require tty for cockpit
+  copy:
+    src: ../src/debian/sudoers/cockpit
+    dest: /etc/sudoers.d/cockpit
+  when: not revert and cockpit_status.rc == 0
+
+- name: Remove cockpit sudo configuration
+  ansible.builtin.file:
+    path: /etc/sudoers.d/cockpit
+    state: absent
+  when: revert and cockpit_status.rc == 0
+
 - name: Configure sudo to be run only users member of the privileged group
   file:
     path: /usr/bin/sudo
