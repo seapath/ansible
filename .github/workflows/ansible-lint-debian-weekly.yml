@@ -9,7 +9,8 @@ name: Ansible Lint Debian main
 on:
   schedule:
     - cron: '30 22 * * 6'
+  workflow_dispatch:
 
 jobs:
   call-workflow:
-    uses: ./.github/workflows/ansible-lint.yml
+    uses: ./.github/workflows/ansible-lint-debian.yml
