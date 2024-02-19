@@ -10,6 +10,7 @@ name: CI debian main
 on:
   schedule:
     - cron: '30 22 * * 6'
+  workflow_dispatch:
 
 jobs:
   call-workflow:
