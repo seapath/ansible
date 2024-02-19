@@ -1,0 +1,53 @@
+# Copyright (C) 2023, RTE (http://www.rte-france.com)
+# Copyright (C) 2024 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+name: CI debian weekly
+
+env:
+  WORK_DIR: /tmp/seapath_ci_${{ github.run_id }}_${{ github.run_attempt }}_${{ github.sha }}
+
+on:
+  schedule:
+    - cron: '30 22 * * 6'
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  CI:
+    runs-on: [self-hosted, runner-RTE-12]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: debian-main
+      - name: Initialize sources
+        run: mkdir ${{ env.WORK_DIR }}; cd ${{ env.WORK_DIR }};
+             git clone -q --depth 1 --recurse-submodules -b main https://github.com/seapath/ci ci;
+             echo "CI sources downloaded successfully";
+             ci/launch.sh init;
+
+      - name: Configure Debian
+        id: conf
+        run: cd ${{ env.WORK_DIR }};
+             ci/launch.sh conf;
+
+      - name: Launch system tests
+        run: cd ${{ env.WORK_DIR }};
+             ci/launch.sh system;
+
+      - name: Launch VM tests
+        run: cd ${{ env.WORK_DIR }};
+             ci/launch.sh vm;
+
+      - name: Launch latency tests
+        run: cd ${{ env.WORK_DIR }};
+             ci/launch.sh latency;
+
+      - name: Upload test report
+        if: ${{ always() && steps.conf.conclusion == 'success' }}
+        run: cd ${{ env.WORK_DIR }};
+             ci/launch.sh report;
+
+      - name: Clean
+        if: always()
+        run: rm -rf $WORK_DIR;
