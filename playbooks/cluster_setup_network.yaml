@@ -42,6 +42,41 @@
         owner: root
         group: systemd-network
 
+- name: configure guests br0 interfaces
+  hosts: cluster_machines
+  become: true
+  tasks:
+    - debug:
+        var: item.value
+      with_items: "{{ guests_on_br0 | dict2items }}"
+      when: guests_on_br0 is defined
+#      failed_when: 1 == 1
+    - name: create 00-GUESTtap.netdev
+      template:
+        src: ../templates/00-GUESTtap.netdev.j2
+        dest: /etc/systemd/network/00-{{ item.key }}tap.netdev
+        owner: "root"
+        group: "systemd-network"
+        mode: '0644'
+      with_items: "{{ guests_on_br0 | dict2items }}"
+      when: guests_on_br0 is defined
+      register: guest_br0_netdev
+    - name: create 00-GUESTtap.network
+      template:
+        src: ../templates/00-GUESTtap.network.j2
+        dest: /etc/systemd/network/00-{{ item.key }}tap.network
+        owner: "root"
+        group: "systemd-network"
+        mode: '0644'
+      with_items: "{{ guests_on_br0 | dict2items }}"
+      when: guests_on_br0 is defined
+      register: guest_br0_network
+    - name: Reload systemd-networkd configuration
+      ansible.builtin.service:
+        name: systemd-networkd
+        state: reloaded
+      when: guest_br0_netdev.changed or guest_br0_network.changed
+
 - name: Apply systemd-networkd config with role
   become: true
   hosts:
@@ -363,41 +398,6 @@
         interface: "{{ item.key }}"
         sriov_network_pool_name: "{{ 'sr-iov-net-' + item.key }}"
       when: sriov is defined
-
-- name: configure guests br0 interfaces
-  hosts: cluster_machines
-  become: true
-  tasks:
-    - debug:
-        var: item.value
-      with_items: "{{ guests_on_br0 | dict2items }}"
-      when: guests_on_br0 is defined
-#      failed_when: 1 == 1
-    - name: create 00-GUESTtap.netdev
-      template:
-        src: ../templates/00-GUESTtap.netdev.j2
-        dest: /etc/systemd/network/00-{{ item.key }}tap.netdev
-        owner: "root"
-        group: "systemd-network"
-        mode: '0644'
-      with_items: "{{ guests_on_br0 | dict2items }}"
-      when: guests_on_br0 is defined
-      register: guest_br0_netdev
-    - name: create 00-GUESTtap.network
-      template:
-        src: ../templates/00-GUESTtap.network.j2
-        dest: /etc/systemd/network/00-{{ item.key }}tap.network
-        owner: "root"
-        group: "systemd-network"
-        mode: '0644'
-      with_items: "{{ guests_on_br0 | dict2items }}"
-      when: guests_on_br0 is defined
-      register: guest_br0_network
-    - name: Reload systemd-networkd configuration
-      ansible.builtin.service:
-        name: systemd-networkd
-        state: reloaded
-      when: guest_br0_netdev.changed or guest_br0_network.changed
 
 - name: push iptables rules
   hosts: cluster_machines
