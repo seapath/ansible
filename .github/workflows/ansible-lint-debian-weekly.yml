@@ -4,7 +4,7 @@
 # This ensure the main branch is always linted properly
 # A badge is derived from this workflow
 
-name: Ansible Lint Debian main
+name: Ansible Lint weekly Debian
 
 on:
   schedule:
