@@ -4,7 +4,7 @@
 # This ensure the main branch is always linted properly
 # A badge is derived from this workflow
 
-name: Ansible Lint Yocto main
+name: Ansible Lint weekly Yocto
 
 on:
   schedule:
