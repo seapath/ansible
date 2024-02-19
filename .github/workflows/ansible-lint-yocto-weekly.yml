@@ -9,6 +9,7 @@ name: Ansible Lint Yocto main
 on:
   schedule:
     - cron: '30 22 * * 6'
+  workflow_dispatch:
 
 jobs:
   call-workflow:
