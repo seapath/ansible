@@ -4,7 +4,7 @@
 # This ensure the main branch is always tested properly.
 # A badge is derived from this workflow.
 
-name: CI Yocto main
+name: CI weekly Yocto
 
 on:
   schedule:
