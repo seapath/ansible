@@ -1,0 +1,15 @@
+# Copyright (C) 2023 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+# This file will execute ansible-lint on the main branch every saturday
+# This ensure the main branch is always linted properly
+# A badge is derived from this workflow
+
+name: Ansible Lint Yocto main
+
+on:
+  schedule:
+    - cron: '30 22 * * 6'
+
+jobs:
+  call-workflow:
+    uses: ./.github/workflows/ansible-lint.yml
