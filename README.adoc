@@ -7,7 +7,7 @@ Setup machines with Ansible
 :sectnumlevels: 1
 
 image::https://github.com/seapath/ansible/actions/workflows/ci-yocto-weekly.yml/badge.svg["CI Yocto Weekly", link=https://github.com/seapath/ansible/actions/workflows/ci-yocto-weekly.yml]
-image::https://github.com/seapath/ansible/actions/workflows/ansible-lint-weekly.yml/badge.svg["Ansible Lint Weekly", link=https://github.com/seapath/ansible/actions/workflows/ansible-lint-weekly.yml]
+image::https://github.com/seapath/ansible/actions/workflows/ansible-lint-yocto-weekly.yml/badge.svg["Ansible Lint Weekly", link=https://github.com/seapath/ansible/actions/workflows/ansible-lint-yocto-weekly.yml]
 
 == Introduction
 
