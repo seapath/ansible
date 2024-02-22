@@ -6,6 +6,7 @@ path_timemaster_conf: "/etc/timemaster.conf"
 path_chrony_conf: "/etc/chrony.conf"
 
 service_name_chrony: "chronyd"
+service_name_udev: "systemd-udevd"
 crm_command_path: "/usr/local/bin/crm"
 cukinia_command_path: "/usr/local/bin/cukinia"
 setup_ovs_command_path: "/usr/local/bin/setup_ovs.py"
