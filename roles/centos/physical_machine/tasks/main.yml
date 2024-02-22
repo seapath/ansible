@@ -150,7 +150,7 @@
     chdir: /tmp/src/python3-setup-ovs
 - name: Copy votp-config_ovs.service
   ansible.builtin.copy:
-    src: ../src/debian/votp-config_ovs.service
+    src: ../src/centos/votp-config_ovs.service
     dest: /etc/systemd/system/votp-config_ovs.service
     mode: '0644'
   register: votpconfigovs
