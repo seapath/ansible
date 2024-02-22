@@ -54,15 +54,20 @@
     - systemd_networkd
 
 - name: Apply .link files change (udev)
+  gather_facts: True
   become: true
   hosts:
     - cluster_machines
     - standalone_machine
     - VMs
   tasks:
-    - name: Restart systemd-udev-trigger
+    - include_vars: ../vars/debian_paths.yml
+      when: ansible_distribution == 'Debian'
+    - include_vars: ../vars/centos_paths.yml
+      when: ansible_distribution == 'CentOS'
+    - name: Restart {{ service_name_udev }}
       ansible.builtin.systemd:
-        name: systemd-udev-trigger
+        name: "{{ service_name_udev }}"
         state: restarted
 
 - name: configure cluster network
