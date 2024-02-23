@@ -34,7 +34,19 @@
         src: "{{ hostvars[item].vm_disk }}"
         dest: "{{ disk_pool }}/{{ hostvars[item].inventory_hostname }}.qcow2"
       with_items: "{{ groups['VMs'] }}"
-      when: disk_copy | bool
+      when: disk_copy | bool and (hostvars[item].disk_extract is not defined or not hostvars[item].disk_extract | bool)
+    - name: Copy the gziped disk on target
+      copy:
+        src: "{{ hostvars[item].vm_disk }}"
+        dest: "{{ disk_pool }}/{{ hostvars[item].inventory_hostname }}.img.gz"
+      with_items: "{{ groups['VMs'] }}"
+      when: disk_copy | bool and hostvars[item].disk_extract is defined and hostvars[item].disk_extract | bool
+    - name: Extract the gziped disk on target
+      command:
+        cmd: "gzip -d -f {{ disk_pool }}/{{ hostvars[item].inventory_hostname }}.img.gz"
+        creates: "{{ hostvars[item].inventory_hostname }}.img"
+      with_items: "{{ groups['VMs'] }}"
+      when: disk_copy | bool and hostvars[item].disk_extract is defined and hostvars[item].disk_extract | bool
     - name: export VM config for debug in /tmp
       template:
         src: "{{ hostvars[item].vm_template }}"
