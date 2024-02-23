@@ -103,12 +103,36 @@
     - cpufreq.default_governor=performance
     - intel_pstate=disable
     - nosoftlockup
-    - "rcu_nocbs={{ isolcpus }}"
     - rcu_nocb_poll
     - rcutree.kthread_prio=10
-    - "isolcpus=nohz,domain,managed_irq,{{ isolcpus }}"
     - skew_tick=1
     - tsc=reliable
+
+- name: "grub conf hypervisor isolcpus"
+  lineinfile:
+    dest: /etc/default/grub
+    regexp: '^(GRUB_CMDLINE_LINUX=(?:(?![" ]{{ item.split("=")[0] }}=?).)*"?)\s*(?:{{ item.split("=")[0] }}(?:=\S+)?\s*)?(.*")$'
+    line: '\1 {{ item.split("=")[0] + (("="+item.split("=")[1]) if item.split("=")|length>1 and item.split("=")[1] != None and item.split("=")[1] != "" else "") }} \2'
+    state: present
+    backrefs: yes
+  register: updategrub2
+  with_items:
+    - "rcu_nocbs={{ isolcpus }}"
+    - "isolcpus=nohz,domain,managed_irq,{{ isolcpus }}"
+  when: isolcpus is defined
+
+- name: "grub conf hypervisor isolcpus revert"
+  lineinfile:
+    dest: /etc/default/grub
+    regexp: '^(.*?)\b{{ item }}=\S+\b(.*)$'
+    line: '\1 \2'
+    state: present
+    backrefs: yes
+  register: updategrub2
+  with_items:
+    - "rcu_nocbs"
+    - "isolcpus"
+  when: isolcpus is not defined
 
 # Another way would be to use a dictionnary so that the regexp is a bit simpler
 #  lineinfile:
@@ -121,7 +145,7 @@
 
 - name: update-grub
   command: update-grub
-  when: updategrub1.changed
+  when: updategrub1.changed or updategrub2.changed
 
 - name: "irqbalance conf"
   lineinfile:
@@ -130,6 +154,16 @@
     line: 'IRQBALANCE_BANNED_CPULIST="{{ isolcpus }}"'
     state: present
   register: irqbalanceconf
+  when: isolcpus is defined
+- name: "irqbalance conf revert"
+  lineinfile:
+    dest: /etc/default/irqbalance
+    regexp: '^#?IRQBALANCE_BANNED_CPULIST=(.*)$'
+    line: '#IRQBALANCE_BANNED_CPULIST=\1'
+    state: present
+    backrefs: yes
+  register: irqbalanceconf
+  when: isolcpus is not defined
 - name: restart irqbalance
   ansible.builtin.systemd:
     name: irqbalance.service
