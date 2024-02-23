@@ -1,5 +1,7 @@
+{% if workqueuemask is defined %}
 bus/workqueue/devices/writeback/cpumask = {{ workqueuemask }}
 devices/virtual/workqueue/cpumask = {{ workqueuemask }}
 devices/virtual/workqueue/*/cpumask = {{ workqueuemask }}
+{% endif %}
 devices/system/machinecheck/machinecheck*/ignore_ce = 1
 module/kvm/parameters/halt_poll_ns = 0
