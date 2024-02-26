@@ -1,0 +1,22 @@
+com2sec readonly  default         public
+group MyROSystem v1        paranoid
+group MyROSystem v2c       paranoid
+group MyROSystem usm       paranoid
+group MyROGroup v1         readonly
+group MyROGroup v2c        readonly
+group MyROGroup usm        readonly
+group MyRWGroup v1         readwrite
+group MyRWGroup v2c        readwrite
+group MyRWGroup usm        readwrite
+view all    included  .1                               80
+view all    included  .2                               80
+access MyROSystem ""     any       noauth    exact  system none   none
+access MyROGroup ""      any       noauth    exact  all    none   none
+access MyRWGroup ""      any       noauth    exact  all    all    none
+syslocation Unknown (configure /etc/snmp/snmpd.local.conf)
+syscontact Root <root@localhost> (configure /etc/snmp/snmpd.local.conf)
+{% if extra_snmpd_directives is defined %}
+{{ extra_snmpd_directives -}}
+{% endif %}
+pass_persist    .2.25.1936023920.1635018752     /usr/local/bin/exposeseapathsnmp.py
+agentAddress udp:{{ snmp_admin_ip_addr }}:161
