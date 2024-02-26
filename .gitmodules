@@ -19,3 +19,7 @@
 	path = src/cukinia
 	url = https://github.com/savoirfairelinux/cukinia.git
         branch = master
+[submodule "src/snmp_passpersist"]
+	path = src/snmp_passpersist
+	url = https://github.com/seapath/snmp_passpersist.git
+        branch = master
