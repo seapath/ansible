@@ -168,18 +168,13 @@
         dest: /etc/apt/sources.list
   when: apt_repo is defined
 
-- name: "find /etc/default/grub.d/*.cfg (FAI)"
-  find:
-    paths: /etc/default/grub.d
-    patterns: '^\d\d.*\.cfg$'
-    use_regex: true
-  register: wildcard_files_to_delete
-
 - name: "remove /etc/default/grub.d/*.cfg (FAI)"
   file:
-    path: "{{ item.path }}"
+    path: "{{ item }}"
     state: absent
-  with_items: "{{ wildcard_files_to_delete.files }}"
+  with_items:
+    - 20_efi_ipv6.cfg
+    - 30_console.cfg
 
 - name: "remove GRUB_CMDLINE_LINUX_DEFAULT option in grub conf"
   lineinfile:

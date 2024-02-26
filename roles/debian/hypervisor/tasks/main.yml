@@ -109,29 +109,20 @@
     - tsc=reliable
 
 - name: "grub conf hypervisor isolcpus"
-  lineinfile:
-    dest: /etc/default/grub
-    regexp: '^(GRUB_CMDLINE_LINUX=(?:(?![" ]{{ item.split("=")[0] }}=?).)*"?)\s*(?:{{ item.split("=")[0] }}(?:=\S+)?\s*)?(.*")$'
-    line: '\1 {{ item.split("=")[0] + (("="+item.split("=")[1]) if item.split("=")|length>1 and item.split("=")[1] != None and item.split("=")[1] != "" else "") }} \2'
-    state: present
-    backrefs: yes
+  template:
+    src: ../src/debian/grub.d/10-isolcpus.cfg.j2
+    dest: /etc/default/grub.d/10-isolcpus.cfg
+    owner: root
+    group: root
+    mode:  0644
   register: updategrub2
-  with_items:
-    - "rcu_nocbs={{ isolcpus }}"
-    - "isolcpus=nohz,domain,managed_irq,{{ isolcpus }}"
   when: isolcpus is defined
 
 - name: "grub conf hypervisor isolcpus revert"
-  lineinfile:
-    dest: /etc/default/grub
-    regexp: '^(.*?)\b{{ item }}=\S+\b(.*)$'
-    line: '\1 \2'
-    state: present
-    backrefs: yes
-  register: updategrub2
-  with_items:
-    - "rcu_nocbs"
-    - "isolcpus"
+  file:
+    path: /etc/default/grub.d/10-isolcpus.cfg
+    state: absent
+  register: updategrub3
   when: isolcpus is not defined
 
 # Another way would be to use a dictionnary so that the regexp is a bit simpler
@@ -145,7 +136,7 @@
 
 - name: update-grub
   command: update-grub
-  when: updategrub1.changed or updategrub2.changed
+  when: updategrub1.changed or updategrub2.changed or updategrub3.changed
 
 - name: "irqbalance conf"
   lineinfile:
