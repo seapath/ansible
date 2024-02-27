@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--  Copyright (C) 2024 Savoir-faire Linux, Inc-->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
+{% set cpu_nb = (vm.cpuset | length) if vm.cpuset is defined else vm.nb_cpu | default(1) %}
+
+<domain type="kvm">
+    <name>{{ vm.inventory_hostname }}</name>
+    <uuid>{{ vm.uuid |default( 9999999999999999999999 | random | to_uuid) }}</uuid>
+    <description>
+        {{ vm.description |default("VM ABB - SSC600 SW") }}
+    </description>
+    <vcpu placement="static">{{ cpu_nb }}</vcpu>
+    <memory unit="G">{{ vm.memory | default ("6") }}</memory>
+    <currentMemory unit="G">{{ vm.memory | default ("6") }}</currentMemory>
+    <memoryBacking>
+	    <hugepages/>
+	<nosharepages/>
+	<locked/>
+    </memoryBacking>
+    <cputune>
+        {% if vm.cpuset is defined %}
+            {% for cpu in vm.cpuset %}
+            <vcpupin vcpu="{{ loop.index - 1 }}" cpuset="{{ cpu }}"/>
+            <vcpusched vcpus="{{ loop.index - 1 }}" scheduler="fifo" priority="{{ vm.rt_priority |default('1') }}" />
+            {% endfor %}
+	{% endif %}
+	{% if vm.emulatorpin is defined %}
+	    <emulatorpin cpuset='{{ vm.emulatorpin }}'/>
+	{% endif %}
+    </cputune>
+    <os>
+        <type arch="x86_64" machine="q35">hvm</type>
+	<boot dev="hd"/>
+    </os>
+    <features>
+        <acpi/>
+        <apic eoi="on"/>
+        <kvm>
+          <hint-dedicated state="on"/>
+          <poll-control state="off"/>
+          <pv-ipi state="on"/>
+        </kvm>
+        <pmu state="off"/>
+        <vmport state="off"/>
+    </features>
+    <cpu mode="host-passthrough">
+	<topology sockets="1" dies="1" cores="{{ cpu_nb }}" threads="1" />
+        <cache mode="passthrough"/>
+    </cpu>
+    <clock offset="utc">
+        <timer name="rtc" tickpolicy="catchup"/>
+        <timer name="pit" tickpolicy="delay"/>
+        <timer name="hpet" present="no"/>
+    </clock>
+    <on_poweroff>destroy</on_poweroff>
+    <on_reboot>restart</on_reboot>
+    <on_crash>destroy</on_crash>
+    <pm>
+        <suspend-to-mem enabled="no"/>
+        <suspend-to-disk enabled="no"/>
+    </pm>
+    <devices>
+        <emulator>/usr/bin/qemu-system-x86_64</emulator>
+        {% if vm.local_disk is defined %}
+        {% for disk in vm.local_disk %}
+        <disk type="file" device="disk">
+           <driver name="qemu" type="raw" cache='none' io='threads'/>
+           <source file="/var/lib/libvirt/images/{{ disk.disk_file }}"/>
+           <target dev="vda" bus="virtio"/>
+        </disk>
+	{% endfor %}
+	{% endif %}
+    <controller type="usb" index="0" model="none"/>
+    <controller type="pci" index="0" model="pcie-root"/>
+    <controller type="virtio-serial" index="0"/>
+    <filesystem type="mount" accessmode="mapped">
+        <driver type="path" wrpolicy="immediate"/>
+        <source dir="/var/lib/libvirt/images/ptp"/>
+        <target dir="ptp"/>
+        <readonly/>
+    </filesystem>
+    {% if vm.bridge is defined %}
+    <interface type="bridge">
+	<source bridge="{{ bridge.name }}"/>
+        <mac address="{{ bridge.mac_address }}"/>
+        <model type="virtio"/>
+    </interface>
+    {% endif %}
+    {% if vm.ovs is defined %}
+    {% for bridge in vm.ovs %}
+    <interface type="ethernet">
+        <mac address="{{ bridge.mac_address }}"/>
+        <target dev="{{ bridge.ovs_port }}" managed="no"/>
+        <model type="virtio"/>
+    </interface>
+    {% endfor %}
+    {% endif %}
+    {% if vm.pci_passthrough is defined %}
+    {% for pci in vm.pci_passthrough %}
+    <hostdev mode="subsystem" type="pci" managed="yes">
+        <source>
+            <!-- The source is the NIC PIC address -->
+            <address domain="{{ pci.domain }}" bus="{{ pci.bus }}" slot="{{ pci.slot }}" function="{{ pci.function }}"/>
+            </source>
+    </hostdev>
+    {% endfor %}
+    {% endif %}
+    <console type='pty'>
+        <target type='virtio' port='0'/>
+    </console>
+    <input type="mouse" bus="ps2"/>
+    <input type="keyboard" bus="ps2"/>
+    <watchdog model="i6300esb" action="reset">
+    </watchdog>
+    <memballoon model="none"/>
+    </devices>
+</domain>
