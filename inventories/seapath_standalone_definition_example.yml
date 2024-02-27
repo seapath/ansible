@@ -85,3 +85,10 @@ all:
                         - "ssh-rsa key2XXX"
 
                     chrony_wait_timeout_sec: 180 #time in seconds the boot sequence will wait for chrony to sync. Optional : default is 180
+
+                    # Optional list of local files to upload to the remote machines
+                    upload_files:
+                      # for example you can override some script to add customizations
+                      - { src: '../inventories_private/snmp_getdata.py', dest: '/usr/local/sbin/snmp_getdata.py', mode: "0755" }
+                      # you can also upload arbitrary file you may need on your setup
+                      - { src: '../inventories_private/toto.txt', dest: '/tmp/toto' }
