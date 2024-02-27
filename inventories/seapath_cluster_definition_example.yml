@@ -331,3 +331,10 @@ all:
         #  allow  {{ admin_cluster_ip }}/32;
         #  deny   all;
         #vmmgr_http_local_auth_file: "/var/local/vmmgrapi/.htpasswd"
+
+        # Optional list of local files to upload to the remote machines
+        upload_files:
+          # for example you can override some script to add customizations
+          - { src: '../inventories_private/snmp_getdata.py', dest: '/usr/local/sbin/snmp_getdata.py', mode: "0755" }
+          # you can also upload arbitrary file you may need on your setup
+          - { src: '../inventories_private/toto.txt', dest: '/tmp/toto' }
