@@ -2,100 +2,102 @@
 all:
     children:
         standalone_machine:
-            hosts:
-                machine1:
-                    # Ansible variables
-                    ansible_host: 10.0.0.2
-                    ansible_user: ansible
-                    ansible_python_interpreter: /usr/bin/python3
-                    ansible_connection: ssh
-                    ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
-                    ansible_remote_tmp: /tmp/.ansible/tmp
+            children:
+                hypervisors:
+                    hosts:
+                        standalone-machine:
+                            # Ansible variables
+                            ansible_host: 10.0.0.2
+                            ansible_user: ansible
+                            ansible_python_interpreter: /usr/bin/python3
+                            ansible_connection: ssh
+                            ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+                            ansible_remote_tmp: /tmp/.ansible/tmp
 
-                    # snmp network settings
-                    snmp_admin_ip_addr: 10.10.11.1 #used to listen to snmp requests
+                            # snmp network settings
+                            snmp_admin_ip_addr: 10.10.11.1 #used to listen to snmp requests
 
-                    # Main network configuration
-                    network_interface: enp1s0
-                    ip_addr: "{{ ansible_host }}"
-                    subnet: 24
-                    dns_servers: 10.10.2.1
-                    gateway_addr: 10.0.0.1
-                    ntp_servers: 
-                      - "185.254.101.25"
-                      - "51.145.123.29"
-                    #ovs_vsctl_cmds: # Extra ovs-vsctl commands to be run by the network playbook
-                    #  - "set Bridge brBRIDGE1 netflow=@nf0 -- --id=@nf0 create NetFlow targets=\\\"192.168.10.1:2055\\\" add_id_to_interface=true"
+                            # Main network configuration
+                            network_interface: enp1s0
+                            ip_addr: "{{ ansible_host }}"
+                            subnet: 24
+                            dns_servers: 10.10.2.1
+                            gateway_addr: 10.0.0.1
+                            ntp_servers:
+                              - "185.254.101.25"
+                              - "51.145.123.29"
+                            #ovs_vsctl_cmds: # Extra ovs-vsctl commands to be run by the network playbook
+                            #  - "set Bridge brBRIDGE1 netflow=@nf0 -- --id=@nf0 create NetFlow targets=\\\"192.168.10.1:2055\\\" add_id_to_interface=true"
 
-                    # Syslog log sending configuration
-                    # Syslog client keys. If not set, syslog will send logs using an unencrypted connection.
-                    syslog_tls_ca: ../keys/syslog_tls_ca.crt
-                    syslog_tls_key: ../keys/syslog_tls_key.pem
-                    syslog_server_ip: "10.10.10.10" # If not set, syslog will not send any logs from network
-                    syslog_tls_port: 6514 #optional: default is 6514
-                    syslog_tcp_port: 514 #optional: default is 601. Used only if syslog_tls_ca and syslog_tls_key are not defined
-                    logstash_server_ip: 10.10.10.10
+                            # Syslog log sending configuration
+                            # Syslog client keys. If not set, syslog will send logs using an unencrypted connection.
+                            syslog_tls_ca: ../keys/syslog_tls_ca.crt
+                            syslog_tls_key: ../keys/syslog_tls_key.pem
+                            syslog_server_ip: "10.10.10.10" # If not set, syslog will not send any logs from network
+                            syslog_tls_port: 6514 #optional: default is 6514
+                            syslog_tcp_port: 514 #optional: default is 601. Used only if syslog_tls_ca and syslog_tls_key are not defined
+                            logstash_server_ip: 10.10.10.10
 
-                    # Other Network configuration
-                    apply_network_config: true # true to apply the network configuration without rebooting
-                    ptp_interface: "enp1s0f1" #OPTIONAL PTP Interface
-                    ptp_vlanid: 100 #OPTIONAL VlanID for PTP
-                    ptp_delay_mechanism: P2P # OPTIONAL E2E or P2P defaut is P2P
-                    ptp_network_transport: L2 # OPTIONAL L2 or UDPv4 default is L2
-                    # SRIOV, Optional configuration
-                    sriov_driver: 'igb'
-                    sriov:
-                      'eno12429': 7
+                            # Other Network configuration
+                            apply_network_config: true # true to apply the network configuration without rebooting
+                            ptp_interface: "enp1s0f1" #OPTIONAL PTP Interface
+                            ptp_vlanid: 100 #OPTIONAL VlanID for PTP
+                            ptp_delay_mechanism: P2P # OPTIONAL E2E or P2P defaut is P2P
+                            ptp_network_transport: L2 # OPTIONAL L2 or UDPv4 default is L2
+                            # SRIOV, Optional configuration
+                            sriov_driver: 'igb'
+                            sriov:
+                              'eno12429': 7
 
-                    # Realtime/CPUs cgroups isolation configuration
-                    isolcpus: "2-5,14-17" # CPUs to isolate (isolcpus, irqbalance on debian 12)
-                    workqueuemask: "1001" #workqueue mask, here it mean 0 and 12 are the only allowed cpus
-                    cpusystem: "0,12" # CPUs reserves for system
-                    cpuuser: "1,13" # CPUs reserves for user applications
-                    cpumachines: "2-11,14-23" # CPUs reserves for VMs
-                    cpumachinesrt: "2-5,14-17" # CPUs reserves for VMs realtime
-                    cpumachinesnort: "6-11,18-23" # CPUs reserves for VMs non realtime
-                    cpuovs: "23" # CPUs reserves for OVSps -eTo comm:50,tid,pid,cls,pri,psr
+                            # Realtime/CPUs cgroups isolation configuration
+                            isolcpus: "2-5,14-17" # CPUs to isolate (isolcpus, irqbalance on debian 12)
+                            workqueuemask: "1001" #workqueue mask, here it mean 0 and 12 are the only allowed cpus
+                            cpusystem: "0,12" # CPUs reserves for system
+                            cpuuser: "1,13" # CPUs reserves for user applications
+                            cpumachines: "2-11,14-23" # CPUs reserves for VMs
+                            cpumachinesrt: "2-5,14-17" # CPUs reserves for VMs realtime
+                            cpumachinesnort: "6-11,18-23" # CPUs reserves for VMs non realtime
+                            cpuovs: "23" # CPUs reserves for OVS
 
-                    # Affinity
-                    nics_affinity: # Optional, only useful with RT containers or macvtag VMs
-                    - eth0: 0-3,4-7 # NICs and their associated CPUs list
-                    - eth1: 8-11,12-15 # NICs and their associated CPUs list
+                            # Affinity
+                            nics_affinity: # Optional, only useful with RT containers or macvtag VMs
+                            - eth0: 0-3,4-7 # NICs and their associated CPUs list
+                            - eth1: 8-11,12-15 # NICs and their associated CPUs list
 
-                    # Grub password
-                    # The password hash generated with "grub-mkpasswd-pbkdf2 -c 65536 -s 256 -l 64", in this example the pass is "toto"
-                    grub_password: grub.pbkdf2.sha512.65536.E291D66AEEB3C22BD6B019C5C3587A3094AE93D61E20D134EC6324925AE5045DCA61EF30B3BD04B4D6F7360B9C9B242AA68B1643CCB269C53658EC959B5964ADB9C9D5FAA280A291D8F95E3F255254A4119A2431AFE797F1949EE4FBBC4C74281C550C83DAED26C254224061BEFCEEBF8091A8D1BE406EBB3A3E8A519E36B4FE161BE191D407193E5DFEBCC09F8822B4060EA9CD1E6B8677D40D32826EF025CA494BCD209032F7CF2A4A2E74717E6D17E87A62AAA93E458C96F983E69FBFC4FD602403988EAF5AADCA4B5B145B0F6C6FFB53F55CD6C56C15C17B2F8A5B3A214F3140470566597760D9388084AE978DB5C0EBF7C868A855DB38DACA47A010417A.FDA0C3188FAC87FFA04D862AC9B1020F29FEEA3B9590BE534330D8C7CAB71444CBF527E39D7DAE640545139202B9CA77822CCE21AB1134110F6AF3EFD793E848
+                            # Grub password
+                            # The password hash generated with "grub-mkpasswd-pbkdf2 -c 65536 -s 256 -l 64", in this example the pass is "toto"
+                            grub_password: grub.pbkdf2.sha512.65536.E291D66AEEB3C22BD6B019C5C3587A3094AE93D61E20D134EC6324925AE5045DCA61EF30B3BD04B4D6F7360B9C9B242AA68B1643CCB269C53658EC959B5964ADB9C9D5FAA280A291D8F95E3F255254A4119A2431AFE797F1949EE4FBBC4C74281C550C83DAED26C254224061BEFCEEBF8091A8D1BE406EBB3A3E8A519E36B4FE161BE191D407193E5DFEBCC09F8822B4060EA9CD1E6B8677D40D32826EF025CA494BCD209032F7CF2A4A2E74717E6D17E87A62AAA93E458C96F983E69FBFC4FD602403988EAF5AADCA4B5B145B0F6C6FFB53F55CD6C56C15C17B2F8A5B3A214F3140470566597760D9388084AE978DB5C0EBF7C868A855DB38DACA47A010417A.FDA0C3188FAC87FFA04D862AC9B1020F29FEEA3B9590BE534330D8C7CAB71444CBF527E39D7DAE640545139202B9CA77822CCE21AB1134110F6AF3EFD793E848
 
-                    # Extra kernel modules to be loaded at boot (you may need this depending on your hardware)
-                    extra_kernel_modules: []
+                            # Extra kernel modules to be loaded at boot (you may need this depending on your hardware)
+                            extra_kernel_modules: []
 
-                    # Optional list variable to change apt repositories. All repositories will be overrides.
-                    # If defined as empty list [], all apt repositories will be removed
-                    apt_repo:
-                        - http://ftp.fr.debian.org/debian bookworm main contrib non-free non-free-firmware
-                        - http://security.debian.org/debian-security bookworm-security main contrib non-free non-free-firmware
-                        - http://ftp.fr.debian.org/debian bookworm-backports main contrib non-free non-free-firmware
-                        - https://artifacts.elastic.co/packages/8.x/apt stable main
-                    # Default user with admin privileges, and password hash
-                    admin_user: virtu
-                    admin_passwd: "XXXXXX"
-                    # SSH public keys for the admin_user
-                    admin_ssh_keys:
-                        - "ssh-rsa key1XXX"
-                        - "ssh-rsa key2XXX"
+                            # Optional list variable to change apt repositories. All repositories will be overrides.
+                            # If defined as empty list [], all apt repositories will be removed
+                            apt_repo:
+                                - http://ftp.fr.debian.org/debian bookworm main contrib non-free non-free-firmware
+                                - http://security.debian.org/debian-security bookworm-security main contrib non-free non-free-firmware
+                                - http://ftp.fr.debian.org/debian bookworm-backports main contrib non-free non-free-firmware
+                                - https://artifacts.elastic.co/packages/8.x/apt stable main
+                            # Default user with admin privileges, and password hash
+                            admin_user: virtu
+                            admin_passwd: "XXXXXX"
+                            # SSH public keys for the admin_user
+                            admin_ssh_keys:
+                                - "ssh-rsa key1XXX"
+                                - "ssh-rsa key2XXX"
 
-                    chrony_wait_timeout_sec: 180 #time in seconds the boot sequence will wait for chrony to sync. Optional : default is 180
+                            chrony_wait_timeout_sec: 180 #time in seconds the boot sequence will wait for chrony to sync. Optional : default is 180
 
-                    # Optional list of local files to upload to the remote machines
-                    upload_files:
-                      # for example you can override some script to add customizations
-                      - { src: '../inventories_private/snmp_getdata.py', dest: '/usr/local/sbin/snmp_getdata.py', mode: "0755" }
-                      # you can also upload arbitrary file you may need on your setup
-                      - { src: '../inventories_private/toto.txt', dest: '/tmp/toto' }
+                            # Optional list of local files to upload to the remote machines
+                            upload_files:
+                              # for example you can override some script to add customizations
+                              - { src: '../inventories_private/snmp_getdata.py', dest: '/usr/local/sbin/snmp_getdata.py', mode: "0755" }
+                              # you can also upload arbitrary file you may need on your setup
+                              - { src: '../inventories_private/toto.txt', dest: '/tmp/toto' }
 
-                    # optional extra directives to add to snmpd.conf
-                    extra_snmpd_directives: |
-                      extend crmstatus /usr/bin/timeout 1s /usr/bin/sudo -u hacluster /usr/local/bin/snmp_crmstatus.sh
-                    # optional extra permissions to add to Debian-snmp sudoers file
-                    extra_debiansnmp_sudoers: |
-                      Debian-snmp     ALL = (hacluster) NOPASSWD:EXEC: /usr/local/bin/snmp_crmstatus.sh ""
+                            # optional extra directives to add to snmpd.conf
+                            extra_snmpd_directives: |
+                              extend crmstatus /usr/bin/timeout 1s /usr/bin/sudo -u hacluster /usr/local/bin/snmp_crmstatus.sh
+                            # optional extra permissions to add to Debian-snmp sudoers file
+                            extra_debiansnmp_sudoers: |
+                              Debian-snmp     ALL = (hacluster) NOPASSWD:EXEC: /usr/local/bin/snmp_crmstatus.sh ""
