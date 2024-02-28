@@ -26,32 +26,42 @@ def multilinetooid(oid,title,multistr):
 base_oid = ""
 f = open("/tmp/snmpdata.txt", "w")
 
+grep = "/usr/bin/grep"
+sort = "/usr/bin/sort"
+awk = "/usr/bin/awk"
+sed = "/usr/bin/sed"
+tr = "/usr/bin/tr"
+head = "/usr/bin/head"
+echo = "/usr/bin/echo"
+
 #IPMITOOL
+ipmitool = "/usr/bin/ipmitool"
 if os.path.isfile("/dev/ipmi0") or os.path.isfile("/dev/ipmi/0") or os.path.isfile("/dev/ipmidev/0"):
     for i in range(1,5):
         match i:
             case 1:
-                command = """/usr/bin/ipmitool sensor | sed -e "s/ *| */;/g" """
+                command = f""" {ipmitool} sensor | {sed} -e "s/ *| */;/g" """
                 title = "ipmitool sensor"
                 data = run_command(command)
             case 2:
-                command = "/usr/bin/ipmitool sensor -v"
+                command = f""" {ipmitool} sensor -v """
                 title = "ipmitool sensor verbose"
                 data = run_command(command)
             case 3:
-                command = """ /usr/bin/ipmitool sdr list | sed -e "s/ *| */;/g" """
+                command = f""" {ipmitool} sdr list | {sed} -e "s/ *| */;/g" """
                 title = "ipmitool sdr"
                 data = run_command(command)
             case 4:
-                command = "/usr/bin/ipmitool sdr list -v"
+                command = f""" {ipmitool} sdr list -v"""
                 title = "ipmitool sdr verbose"
                 data = run_command(command)
         multilinetooid(base_oid + ".4." + str(i), title, data)
 
 # RAID
-if os.path.isfile("/usr/local/sbin/arcconf"):
+arcconf = "/usr/local/sbin/arcconf"
+if os.path.isfile(arcconf):
     # get temperatures
-    command = """ /usr/local/sbin/arcconf GETCONFIG 1 PD | /usr/bin/grep "Current Temperature" | /usr/bin/awk '{ print $4 }' """
+    command = f""" {arcconf} GETCONFIG 1 PD | {grep} "Current Temperature" | {awk} '{{ print $4 }}' """
     data = run_command(command)
     linenumber = 0
     for line in data.splitlines():
@@ -59,7 +69,7 @@ if os.path.isfile("/usr/local/sbin/arcconf"):
         line = line.lstrip().rstrip()
         singlelinetooid(base_oid + ".3.1."+str(linenumber), "temperature disk " + str(linenumber), line)
 
-    command = """ /usr/local/sbin/arcconf GETCONFIG 1  | grep "S.M.A.R.T. warnings" | awk '{ print $4 }' """
+    command = f""" {arcconf} GETCONFIG 1  | grep "S.M.A.R.T. warnings" | awk '{{ print $4 }}' """
     data = run_command(command)
     linenumber = 0
     for line in data.splitlines():
@@ -71,20 +81,20 @@ if os.path.isfile("/usr/local/sbin/arcconf"):
 for i in range(1,4):
     match i:
         case 1:
-            command = """ /usr/sbin/smartctl -H /dev/sda | /usr/bin/grep "SMART overall-health self-assessment test result: " | sed "s/SMART overall-health self-assessment test result: //" """
+            command = f""" /usr/sbin/smartctl -H /dev/sda | {grep} "SMART overall-health self-assessment test result: " | {sed} "s/SMART overall-health self-assessment test result: //" """
             title = "smartctl /dev/sda"
             data = run_command(command)
         case 2:
-            command = """ /usr/sbin/smartctl -H /dev/sdb | /usr/bin/grep "SMART overall-health self-assessment test result: " | sed "s/SMART overall-health self-assessment test result: //" """
+            command = f""" /usr/sbin/smartctl -H /dev/sdb | {grep} "SMART overall-health self-assessment test result: " | {sed} "s/SMART overall-health self-assessment test result: //" """
             title = "smartctl /dev/sdb"
             data = run_command(command)
         case 3:
-            command = """
-passed=$(/usr/sbin/smartctl --scan | /usr/bin/grep -E "^/dev/(sd|nvme)" | /usr/bin/awk '{ print $1 }' | while read i; do /usr/sbin/smartctl -H $i | /usr/bin/grep "SMART overall-health self-assessment test result: " | /usr/bin/grep -v "SMART overall-health self-assessment test result: PASSED"; done | /usr/bin/wc -l)
+            command = f"""
+passed=$(/usr/sbin/smartctl --scan | {grep} -E "^/dev/(sd|nvme)" | {awk} '{{ print $1 }}' | while read i; do /usr/sbin/smartctl -H $i | {grep} "SMART overall-health self-assessment test result: " | {grep} -v "SMART overall-health self-assessment test result: PASSED"; done | /usr/bin/wc -l)
 if [ $passed -ne 0 ]; then
-  echo DISKPROBLEM
+  {echo} DISKPROBLEM
 else
-  echo DISKOK
+  {echo} DISKOK
 fi
 """
             title = "disk status"
@@ -95,66 +105,66 @@ fi
 for i in range(1,11):
     match i:
         case 1:
-            command = "/usr/sbin/crm status"
+            command = f""" /usr/sbin/crm status"""
             title = command
             data = run_command(command)
         case 2:
-            command = "/usr/bin/virsh --connect qemu:///system domstats"
+            command = f""" /usr/bin/virsh --connect qemu:///system domstats """
             title = "virsh domstats"
             data = run_command(command)
         case 3:
-            command = """
-/usr/bin/virsh --connect qemu:///system list --name | sed -s "/^$/d" | while read i
+            command = f"""
+/usr/bin/virsh --connect qemu:///system list --name | {sed} -s "/^$/d" | while read i
 do
-  echo Domain: \'$i\'
+  {echo} Domain: \'$i\'
   /usr/bin/virsh --connect qemu:///system dommemstat --domain $i
 done
 """
             title = "virsh dommemstat"
             data = run_command(command)
         case 4:
-            command = "/usr/bin/ceph status"
+            command = f""" /usr/bin/ceph status """
             title = "ceph status"
             data = run_command(command)
         case 5:
-            command = "/usr/local/bin/virt-df.sh"
+            command = f""" /usr/local/bin/virt-df.sh """
             title = "virt-df"
             data = run_command(command)
         case 6:
-            command = "/usr/bin/virsh -c qemu:///system list --all"
+            command = f""" /usr/bin/virsh -c qemu:///system list --all """
             title = "virsh list"
             data = run_command(command)
         case 7:
-            command = "/usr/bin/ceph status --format=json | /usr/bin/jq -c .pgmap"
+            command = f""" /usr/bin/ceph status --format=json | /usr/bin/jq -c .pgmap """
             title = "ceph usage"
             data = run_command(command)
         case 8:
-            command = """
-/usr/sbin/smartctl --scan | /usr/bin/awk '{ print $1 }' | while read i; do
-  temp=$(/usr/sbin/smartctl -a $i | /usr/bin/grep Temperature_Celsius | /usr/bin/awk '{ print $10 }')
+            command = f"""
+/usr/sbin/smartctl --scan | {awk} '{{ print $1 }}' | while read i; do
+  temp=$(/usr/sbin/smartctl -a $i | {grep} Temperature_Celsius | {awk} '{{ print $10 }}')
   if [ ! -z "$temp" ]
   then
-    echo "$i;$temp"
+    {echo} "$i;$temp"
   fi
 done
 """
             title = "temperature disks"
             data = run_command(command)
         case 9:
-            command = """
-/usr/sbin/smartctl --scan | /usr/bin/grep -E "^/dev/(sd|nvme)" | /usr/bin/awk '{ print $1 }' | while read i; do
-  echo $i
-  j=$(echo $i | sed "s/\/dev\///")
-  k=$(/usr/bin/udevadm info -q symlink --path=/sys/block/$j | tr " " "\n" | sort | /usr/bin/grep 'disk/by-path' | head -n 1 | /usr/bin/awk '{print "/dev/" $1}')
-  echo $k
-  /usr/sbin/smartctl --attributes -H $i | sed '0,/^=== START OF READ SMART DATA SECTION ===$/d'
-  echo ------------------------------------------
+            command = f"""
+/usr/sbin/smartctl --scan | {grep} -E "^/dev/(sd|nvme)" | {awk} '{{ print $1 }}' | while read i; do
+  {echo} $i
+  j=$({echo} $i | {sed} "s/\/dev\///")
+  k=$(/usr/bin/udevadm info -q symlink --path=/sys/block/$j | {tr} " " "\n" | {sort} | {grep} 'disk/by-path' | {head} -n 1 | {awk} '{{ print "/dev/" $1 }}')
+  {echo} $k
+  /usr/sbin/smartctl --attributes -H $i | {sed} '0,/^=== START OF READ SMART DATA SECTION ===$/d'
+  {echo} ------------------------------------------
 done
 """
             title = "smartctl"
             data = run_command(command)
         case 10:
-            command = "/usr/sbin/lvs -a -o +devices,lv_health_status"
+            command = f""" /usr/sbin/lvs -a -o +devices,lv_health_status """
             title = "lvs status"
             data = run_command(command)
 
