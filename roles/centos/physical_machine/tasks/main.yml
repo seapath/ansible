@@ -356,24 +356,49 @@
         group: Centos-snmp
   when: getent_passwd['Centos-snmp'][1] != "902" or getent_group['Centos-snmp'][1] != "902"
 
+  - name: Synchronization of src snmp_passpersist python module
+    ansible.posix.synchronize:
+      src: ../src/snmp_passpersist
+      dest: /tmp/src
+      rsync_opts:
+        - "--chown=root:root"
+  - name: Install snmp_passpersist
+    command:
+      cmd: /usr/bin/python3 setup.py install
+      chdir: /tmp/src/snmp_passpersist
+
 - name: Synchronization of snmp_ scripts
   ansible.posix.synchronize:
-    src: ../src/debian/
+    src: ../src/debian/snmp/
     dest: /usr/local/bin/
     rsync_opts:
-    - "--include=snmp_*.sh"
     - "--include=virt-df.sh"
     - "--exclude=*"
     - "--chmod=F755"
     - "--chown=root:root"
 - name: Snmp config
   ansible.builtin.template:
-    src: ../src/debian/snmpd.conf.j2
+    src: ../src/debian/snmp/snmpd.conf.j2
     dest: /etc/snmp/snmpd.conf
     mode: '0644'
     owner: root
     group: root
   register: snmpd_conf
+  - name: SNMP PASS AGENT script run by net-snmp for seapath tree
+    copy:
+      src: ../src/debian/snmp/exposeseapathsnmp.py
+      dest: "/usr/local/bin/exposeseapathsnmp.py"
+      mode: '0755'
+  - name: script run by cron job to generate snmp data
+    copy:
+      src: ../src/debian/snmp/snmp_getdata.py
+      dest: "/usr/local/sbin/snmp_getdata.py"
+      mode: '0755'
+  - name: cron job to generate snmp data
+    copy:
+      src: ../src/debian/snmp/seapathsnmp.cron
+      dest: "/etc/cron.d/seapathsnmp"
+      mode: '0644'
 - name: Wait for DHCP for SNMP
   lineinfile:
     dest: /lib/systemd/system/snmpd.service
@@ -388,8 +413,8 @@
     enabled: yes
 
 - name: Install sudo Centos-snmp user rules
-  copy:
-    src: ../src/debian/sudoers/Centos-snmp
+  template:
+    src: ../src/centos/sudoers/Centos-snmp.j2
     dest: /etc/sudoers.d/Centos-snmp
     owner: root
     group: root
