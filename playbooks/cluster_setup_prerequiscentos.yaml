@@ -36,3 +36,21 @@
         name: libvirt-guests.service
         enabled: no
         state: stopped
+
+- name: upload extra files
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  become: true
+  tasks:
+    - name: upload extra files
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: "{{ item.owner | default('root') }}"
+        group: "{{ item.group | default('root') }}"
+        mode: "{{ item.mode | default('0644') }}"
+        backup: yes
+      with_items: "{{ upload_files }}"
+      when: upload_files is defined
