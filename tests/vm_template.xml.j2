@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Copyright (C) 2020, RTE (http://www.rte-france.com) -->
+<!-- Copyright (C) 2024, SFL (https://savoirfairelinux.com) -->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 
 <!--
@@ -9,7 +10,7 @@
 <domain type="{{ vm_domain | default('qemu') }}">
     <name>{{ vm_name }}</name>
     <uuid>{{ vm_uuid }}</uuid>
-    <title>VOTP {{ vm_name }}</title>
+    <title>{{ vm_name }}</title>
     <description>
             Test template working with test_add_vm.yaml
     </description>

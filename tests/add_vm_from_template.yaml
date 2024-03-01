@@ -1,4 +1,5 @@
 # Copyright (C) 2021, RTE (http://www.rte-france.com)
+# Copyright (C) 2024, SFL (https://savoirfairelinux.com)
 # SPDX-License-Identifier: Apache-2.0
 
 # Test VM creation.
@@ -44,7 +45,7 @@
   vars:
      - vm_name: test0
      - state: create
-     - xml_template: "../templates/vm/votp_vm_dpdk.xml.j2"
+     - xml_template: "../templates/vm/seapath_guest_nort.xml.j2"
      - rbd_pool: rbd
      - os_disk: os0
      - data_disk: data0
