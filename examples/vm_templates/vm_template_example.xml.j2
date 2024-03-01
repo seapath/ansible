@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Copyright (C) 2020, RTE (http://www.rte-france.com) -->
+<!-- Copyright (C) 2024, SFL (https://savoirfairelinux.com) -->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 
 <!--
@@ -12,7 +13,7 @@ seapath_vm_manage role all variables must be defined before using this template.
 <domain type="{{ vm_domaine | default('kvm') }}">
     <name>{{ vm_name }}</name>
     <uuid>{{ vm_uuid }}</uuid>
-    <title>VOTP {{ vm_name }}</title>
+    <title>{{ vm_name }}</title>
     <description>
             Test template working with add_vm_playbook_example.yaml
     </description>
