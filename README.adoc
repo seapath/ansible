@@ -329,16 +329,16 @@ Note: The swu image must be placed in the `swu_images` directory.
 
 For the update of a machine in the cluster, call the playbook `playbooks/update_machine_cluster.yaml`
 
- $ ansible-playbook -i inventories/cluster_inventory.yaml -e "machine_to_update=node1 swu_image=update.swu" playbooks/update_machine_cluster.yaml
+ $ ansible-playbook -i inventories/cluster_inventory.yaml -e "machine_to_update=node1" -e "swu_image=update.swu" playbooks/update_machine_cluster.yaml
 
 Or if you use `cqfd`:
 
- $ cqfd run ansible-playbook -i inventories/cluster_inventory.yaml -e "machine_to_update=node swu_image=update.swu" playbooks/update_machine_cluster.yaml
+ $ cqfd run ansible-playbook -i inventories/cluster_inventory.yaml -e "machine_to_update=node" -e "swu_image=update.swu" playbooks/update_machine_cluster.yaml
 
 Otherwise, for the standalone, call the playbook `playbooks/update_machine_standalone.yaml`
 
- $ ansible-playbook -i inventories/standalone_inventory.yaml e "machine_to_update=node1 swu_image=update.swu" playbooks/update_machine_standalone.yaml
+ $ ansible-playbook -i inventories/standalone_inventory.yaml -e "machine_to_update=node1" -e "swu_image=update.swu" playbooks/update_machine_standalone.yaml
 
 Or if you use `cqfd`:
 
- $ cqfd run ansible-playbook -i inventories/standalone_inventory.yaml e "machine_to_update=node swu_image=update.swu" playbooks/update_machine_standalone.yaml
+ $ cqfd run ansible-playbook -i inventories/standalone_inventory.yaml -e "machine_to_update=node" -e "swu_image=update.swu" playbooks/update_machine_standalone.yaml
