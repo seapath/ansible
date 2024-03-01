@@ -16,25 +16,25 @@
     regexp: '^vhost_vsock$'
     line: 'vhost_vsock'
 
-- name: Copy votp-taskset.service script
+- name: Copy khtread-taskset.service script
   template:
     src: ../src/debian/taskset_boot.sh.j2
     dest: /usr/local/bin/taskset_boot.sh
     mode: '0755'
-  register: votptaskset1
-- name: Copy votp-taskset.service
+  register: kthreadtaskset1
+- name: Copy kthread-taskset.service
   ansible.builtin.copy:
-    src: ../src/debian/votp-taskset.service
-    dest: /etc/systemd/system/votp-taskset.service
+    src: ../src/debian/kthread-taskset.service
+    dest: /etc/systemd/system/kthread-taskset.service
     mode: '0644'
-  register: votptaskset2
+  register: kthreadtaskset2
 - name: daemon-reload taskset
   ansible.builtin.service:
     daemon_reload: yes
-  when: votptaskset1.changed or votptaskset2.changed
-- name: enable votp-taskset.service
+  when: kthreadtaskset1.changed or kthreadtaskset2.changed
+- name: enable kthread-taskset.service
   ansible.builtin.systemd:
-    name: votp-taskset.service
+    name: kthread-taskset.service
     enabled: yes
 
 - name: Copy sysctl RT rules
