@@ -7,10 +7,10 @@
   hosts: "{{ groups.hypervisors[0] }}"
   vars:
     - xml_template: >-
-        {{ vm_config | default('../../../templates/vm/votp_vm.xml.j2') }}
+        {{ vm_config | default('../../../templates/vm/vm.xml.j2') }}
     - disk_path: >-
         {{ image_directory }}/{{ guest_image |
-        default('seapath-guest-efi-image-votp-vm.wic.qcow2') }}
+        default('seapath-guest-efi-image.wic.qcow2') }}
   tasks:
     - name: Copy the disk on target
       copy:
