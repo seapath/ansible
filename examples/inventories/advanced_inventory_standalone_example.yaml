@@ -14,7 +14,7 @@ all:
       children:
         hypervisors:
           hosts:
-            votp1:
+            standalone:
               # Change IP address according to your setup
               ansible_host: 192.168.216.15
               # The IP address to be set to enbridge0. Don't forget to change

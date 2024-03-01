@@ -9,9 +9,9 @@ all:
             children:
                 hypervisors:
                     hosts:
-                        votp1:
+                        hypervisor1:
                             ansible_host: 192.168.217.15 # Change IP address according to your setup
-                        votp2:
+                        hypervisor2:
                             ansible_host: 192.168.217.16 # Change IP address according to your setup
                 observers:
                     hosts:
