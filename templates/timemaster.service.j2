@@ -1,0 +1,15 @@
+# Copyright (C) 2024 Savoir-faire Linux, Inc
+# SPDX-License-Identifier: Apache-2.0
+
+[Unit]
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+{% if ptp_interface is defined %}{% if ptp_vlanid is defined %}
+ExecStartPre=bash -c "while true; do ip addr show ptp && break; sleep 1; done"
+{% else %}
+After=sys-subsystem-net-devices-{{ ptp_interface }}.device
+ExecStartPre=bash -c "while true; do ip addr show {{ ptp_interface }} && break; sleep 1; done"
+{% endif %}
+{% endif %}
