@@ -63,88 +63,43 @@
   vars:
     apply_config: "{{ apply_network_config | default(false) }}"
   tasks:
-  - block:
-    - name: add ptp vlan interfaces
+    - name: Add ptp vlan
       template:
-        src: "../templates/{{ item }}.j2"
-        dest: "/etc/systemd/network/{{ item }}"
+        src: "../templates/00-ptp.netdev.j2"
+        dest: "/etc/systemd/network/00-ptp.netdev"
         group: systemd-network
-      with_items:
-        - 00-ptp.netdev
-        - 01-ptp.network
-      register: ptp_interface
+      when:
+        - ptp_vlanid is defined
+      register: ptp_netdev_register
+    - name: Add IP address to PTP vlan
+      template:
+        src: "../templates/79-ptp.network.j2"
+        dest: "/etc/systemd/network/91-ptp.network"
+        group: systemd-network
+      when:
+        - ptp_vlan_address is defined
+        - ptp_vlan_mask is defined
+      register: ptp_network_register
+    - name : "Add PTP vlan on {{ ptp_interface }}"
+      template:
+        src: "../templates/79-ptp_interface.network.j2"
+        dest: "/etc/systemd/network/91-{{ ptp_interface }}-ptp.network"
+        group: systemd-network
+      when:
+        - ptp_vlanid is defined
+      register: ptp_interface_network_register
     - name: Register reboot
       set_fact:
         need_reboot: true
       when:
         - not apply_config
-        - ptp_interface.changed
-    when:
-      - ptp_vlan is defined
-      - ptp_vlan_address is defined
-  - name: Restart systemd-networkd
-    ansible.builtin.systemd:
-      name: systemd-networkd
-      state: restarted
-    when:
-      apply_config
-
-
-- name: Configure PTP ansible.builtin.service
-  hosts:
-    - cluster_machines
-    - standalone_machine
-  vars:
-    apply_config: "{{ apply_network_config | default(false) }}"
-  tasks:
-    - block:
-      - name: disable systemd-timesyncd service
-        ansible.builtin.systemd:
-          name: systemd-timesyncd.service
-          enabled: no
-          state: stopped
-      - name: Add the ptp4l configuration file
-        copy:
-          src: ../src/ptp4l.conf
-          dest: /etc/ptp4l.conf
-          owner: root
-          group: root
-          mode: 0644
-      - name: Ensure /etc/systemd/system/ptp4l@.service.d directory exists
-        file:
-          path: /etc/systemd/system/ptp4l@.service.d
-          state: directory
-          owner: root
-          group: root
-          mode: 0755
-      - name: Configure ptp4l service to use a configuration file
-        copy:
-          src: ../src/ptp4l.service.override
-          dest: /etc/systemd/system/ptp4l@.service.d/override.conf
-          owner: root
-          group: root
-          mode: 0644
-      - name: Enable ptp service
-        ansible.builtin.systemd:
-          name: ptp4l@ptp.service
-          enabled: yes
-          daemon_reload: yes
-      - name: Start ptp service
-        ansible.builtin.systemd:
-          name: ptp4l@ptp.service
-          state: restarted
-        when: apply_config or (need_reboot is defined and not need_reboot)
-      - name: Enable phc2sys service
-        ansible.builtin.systemd:
-          name: phc2sys@ptp.service
-          enabled: yes
-      - name: Start phc2sys service
-        ansible.builtin.systemd:
-          name: phc2sys@ptp.service
-          state: restarted
-        when: apply_config or (need_reboot is defined and not need_reboot)
-
-      when: ptp_vlan is defined
+        - ptp_netdev_register.changed or ptp_network_register.changed or ptp_interface_network_register.changed
+    - name: Restart systemd-networkd
+      ansible.builtin.systemd:
+        name: systemd-networkd
+        state: restarted
+      when:
+        apply_config
 
 - name: Configure hostname
   hosts:
@@ -174,33 +129,6 @@
         replace: '{{ cluster_ip_addr }} {{ inventory_hostname }} rbd'
       when: cluster_ip_addr is defined
 
-- name: Configure NTP
-  hosts:
-    - cluster_machines
-    - standalone_machine
-  tasks:
-    - name: Set NTP configuration in /etc/systemd/timesyncd.conf
-      lineinfile:
-        dest: /etc/systemd/timesyncd.conf
-        regexp: '{{ item.regexp }}'
-        line: '{{ item.line   }}'
-        insertafter: '\[Time\]'
-        backrefs: true
-        create: true
-        state: present
-      with_items:
-        - regexp: '^\s*#?\s*(NTP=).*$'
-          line: 'NTP={{ ntp_servers }}'
-        - regexp: '^\s*#?\s*(FallbackNTP=).*$'
-          line: 'FallbackNTP={{ fallback_ntp_servers | default("") }}'
-      notify:
-        - Restart systemd timesyncd
-  handlers:
-    - name: Restart systemd timesyncd
-      ansible.builtin.service:
-        name: systemd-timesyncd
-        state: restarted
-
 - name: Configure syslog-ng
   hosts:
     - cluster_machines
@@ -225,6 +153,73 @@
         state: restarted
       when:
         apply_config or (need_reboot is defined and not need_reboot)
+
+- name: Configure TimeMaster
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  become: true
+  tasks:
+    - name: Populate service facts
+      service_facts:
+    - name: stop and disable systemd-timesyncd if it exists
+      service:
+        name: "systemd-timesyncd"
+        state: stopped
+        enabled: false
+      when: "'systemd-timesyncd.service' in services"
+    - name: Create a linuxptp directory if it does not exist
+      file:
+        path: /etc/linuxptp
+        state: directory
+        mode: '0755'
+    - name: Create timemaster configuration
+      template:
+        src: ../templates/timemaster.conf.j2
+        dest: /etc/linuxptp/timemaster.conf
+      register: timemasterconf1
+    - name: comment pool configuration in chrony.conf
+      replace:
+        path: /etc/chrony.conf
+        regexp: '^(pool .*)'
+        replace: '#\1'
+      register: timemasterconf2
+    - name: Create timemaster.service.d directory
+      file:
+        path: /etc/systemd/system/timemaster.service.d/
+        state: directory
+        owner: root
+        group: root
+        mode: 0755
+    - name: Copy timemaster.service overide
+      template:
+        src: ../templates/timemaster.service.j2
+        dest: /etc/systemd/system/timemaster.service.d/override.conf
+      register: timemasterconf3
+    - name: start and enable timemaster
+      service:
+        name: "timemaster"
+        state: started
+        enabled: true
+    - name: restart timemaster if necessary
+      service:
+        name: "timemaster"
+        state: restarted
+        enabled: true
+      when: timemasterconf1.changed or timemasterconf2.changed or timemasterconf3.changed
+
+- name: Stop chrony service
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  become: true
+  tasks:
+    - name: stop and disable chrony
+      service:
+        name: "chrony"
+        state: stopped
+        enabled: false
 
 - name: Configure systemd-networkd-wait-online.service
   hosts: hypervisors
