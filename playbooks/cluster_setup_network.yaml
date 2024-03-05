@@ -162,9 +162,9 @@
         dest: /etc/ovs_configuration.json
         validate: setup_ovs.py -v -c -f %s
       register: ovs_conf
-    - name: Restart votp-config_ovs
+    - name: Restart seapath-config_ovs
       ansible.builtin.systemd:
-        name: votp-config_ovs
+        name: seapath-config_ovs
         state: restarted
       when:
         - apply_config
