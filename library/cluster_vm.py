@@ -133,6 +133,11 @@ options:
       - Time given to a guest to live migrate (in seconds)
       - Optional parameter relevant only if I(command) is C(create) or C(clone)
     type: str
+  priority:
+    description:
+      - Priority of resource in pacemaker
+      - Optional parameter relevant only if I(command) is C(create) or C(clone)
+    type: str
   clear_constraint:
     description:
       - Do not keep source location constraint
@@ -464,6 +469,7 @@ def run_module():
         migration_user=dict(type="str", require=False),
         stop_timeout=dict(type="str", require=False),
         migrate_to_timeout=dict(type="str", require=False),
+        priority=dict(type="str", required=False),
         clear_constraint=dict(type="bool", required=False, default=False),
         strong=dict(type="bool", required=False, default=False),
         colocated_vms=dict(type="list", required=False),
@@ -522,6 +528,7 @@ def run_module():
     strong_constraint = args.get("strong", False)
     colocated_vms = args.get("colocated_vms", [])
     crm_config_cmd = args.get("crm_config_cmd", None)
+    priority = args.get("priority", None)
 
     vm_name_command_list = commands_list.copy()
     vm_name_command_list.remove("list_vms")
@@ -543,37 +550,41 @@ def run_module():
                 module.fail_json(
                     msg="`system_image` doesn't exist or is not a file`"
                 )
-            vm_manager.create(
-                vm_name,
-                vm_config,
-                system_image,
-                force=force,
-                enable=enable,
-                metadata=metadata,
-                preferred_host=preferred_host,
-                pinned_host=pinned_host,
-                live_migration=live_migration,
-                migration_user=migration_user,
-                stop_timeout=stop_timeout,
-                migrate_to_timeout=migrate_to_timeout,
-                crm_config_cmd=crm_config_cmd,
-            )
+            vm_options = {
+                "name": vm_name,
+                "base_xml": vm_config,
+                "image": system_image,
+                "force": force,
+                "enable": enable,
+                "metadata": metadata,
+                "preferred_host": preferred_host,
+                "pinned_host": pinned_host,
+                "live_migration": live_migration,
+                "migration_user": migration_user,
+                "stop_timeout": stop_timeout,
+                "migrate_to_timeout": migrate_to_timeout,
+                "crm_config_cmd": crm_config_cmd,
+                "priority": priority,
+            }
+            vm_manager.create(vm_options)
         elif command == "clone":
-            vm_manager.clone(
-                src_name,
-                vm_name,
-                base_xml=vm_config,
-                force=force,
-                enable=enable,
-                metadata=metadata,
-                preferred_host=preferred_host,
-                pinned_host=pinned_host,
-                live_migration=live_migration,
-                migration_user=migration_user,
-                stop_timeout=stop_timeout,
-                migrate_to_timeout=migrate_to_timeout,
-                clear_constraint=clear_constraint,
-            )
+            vm_options = {
+                "name": src_name,
+                "dst_name": vm_name,
+                "base_xml": vm_config,
+                "force": force,
+                "enable": enable,
+                "metadata": metadata,
+                "preferred_host": preferred_host,
+                "pinned_host": pinned_host,
+                "live_migration": live_migration,
+                "migration_user": migration_user,
+                "stop_timeout": stop_timeout,
+                "migrate_to_timeout": migrate_to_timeout,
+                "clear_constraint": clear_constraint,
+                "priority": priority,
+            }
+            vm_manager.clone(vm_options)
         elif command == "remove":
             vm_manager.remove(vm_name)
         elif command == "start":
