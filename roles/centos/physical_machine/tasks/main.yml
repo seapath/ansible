@@ -148,19 +148,19 @@
   command:
     cmd: /usr/bin/python3 setup.py install
     chdir: /tmp/src/python3-setup-ovs
-- name: Copy votp-config_ovs.service
+- name: Copy seapath-config_ovs.service
   ansible.builtin.copy:
-    src: ../src/centos/votp-config_ovs.service
-    dest: /etc/systemd/system/votp-config_ovs.service
+    src: ../src/debian/seapath-config_ovs.service
+    dest: /etc/systemd/system/seapath-config_ovs.service
     mode: '0644'
-  register: votpconfigovs
-- name: daemon-reload votp-config_ovs
+  register: seapathconfigovs
+- name: daemon-reload seapath-config_ovs
   ansible.builtin.service:
     daemon_reload: yes
-  when: votpconfigovs.changed
-- name: enable votp-config_ovs.service
+  when: seapathconfigovs.changed
+- name: enable seapath-config_ovs.service
   ansible.builtin.systemd:
-    name: votp-config_ovs.service
+    name: seapath-config_ovs.service
     enabled: yes
 
 - name: Synchronization of src vm_manager on the control machine to dest on the remote hosts
