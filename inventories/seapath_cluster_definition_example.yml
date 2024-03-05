@@ -311,11 +311,11 @@ all:
           clone cl_ptpstatus_test ptpstatus_test meta target-role=Started
 
         # if br0vlan is set, then the host's remote access network ip is on a vlan, but a trunk port has been given to the host so that guests can connect to other vlans. You create the interfaces for those guests here:
-        guests_on_br0:
-          GUEST1: 159       #access port on vlan 159
-          GUEST2: [159,160] #trunk port on vlan 159 and 160
-          GUEST3: [1-4094]  # no filtering, excluding untagged trafic
-          GUEST4: []        # no filtering, including untagged trafic
+        interfaces_on_br0:
+          INTERFACE1: 159       #access port on vlan 159
+          INTERFACE2: [159,160] #trunk port on vlan 159 and 160
+          INTERFACE3: [1-4094]  # no filtering, excluding untagged trafic
+          INTERFACE4: []        # no filtering, including untagged trafic
 
         iptables_rules_path: "../inventories/iptables_rules_example.txt" #when defined, it uploads this file to /etc/iptables/rules.v4 and loads those rules
         #cluster_protocol: "HSR" # RSTP or HSR, default is RSTP

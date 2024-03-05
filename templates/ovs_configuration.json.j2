@@ -1,7 +1,7 @@
 {% set taps=[] %}
-{%- if guests_on_br0 is defined %}
-{%- for guest, vlan in guests_on_br0.items() %}
-{{- taps.append(guest+'tap') or "" }}
+{%- if interfaces_on_br0 is defined %}
+{%- for interface, vlan in interfaces_on_br0.items() %}
+{{- taps.append(interface) or "" }}
 {%- endfor %}
 {%- endif %}
 {% set OVS_configuration = ({ "bridges": ovs_bridges | default([]), "ignored_bridges": ignored_bridges | default([]), "ignored_taps": taps | default([]), "unbind_pci_address": unbind_pci_address | default([]) }) %}
