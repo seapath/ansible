@@ -25,8 +25,8 @@
         migration_user: "{{ livemigration_user | default('root') }}"
         migrate_to_timeout: "{{ hostvars[item].migrate_to_timeout | default('') }}"
         enable: true
-        pinned_host: "{{ hostvars[item].pinned_host | default(None) }}"
-        preferred_host: "{{ hostvars[item].preferred_host | default(None) }}"
+        pinned_host: "{{ hostvars[item].pinned_host | default(omit) }}"
+        preferred_host: "{{ hostvars[item].preferred_host | default(omit) }}"
         crm_config_cmd: "{{ hostvars[item].crm_config_cmd | default(omit) }}"
         xml: >-
           {{ lookup('template',
