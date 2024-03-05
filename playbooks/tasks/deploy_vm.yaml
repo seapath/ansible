@@ -34,13 +34,14 @@
       system_image: "{{ qcow2tmpuploadfolder | default('/tmp') + '/' + 'os.qcow2' }}"
       force: true
       xml: "{{ lookup('file', hostvars[item].xml_path | default(vms_disks_directory + '/' + item + '.xml')) | replace('\n', '') }}"
-      pinned_host: "{{ hostvars[item].pinned_host | default('') }}"
-      preferred_host: "{{ hostvars[item].preferred_host | default('') }}"
-      live_migration: "{{ hostvars[item].live_migration | default('') }}"
-      migration_user: "{{ hostvars[item].migration_user | default('') }}"
-      migrate_to_timeout: "{{ hostvars[item].migrate_to_timeout | default('') }}"
+      pinned_host: "{{ hostvars[item].pinned_host | default(omit) }}"
+      preferred_host: "{{ hostvars[item].preferred_host | default(omit) }}"
+      live_migration: "{{ hostvars[item].live_migration | default(omit) }}"
+      migration_user: "{{ hostvars[item].migration_user | default(omit) }}"
+      migrate_to_timeout: "{{ hostvars[item].migrate_to_timeout | default(omit) }}"
       crm_config_cmd: "{{ hostvars[item].crm_config_cmd | default(omit) }}"
       enable: "{{ hostvars[item].enable | default(true) }}"
+      priority: "{{ hostvars[item].priority | default(omit) }}"
   - name: Remove temporary file
     file:
       path: "{{ qcow2tmpuploadfolder | default('/tmp') + '/' + 'os.qcow2' }}"
