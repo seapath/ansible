@@ -7,7 +7,7 @@ all:
           vars:
             # this is the object used by ansible to create the json OVS conf
             # that will be uploaded to the nodes, and used by the
-            # votp-config_ovs service to the OVS configuration at each boot
+            # seapath-config_ovs service to the OVS configuration at each boot
             ignored_bridges:
             # the team0 bridge (cluster network) is created separately by the networking playbook.
               - "team0"
