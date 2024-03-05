@@ -370,34 +370,33 @@
   tasks:
     - debug:
         var: item.value
-      with_items: "{{ guests_on_br0 | dict2items }}"
-      when: guests_on_br0 is defined
-#      failed_when: 1 == 1
-    - name: create 00-GUESTtap.netdev
+      with_items: "{{ interfaces_on_br0 | dict2items }}"
+      when: interfaces_on_br0 is defined
+    - name: create 00-INTERFACEX.netdev
       template:
-        src: ../templates/00-GUESTtap.netdev.j2
-        dest: /etc/systemd/network/00-{{ item.key }}tap.netdev
+        src: ../templates/00-INTERFACEX.netdev.j2
+        dest: /etc/systemd/network/00-{{ item.key }}.netdev
         owner: "root"
         group: "systemd-network"
         mode: '0644'
-      with_items: "{{ guests_on_br0 | dict2items }}"
-      when: guests_on_br0 is defined
-      register: guest_br0_netdev
-    - name: create 00-GUESTtap.network
+      with_items: "{{ interfaces_on_br0 | dict2items }}"
+      when: interfaces_on_br0 is defined
+      register: interfaces_br0_netdev
+    - name: create 00-INTERFACEX.network
       template:
-        src: ../templates/00-GUESTtap.network.j2
-        dest: /etc/systemd/network/00-{{ item.key }}tap.network
+        src: ../templates/00-INTERFACEX.network.j2
+        dest: /etc/systemd/network/00-{{ item.key }}.network
         owner: "root"
         group: "systemd-network"
         mode: '0644'
-      with_items: "{{ guests_on_br0 | dict2items }}"
-      when: guests_on_br0 is defined
-      register: guest_br0_network
+      with_items: "{{ interfaces_on_br0 | dict2items }}"
+      when: interfaces_on_br0 is defined
+      register: interfaces_br0_network
     - name: Reload systemd-networkd configuration
       ansible.builtin.service:
         name: systemd-networkd
         state: reloaded
-      when: guest_br0_netdev.changed or guest_br0_network.changed
+      when: interfaces_br0_netdev.changed or interfaces_br0_netdev.changed
 
 - name: push iptables rules
   hosts: cluster_machines
