@@ -19,7 +19,7 @@
 
 - name: Copy khtread-taskset.service script
   template:
-    src: ../src/debian/taskset_boot.sh.j2
+    src: ../src/centos/taskset_boot.sh.j2
     dest: /usr/local/bin/taskset_boot.sh
     mode: '0755'
   register: kthreadtaskset1
