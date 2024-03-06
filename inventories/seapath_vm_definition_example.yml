@@ -6,7 +6,7 @@ all:
   children:
     VMs:
       hosts:
-        guest:
+        guest1:
           description: "example VM"
           ansible_host: 192.168.212.131 # Update the VM IP
           vm_template: "../templates/vm/guest.xml.j2"
@@ -34,6 +34,19 @@ all:
           sriov:
             - sriov_pool1
             - sriov_pool2
+        guest2:
+          description: "Simple VM with gzipped disk"
+          ansible_host: 192.168.212.132 # Update the VM IP
+          vm_template: "../templates/vm/guest.xml.j2"
+          vm_disk: "../vm_images/guest.img.gz"
+          disk_extract: true
+          local_disk:
+              - disk_file: guest2.qcow2
+          vm_features: []
+          preferred_host: pc3 # Optional
+          bridges:
+            - name: "br0" # Change the bridge name
+              mac_address: "52:54:00:c4:ff:05" # change the MAC address
       vars:
         ansible_user: virtu
         apply_network_config: true
@@ -53,6 +66,7 @@ all:
 #                vm-manager)
 #    ** disk_file: name of the disk, note that you must give the same name as
 #                  the vm name.
+#  * disk_extract: if the disk image is gzipped, set the value to true.
 #  * vm_features: the VM feature (list). Can contained one or more of the
 #                 following items.
 #    ** isolated: to enable CPU pinning
