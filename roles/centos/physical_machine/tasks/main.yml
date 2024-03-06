@@ -132,6 +132,29 @@
   when:
     - services['gunicorn.service'] is defined
 
+- name: Copy sysctl rules
+  ansible.builtin.copy:
+    src: ../src/debian/sysctl/{{ item }}
+    dest: /etc/sysctl.d/{{ item }}
+    mode: '0644'
+  with_items:
+    - 00-bridge_nf_call.conf
+  register: sysctl1
+
+- name: Add sysctl conf from inventory (extra_sysctl_physical_machines)
+  ansible.builtin.copy:
+    dest: /etc/sysctl.d/00-seapathextra_physicalmachines.conf
+    mode: '0644'
+    content: "{{ extra_sysctl_physical_machines }}"
+  when: extra_sysctl_physical_machines is defined
+  register: sysctl2
+
+- name: restart systemd-sysctl if needed
+  ansible.builtin.systemd:
+    name: systemd-sysctl.service
+    state: restarted
+  when: sysctl1.changed or sysctl2.changed
+
 - name: create src folder on hosts
   file:
     path: /tmp/src
@@ -416,21 +439,6 @@
   user: name=libvirt
     group=libvirt
     shell=/bin/false
-
-- name: Copy sysctl rules
-  ansible.builtin.copy:
-    src: ../src/debian/sysctl/{{ item }}
-    dest: /etc/sysctl.d/{{ item }}
-    mode: '0644'
-  with_items:
-    - 00-bridge_nf_call.conf
-
-- name: Add sysctl conf from inventory (extra_sysctl_physical_machines)
-  ansible.builtin.copy:
-    dest: /etc/sysctl.d/00-seapathextra_physicalmachines.conf
-    mode: '0644'
-    content: "{{ extra_sysctl_physical_machines }}"
-  when: extra_sysctl_physical_machines is defined
 
 - name: add br_netfilter to /etc/modules-load.d
   ansible.builtin.copy:
