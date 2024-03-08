@@ -208,18 +208,22 @@
         enabled: true
       when: timemasterconf1.changed or timemasterconf2.changed or timemasterconf3.changed
 
-- name: Stop chrony service
+- name: Stop chrony service if running
   hosts:
     - cluster_machines
     - standalone_machine
     - VMs
   become: true
   tasks:
-    - name: stop and disable chrony
+    - name: Get all services
+      service_facts:
+
+    - name: Stop and disable chrony if running
       service:
         name: "chrony"
         state: stopped
         enabled: false
+      when: "'chrony.service' in services"
 
 - name: Configure systemd-networkd-wait-online.service
   hosts: hypervisors
