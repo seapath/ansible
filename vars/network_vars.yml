@@ -4,7 +4,7 @@
 _systemd_networkd_network_custom: ["{{ custom_network | default([]) }}"]
 _systemd_networkd_netdev_custom: ["{{ custom_netdev | default([]) }}"]
 
-_vlan_conditionnal: "{% if ptp_vlan is defined and ptp_vlan_interface and ptp_vlan_interface == network_interface %}[{'VLAN': 'ptp'}]{% else %}[]{% endif %}"
+_vlan_conditionnal: "{% if ptp_vlanid is defined and ptp_interface is defined and ptp_interface == network_interface %}[{'VLAN': 'ptp'}]{% else %}[]{% endif %}"
 
 _network_common:
   - Gateway: "{{ gateway_addr }}"
@@ -12,25 +12,25 @@ _network_common:
   - DNS: "{{ dns_server }}"
 
 _wired_systemd_networkd_network:
-  00-wired:
+  78-wired:
     - Match:
         - Name: "{{ network_interface }}"
     - Network: "{{ _network_common + _vlan_conditionnal }}"
 
 _br0_systemd_networkd_netdev:
-  79-br0:
+  77-br0:
     - NetDev:
       - Name: "br0"
       - Kind: "bridge"
 
 _br0_systemd_networkd_network:
-  79-br0:
+  77-br0:
     - Match:
       - Name: "br0"
     - Network:
       - Gateway: "{{ gateway_addr }}"
       - Address: "{{ ip_addr }}/{{ subnet | default(24) }}"
-  79-wired:
+  77-wired:
     - Match:
       - Name: "{{ network_interface }}"
     - Network: "{{ [ {'Bridge': 'br0'} ] | default([]) }}"
