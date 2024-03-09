@@ -16,26 +16,43 @@
     regexp: '^vhost_vsock$'
     line: 'vhost_vsock'
 
-- name: Copy khtread-taskset.service script
-  template:
-    src: ../src/debian/taskset_boot.sh.j2
-    dest: /usr/local/bin/taskset_boot.sh
-    mode: '0755'
-  register: kthreadtaskset1
-- name: Copy kthread-taskset.service
-  ansible.builtin.copy:
-    src: ../src/debian/kthread-taskset.service
-    dest: /etc/systemd/system/kthread-taskset.service
-    mode: '0644'
-  register: kthreadtaskset2
-- name: daemon-reload taskset
-  ansible.builtin.service:
-    daemon_reload: yes
-  when: kthreadtaskset1.changed or kthreadtaskset2.changed
-- name: enable kthread-taskset.service
-  ansible.builtin.systemd:
-    name: kthread-taskset.service
-    enabled: yes
+- block:
+  - name: Copy khtread-taskset.service script
+    template:
+      src: ../src/debian/taskset_boot.sh.j2
+      dest: /usr/local/bin/taskset_boot.sh
+      mode: '0755'
+    register: kthreadtaskset1
+  - name: Copy kthread-taskset.service
+    ansible.builtin.copy:
+      src: ../src/debian/kthread-taskset.service
+      dest: /etc/systemd/system/kthread-taskset.service
+      mode: '0644'
+    register: kthreadtaskset2
+  - name: daemon-reload taskset
+    ansible.builtin.service:
+      daemon_reload: yes
+    when: kthreadtaskset1.changed or kthreadtaskset2.changed
+  - name: enable kthread-taskset.service
+    ansible.builtin.systemd:
+      name: kthread-taskset.service
+      enabled: yes
+  when: cpuset is defined
+
+- block:
+  - name: disable kthread-taskset.service
+    file:
+      path: /etc/systemd/system/multi-user.target.wants/kthread-taskset.service
+      state: absent
+  - name: remove khtread-taskset.service
+    file:
+      path: /etc/systemd/system/kthread-taskset.service
+      state: absent
+  - name: remove khtread-taskset.service script
+    file:
+      path: /usr/local/bin/taskset_boot.sh
+      state: absent
+  when: cpuset is not defined
 
 - name: Copy sysctl RT rules
   ansible.builtin.copy:
@@ -168,6 +185,15 @@
     regexp: '^CPUAffinity=.*$'
     line: "CPUAffinity={{ cpusystem }}"
     state: present
+  when: cpusystem is defined
+- name: "systemd conf CPUAffinity revert"
+  lineinfile:
+    dest: /etc/systemd/system.conf
+    regexp: '^#?CPUAffinity=.*$'
+    line: "#CPUAffinity="
+    state: present
+  when: cpusystem is not defined
+
 - name: "systemd conf RuntimeWatchdogSec"
   lineinfile:
     dest: /etc/systemd/system.conf
@@ -181,28 +207,42 @@
     line: "RebootWatchdogSec=5min"
     state: present
 
-- name: Create systemd slices override
+- block:
+  - name: "Create systemd slices override (folder)"
+    file:
+      path: /etc/systemd/system.control/{{ item }}.slice.d
+      state: directory
+      owner: root
+      group: root
+      mode: 0755
+    with_items:
+      - "system"
+      - "user"
+      - "machine"
+  - name: create systemd slices override (files)
+    template:
+      src: ../templates/systemd_slice_override.j2
+      dest: /etc/systemd/system.control/{{ item.name }}.slice.d/50-AllowedCPUs.conf
+      owner: root
+      group: root
+      mode:  0644
+    with_items:
+      - { name: "system", description: "system slice", allowedcpus: "{{ cpusystem }}" }
+      - { name: "user", description: "user slice", allowedcpus: "{{ cpuuser }}" }
+      - { name: "machine", description: "machine slice", allowedcpus: "{{ cpumachines }}" }
+  when:
+    - cpusystem is defined
+    - cpuuser is defined
+    - cpumachines is defined
+- name: Create systemd slices override REVERT
   file:
     path: /etc/systemd/system.control/{{ item }}.slice.d
-    state: directory
-    owner: root
-    group: root
-    mode: 0755
+    state: absent
   with_items:
     - "system"
     - "user"
     - "machine"
-- name: create systemd slices override
-  template:
-    src: ../templates/systemd_slice_override.j2
-    dest: /etc/systemd/system.control/{{ item.name }}.slice.d/50-AllowedCPUs.conf
-    owner: root
-    group: root
-    mode:  0644
-  with_items:
-    - { name: "system", description: "system slice", allowedcpus: "{{ cpusystem }}" }
-    - { name: "user", description: "user slice", allowedcpus: "{{ cpuuser }}" }
-    - { name: "machine", description: "machine slice", allowedcpus: "{{ cpumachines }}" }
+  when: cpusystem is not defined or cpuuser is not defined or cpumachines is not defined
 
 - name: create systemd slices
   template:
@@ -216,6 +256,20 @@
     - { name: "machine-nort", description: "VM nonrt slice", wants: "machine.slice", allowedcpus: "{{ cpumachinesnort }}" }
     - { name: "ovs", description: "ovs slice", wants: "", allowedcpus: "{{ cpuovs }}" }
   register: newslices
+  when:
+    - cpumachinesrt is defined
+    - cpumachinesnort is defined
+    - cpuovs is defined
+- name: create systemd slices REVERT
+  file:
+    path: /etc/systemd/system/{{ item }}.slice
+    state: absent
+  with_items:
+    - "machine-rt"
+    - "machine-nort"
+    - "ovs"
+  register: removeslices
+  when: cpumachinesrt is not defined and cpumachinesnort is not defined and cpuovs is not defined
 
 - name: start new slices
   ansible.builtin.systemd:
@@ -227,6 +281,16 @@
     - "machine-nort"
     - "ovs"
   when: newslices.changed
+- name: start new slices REVERT
+  ansible.builtin.systemd:
+    name: "{{ item }}.slice"
+    state: stopped
+    daemon_reload: yes
+  with_items:
+    - "machine-rt"
+    - "machine-nort"
+    - "ovs"
+  when: removeslices.changed
 
 - name: Create ovs-vswitchd.service.d directory
   file:
