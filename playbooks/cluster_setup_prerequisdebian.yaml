@@ -53,7 +53,20 @@
         mode: "{{ item.mode | default('0644') }}"
         backup: yes
       with_items: "{{ upload_files }}"
-      when: upload_files is defined
+      when:
+        - upload_files is defined
+        - item.extract is not defined or item.extract is false
+    - name: upload extra files and extract them
+      unarchive:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: "{{ item.owner | default('root') }}"
+        group: "{{ item.group | default('root') }}"
+        mode: "{{ item.mode | default('0644') }}"
+      with_items: "{{ upload_files }}"
+      when:
+        - upload_files is defined
+        - item.extract is defined and item.extract is true
 
 - name: Remove what is not needed after installation
   hosts:
