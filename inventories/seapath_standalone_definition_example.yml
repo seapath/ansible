@@ -94,6 +94,8 @@ all:
                               - { src: '../inventories_private/snmp_getdata.py', dest: '/usr/local/sbin/snmp_getdata.py', mode: "0755" }
                               # you can also upload arbitrary file you may need on your setup
                               - { src: '../inventories_private/toto.txt', dest: '/tmp/toto' }
+                              # you can also upload and uncompress an archive file (set extract: true), in that case the destination must be a folder
+                              - { src: '../inventories_private/toto.tar.bz2', dest: '/tmp/folder1', extract: true }
 
                             # optional extra directives to add to snmpd.conf
                             extra_snmpd_directives: |
