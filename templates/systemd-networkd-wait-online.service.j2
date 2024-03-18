@@ -1,3 +1,3 @@
 [Service]
 ExecStart=
-ExecStart=/lib/systemd/systemd-networkd-wait-online -i {{ 'vlan'+br0vlan|string if br0vlan is defined else 'br0' }} -i {{ 'hsr0' if cluster_protocol is defined and cluster_protocol == 'HSR' else 'team0' }}
+ExecStart=/lib/systemd/systemd-networkd-wait-online -i {{ 'vlan'+br0vlan|string if br0vlan is defined else 'br0' }} {% if cluster_protocol is defined and cluster_protocol == 'HSR' %} -i hsr0 {% elif cluster_ip_addr is defined %} -i team0 {% endif %}
