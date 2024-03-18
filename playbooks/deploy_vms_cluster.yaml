@@ -38,3 +38,10 @@
         path: "/tmp/os_{{ item }}.qcow2"
         state: absent
       with_items: "{{ groups['VMs'] }}"
+
+- hosts: VMs
+  name: Wait for VMs to be online
+  gather_facts: false
+  tasks:
+    - name: Wait for VM connections
+      wait_for_connection:
