@@ -22,7 +22,7 @@ def update():
             if len(parts) == 2:
                 oid = parts[0].strip()
                 value = parts[1].strip()
-                pp.add_str("0"+oid, value)
+                pp.add_str("0"+oid, value[0:4000])
 
 pp=snmp.PassPersist(".2.25.1936023920.1635018752")
 pp.register_setter('.2.25.1936023920.1635018752.0.0', my_setter)
