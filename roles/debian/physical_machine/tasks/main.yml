@@ -4,6 +4,13 @@
 #- name: Print service facts
 #  ansible.builtin.debug:
 #    var: ansible_facts.services
+
+- name: disable nginx.service all the time, if it exists
+  ansible.builtin.systemd:
+    name: nginx.service
+    enabled: no
+    state: stopped
+  when: services['nginx.service'] is defined
 - name: install vm-mgr http interface
   vars:
     vmmgrapi_certs_dir: "/var/local/vmmgrapi/certs"
