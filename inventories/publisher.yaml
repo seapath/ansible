@@ -1,0 +1,14 @@
+---
+all:
+    children:
+        publisher_machines:
+            hosts:
+                sv_publisher:
+                    ansible_host: 192.168.132.3
+                    sv_interface: sv
+                    pcap_file: "{{ pcap }}"
+                    pcap_path: "../examples/pcaps/{{ pcap }}"
+    vars:
+        ansible_connection: ssh
+        ansible_user: root
+        ansible_python_interpreter: /usr/bin/python3
