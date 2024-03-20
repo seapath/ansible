@@ -37,7 +37,7 @@
     ansible.builtin.systemd:
       name: kthread-taskset.service
       enabled: yes
-  when: cpuset is defined
+  when: cpusystem is defined
 
 - block:
   - name: disable kthread-taskset.service
@@ -52,7 +52,7 @@
     file:
       path: /usr/local/bin/taskset_boot.sh
       state: absent
-  when: cpuset is not defined
+  when: cpusystem is not defined
 
 - name: Copy sysctl RT rules
   ansible.builtin.copy:
