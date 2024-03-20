@@ -16,52 +16,6 @@
     regexp: '^vhost_vsock$'
     line: 'vhost_vsock'
 
-- block:
-  - name: Copy khtread-taskset.service script
-    template:
-      src: ../src/debian/taskset_boot.sh.j2
-      dest: /usr/local/bin/taskset_boot.sh
-      mode: '0755'
-    register: kthreadtaskset1
-  - name: Copy kthread-taskset.service
-    ansible.builtin.copy:
-      src: ../src/debian/kthread-taskset.service
-      dest: /etc/systemd/system/kthread-taskset.service
-      mode: '0644'
-    register: kthreadtaskset2
-  - name: daemon-reload taskset
-    ansible.builtin.service:
-      daemon_reload: yes
-    when: kthreadtaskset1.changed or kthreadtaskset2.changed
-  - name: enable kthread-taskset.service
-    ansible.builtin.systemd:
-      name: kthread-taskset.service
-      enabled: yes
-  when: cpusystem is defined
-
-- block:
-  - name: disable kthread-taskset.service
-    file:
-      path: /etc/systemd/system/multi-user.target.wants/kthread-taskset.service
-      state: absent
-  - name: remove khtread-taskset.service
-    file:
-      path: /etc/systemd/system/kthread-taskset.service
-      state: absent
-  - name: remove khtread-taskset.service script
-    file:
-      path: /usr/local/bin/taskset_boot.sh
-      state: absent
-  when: cpusystem is not defined
-
-- name: Copy sysctl RT rules
-  ansible.builtin.copy:
-    src: ../src/debian/sysctl/{{ item }}
-    dest: /etc/sysctl.d/{{ item }}
-    mode: '0644'
-  with_items:
-    - 00-schedrt.conf
-
 - name: add sriov driver to /etc/modules
   lineinfile:
     dest: /etc/modules
@@ -94,17 +48,11 @@
   with_items: "{{ sriov | dict2items }}"
   when: sriov is defined
   register: sriov_sysfs
-- name: Copy sysfs.d cpumask
-  template:
-    src: ../templates/00-workqueue_cpumask.conf.j2
-    dest: /etc/sysfs.d/00-workqueue_cpumask.conf
-    mode: '0644'
-  register: sysfscpumask
 - name: restart sysfsutils
   ansible.builtin.systemd:
     name: sysfsutils.service
     state: restarted
-  when: sysfscpumask.changed or sriov_sysfs.changed
+  when: sriov_sysfs.changed
 
 - name: "grub conf hypervisor"
   lineinfile:
@@ -120,27 +68,9 @@
     - cpufreq.default_governor=performance
     - intel_pstate=disable
     - nosoftlockup
-    - rcu_nocb_poll
     - rcutree.kthread_prio=10
     - skew_tick=1
     - tsc=reliable
-
-- name: "grub conf hypervisor isolcpus"
-  template:
-    src: ../src/debian/grub.d/10-isolcpus.cfg.j2
-    dest: /etc/default/grub.d/10-isolcpus.cfg
-    owner: root
-    group: root
-    mode:  0644
-  register: updategrub2
-  when: isolcpus is defined
-
-- name: "grub conf hypervisor isolcpus revert"
-  file:
-    path: /etc/default/grub.d/10-isolcpus.cfg
-    state: absent
-  register: updategrub3
-  when: isolcpus is not defined
 
 # Another way would be to use a dictionnary so that the regexp is a bit simpler
 #  lineinfile:
@@ -178,21 +108,6 @@
     enabled: yes
     state: restarted
   when: irqbalanceconf.changed
-
-- name: "systemd conf CPUAffinity"
-  lineinfile:
-    dest: /etc/systemd/system.conf
-    regexp: '^CPUAffinity=.*$'
-    line: "CPUAffinity={{ cpusystem }}"
-    state: present
-  when: cpusystem is defined
-- name: "systemd conf CPUAffinity revert"
-  lineinfile:
-    dest: /etc/systemd/system.conf
-    regexp: '^#?CPUAffinity=.*$'
-    line: "#CPUAffinity="
-    state: present
-  when: cpusystem is not defined
 
 - name: "systemd conf RuntimeWatchdogSec"
   lineinfile:
@@ -291,6 +206,16 @@
     - "machine-nort"
     - "ovs"
   when: removeslices.changed
+
+- name: configure tuned profile
+  lineinfile:
+    dest: /etc/tuned/realtime-virtual-host-variables.conf
+    state: present
+    regexp: '^isolated_cores='
+    line: 'isolated_cores={{ isolcpus }}'
+
+- name: set tuned profile
+  ansible.builtin.command: tuned-adm profile realtime-virtual-host
 
 - name: Create ovs-vswitchd.service.d directory
   file:
