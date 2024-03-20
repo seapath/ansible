@@ -23,13 +23,13 @@
             group: ceph
             mode: "0770"
             state: directory
-        register: new_ceph_installation
 
 - name: Ceph OSD disk
   hosts:
       osds
   become: true
   gather_facts: yes
+  service_facts: yes
   tasks:
       - debug:
           var: lvm_volumes
@@ -52,6 +52,10 @@
                 register: ceph_osd_realdisk
               - name: Cleanup Ceph OSD disks with ceph-volume
                 command: "ceph-volume lvm zap {{ ceph_osd_realdisk.stdout }} --destroy"
+                when: lvm_volumes[0].device_number == 1
+              - name: Cleanup Ceph lvm's partition with ceph-volume
+                command: "ceph-volume lvm zap /dev/{{ lvm_volumes[0].data_vg }}"
+                when: ansible_lvm['lvs'][lvm_volumes[0].data] is defined
               - name: Create volumes for OSD disk
                 block:
                   - name: Create partition on OSD disks with parted
@@ -79,7 +83,7 @@
             when:
               - lvm_volumes is not defined or ansible_lvm['lvs'][lvm_volumes[0].data] is not defined
         when:
-          - new_ceph_installation.changed
+          - ansible_facts.services['ceph-osd.target'].state == 'running'
 
 - import_playbook: ../ceph-ansible/site.yml
 
