@@ -437,6 +437,13 @@
       mode: '0440'
   when: snmp_admin_ip_addr is defined
 
+- name: Disable snmp if it is not needed
+  systemd:
+    name: snmpd.service
+    state: stopped
+    enabled: no
+  when: snmp_admin_ip_addr is not defined
+
 - name: Creating libvirt user with libvirtd permissions
   user: name=libvirt
     group=libvirt
