@@ -224,6 +224,16 @@ For more information about roles see:
 https://docs.ansible.com/ansible/2.9/user_guide/playbooks_reuse_roles.html
 
 == Using Ansible with SEAPATH in practice
+First, make sure you are using the git branch corresponding to your
+version of Seapath.
+
+On Seapath Debian:
+
+  $ git checkout debian-main
+
+On Seapath Yocto:
+
+  $ git checkout main
 
 === Write your inventory file
 
