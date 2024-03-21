@@ -6,6 +6,23 @@
 # call.
 
 ---
+
+- name: Check if we are using a correct seapath flavor
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  tasks:
+    - name: Retrieve Seapath system version
+      command: "uname -a"
+      register: "uname_output"
+
+    - name: Check if current Ansible branch is compatible
+      fail:
+        msg: "The current branch (main) is incompatible with the Debian version of SEAPATH. Please use the debian-main branch to configure this machine"
+      failed_when:
+        - uname_output.stdout | regex_search("Debian")
+
 - import_playbook: cluster_setup_configure_hosts.yaml
 - import_playbook: cluster_setup_ceph.yaml
 - import_playbook: cluster_setup_libvirt.yaml
