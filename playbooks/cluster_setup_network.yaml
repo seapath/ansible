@@ -46,11 +46,21 @@
   hosts:
     - cluster_machines
     - standalone_machine
-    - VMs
   vars_files:
     - ../vars/network_vars.yml
   vars:
     systemd_networkd_apply_config: "{{ apply_network_config | default(false) }}"
+  roles:
+    - systemd_networkd
+
+- name: Apply systemd-networkd config on VMs
+  become: true
+  hosts:
+    - VMs
+  vars_files:
+    - ../vars/network_vars.yml
+  vars:
+    systemd_networkd_apply_config: "true"
   roles:
     - systemd_networkd
 
