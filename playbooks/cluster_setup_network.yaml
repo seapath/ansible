@@ -133,22 +133,6 @@
         when: hsr1.changed or hsr2.changed or hsr3.changed or hsrservice.changed
       when: cluster_protocol is defined and cluster_protocol == "HSR" and hsr_mac_address is defined
 
-- name: Apply systemd-networkd configuration
-  hosts:
-    - cluster_machines
-    - standalone_machine
-    - VMs
-  become: true
-  vars:
-    apply_config: "{{ apply_network_config | default(false) }}"
-  tasks:
-    - name: Reload systemd-networkd configuration
-      ansible.builtin.service:
-        name: systemd-networkd
-        state: reloaded
-      when:
-        apply_config
-
 - name: Configure OVS
   hosts:
     - cluster_machines
