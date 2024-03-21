@@ -7,7 +7,7 @@ roles:
     - name: "systemd_networkd"
       src: "https://github.com/seapath/ansible-role-systemd-networkd"
       scm: git
-      version: "461fe1d2bb8e0307aa1ec4be6316cf5c6fb0af80"
+      version: "11db8650fdb2e0dce655d7b2d8db27ce36621191"
 
     - name: "corosync"
       src: "https://github.com/seapath/corosync-ansible"
