@@ -49,7 +49,6 @@ all:
               mac_address: "52:54:00:c4:ff:05" # change the MAC address
       vars:
         ansible_user: virtu
-        apply_network_config: true
         ip_addr: "{{ ansible_host }}"
 
 # This inventory can be customize using those fields :
@@ -96,5 +95,3 @@ all:
 #  * ovs: a list containing dictionaries of the OVS ports to use.
 #    ** ovs_port: the OVS port name (string)
 #    ** mac_address: the OVS port MAC address (string)
-#  * apply_network_config: to apply the network configuration without rebooting
-#    (bool).
