@@ -39,7 +39,6 @@ all:
                             logstash_server_ip: 10.10.10.10
 
                             # Other Network configuration
-                            apply_network_config: true # true to apply the network configuration without rebooting
                             ptp_interface: "enp1s0f1" #OPTIONAL PTP Interface
                             ptp_vlanid: 100 #OPTIONAL VlanID for PTP
                             ptp_delay_mechanism: P2P # OPTIONAL E2E or P2P defaut is P2P
