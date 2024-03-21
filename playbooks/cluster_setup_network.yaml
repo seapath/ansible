@@ -1,4 +1,5 @@
 # Copyright (C) 2020, RTE (http://www.rte-france.com)
+# Copyright (C) 2024 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 # This Ansible playbook configures the networks and defines the hostnames. It
@@ -11,8 +12,6 @@
     - standalone_machine
     - VMs
   become: true
-  vars:
-    apply_config: "{{ apply_network_config | default(false) }}"
   tasks:
     - block:
       - name: wipe the /etc/systemd/network/ directory content 1/2, list files
@@ -65,7 +64,7 @@
         name: systemd-udev-trigger
         state: restarted
 
-- name: configure cluster network
+- name: Configure cluster network
   hosts: cluster_machines
   become: true
   tasks:
@@ -272,6 +271,8 @@
     - cluster_machines
     - standalone_machine
   become: true
+  vars:
+    apply_config: "{{ apply_network_config | default(false) }}"
   tasks:
     - name: Populate service facts
       service_facts:
@@ -304,10 +305,9 @@
         src: ../templates/timemaster.service.j2
         dest: /etc/systemd/system/timemaster.service.d/override.conf
       register: timemasterconf3
-    - name: start and enable timemaster
+    - name: Enable timemaster
       service:
         name: "timemaster"
-        state: started
         enabled: true
     - name: restart timemaster if necessary
       service:
@@ -315,7 +315,9 @@
         state: restarted
         enabled: true
         daemon_reload: true
-      when: timemasterconf1.changed or timemasterconf2.changed or timemasterconf3.changed
+      when:
+        - timemasterconf1.changed or timemasterconf2.changed or timemasterconf3.changed
+        - apply_config or (need_reboot is defined and not need_reboot)
 
 - name: Stop chrony service
   hosts:
