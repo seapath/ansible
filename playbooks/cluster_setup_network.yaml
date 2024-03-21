@@ -64,18 +64,6 @@
   roles:
     - systemd_networkd
 
-- name: Apply .link files change (udev)
-  become: true
-  hosts:
-    - cluster_machines
-    - standalone_machine
-    - VMs
-  tasks:
-    - name: Restart systemd-udev-trigger
-      ansible.builtin.systemd:
-        name: systemd-udev-trigger
-        state: restarted
-
 - name: Configure cluster network
   hosts: cluster_machines
   become: true
