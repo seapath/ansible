@@ -314,6 +314,7 @@
         name: "timemaster"
         state: restarted
         enabled: true
+        daemon_reload: true
       when: timemasterconf1.changed or timemasterconf2.changed or timemasterconf3.changed
 
 - name: Stop chrony service
