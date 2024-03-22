@@ -9,6 +9,29 @@
 
 ---
 
+- name: Apply systemd-networkd config with role
+  become: true
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  vars_files:
+    - ../vars/network_vars.yml
+  vars:
+    systemd_networkd_apply_config: "{{ apply_network_config | default(false) }}"
+  roles:
+    - systemd_networkd
+
+- name: Apply systemd-networkd config on VMs
+  become: true
+  hosts:
+    - VMs
+  vars_files:
+    - ../vars/network_vars.yml
+  vars:
+    systemd_networkd_apply_config: "true"
+  roles:
+    - systemd_networkd
+
 - name: Configure cluster network
   hosts: cluster_machines
   tasks:
@@ -52,14 +75,10 @@
         - not apply_config
         - ovs_conf.changed
 
-- name: Configure Network
+- name: Configure PTP
   hosts:
     - cluster_machines
     - standalone_machine
-  vars_files:
-    - ../vars/network_vars.yml
-  roles:
-    - systemd_networkd
   vars:
     apply_config: "{{ apply_network_config | default(false) }}"
   tasks:
