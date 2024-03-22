@@ -426,8 +426,6 @@
 - name: Restart machine if needed
   hosts:
     - cluster_machines
-    - standalone_machine
-    - VMs
   become: true
   tasks:
     - block:
