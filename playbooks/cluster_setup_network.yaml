@@ -178,6 +178,8 @@
     - cluster_machines
     - standalone_machine
   become: true
+  vars:
+    apply_config: "{{ apply_network_config | default(false) }}"
   tasks:
     - name: Populate service facts
       service_facts:
@@ -215,17 +217,19 @@
         src: ../templates/timemaster.service.j2
         dest: /etc/systemd/system/timemaster.service.d/override.conf
       register: timemasterconf3
-    - name: start and enable timemaster
+    - name: Enable timemaster
       service:
         name: "timemaster"
-        state: started
         enabled: true
     - name: restart timemaster if necessary
       service:
         name: "timemaster"
         state: restarted
         enabled: true
-      when: timemasterconf1.changed or timemasterconf2.changed or timemasterconf3.changed
+        daemon_reload: true
+      when:
+        - timemasterconf1.changed or timemasterconf2.changed or timemasterconf3.changed
+        - apply_config or (need_reboot is defined and not need_reboot)
 
 - name: Stop chrony service if running
   hosts:
