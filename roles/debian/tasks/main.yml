@@ -170,7 +170,7 @@
 
 - name: "remove /etc/default/grub.d/*.cfg (FAI)"
   file:
-    path: "{{ item }}"
+    path: "/etc/default/grub.d/{{ item }}"
     state: absent
   with_items:
     - 20_efi_ipv6.cfg
