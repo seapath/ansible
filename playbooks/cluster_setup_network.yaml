@@ -173,13 +173,21 @@
       hostname:
         name: "{{ inventory_hostname }}"
         use: systemd
-    - name: Build hosts file
+    - name: Build hosts file (Cluster Network)
       lineinfile:
         dest: /etc/hosts
         regexp: '.*{{ item }}(| rbd)$'
         line: "{{ hostvars[item].cluster_ip_addr }} {{ item }}{% if item == inventory_hostname %} rbd{% endif %}"
         state: present
       when: hostvars[item].cluster_ip_addr is defined
+      loop: "{{ groups['cluster_machines'] }}"
+    - name: Build hosts file (Public Network) # if cluster_ip_addr is not defined, we consider there is no cluster Network. Ceph will use the public network instead.
+      lineinfile:
+        dest: /etc/hosts
+        regexp: '.*{{ item }}(| rbd)$'
+        line: "{{ hostvars[item].ip_addr }} {{ item }}{% if item == inventory_hostname %} rbd{% endif %}"
+        state: present
+      when: hostvars[item].cluster_ip_addr is undefined
       loop: "{{ groups['cluster_machines'] }}"
     - name: remove 'debian' from hosts file
       lineinfile:
