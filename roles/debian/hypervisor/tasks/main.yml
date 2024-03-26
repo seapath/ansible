@@ -181,6 +181,13 @@
     name: tuned
     state: present
 
+- name: Remove tuna
+  ansible.builtin.apt:
+    autoremove: yes
+    purge: true
+    name: tuna
+    state: absent
+
 - name: create tuned seapath-rt profile folder
   file:
     path: /etc/tuned/seapath-rt-host
