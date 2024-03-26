@@ -176,11 +176,41 @@
     - 20_efi_ipv6.cfg
     - 30_console.cfg
 
-- name: "remove GRUB_CMDLINE_LINUX_DEFAULT option in grub conf"
+- name: "remove quiet from GRUB_CMDLINE_LINUX_DEFAULT option in grub conf"
   lineinfile:
     dest: /etc/default/grub
-    regexp: "^GRUB_CMDLINE_LINUX_DEFAULT="
+    regexp: "^(GRUB_CMDLINE_LINUX_DEFAULT=\")(.*?[ ])?quiet([ ].*)?(\")$"
+    line: '\1\2\3\4'
+    backrefs: yes
+  register: updategrub0
+
+- name: "make sure GRUB_CMDLINE_LINUX_DEFAULT has no double space"
+  lineinfile:
+    dest: /etc/default/grub
+    regexp: "^(GRUB_CMDLINE_LINUX_DEFAULT=\".*)[ ][ ](.*\")"
+    line: '\1 \2'
+    state: present
+    backrefs: yes
+  register: doublespace
+  until: not doublespace.changed
+  delay: 0.1
+  retries: 10
+
+- name: "make sure GRUB_CMDLINE_LINUX exists 1/2"
+  lineinfile:
+    path: /etc/default/grub
+    regexp: "^GRUB_CMDLINE_LINUX=\".*\""
     state: absent
+  check_mode: true
+  changed_when: false
+  register: checkGRUB_CMDLINE_LINUX
+
+- name: "make sure GRUB_CMDLINE_LINUX exists 2/2"
+  lineinfile:
+    path: /etc/default/grub
+    state: present
+    line: "GRUB_CMDLINE_LINUX=\" \""
+  when: checkGRUB_CMDLINE_LINUX.found == 0
 
 - name: "make sure GRUB_CMDLINE_LINUX starts with a space"
   lineinfile:
@@ -214,4 +244,4 @@
   register: updategrub2
 - name: update-grub
   command: update-grub
-  when: updategrub1.changed or updategrub2.changed
+  when: updategrub0.changed or updategrub1.changed or updategrub2.changed
