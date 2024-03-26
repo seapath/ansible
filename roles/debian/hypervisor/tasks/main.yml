@@ -11,21 +11,21 @@
 
 - name: add vhost_vsock to /etc/modules
   lineinfile:
-    dest: /etc/modules
+    path: /etc/modules
     state: present
     regexp: '^vhost_vsock$'
     line: 'vhost_vsock'
 
 - name: add sriov driver to /etc/modules
   lineinfile:
-    dest: /etc/modules
+    path: /etc/modules
     state: present
     regexp: "^{{ sriov_driver }}$"
     line: "{{ sriov_driver }}"
   when: sriov_driver is defined
 - name: add sriov apparmor permission for libvirt
   lineinfile:
-    dest: /etc/apparmor.d/local/abstractions/libvirt-qemu
+    path: /etc/apparmor.d/local/abstractions/libvirt-qemu
     state: present
     line: '/dev/vfio/* rw,'
     create: yes
@@ -39,7 +39,7 @@
 
 - name: add sriov sysfs rules
   ansible.builtin.lineinfile:
-    dest: "/etc/sysfs.d/sriov.conf"
+    path: "/etc/sysfs.d/sriov.conf"
     state: present
     regexp: "^class/net/{{ item.key }}/device/sriov_numvfs = "
     line: "class/net/{{ item.key }}/device/sriov_numvfs = {{ item.value }}"
@@ -56,7 +56,7 @@
 
 - name: "irqbalance conf"
   lineinfile:
-    dest: /etc/default/irqbalance
+    path: /etc/default/irqbalance
     regexp: '^#?IRQBALANCE_BANNED_CPULIST=".*"$'
     line: 'IRQBALANCE_BANNED_CPULIST="{{ isolcpus }}"'
     state: present
@@ -64,7 +64,7 @@
   when: isolcpus is defined
 - name: "irqbalance conf revert"
   lineinfile:
-    dest: /etc/default/irqbalance
+    path: /etc/default/irqbalance
     regexp: '^#?IRQBALANCE_BANNED_CPULIST=(.*)$'
     line: '#IRQBALANCE_BANNED_CPULIST=\1'
     state: present
@@ -80,13 +80,13 @@
 
 - name: "systemd conf RuntimeWatchdogSec"
   lineinfile:
-    dest: /etc/systemd/system.conf
+    path: /etc/systemd/system.conf
     regexp: '^RuntimeWatchdogSec=.*$'
     line: "RuntimeWatchdogSec=20"
     state: present
 - name: "systemd conf RebootWatchdogSec"
   lineinfile:
-    dest: /etc/systemd/system.conf
+    path: /etc/systemd/system.conf
     regexp: '^RebootWatchdogSec=.*$'
     line: "RebootWatchdogSec=5min"
     state: present
@@ -212,7 +212,7 @@
 
 - name: remove tuned dynamic tuning
   lineinfile:
-    dest: /etc/tuned/tuned-main.conf
+    path: /etc/tuned/tuned-main.conf
     state: present
     regexp: '^#?dynamic_tuning = .*$'
     line: 'dynamic_tuning = 0'
