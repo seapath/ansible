@@ -57,10 +57,10 @@
 - name: "irqbalance conf"
   lineinfile:
     dest: /etc/default/irqbalance
-    regexp: '^IRQBALANCE_BANNED_CPULIST=".*"$'
+    regexp: '^#?IRQBALANCE_BANNED_CPULIST=".*"$'
     line: 'IRQBALANCE_BANNED_CPULIST="{{ isolcpus }}"'
     state: present
-  register: irqbalanceconf
+  register: irqbalanceconf1
   when: isolcpus is defined
 - name: "irqbalance conf revert"
   lineinfile:
@@ -69,14 +69,14 @@
     line: '#IRQBALANCE_BANNED_CPULIST=\1'
     state: present
     backrefs: yes
-  register: irqbalanceconf
+  register: irqbalanceconf2
   when: isolcpus is not defined
 - name: restart irqbalance
   ansible.builtin.systemd:
     name: irqbalance.service
     enabled: yes
     state: restarted
-  when: irqbalanceconf.changed
+  when: irqbalanceconf1.changed or irqbalanceconf2.changed
 
 - name: "systemd conf RuntimeWatchdogSec"
   lineinfile:
