@@ -194,17 +194,9 @@
     state: directory
     mode: '0755'
 
-- name: copy seapath-rt-host tuned profile variable file
-  template:
-    src: ../src/tuned/seapath-rt-host-variables.conf.j2
-    dest: /etc/tuned/seapath-rt-host/seapath-rt-host-variables.conf
-    group: root
-    owner: root
-    mode: '0644'
-
 - name: copy seapath-rt-host tuned profile conf
-  copy:
-    src: ../src/tuned/tuned.conf
+  template:
+    src: ../src/tuned/tuned.conf.j2
     dest: /etc/tuned/seapath-rt-host/tuned.conf
     group: root
     owner: root

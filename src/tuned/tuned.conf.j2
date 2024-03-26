@@ -3,8 +3,7 @@ include=realtime-virtual-host
 summary=Seapath profile for RT host (Seapath Rt Host = SRH)
 
 [variables]
-# User is responsible for adding isolated_cores=X-Y to seapath-rt-host-variables.conf
-include=/etc/tuned/seapath-rt-host/seapath-rt-host-variables.conf
+isolated_cores={{ isolcpus | default('') }}
 non_isolated_cores_expanded=${f:cpulist_unpack:${non_isolated_cores}}
 
 [sysctl]
