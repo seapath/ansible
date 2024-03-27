@@ -5,6 +5,7 @@
 ---
 - name: Deploy VMs
   hosts: "{{ groups.hypervisors[0] }}"
+  become: true
   tasks:
     - name: "Prepare tasks"
       include_tasks: tasks/deploy_vm.yaml
