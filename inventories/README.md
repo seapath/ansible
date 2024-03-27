@@ -10,6 +10,33 @@ We recommend to have 3 kinds of inventories:
 - The OpenVSwitch topology inventory, where you will describe the different bridges and ports configuration for OVS: a template is provided (seapath_ovstopology_definition_example.yml)
 - The VM inventory, where you will describe all variables related to the virtual machine (number of cores, features, ip, network interface, etc.): a template is provided (seapath_vm_definition_example.yml)
 
+## Basic cluster inventory
+
+A basic template of inventory to form a basic cluster for POC is provided (seapath_basic_cluster_definition_example.yml)
+
+#### ⚠ Do not support ⚠
+
+- Low latency network
+- Dedicated cluster network with redundancy
+- Advanced features like:
+    - SNMP
+    - Syslog log sending
+    - Advanced isolation
+
+<img src="./basic_cluster.png" alt="Exemple d'image" style="max-width:500px">
+
+
+#### To be configured :
+- ansible_host for each node (identical to the IP of the switch interface)
+- ceph_osd_disk to locate the disk used
+- (optionnal) data_size and device_size can be modified depending on the space left on the ceph_osd_disk
+- gateway_addr
+- dns_servers
+- ntp_servers
+- public_network
+- admin_passwd
+- admin_ssh_keys
+
 ## Optionnal variables
 
 You can find concrete examples of the variables in the inventories of this directory. Below are optionnal advanced variables that are not described in the examples.
