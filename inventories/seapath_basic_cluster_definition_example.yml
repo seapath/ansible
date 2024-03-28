@@ -5,15 +5,16 @@ all:
             children:
                 hypervisors:
                     hosts:
-                        nuc1:
+                        # IPs need to be configured
+                        hypervisor1:
                             # ansible variables
                             ansible_host: 192.168.216.135
 
-                        nuc2:
+                        hypervisor2:
                             # ansbile variables
                             ansible_host: 192.168.216.136
 
-                        nuc3:
+                        hypervisor3:
                             # ansbile variables
                             ansible_host: 192.168.216.137
 
@@ -36,19 +37,20 @@ all:
         # All machines in the cluster must be part of mons groups
         mons:
             hosts:
-                nuc1:
-                nuc2:
-                nuc3:
+                hypervisor1:
+                hypervisor2:
+                hypervisor3:
         # Machines that will be used as OSDs (which will store data)
         osds:
             hosts:
-                nuc1:
-                nuc2:
-                nuc3:
+                hypervisor1:
+                hypervisor2:
+                hypervisor3:
 
             vars:
                 # Ceph settings
                 # ceph_osd_disk needs to be set to the "/dev/disk/by-path/" link of the disk used by the osd
+                # Location of the disk and space allocated for Ceph need to be configured
                 ceph_osd_disk: "/dev/disk/by-path/pci-0000:01:00.0-nvme-1"
                 # Required variables by ceph-ansible:
                 lvm_volumes: # One disk installation. Create a 100 GiB partition for Ceph.
@@ -61,9 +63,9 @@ all:
 
         clients:
             hosts:
-                nuc1:
-                nuc2:
-                nuc3:
+                hypervisor1:
+                hypervisor2:
+                hypervisor3:
             vars:
               # Required variables by ceph-ansible.
               # These are SEAPATH needed overrides. Do not change unless you know exactly what you are doing
@@ -91,6 +93,7 @@ all:
         ansible_remote_tmp: /tmp/.ansible/tmp
 
         # Main network configuration
+        # Need to be configured
         gateway_addr: 192.168.216.1
         dns_servers: "192.168.216.1"
         apply_network_config: false # do we restart the ovs_config script to apply the changes to the ovs topology (default: false)
@@ -98,6 +101,7 @@ all:
         skip_recreate_team0_config: true # one network configuration
         remove_all_networkd_config: true  # if defined and true, the network playbook will start by wiping the /etc/systemd/network/ directory content, this can help cleaning old conflicting files.
 
+        # Need to be configured
         ntp_servers:
             - "192.168.216.1"
 
@@ -108,7 +112,7 @@ all:
         ntp_service_enabled: true
         ceph_origin: distro
         monitor_address: "{{ ansible_host }}"
-        public_network: "192.168.216.0/24"
+        public_network: "192.168.216.0/24" # Need to be configured
         cluster_network: "{{ public_network }}"
         ceph_conf_overrides:
           global:
@@ -141,9 +145,11 @@ all:
           - https://artifacts.elastic.co/packages/8.x/apt stable main
 
         # Default user with admin privileges, and password hash
+        # Need to be configured
         admin_user: virtu
         admin_passwd: "XXXXXX"
         # SSH public keys for the admin_user
+        # Need to be configured
         admin_ssh_keys:
           - "ssh-rsa key1XXX"
           - "ssh-rsa key2XXX"
