@@ -8,8 +8,6 @@
 - name: Configure ssh keys between hosts
   hosts: hypervisors
   gather_facts: true
-  vars:
-    livemigration_user: "{{ livemigrationuser | default('virtu') }}"
   tasks:
       - block:
         - name: Create live migration user
@@ -63,4 +61,4 @@
             name: "{{ item }}"
             key: "{{ item }} {{ lookup('file','buffer/' + item + '-ssh_host_ed25519_key.pub') }}"
           with_items: "{{ groups['hypervisors'] }}"
-        when: create_livemigration_user is defined
+        when: livemigration_user is defined
