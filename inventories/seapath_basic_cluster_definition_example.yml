@@ -20,15 +20,6 @@ all:
 
                     # hypervisors common vars
                     vars:
-                        # Realtime/CPUs cgroups isolation configuration
-                        # All those parameters are optional.
-                        isolcpus: "4-7" # CPUs to isolate (isolcpus, irqbalance on debian 12)
-                        workqueuemask: "F000" #workqueue mask, here it mean 0 and 3 are the only allowed cpus
-                        cpusystem: "0-3" # CPUs reserves for system
-                        cpuuser: "0-3" # CPUs reserves for user applications
-                        cpumachines: "0-3" # CPUs reserves for VMs
-                        cpumachinesrt: "4-7" # CPUs reserves for VMs realtime
-                        cpumachinesnort: "0-3" # CPUs reserves for VMs non realtime
                         # Main network interface configuration
                         network_interface: enp88s0 #main interface
                         ip_addr: "{{ ansible_host }}"
