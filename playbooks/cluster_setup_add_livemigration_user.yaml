@@ -1,4 +1,5 @@
 # Copyright (C) 2022, RTE (http://www.rte-france.com)
+# Copyright (C) 2024, SFL (https://savoirfairelinux.com)
 # SPDX-License-Identifier: Apache-2.0
 
 # This playbook adds and configures the virtu user. This user is used by libvirt
@@ -8,8 +9,6 @@
 - name: Configure ssh keys between hosts
   hosts: hypervisors
   gather_facts: true
-  vars:
-    livemigration_user: "{{ livemigrationuser | default('virtu') }}"
   tasks:
       - block:
         - name: Create live migration user
@@ -63,4 +62,4 @@
             name: "{{ item }}"
             key: "{{ item }} {{ lookup('file','buffer/' + item + '-ssh_host_ed25519_key.pub') }}"
           with_items: "{{ groups['hypervisors'] }}"
-        when: create_livemigration_user is defined
+        when: livemigration_user is defined
