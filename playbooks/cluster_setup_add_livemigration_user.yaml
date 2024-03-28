@@ -1,0 +1,68 @@
+# Copyright (C) 2022, RTE (http://www.rte-france.com)
+# Copyright (C) 2024, SFL (https://savoirfairelinux.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# This playbook adds and configures the virtu user. This user is used by libvirt
+# to migrate VM from a host to an other without halting it.
+
+---
+- name: Create livemigration user
+  hosts: hypervisors
+  gather_facts: true
+  become: true
+  tasks:
+      - block:
+        - name: Create live migration user
+          user:
+            name: "{{ livemigration_user }}"
+            shell: /bin/sh
+            system: true
+            group: libvirt
+            create_home: false
+        - name: Unlock the user
+          replace:
+              path: /etc/shadow
+              regexp: '^{{ livemigration_user }}:!:'
+              replace: '{{ livemigration_user }}:*:'
+        - name: generate root SSH key
+          user:
+            name: "root"
+            generate_ssh_key: yes
+            ssh_key_type: rsa
+            ssh_key_bits: 4096
+            ssh_key_file: .ssh/id_rsa
+            ssh_key_passphrase: ""
+            force: false
+        - name: create livemigration lsh directory
+          file:
+            path: "/etc/ssh/{{ livemigration_user }}"
+            state: directory
+            mode: '0755'
+            owner: "{{ livemigration_user }}"
+        - name: Get root user's home directory
+          shell: getent passwd root | cut -d ':' -f6
+          register: root_home_dir
+        - name: Fetch the root keyfile
+          fetch:
+            src: "{{ root_home_dir.stdout }}/.ssh/id_rsa.pub"
+            dest: "buffer/{{ inventory_hostname }}-id_rsa.pub"
+            flat: true
+        - name: Copy the key add to authorized_keys using Ansible module
+          authorized_key:
+            user: "{{ livemigration_user }}"
+            state: present
+            path: "/etc/ssh/{{ livemigration_user }}/authorized_keys"
+            key: "{{ lookup('file','buffer/' + item + '-id_rsa.pub') }}"
+          with_items: "{{ groups['cluster_machines'] }}"
+        - name: Fetch the ssh keyfile
+          fetch:
+            src: "/etc/ssh/ssh_host_ed25519_key.pub"
+            dest: "buffer/{{ inventory_hostname }}-ssh_host_ed25519_key.pub"
+            flat: true
+        - name: populate the known_hosts files
+          known_hosts:
+            path: "{{ root_home_dir.stdout }}/.ssh/known_hosts"
+            name: "{{ item }}"
+            key: "{{ item }} {{ lookup('file','buffer/' + item + '-ssh_host_ed25519_key.pub') }}"
+          with_items: "{{ groups['cluster_machines'] }}"
+        when: livemigration_user is defined
