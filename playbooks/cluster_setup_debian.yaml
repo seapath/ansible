@@ -34,6 +34,10 @@
   when:
     - groups['cluster_machines'] is defined
     - inventory_hostname in groups['cluster_machines']
+- import_playbook: cluster_setup_add_livemigration_user.yaml
+  when:
+    - groups['cluster_machines'] is defined
+    - inventory_hostname in groups['cluster_machines']
 - import_playbook: cluster_setup_ha.yaml
   when:
     - groups['cluster_machines'] is defined
