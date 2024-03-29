@@ -332,14 +332,6 @@
     name: "{{ admin_user }}"
     groups: libvirt,haclient
     append: yes
-- name: Adding live-migration user
-  user:
-    name: "{{ livemigration_user }}"
-    shell: /bin/bash
-    group: libvirt
-    uid: 1001
-    append: no
-  when: livemigration_user is defined and livemigration_user != admin_user
 
 - name: configure snmp
   block:
