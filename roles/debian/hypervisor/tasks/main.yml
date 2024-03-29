@@ -54,30 +54,6 @@
     state: restarted
   when: sriov_sysfs.changed
 
-- name: "irqbalance conf"
-  lineinfile:
-    path: /etc/default/irqbalance
-    regexp: '^#?IRQBALANCE_BANNED_CPULIST=".*"$'
-    line: 'IRQBALANCE_BANNED_CPULIST="{{ isolcpus }}"'
-    state: present
-  register: irqbalanceconf1
-  when: isolcpus is defined
-- name: "irqbalance conf revert"
-  lineinfile:
-    path: /etc/default/irqbalance
-    regexp: '^#?IRQBALANCE_BANNED_CPULIST=(.*)$'
-    line: '#IRQBALANCE_BANNED_CPULIST=\1'
-    state: present
-    backrefs: yes
-  register: irqbalanceconf2
-  when: isolcpus is not defined
-- name: restart irqbalance
-  ansible.builtin.systemd:
-    name: irqbalance.service
-    enabled: yes
-    state: restarted
-  when: irqbalanceconf1.changed or irqbalanceconf2.changed
-
 - name: "systemd conf RuntimeWatchdogSec"
   lineinfile:
     path: /etc/systemd/system.conf
