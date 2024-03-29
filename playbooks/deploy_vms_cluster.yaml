@@ -21,8 +21,9 @@
         command: create
         system_image: /tmp/os_{{ item }}.qcow2
         force: true
-        live_migration: true
-        migration_user: "{{ livemigration_user }}"
+        live_migration: "{{ livemigration_user is defined }}"
+        migration_user: "{{ livemigration_user | default(omit) }}"
+        migrate_to_timeout: "{{ hostvars[item].migrate_to_timeout | default('') }}"
         enable: true
         pinned_host: "{{ hostvars[item].pinned_host | default(omit) }}"
         preferred_host: "{{ hostvars[item].preferred_host | default(omit) }}"
