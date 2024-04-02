@@ -152,7 +152,6 @@ all:
             hosts:
                 test:
                   live_migration: true
-                  migration_user: "{{ livemigration_user }}"
                   preferred_host: "node3"
                   migrate_to_timeout: 180
                   enable: false
@@ -295,7 +294,7 @@ all:
         admin_ssh_keys:
           - "ssh-rsa key1XXX"
           - "ssh-rsa key2XXX"
-        # account used for libvirt live-migration
+        # account used for libvirt live-migration. If this variable is not set, the livemigration feature will be disabled.
         livemigration_user: livemigration
 
         #pacemaker_shutdown_timeout: "2min"
