@@ -138,8 +138,8 @@ all:
 
                         # Realtime/CPUs cgroups isolation configuration
                         # All those parameters are optional.
-                        isolcpus: "2-5,14-17" # CPUs to isolate (isolcpus, irqbalance on debian 12)
-                        workqueuemask: "1001" #workqueue mask, here it mean 0 and 12 are the only allowed cpus
+                        isolcpus: "2-5,14-17" # CPUs to isolate
+
                         cpusystem: "0,12" # CPUs reserves for system
                         cpuuser: "1,13" # CPUs reserves for user applications
                         cpumachines: "2-11,14-23" # CPUs reserves for VMs
@@ -312,6 +312,8 @@ all:
           INTERFACE2: [159,160] #trunk port on vlan 159 and 160
           INTERFACE3: [1-4094]  # no filtering, excluding untagged trafic
           INTERFACE4: []        # no filtering, including untagged trafic
+
+        #interface_to_wait_for: eth3 #by default, systemd-networkd-wait-online will only wait for the cluster_network interface (team0 or hsr0). In some setup it is useful to customize the network_interface the most relevant to wait for at boot time. This variable will add an interface networkd will wait for at boot time
 
         iptables_rules_path: "../inventories/iptables_rules_example.txt" #when defined, it uploads this file to /etc/iptables/rules.v4 and loads those rules
         #iptables_rules_template_path: "../inventories/iptables_rules_example.txt.j2" #when defined, it templates then uploads this file to /etc/iptables/rules.v4 and loads those rules

@@ -1,7 +1,6 @@
 # Copyright (C) 2022, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 ---
-
 - name: Create groups
   group:
     name: "{{ item }}"
@@ -352,6 +351,21 @@
   file:
     state: absent
     path: /etc/grub.d/01_password
+  when: revert
+
+- name: add unrestricted in grub.cfg
+  lineinfile:
+    #CLASS="--class gnu-linux --class gnu --class os --unrestricted"
+    path: /etc/grub.d/10_linux
+    regexp: '^CLASS='
+    line: 'CLASS="--class gnu-linux --class gnu --class os --unrestricted"'
+  when: not revert
+- name: remove unrestricted in grub.cfg
+  lineinfile:
+    #CLASS="--class gnu-linux --class gnu --class os"
+    path: /etc/grub.d/10_linux
+    regexp: '^CLASS='
+    line: 'CLASS="--class gnu-linux --class gnu --class os"'
   when: revert
 
 - name: copy syslog.conf

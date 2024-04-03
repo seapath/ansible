@@ -50,6 +50,10 @@ all:
       vars:
         ansible_user: virtu
         ip_addr: "{{ ansible_host }}"
+        network_interface: ens2
+        gateway_addr: 192.168.212.1 # Update the Gateway IP addr
+        grub_append: "console=ttyS0,115200" # Optional variable to add grub argument for boot.
+          # This one for example create a tty that can be accessed with `virsh console`
 
 # This inventory can be customize using those fields :
 #  * name: the VM name (string). Only on standalone. Default

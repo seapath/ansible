@@ -73,11 +73,6 @@
         - nginx_conf.changed
         - services['nginx.service']['state'] == "running"
 
-    - name: disable nginx
-      ansible.builtin.systemd:
-        name: nginx.service
-        enabled: no
-
     - name: Copy vmmgrapi files
       ansible.builtin.copy:
         src: ../src/debian/vmmgrapi/{{ item }}
@@ -124,6 +119,13 @@
   when:
     - enable_vmmgr_http_api is not defined or enable_vmmgr_http_api is false
     - services['gunicorn.socket'] is defined
+
+- name: disable nginx.service all the time, if it exists
+  ansible.builtin.systemd:
+    name: nginx.service
+    enabled: no
+  when:
+    - services['nginx.service'] is defined
 
 - name: disable gunicorn.service all the time, if it exists
   ansible.builtin.systemd:
