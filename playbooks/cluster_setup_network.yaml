@@ -431,6 +431,14 @@
         cmd: "/usr/sbin/iptables-restore < /etc/iptables/rules.v4"
       when: iptables_rules.changed or iptables_rules_template.changed
 
+- name: Configure snmp
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  become: true
+  roles:
+    - snmp
+
 - name: Restart machine if needed
   hosts:
     - cluster_machines
