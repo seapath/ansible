@@ -210,7 +210,7 @@ all:
 
         # Main network configuration
         gateway_addr: 10.0.0.1
-        dns_servers: "8.8.8.8 8.8.4.4"
+        dns_servers: "8.8.8.8 8.8.4.4" #remove this variable to disable dns, leave this variable empty for DNS via DHCP
         ntp_servers:
             - "185.254.101.25"
             - "51.145.123.29"
