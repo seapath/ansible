@@ -68,3 +68,18 @@
 
     - debug: msg= "{{ cmd.stderr }}"
       when: ansible_verbosity >= 2
+
+- name: Fetch results
+  hosts:
+      - VMs
+      - publisher_machines
+  become: true
+  tasks:
+    - name: "Stop docker container"
+      command: docker stop sv_timestamp_logger
+
+    - name: "Copy results to ansible directory"
+      fetch:
+        src: "/tmp/latency_tests/ts_{{ inventory_hostname }}.txt"
+        dest: "../ci_latency_tests/results/"
+        flat: yes
