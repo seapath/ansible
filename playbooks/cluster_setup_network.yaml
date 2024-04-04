@@ -258,6 +258,20 @@
         when: resolved_conf1.changed or resolved_conf2.changed or resolved_conf3.changed
       when: dns_servers is defined
 
+- name: disable resolved if no dns server is defined
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  become: true
+  tasks:
+  - name: Stop and disable systemd-resolved
+    ansible.builtin.systemd:
+      name: systemd-resolved
+      state: stopped
+      enabled: false
+    when: dns_servers is not defined
+
 - name: Configure TimeMaster
   hosts:
     - cluster_machines
