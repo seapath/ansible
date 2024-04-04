@@ -42,3 +42,29 @@
         sv_timestamp_logger \
         -d {{ sv_interface }} \
         -f "/tmp/latency_tests/ts_{{ inventory_hostname }}.txt"
+
+- name: Launch pcap sending
+  hosts: publisher_machines
+  become: true
+  tasks:
+    - name: "Create pcaps directory if it doesn't exist"
+      file:
+        path: "/tmp/latency_tests/pcaps"
+        state: directory
+
+    - name: "Copy pcap file on publisher"
+      copy:
+        src: "{{ pcap_path }}/{{ pcap_file }}"
+        dest: "/tmp/latency_tests/pcaps"
+
+    - name: "Send pcap from publisher"
+      command: "bittwist -i {{ sv_interface }} \
+              /tmp/latency_tests/pcaps/{{ pcap_file }}"
+      register: cmd
+
+    - name: "Wait for pcaps to be received by sv_timestamp_logger"
+      pause:
+          seconds: 5
+
+    - debug: msg= "{{ cmd.stderr }}"
+      when: ansible_verbosity >= 2
