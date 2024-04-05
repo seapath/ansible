@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-import subprocess,json,os
+import subprocess,json,os,stat
 import xmltodict
 from xml.parsers.expat import ParserCreate, ExpatError, errors
 
@@ -61,7 +61,14 @@ replacedisk = ["OK","OK","OK","OK"] # we store a status per disk
 
 #IPMITOOL
 ipmitool = "/usr/bin/ipmitool"
-if os.path.isfile("/dev/ipmi0") or os.path.isfile("/dev/ipmi/0") or os.path.isfile("/dev/ipmidev/0"):
+def exist_and_is_character(filepath):
+    try:
+        r = stat.S_ISCHR(os.lstat(filepath)[stat.ST_MODE])
+    except FileNotFoundError:
+        return False
+    return r
+
+if exist_and_is_character("/dev/ipmi0") or exist_and_is_character("/dev/ipmi/0") or exist_and_is_character("/dev/ipmidev/0"):
     for i in range(1,5):
         match i:
             case 1:
