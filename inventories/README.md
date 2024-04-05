@@ -16,25 +16,13 @@ It is possible with Ansible to provides [multiple inventories files](https://doc
 * the physical machines
 * the cluster internal network (Open vSwitch topology)
 * the virtual machines
-## SEAPATH Ansible inventories examples description
 
-All inventories examples are in YAML format. The example inventories are:
-* `seapath_demo_cluster_definition_example.yml`: SEAPATH cluster demo
-* `seapath_standalone_definition_example.yml`: SEAPATH standalone hypervisor setup
-* The complex SEAPATH cluster inventories are:
-	* `seapath_cluster_definition_example.yml`: physical machines
-	* `seapath_ovstopology_definition_example.yml`: cluster internal network (Open vSwitch topology)
-	* `seapath_vm_definition_example.yml`: virtual machines
+## Advanced variables
 
-The directory also contains the firewall rules `iptables_rules_example.txt` which are referring in `seapath_cluster_definition_example.yml`.
+You can find concrete examples of the variables in the inventories of this directory.
+Below are optional advanced variables that are not described in the examples.
 
-The simple SEAPATH cluster inventory require only minor tweak to be adapted. In all other files described, all the options which do not match a realistic case and need to be modified are indicated.
-
-### Optional variables
-
-You can find concrete examples of the variables in the inventories of this directory. Below are optional advanced variables that are not described in the examples.
-
-#### Network implementation
+### Network implementation
 
 ```yaml
 apply_network_config: true
@@ -48,6 +36,20 @@ remove_all_networkd_config: true
 # If set to true, the network playbook will start by wiping the /etc/systemd/network/ directory content, this can help cleaning old conflicting files.
 # THIS MUST NOT BE USED WITH skip_recreate_team0_config at the same time or the cluster network config won't be recreated.
 ```
+
+## SEAPATH Ansible inventories examples description
+
+All inventories examples are in YAML format. The example inventories are:
+* `seapath_demo_cluster_definition_example.yml`: SEAPATH cluster demo
+* `seapath_standalone_definition_example.yml`: SEAPATH standalone hypervisor setup
+* The complex SEAPATH cluster inventories are:
+	* `seapath_cluster_definition_example.yml`: physical machines
+	* `seapath_ovstopology_definition_example.yml`: cluster internal network (Open vSwitch topology)
+	* `seapath_vm_definition_example.yml`: virtual machines
+
+The directory also contains the firewall rules `iptables_rules_example.txt` which are referring in `seapath_cluster_definition_example.yml`.
+
+The simple SEAPATH cluster inventory require only minor tweak to be adapted. In all other files described, all the options which do not match a realistic case and need to be modified are indicated.
 
 ### SEAPATH demo cluster inventory
 
