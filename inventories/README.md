@@ -37,6 +37,28 @@ remove_all_networkd_config: true
 # THIS MUST NOT BE USED WITH skip_recreate_team0_config at the same time or the cluster network config won't be recreated.
 ```
 
+### Cgroup configuration
+
+These variables configures cgroup on an hypervisor. More information on the wiki : https://wiki.lfenergy.org/display/SEAP/Scheduling+and+priorization
+
+```yaml
+cpusystem: "0,12" # List of allowed CPUs for the system slice (default is all CPUs)
+cpuuser: "1,13" # List of allowed CPUs for the user slice (default is all CPUs)
+cpumachines: "2-11,14-23" # List of allowed CPUs for the machine slice (default is all CPUs)
+
+cpumachinesrt: "2-5,14-17" # Create the machine-rt slice and list all allowed CPUs for it.
+# This slice will be used for Real time virtual machines
+# If not provided, the machine-rt slice will not be created.
+cpumachinesnort: "6-11,18-23" # Create the machine-nort slice and list all allowed CPUs for it.
+# This slice will be used for virtual machines without real time needs
+# If not provided, the machine-nort slice will not be created.
+cpuovs: "23" # Create the ovs slice and list all allowed CPUs for it.
+# This slice will be used for ovs processes.
+# If not provided, the ovs slice will not be created.
+```
+
+More information on the format for a cpu list here : https://docs.kernel.org/admin-guide/kernel-parameters.html#cpu-lists
+
 ## SEAPATH Ansible inventories examples description
 
 All inventories examples are in YAML format. The example inventories are:
