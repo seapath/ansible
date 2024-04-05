@@ -136,16 +136,9 @@ all:
                         #OPTIONAL
                         logstash_server_ip: 10.10.10.10
 
-                        # Realtime/CPUs cgroups isolation configuration
-                        # All those parameters are optional.
-                        isolcpus: "2-5,14-17" # CPUs to isolate
-
-                        cpusystem: "0,12" # CPUs reserves for system
-                        cpuuser: "1,13" # CPUs reserves for user applications
-                        cpumachines: "2-11,14-23" # CPUs reserves for VMs
-                        cpumachinesrt: "2-5,14-17" # CPUs reserves for VMs realtime
-                        cpumachinesnort: "6-11,18-23" # CPUs reserves for VMs non realtime
-                        cpuovs: "23" # CPUs reserves for OVS
+                        isolcpus: "2-5,14-17" # List of CPU to isolate
+                        # No process or IRQs will run on these cores
+                        # They should be used by the real time virtual machines.
 
         # Ceph groups
         # All machines in the cluster must be part of mons groups

@@ -48,15 +48,9 @@ all:
                             sriov:
                               'eno12429': 7
 
-                            # Realtime/CPUs cgroups isolation configuration
-                            isolcpus: "2-5,14-17" # CPUs to isolate
-
-                            cpusystem: "0,12" # CPUs reserves for system
-                            cpuuser: "1,13" # CPUs reserves for user applications
-                            cpumachines: "2-11,14-23" # CPUs reserves for VMs
-                            cpumachinesrt: "2-5,14-17" # CPUs reserves for VMs realtime
-                            cpumachinesnort: "6-11,18-23" # CPUs reserves for VMs non realtime
-                            cpuovs: "23" # CPUs reserves for OVS
+                            isolcpus: "2-5,14-17" # List of CPU to isolate
+                            # No process or IRQs will run on these cores
+                            # They should be used by the real time virtual machines.
 
                             # Affinity
                             nics_affinity: # Optional, only useful with RT containers or macvtag VMs
