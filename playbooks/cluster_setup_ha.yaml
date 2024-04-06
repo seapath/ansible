@@ -139,6 +139,7 @@
             primitive ClusterIP IPaddr2 params ip={{ admin_cluster_ip }} cidr_netmask=32 op monitor interval=30s meta target-role=Started
             primitive vmmgrapi systemd:nginx.service  op monitor interval=30s
             colocation vmmgrapi_colocation inf: ClusterIP vmmgrapi
+            order order_ClusterIP_vmmgrapi ClusterIP vmmgrapi
       - name: run extra CRM configuration commands
         command:
           cmd: crm -d config load update -
