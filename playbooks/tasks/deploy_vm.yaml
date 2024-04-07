@@ -18,33 +18,45 @@
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
     mode: '0755'
+  when: qcow2tmpuploadfolder is defined
 
 - block:
 
-  - name: "Copy {{ item }} system disk on target"
-    copy:
-      src: "{{ hostvars[item].qcow2_path | default(vms_disks_directory + '/' + item + '.qcow2') }}"
-      dest: "{{ qcow2tmpuploadfolder | default('/tmp') + '/' + 'os.qcow2' }}"
-    vars:
-      ansible_remote_tmp: "{{ qcow2tmpuploadfolder | default(omit) }}"
-  - name: "Create {{ item }}"
-    cluster_vm:
-      name: "{{ item }}"
-      command: create
-      system_image: "{{ qcow2tmpuploadfolder | default('/tmp') + '/' + 'os.qcow2' }}"
-      force: true
-      xml: "{{ lookup('file', hostvars[item].xml_path | default(vms_disks_directory + '/' + item + '.xml')) | replace('\n', '') }}"
-      pinned_host: "{{ hostvars[item].pinned_host | default(omit) }}"
-      preferred_host: "{{ hostvars[item].preferred_host | default(omit) }}"
-      live_migration: "{{ hostvars[item].live_migration | default(omit) }}"
-      migration_user: "{{ hostvars[item].migration_user | default(omit) }}"
-      migrate_to_timeout: "{{ hostvars[item].migrate_to_timeout | default(omit) }}"
-      crm_config_cmd: "{{ hostvars[item].crm_config_cmd | default(omit) }}"
-      enable: "{{ hostvars[item].enable | default(true) }}"
-      priority: "{{ hostvars[item].priority | default(omit) }}"
-  - name: Remove temporary file
-    file:
-      path: "{{ qcow2tmpuploadfolder | default('/tmp') + '/' + 'os.qcow2' }}"
-      state: absent
+      - name: "Copy {{ item }} system disk on target"
+        copy:
+          src: "{{ hostvars[item].vm_disk | default(vms_disks_directory + '/' + item + '.qcow2') }}"
+          dest: "{{ qcow2tmpuploadfolder | default('/tmp') + '/' + 'os.qcow2' }}"
+        vars:
+          ansible_remote_tmp: "{{ qcow2tmpuploadfolder | default(omit) }}"
+        when: disk_copy | bool
+      - name: "Create {{ item }}"
+        cluster_vm:
+          name: "{{ item }}"
+          command: create
+          system_image: "{{ qcow2tmpuploadfolder | default('/tmp') + '/' + 'os.qcow2' }}"
+          force: true
+          live_migration: "{{ livemigration_user is defined }}"
+          migration_user: "{{ livemigration_user | default(omit) }}"
+          migrate_to_timeout: "{{ hostvars[item].migrate_to_timeout | default('') }}"
+          priority: "{{ hostvars[item].priority | default(omit) }}"
+          enable: "{{ hostvars[item].enable | default(true) }}"
+          pinned_host: "{{ hostvars[item].pinned_host | default(omit) }}"
+          preferred_host: "{{ hostvars[item].preferred_host | default(omit) }}"
+          crm_config_cmd: "{{ hostvars[item].crm_config_cmd | default(omit) }}"
+          xml: >-
+            {{ lookup('file', hostvars[item].xml_path)
+                 if hostvars[item].xml_path is defined
+               else lookup('template',hostvars[item].vm_template,template_vars=dict(vm=hostvars[item]))
+                 if hostvars[item].vm_template is defined
+               else lookup('file',vms_disks_directory + '/' + item + '.xml')
+               | replace('\n', '') }}
+      - name: Remove temporary file
+        file:
+          path: "{{ qcow2tmpuploadfolder | default('/tmp') + '/' + 'os.qcow2' }}"
+          state: absent
+      - name: Wait for VM connections
+        wait_for_connection:
+        delegate_to: "{{ item }}"
+        when: hostvars[item].wait_for_connection is defined and hostvars[item].wait_for_connection
 
   when: presencevm.status == "Undefined" or (hostvars[item].force is defined and hostvars[item].force)

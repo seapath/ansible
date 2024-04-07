@@ -52,6 +52,7 @@ all:
         gateway_addr: 192.168.212.1 # Update the Gateway IP addr
         grub_append: "console=ttyS0,115200" # Optional variable to add grub argument for boot.
           # This one for example create a tty that can be accessed with `virsh console`
+        wait_for_connection: True # at the end of guest deployment, wait for an ssh connection before moving forward, default is False
 
 # This inventory can be customize using those fields :
 #  * name: the VM name (string). Only on standalone. Default
