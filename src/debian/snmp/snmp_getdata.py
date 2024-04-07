@@ -153,7 +153,7 @@ if os.path.isfile(arcconf):
 i = 0
 for disk in ["sda","sdb","sdc","sdd"]:
     command = f""" /usr/sbin/smartctl -H /dev/{disk} | {grep} "SMART overall-health self-assessment test result: " | {sed} "s/SMART overall-health self-assessment test result: //" """
-    title = "smartctl /dev/{disk}"
+    title = f"""smartctl /dev/{disk}"""
     data = run_command(command)
     data = data.lstrip().rstrip()
     if data != "PASSED" and data != "":
