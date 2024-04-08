@@ -54,6 +54,13 @@
             path: "/etc/ssh/{{ livemigration_user }}/authorized_keys"
             key: "{{ lookup('file','buffer/' + item + '-id_rsa.pub') }}"
           with_items: "{{ groups['cluster_machines'] }}"
+        - name: Copy the key to admin user's authorized_keys using Ansible module
+          authorized_key:
+            user: "{{ admin_user }}"
+            state: present
+            path: "/home/{{ admin_user }}/.ssh/authorized_keys"
+            key: "{{ lookup('file','buffer/' + item + '-id_rsa.pub') }}"
+          with_items: "{{ groups['cluster_machines'] }}"
         - name: Fetch the ssh keyfile
           fetch:
             src: "/etc/ssh/ssh_host_ed25519_key.pub"
