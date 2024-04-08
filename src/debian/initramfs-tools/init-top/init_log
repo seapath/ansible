@@ -1,0 +1,27 @@
+#!/bin/sh
+
+prereqs()
+{
+   echo "$PREREQ"
+}
+
+case $1 in
+prereqs)
+   prereqs
+   exit 0
+   ;;
+esac
+
+. /scripts/functions
+
+cat >> /conf/param.conf <<EOF 
+if [ -z "\$INIT_LOG_DONE" ]; then
+	mkfifo "/run/initramfs/tempfifo"
+	awk '{print "<4>init: " \$0}' > /dev/kmsg </run/initramfs/tempfifo &
+	exec > /run/initramfs/tempfifo 2>&1
+	rm /run/initramfs/tempfifo
+
+	INIT_LOG_DONE=done
+fi
+EOF
+exit 0

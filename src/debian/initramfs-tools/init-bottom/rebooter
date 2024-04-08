@@ -1,0 +1,36 @@
+#!/bin/sh 
+
+PREREQ="lvm"
+
+prereqs()
+{
+   echo "$PREREQ"
+}
+
+case $1 in
+prereqs)
+   prereqs
+   exit 0
+   ;;
+esac
+
+. /scripts/functions
+
+log_begin_msg "Rebooter starting"
+if [ -e /run/initramfs/do_reboot ]; then
+	_log_msg "Rebooting...\n"	
+	MOUNT_POINT="/run/mnt"
+	mkdir -p $MOUNT_POINT
+	# TODO: Make the log device+path configurable
+	mount -o sync,rw /dev/mapper/vg1-log $MOUNT_POINT
+	echo "== $(date) ==" >> $MOUNT_POINT/initramfs.log
+	dmesg >> $MOUNT_POINT/initramfs.log
+	echo >> $MOUNT_POINT/initramfs.log
+	umount $MOUNT_POINT
+	reboot -f -d 1 # No init to handle reboot => -f
+else
+	_log_msg "(no reboot needed) "
+fi
+log_end_msg
+
+exit 0
