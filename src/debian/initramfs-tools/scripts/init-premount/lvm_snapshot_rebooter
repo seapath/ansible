@@ -40,10 +40,8 @@ if [ -n "$lv_merging" ] ; then
 		/sbin/lvm lvpoll --polloperation merge --interval 1 --config activation/monitoring=0 "$lv"
 		log_end_msg
 	done
-	log_success_msg "Snapshot merging complete, rebooting..."
-	sleep 3 # To allow display on console
-
-	reboot -f # No init to handle reboot => -f
+	log_success_msg "Snapshot merging complete, will reboot..."
+	touch /run/initramfs/do_reboot
 else
 	log_success_msg "Done. (No LVM snapshot need merging)"
 fi
