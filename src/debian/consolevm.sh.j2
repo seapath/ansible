@@ -6,7 +6,7 @@ then
   echo no vm defined
 else
   echo "you want a console to $vm, ok let's go"
-  hyp=`crm status | grep -E "^  \* $vm" | grep Started | awk 'NF>1{print $NF}'`
+  hyp=`crm status | grep -E "^  \* $vm\b" | grep Started | awk 'NF>1{print $NF}'`
   if [ -z $hyp ]
   then
     echo no hypervisor found for this vm
