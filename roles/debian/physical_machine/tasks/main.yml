@@ -380,12 +380,21 @@
   ansible.builtin.systemd:
     name: docker.service
 
-- name: "add lvm_snapshot_rebooter: script file"
+- name: "add initramfs-tools scripts: script file (LVM rebooter and log handling)"
   ansible.builtin.copy:
-    src: ../src/debian/lvm_snapshot_rebooter.sh
-    dest: /etc/initramfs-tools/scripts/init-premount/lvm_snapshot_rebooter
+    src: ../src/debian/initramfs-tools/
+    dest: /etc/initramfs-tools/scripts/
     mode: '0755'
-  register: lvm_snapshot_rebooter
+  register: initramfs_tools_scripts
+
+- name: "configure initramfs-tools to use busybox"
+  lineinfile:
+    dest: /etc/initramfs-tools/initramfs.conf
+    regexp: "^#?BUSYBOX="
+    line: "BUSYBOX=y"
+    state: present
+  register: initramfs_busybox
+
 - name: "add udev rules for lvm2 limitation"
   ansible.builtin.copy:
     src: ../src/debian/69-lvm.rules
@@ -393,10 +402,11 @@
     mode: '0644'
   when: ansible_distribution == 'Debian' and ansible_distribution_version | int >= 12
   register: udevlvm
+
 - name: "rebuild initramfs if necessary"
   command:
     cmd: /usr/sbin/update-initramfs -u
-  when: udevlvm.changed or lvm_snapshot_rebooter.changed
+  when: udevlvm.changed or initramfs_tools_scripts.changed or initramfs_busybox.changed
 
 - name: "add rbd type to lvm.conf"
   ansible.builtin.lineinfile:
