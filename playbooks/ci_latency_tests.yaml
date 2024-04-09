@@ -2,6 +2,19 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+- name: Copy docker tar image
+  hosts:
+      - publisher_machines
+      - VMs
+  tasks:
+      - name: "Create latency_tests directory if it doesn't exist"
+        file:
+          path: "/tmp/latency_tests/"
+          state: directory
+      - name: "Copy archive"
+        copy:
+          src: "../ci_latency_tests/build/sv_timestamp_logger.tar"
+          dest: "/tmp/latency_tests/"
 
 - name: Launch sv timestamp logger on publisher
   hosts: publisher_machines
