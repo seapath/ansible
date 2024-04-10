@@ -133,6 +133,11 @@ options:
       - Time given to a guest to live migrate (in seconds)
       - Optional parameter relevant only if I(command) is C(create) or C(clone)
     type: str
+  migration_downtime:
+    description:
+      - Allowed downtime when live migrating (in milliseconds)
+      - Optional parameter relevant only if I(command) is C(create) or C(clone)
+    type: str
   priority:
     description:
       - Priority of resource in pacemaker
@@ -469,6 +474,7 @@ def run_module():
         migration_user=dict(type="str", require=False),
         stop_timeout=dict(type="str", require=False),
         migrate_to_timeout=dict(type="str", require=False),
+        migration_downtime=dict(type="str", require=False),
         priority=dict(type="str", required=False),
         clear_constraint=dict(type="bool", required=False, default=False),
         strong=dict(type="bool", required=False, default=False),
@@ -524,6 +530,7 @@ def run_module():
     migration_user = args.get("migration_user", None)
     stop_timeout = args.get("stop_timeout", None)
     migrate_to_timeout = args.get("migrate_to_timeout", None)
+    migration_downtime = args.get("migration_downtime", None)
     clear_constraint = args.get("clear_constraint", False)
     strong_constraint = args.get("strong", False)
     colocated_vms = args.get("colocated_vms", [])
@@ -563,6 +570,7 @@ def run_module():
                 "migration_user": migration_user,
                 "stop_timeout": stop_timeout,
                 "migrate_to_timeout": migrate_to_timeout,
+                "migration_downtime": migration_downtime,
                 "crm_config_cmd": crm_config_cmd,
                 "priority": priority,
             }
@@ -581,6 +589,7 @@ def run_module():
                 "migration_user": migration_user,
                 "stop_timeout": stop_timeout,
                 "migrate_to_timeout": migrate_to_timeout,
+                "migration_downtime": migration_downtime,
                 "clear_constraint": clear_constraint,
                 "priority": priority,
             }
