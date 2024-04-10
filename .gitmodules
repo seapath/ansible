@@ -10,7 +10,7 @@
 [submodule "src/debian/vm_manager"]
 	path = src/debian/vm_manager
 	url = https://github.com/seapath/vm_manager.git
-        branch = main
+        branch = migrationdowntime
 [submodule "src/cukinia-tests"]
 	path = src/cukinia-tests
 	url = https://github.com/seapath/cukinia-tests.git
