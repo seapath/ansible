@@ -146,3 +146,4 @@ all:
           - "ssh-rsa key2XXX"
         # account used for libvirt live-migration
         livemigration_user: livemigration
+        interface_to_wait_for: br0
