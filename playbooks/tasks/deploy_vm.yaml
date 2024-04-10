@@ -37,7 +37,8 @@
           force: true
           live_migration: "{{ livemigration_user is defined }}"
           migration_user: "{{ livemigration_user | default(omit) }}"
-          migrate_to_timeout: "{{ hostvars[item].migrate_to_timeout | default('') }}"
+          migrate_to_timeout: "{{ hostvars[item].migrate_to_timeout | default(omit) }}"
+          migration_downtime: "{{ hostvars[item].migration_downtime | default(omit) }}"
           priority: "{{ hostvars[item].priority | default(omit) }}"
           enable: "{{ hostvars[item].enable | default(true) }}"
           pinned_host: "{{ hostvars[item].pinned_host | default(omit) }}"

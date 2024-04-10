@@ -11,6 +11,7 @@ all:
           ansible_host: 192.168.212.131 # Update the VM IP
           vm_template: "../templates/vm/guest.xml.j2"
           vm_disk: "../vm_images/guest.qcow2"
+          migration_downtime: 5000 #optional
           cpuset: [4, 6] # CPUs list to use.
           rt_priority: 1 # FIFO priority
           mac_address: "52:54:00:c4:ff:03" # change the MAC address
