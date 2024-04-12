@@ -31,6 +31,10 @@
           group: Debian-snmp
     when: getent_passwd['Debian-snmp'][1] != "902" or getent_group['Debian-snmp'][1] != "902"
 
+  - name: temp fix for synchronize to force evaluate variables
+    set_fact:
+      ansible_host: "{{ ansible_host }}"
+
   - name: Synchronization of src snmp_passpersist python module
     ansible.posix.synchronize:
       src: ../src/snmp_passpersist
