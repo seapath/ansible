@@ -38,7 +38,7 @@ jobs:
 
       - name: Launch VMs tests
         run: cd ${{ env.WORK_DIR }};
-             ci/launch-yocto.sh tests_vm;
+             ci/launch-yocto.sh test_vms;
 
       - name: Upload test report
         if: ${{ always() && steps.conf.conclusion == 'success' }}
