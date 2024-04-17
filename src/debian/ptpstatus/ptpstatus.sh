@@ -1,117 +1,139 @@
 #!/bin/bash
+# Copyright (C) 2024, Savoir-faire Linux, Inc
+# SPDX-License-Identifier: Apache-2.0
 
-#------------------------------------------------------------------------------
-# Project : Virtual Merging Unit - Driver for legacy SASensor hardware
-# Company : (C) Copyright 2021, Locamation B.V.
-# Function: Linux shell script reading the status of the PTP client with pmc 
-#           and storing the result into a status file.
-#
-#  Any reproduction without written permission is prohibited by law.
-#------------------------------------------------------------------------------
+die()
+{
+	local _ret="${2:-1}"
+	test "${_PRINT_HELP:-no}" = yes && print_help >&2
+	echo "$1" >&2
+	exit "${_ret}"
+}
 
-set -e
-set -u
 
-# Global variables
-declare -i PTP_STAT_PREV=0
-declare -i CLOCK_NO_SYNC=0
-declare -i CLOCK_LOCAL_SYNC=1
-declare -i CLOCK_GLOBAL_SYNC=2
+# THE DEFAULTS INITIALIZATION - POSITIONALS
+_positionals=()
+# THE DEFAULTS INITIALIZATION - OPTIONALS
+_arg_interval="1"
 
-PTP_STAT_FILE=""
-PMC_EXE="/usr/sbin/pmc"
 
-PTP_STAT_GMPRESENT="none"
-PTP_STAT_CLOCK_CLASS="none"
-PTP_STAT_CLOCK_ACCURACY="none"
+print_help()
+{
+	printf '%s\n' "The general script's help msg"
+	printf 'Usage: %s [-i|--interval <secs>] [-h|--help] <stats> <details>\n' "$0"
+	printf '\t%s\n' "<stats>: Stats file path"
+	printf '\t%s\n' "<details>: Stats details file path"
+	printf '\t%s\n' "-i, --interval: Time in sec between two status (default: '1')"
+	printf '\t%s\n' "-h, --help: Prints help"
+}
 
-declare -i CLOCK_CLASS_MIN=7 # The minimum requirement for the best clock
-declare -i CLOCK_MIN_ACCURACY=0x23 # 0x23: the time is accurate to within 1 us
 
-# Error checks
-if [[ $# -ne 2 ]]; then
-  echo "ERROR: PTP status and details output files not specified!"
-  exit 1
+parse_commandline()
+{
+	_positionals_count=0
+	while test $# -gt 0
+	do
+		_key="$1"
+		case "$_key" in
+			-i|--interval)
+				test $# -lt 2 && die "Missing value for the optional argument '$_key'." 1
+				_arg_interval="$2"
+				shift
+				;;
+			--interval=*)
+				_arg_interval="${_key##--interval=}"
+				;;
+			-i*)
+				_arg_interval="${_key##-i}"
+				;;
+			-h|--help)
+				print_help
+				exit 0
+				;;
+			-h*)
+				print_help
+				exit 0
+				;;
+			*)
+				_last_positional="$1"
+				_positionals+=("$_last_positional")
+				_positionals_count=$((_positionals_count + 1))
+				;;
+		esac
+		shift
+	done
+}
+
+
+handle_passed_args_count()
+{
+	local _required_args_string="'stats' and 'details'"
+	test "${_positionals_count}" -ge 2 || _PRINT_HELP=yes die "FATAL ERROR: Not enough positional arguments - we require exactly 2 (namely: $_required_args_string), but got only ${_positionals_count}." 1
+	test "${_positionals_count}" -le 2 || _PRINT_HELP=yes die "FATAL ERROR: There were spurious positional arguments --- we expect exactly 2 (namely: $_required_args_string), but got ${_positionals_count} (the last one was: '${_last_positional}')." 1
+}
+
+parse_commandline "$@"
+handle_passed_args_count
+
+STATS_FILE="${_positionals[0]}"
+DETAILS_FILE="${_positionals[1]}"
+
+echo "Interval is $_arg_interval"
+echo "Stats file is $STATS_FILE"
+echo "Details file is $DETAILS_FILE"
+
+if [ ! -f /usr/sbin/pmc ] ; then
+    echo "Error: pmc must be installed to continue" 1>&2
+    exit 1
 fi
 
-PTP_STAT_FILE="$1"
-PTP_DETAILS_FILE="$2"
-
-# Initialize this script and perform some condition checks
-function init() {
-  if [[ ! -f "$PMC_EXE" ]]; then
-    echo "ERROR: linuxptp pmc application ($PMC_EXE) does not exist on this platform."
+StateDir=$(dirname $STATS_FILE 2>/dev/null)
+mkdir -p $StateDir
+if [ $? -ne 0 ] ; then
+    echo "Error: Unable to create directory $StateDir" 1>&2
     exit 1
-  fi
+fi
 
-  ptpStatusFileDir="$(dirname "$PTP_STAT_FILE" 2> /dev/null)"
-  ptpDetailsFileDir="$(dirname "$PTP_DETAILS_FILE" 2> /dev/null)"
+DetailsDir=$(dirname $DETAILS_FILE 2>/dev/null)
+mkdir -p $DetailsDir
+if [ $? -ne 0 ] ; then
+    echo "Error: Unable to create directory $DetailsDir" 1>&2
+    exit 1
+fi
 
-  mkdir -p "$ptpStatusFileDir"
-  mkdir -p "$ptpDetailsFileDir"
+echo 0 > "$STATS_FILE"
 
-  # Write initially 0 into the stat file
-  echo "$PTP_STAT_PREV" > "$PTP_STAT_FILE"
-  echo "PTP status write; $PTP_STAT_PREV > '$PTP_STAT_FILE'"
-}
-
-# Gather and analyse the PTP client status using pmc, and return the status according
-# to the iec61850 standard description.
-function getPtpStatus() {
-  local resultVar=$1
-  local clockClassInSpec="true"
-  local pmcOutput=""
-  local -i ptpStatus=$CLOCK_NO_SYNC
-
-  pmcOutput="$($PMC_EXE -s /var/run/timemaster/ptp4l.0.socket -u -b 0 'GET PARENT_DATA_SET' 'GET TIME_STATUS_NP' 'GET PORT_DATA_SET')"
-  echo "$pmcOutput" > "$PTP_DETAILS_FILE"
-  
-  PTP_STAT_GMPRESENT=$(echo "$pmcOutput" | grep 'gmPresent'| tr -d '\t' | tr -s ' ' | cut -f2 -d " ")
-  PTP_STAT_CLOCK_CLASS=$(echo "$pmcOutput" | grep 'gm.ClockClass'| tr -d '\t' | tr -s ' ' | cut -f2 -d " ")
-  PTP_STAT_CLOCK_ACCURACY=$(echo "$pmcOutput" | grep 'gm.ClockAccuracy'| tr -d '\t' | tr -s ' ' | cut -f2 -d " ")
-
-  # Determine whether the Clock Class is not out of spec (even when gmPresent=true)
-  if [[ "$PTP_STAT_CLOCK_CLASS" == "52"  || "$PTP_STAT_CLOCK_CLASS" == "58" ||
-        "$PTP_STAT_CLOCK_CLASS" == "187" || "$PTP_STAT_CLOCK_CLASS" == "193" ]]; then
-    clockClassInSpec=false
-  fi
-
-  if [ "${PTP_STAT_GMPRESENT,,}" == "true" -a "$clockClassInSpec" = true ]; then
-    ptpStatus=$CLOCK_LOCAL_SYNC
-
-    # Swap the following line when clock accuracy is needed:
-    #if [ $PTP_STAT_CLOCK_CLASS -le $CLOCK_CLASS_MIN -a $((PTP_STAT_CLOCK_ACCURACY)) -le $((CLOCK_MIN_ACCURACY)) ]; then
-    if [[ $PTP_STAT_CLOCK_CLASS -le $CLOCK_CLASS_MIN ]]; then
-      ptpStatus=$CLOCK_GLOBAL_SYNC
+updateState()
+{
+    pmc_output=$(/usr/sbin/pmc -s /var/run/timemaster/ptp4l.0.socket -u -b 0 'GET PARENT_DATA_SET' 'GET TIME_STATUS_NP' 'GET PORT_DATA_SET')
+    if [ $? -ne 0 ] ; then
+        echo "Error: pmc failed" 1>&2
+        echo 0 > "$STATS_FILE"
+        return
     fi
-  fi
-
-  eval $resultVar="'$ptpStatus'"
+    echo "$pmc_output" > "$DETAILS_FILE"
+    if echo "$pmc_output" | grep gmPresent | grep -q true ; then
+        gmp_present=1
+    else
+        gmp_present=0
+    fi
+    clock_class=$(echo "$pmc_output" | grep gm.ClockClass | grep -Eo '[0-9]+')
+    if [ -z "$clock_class" ] ; then
+        echo "Error: clockClass not found" 1>&2
+        echo 0 > "$STATS_FILE"
+        return
+    fi
+    # Check if Clock Classs is not out of the spec (not 52, 58, 187 and 193) and GMP is present
+    if [[ $clock_class -ne 52 && $clock_class -ne 58 && $clock_class -ne 187 && $clock_class -ne 193 && $gmp_present -eq 1 ]] ; then
+        echo 1 > "$STATS_FILE"
+        return
+    else
+        echo 2 > "$STATS_FILE"
+        return
+    fi
 }
 
-# Main while loop
-function run() {
-  while true
-  do
-    sleep 1
-    getPtpStatus status
-    setPtpStatus $status
-  done
-}
-
-# Write the given value into the PTP status file
-function setPtpStatus() {
-  local currentPtpStat=$1
-
-  if [[ $PTP_STAT_PREV -ne $currentPtpStat ]]; then
-    echo "PTP status new; gmPresent: $PTP_STAT_GMPRESENT, gm.ClockClass: $PTP_STAT_CLOCK_CLASS, gm.ClockAccuracy: $PTP_STAT_CLOCK_ACCURACY"
-    echo "PTP status write; $PTP_STAT_PREV -> $currentPtpStat > '$PTP_STAT_FILE'"
-    echo "$1" > "$PTP_STAT_FILE"
-
-    PTP_STAT_PREV=$currentPtpStat
-  fi
-}
-
-init
-run
-
+while true ; do
+    updateState
+    sleep "$_arg_interval"
+done
