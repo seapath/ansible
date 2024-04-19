@@ -65,7 +65,7 @@
     register: snmpd_conf
   - name: SNMP PASS AGENT script run by net-snmp for seapath tree
     copy:
-      src: ../src/debian/snmp/exposeseapathsnmp.py
+      src: ../src/debian/snmp/exposeseapathsnmp_script/exposeseapathsnmp.py
       dest: "/usr/local/bin/exposeseapathsnmp.py"
       mode: '0755'
   - name: script run by cron job to generate snmp data
