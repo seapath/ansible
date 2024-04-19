@@ -8,6 +8,7 @@ all:
                         node1:
                             # ansible variables
                             ansible_host: 10.10.10.1
+                            hostname: "node1"
 
                             # Main network interface configuration
                             network_interface: eno8303 #main interface
@@ -56,6 +57,7 @@ all:
                         node2:
                             # ansbile variables
                             ansible_host: 10.10.10.2
+                            hostname: "node2"
 
                             # Main network interface configuration
                             network_interface: eno8303
@@ -88,6 +90,7 @@ all:
                         node3:
                             # ansbile variables
                             ansible_host: 10.10.10.3
+                            hostname: "node3"
 
                             # Main network interface configuration
                             network_interface: eno8303
