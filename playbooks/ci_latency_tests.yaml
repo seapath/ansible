@@ -25,15 +25,16 @@
 
     - name: Launch sv timestamp logger
       command: >-
-        docker run \
-        --rm \
-        --name sv_timestamp_logger \
-        -d \
-        --network host \
-        -v /tmp:/tmp \
+        docker run
+        --rm
+        --name sv_timestamp_logger
+        -d
+        --network host
+        -v /tmp:/tmp
         --cap-add=NET_ADMIN
-        sv_timestamp_logger \
-        -d {{ sv_interface }} \
+        --cap-add=SYS_NICE
+        sv_timestamp_logger
+        -d {{ sv_interface }}
         -f "/tmp/latency_tests/ts_{{ inventory_hostname }}.txt"
         -t
 
@@ -46,14 +47,15 @@
 
     - name: Launch sv timestamp logger
       command: >-
-        docker run \
-        --name sv_timestamp_logger \
-        -d \
-        --rm \
-        --network host \
-        -v /tmp:/tmp \
-        sv_timestamp_logger \
-        -d {{ sv_interface }} \
+        docker run
+        --name sv_timestamp_logger
+        -d
+        --rm
+        --network host
+        -v /tmp:/tmp
+        --cap-add=SYS_NICE
+        sv_timestamp_logger
+        -d {{ sv_interface }}
         -f "/tmp/latency_tests/ts_{{ inventory_hostname }}.txt"
 
 - name: Launch pcap sending
