@@ -5,7 +5,7 @@ import xmltodict
 from xml.parsers.expat import ParserCreate, ExpatError, errors
 
 def run_command(command):
-    result = os.popen(command).read()
+    result = subprocess.check_output(command, shell=True, executable='/bin/bash').decode()
     return (result)
 
 def writeline(oid,line):
@@ -211,16 +211,48 @@ for i in range(1,12):
             title = command
             data = run_command(command)
         case 2:
-            command = f""" /usr/bin/virsh --connect qemu:///system domstats """
+            command = f"""
+FILE=/tmp/domstats.txt
+if [ -f $FILE ]
+then
+  OLDTIME=120
+  CURTIME=$(date +%s)
+  FILETIME=$(stat $FILE -c %Y)
+  TIMEDIFF=$(expr $CURTIME - $FILETIME)
+  if [ $TIMEDIFF -gt $OLDTIME ]; then
+    /usr/bin/virsh --connect qemu:///system domstats > $FILE
+  fi
+else
+  /usr/bin/virsh --connect qemu:///system domstats > $FILE
+fi
+cat $FILE
+"""
             title = "virsh domstats"
             data = run_command(command)
         case 3:
             command = f"""
-/usr/bin/virsh --connect qemu:///system list --name | {sed} -s "/^$/d" | while read i
-do
-  {echo} Domain: \'$i\'
-  /usr/bin/virsh --connect qemu:///system dommemstat --domain $i
-done
+FILE=/tmp/dommemstat.txt
+function create_or_rewrite {{
+  /usr/bin/virsh --connect qemu:///system list --name | sed -s "/^$/d" | while read i
+  do
+    echo Domain: \'$i\'
+    /usr/bin/virsh --connect qemu:///system dommemstat --domain $i
+  done > $FILE
+}}
+if [ -f $FILE ]
+then
+  OLDTIME=120
+  CURTIME=$(date +%s)
+  FILETIME=$(stat $FILE -c %Y)
+  TIMEDIFF=$(expr $CURTIME - $FILETIME)
+
+  if [ $TIMEDIFF -gt $OLDTIME ]; then
+    create_or_rewrite
+  fi
+else
+  create_or_rewrite
+fi
+cat $FILE
 """
             title = "virsh dommemstat"
             data = run_command(command)
@@ -229,7 +261,22 @@ done
             title = "ceph status"
             data = run_command(command)
         case 5:
-            command = f""" /usr/local/bin/virt-df.sh """
+            command = f"""
+FILE=/tmp/virt-df.txt
+if [ -f $FILE ]
+then
+  OLDTIME=3600
+  CURTIME=$(date +%s)
+  FILETIME=$(stat $FILE -c %Y)
+  TIMEDIFF=$(expr $CURTIME - $FILETIME)
+  if [ $TIMEDIFF -gt $OLDTIME ]; then
+    /usr/local/bin/virt-df.sh > $FILE
+  fi
+else
+  /usr/local/bin/virt-df.sh > $FILE
+fi
+cat $FILE
+"""
             title = "virt-df"
             data = run_command(command)
         case 6:
