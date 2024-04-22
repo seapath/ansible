@@ -52,10 +52,10 @@
                 register: ceph_osd_realdisk
               - name: Cleanup Ceph OSD disks with ceph-volume
                 command: "ceph-volume lvm zap {{ ceph_osd_realdisk.stdout }} --destroy" # Zapping the disk and destroying any vgs or lvs present
-                when: lvm_volumes[0].device_number == 1 # The disk must not be zapped in the case of a single disk for linux and ceph
+                when: lvm_volumes is not defined or lvm_volumes[0].device_number == 1 # The disk must not be zapped in the case of a single disk for linux and ceph
               - name: Cleanup Ceph lvm's partition with ceph-volume
                 command: "ceph-volume lvm zap /dev/{{ lvm_volumes[0].data_vg }}" # In the case of a single-disk installation, only the Ceph partition is zapped
-                when: ansible_lvm['lvs'][lvm_volumes[0].data] is defined
+                when: lvm_volumes is defined and ansible_lvm['lvs'][lvm_volumes[0].data] is defined
               - name: Create volumes for OSD disk
                 block:
                   - name: Create partition on OSD disks with parted
