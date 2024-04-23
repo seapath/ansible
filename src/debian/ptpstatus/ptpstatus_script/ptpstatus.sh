@@ -500,12 +500,22 @@ function getPtpStatus() {
   # Reset state to default
   resetState
 
+  if [[ ! -d "$PTPDETAILSFILEDIR" ]]; then
+    mkdir -p "$PTPDETAILSFILEDIR"
+  fi
+
+  if [[ -S /var/run/timemaster/ptp4l.0.socket ]]; then
+    PMC_SOCKET_OPTION="-s /var/run/timemaster/ptp4l.0.socket"
+  fi
+
   local _pmcOutput="$( \
-    "$PMC_EXE" -u -b 0 \
+    "$PMC_EXE" $PMC_SOCKET_OPTION -u -b 0 \
       'GET TIME_PROPERTIES_DATA_SET' \
       'GET TIME_STATUS_NP' \
       'GET PARENT_DATA_SET' \
+      'GET PORT_DATA_SET' \
       2> /dev/null)"
+  echo "$_pmcOutput" > "$PTP_DETAILS_FILE"
 
   # Determine whether a GM clock is present
   STATE_PTP_GM_PRESENT="$( \
@@ -599,13 +609,15 @@ if [[ -z "$PMC_EXE" ]]; then
   exit 1
 fi
 
-if [[ $# -ne 1 ]]; then
-  echo "ERROR: Specify the PTP status file"
+if [[ $# -ne 2 ]]; then
+  echo "ERROR: Specify the PTP status and details files"
   exit 1
 fi
 
 PTP_STAT_FILE="$1"
+PTP_DETAILS_FILE="$2"
 PTPSTATUSFILEDIR="$(dirname "$PTP_STAT_FILE" 2> /dev/null)"
+PTPDETAILSFILEDIR="$(dirname "$PTP_DETAILS_FILE" 2> /dev/null)"
 
 declare -i SMPSYNC=0
 
