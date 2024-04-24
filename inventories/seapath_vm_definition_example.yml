@@ -11,8 +11,6 @@ all:
           ansible_host: 192.168.212.131 # Update the VM IP
           vm_template: "../templates/vm/guest.xml.j2"
           vm_disk: "../vm_images/guest.qcow2"
-          local_disk:
-              - disk_file: guest0.qcow2
           cpuset: [4, 6] # CPUs list to use.
           rt_priority: 1 # FIFO priority
           mac_address: "52:54:00:c4:ff:03" # change the MAC address
@@ -41,7 +39,7 @@ all:
           vm_disk: "../vm_images/guest.img.gz"
           disk_extract: true
           local_disk:
-              - disk_file: guest2.qcow2
+              - disk_file: second_disk.qcow2
           vm_features: []
           preferred_host: pc3 # Optional
           bridges:
@@ -65,10 +63,8 @@ all:
 #                 templates/vm/guest.xml.j2. In most cases, you should not
 #                 change this.
 #  * vm_disk: the image to use for the VM creation
-#  * local_disk: list of VM disks. (When using cluster, it's managed by
-#                vm-manager)
-#    ** disk_file: name of the disk, note that you must give the same name as
-#                  the vm name.
+#  * local_disk: list of additionnal VM disks.
+#    ** disk_file: name of the disk.
 #  * disk_extract: if the disk image is gzipped, set the value to true.
 #  * vm_features: the VM feature (list). Can contained one or more of the
 #                 following items.
