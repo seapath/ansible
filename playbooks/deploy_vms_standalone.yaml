@@ -47,6 +47,14 @@
         creates: "{{ hostvars[item].inventory_hostname }}.img"
       with_items: "{{ groups['VMs'] }}"
       when: disk_copy | bool and hostvars[item].disk_extract is defined and hostvars[item].disk_extract | bool
+    - name: Add main disk to disk list
+      # This task reuse the optional local_disk variable and put the qcow2 of the VM at the beginning of the list
+      # This allow the VM to boot on this disk without having to write it manually in the inventory
+      set_fact:
+        local_disk: "{{ [{'disk_file': '{{ hostvars[item].inventory_hostname }}.qcow2'}] + (local_disk | default([])) }}"
+      delegate_to: "{{ item }}"
+      delegate_facts: true
+      with_items: "{{ groups['VMs'] }}"
     - name: export VM config for debug in /tmp
       template:
         src: "{{ hostvars[item].vm_template }}"
