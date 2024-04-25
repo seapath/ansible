@@ -48,15 +48,15 @@
 
 - name: "irqbalance conf"
   lineinfile:
-    dest: /etc/sysconfig/irqbalance
-    regexp: '^IRQBALANCE_BANNED_CPULIST=".*"$'
+    path: /etc/sysconfig/irqbalance
+    regexp: '^#?IRQBALANCE_BANNED_CPULIST=".*"$'
     line: 'IRQBALANCE_BANNED_CPULIST="{{ isolcpus }}"'
     state: present
   register: irqbalanceconf1
   when: isolcpus is defined
 - name: "irqbalance conf revert"
   lineinfile:
-    dest: /etc/sysconfig/irqbalance
+    path: /etc/sysconfig/irqbalance
     regexp: '^#?IRQBALANCE_BANNED_CPULIST=(.*)$'
     line: '#IRQBALANCE_BANNED_CPULIST=\1'
     state: present
@@ -72,13 +72,13 @@
 
 - name: "systemd conf RuntimeWatchdogSec"
   lineinfile:
-    dest: /etc/systemd/system.conf
+    path: /etc/systemd/system.conf
     regexp: '^RuntimeWatchdogSec=.*$'
     line: "RuntimeWatchdogSec=20"
     state: present
 - name: "systemd conf RebootWatchdogSec"
   lineinfile:
-    dest: /etc/systemd/system.conf
+    path: /etc/systemd/system.conf
     regexp: '^RebootWatchdogSec=.*$'
     line: "RebootWatchdogSec=5min"
     state: present
