@@ -383,13 +383,33 @@
 - name: enable docker.service
   ansible.builtin.systemd:
     name: docker.service
-
 - name: "add initramfs-tools scripts: script file (LVM rebooter and log handling)"
   ansible.builtin.copy:
-    src: ../src/debian/initramfs-tools/
+    src: ../src/debian/initramfs-tools/scripts/
     dest: /etc/initramfs-tools/scripts/
     mode: '0755'
   register: initramfs_tools_scripts
+
+- name: "get the /var/log/ device"
+  command: "findmnt -n -o SOURCE --target /var/log"
+  register: varlog_dev
+
+- name: "set_fact /var/log/ device"
+  set_fact:
+    lvm_rebooter_log_device: "{{ varlog_dev.stdout }}"
+
+- name: "get the /var/log/ relative path"
+  shell: "realpath --relative-to=$(findmnt -n -o TARGET --target /var/log/) /var/log"
+  register: varlog_path
+
+- name: "set_fact /var/log/ relative path"
+  set_fact:
+    lvm_rebooter_log_path: "{{ varlog_path.stdout }}"
+
+- name: "Copy rebooter.conf"
+  template:
+    src: ../src/debian/initramfs-tools/conf.d/rebooter.conf.j2
+    dest: /etc/initramfs-tools/conf.d/rebooter.conf
 
 - name: "configure initramfs-tools to use busybox"
   lineinfile:
