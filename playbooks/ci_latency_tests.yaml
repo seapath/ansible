@@ -73,7 +73,7 @@
         dest: "/tmp/latency_tests/pcaps"
 
     - name: "Send pcap from publisher"
-      command: "bittwist -i {{ sv_interface }} \
+      command: "bittwist -i {{ sv_interface }} -l {{ pcap_loop | default('1') }} \
               /tmp/latency_tests/pcaps/{{ pcap_file }}"
       register: cmd
 
