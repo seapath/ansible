@@ -31,8 +31,6 @@
   become: true
   gather_facts: yes
   tasks:
-      - debug:
-          var: lvm_volumes
       - name: Prepare OSD disk
         block:
           - name: Refresh LVM VG
@@ -68,7 +66,7 @@
                       part_start: "-{{ lvm_volumes[0].device_size }}" # Negative numbers specifie the distance from the end of the disk
                     register: ceph_osd_result
                   - name: Get disk/by-path of OSD disk
-                    command: "find -L /dev/disk/by-path -samefile {{ ceph_osd_result.disk.dev }} -print -quit"
+                    command: "/usr/bin/find -L /dev/disk/by-path -samefile {{ ceph_osd_result.disk.dev }} -print -quit"
                     register: ceph_osd_finddisk
                   - name: Create volume group on the partition
                     community.general.lvg:
@@ -85,6 +83,8 @@
               - lvm_volumes is not defined or ansible_lvm['lvs'][lvm_volumes[0].data] is not defined
         when:
           - new_ceph_installation.changed
+
+- import_playbook: cluster_setup_ceph_expansion.yaml
 
 - import_playbook: ../ceph-ansible/site.yml
 
