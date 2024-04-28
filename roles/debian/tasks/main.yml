@@ -203,14 +203,14 @@
     state: absent
   check_mode: true
   changed_when: false
-  register: checkGRUB_CMDLINE_LINUX
+  register: check_grub_cmdline_linux
 
 - name: "make sure GRUB_CMDLINE_LINUX exists 2/2"
   lineinfile:
     path: /etc/default/grub
     state: present
     line: "GRUB_CMDLINE_LINUX=\" \""
-  when: checkGRUB_CMDLINE_LINUX.found == 0
+  when: check_grub_cmdline_linux.found == 0
 
 - name: "make sure GRUB_CMDLINE_LINUX starts with a space"
   lineinfile:
