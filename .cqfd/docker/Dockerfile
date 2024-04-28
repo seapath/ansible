@@ -20,7 +20,7 @@ RUN set -x \
         vim \
     && sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen \
     && python3 -m venv --system-site-packages /env \
-    && /env/bin/pip install ansible==2.10.7 ansible-lint==5.4.0 yamllint six netaddr \
+    && /env/bin/pip install ansible==2.10.7 ansible-lint==5.4.0 yamllint six netaddr jmespath \
     && rm -rf /var/lib/{apt,dpkg,cache,log}/*
 
 ENV PATH="/env/bin:/env/usr/bin:/env/sbin:/env/usr/sbin:$PATH"
