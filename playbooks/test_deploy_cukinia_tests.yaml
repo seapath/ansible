@@ -30,6 +30,8 @@
               dest: 'hypervisor_security_tests.d/passwd.conf' }
           - { src: 'hypervisor_security_tests.d/groups.conf.j2',
               dest: 'hypervisor_security_tests.d/groups.conf' }
+          - { src: 'common_security_tests.d/sudo.conf.j2',
+              dest: 'common_security_tests.d/sudo.conf' }
     - name: Create /usr/share/cukinia/includes
       file:
         path: /usr/share/cukinia/includes
