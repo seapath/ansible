@@ -15,10 +15,10 @@
         - name: Create live migration user
           user:
             name: "{{ livemigration_user }}"
-            shell: /bin/sh
+            shell: /bin/bash
             system: true
             group: libvirt
-            create_home: false
+            create_home: true
         - name: Unlock the user
           replace:
               path: /etc/shadow
@@ -33,11 +33,11 @@
             ssh_key_file: .ssh/id_rsa
             ssh_key_passphrase: ""
             force: false
-        - name: create livemigration lsh directory
+        - name: create livemigration .ssh directory
           file:
-            path: "/etc/ssh/{{ livemigration_user }}"
+            path: "/home/{{ livemigration_user }}/.ssh"
             state: directory
-            mode: '0755'
+            mode: '0700'
             owner: "{{ livemigration_user }}"
         - name: Get root user's home directory
           shell: getent passwd root | cut -d ':' -f6
@@ -51,7 +51,7 @@
           authorized_key:
             user: "{{ livemigration_user }}"
             state: present
-            path: "/etc/ssh/{{ livemigration_user }}/authorized_keys"
+            path: "/home/{{ livemigration_user }}/.ssh/authorized_keys"
             key: "{{ lookup('file','buffer/' + item + '-id_rsa.pub') }}"
           with_items: "{{ groups['cluster_machines'] }}"
         - name: Copy the key to admin user's authorized_keys using Ansible module
