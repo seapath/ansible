@@ -24,6 +24,7 @@ RUN set -x \
         python3-pip \
         python3-pygments \
         python3-sphinx \
+	python3-matplotlib \
         python3-sphinx-notfound-page \
         rstcheck \
         rsync \
