@@ -20,6 +20,12 @@
     path: /var/log/syslog-ng
     state: directory
     mode: '0755'
+- name: Copy syslog-ng conf file
+  template:
+    src: ../templates/syslog-ng.conf.j2
+    dest: /etc/syslog-ng/syslog-ng.conf
+    mode: '0644'
+  notify: restart syslog-ng
 - block:
   - name: Create /etc/syslog-ng/cert.d
     file:
@@ -46,12 +52,6 @@
       src: "{{ syslog_tls_server_ca }}"
       dest: /etc/syslog-ng/ca.d/serverca.pem
       mode: '0644'
-  - name: Copy syslog-ng conf file
-    template:
-      src: ../templates/syslog-ng.conf.j2
-      dest: /etc/syslog-ng/syslog-ng.conf
-      mode: '0644'
-    notify: restart syslog-ng
   when:
     - syslog_tls_ca is defined
     - syslog_tls_key is defined
