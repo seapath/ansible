@@ -40,6 +40,10 @@ jobs:
         run: cd ${{ env.WORK_DIR }};
              ci/launch-yocto.sh test_vms;
 
+      - name: Launch latency tests
+        run: cd ${{ env.WORK_DIR }};
+            ci/launch-yocto.sh test_latency
+
       - name: Upload test report
         if: ${{ always() && steps.conf.conclusion == 'success' }}
         run: cd ${{ env.WORK_DIR }};
