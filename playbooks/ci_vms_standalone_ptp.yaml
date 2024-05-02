@@ -18,14 +18,16 @@
       when: "'phc2sys' in services"
 
     - name: Copy systemd service file to server
-      copy:
-        src: ../src/phc2sys.service
-        dest: /etc/systemd/system
+      template:
+        src: ../templates/phc2sys.service.j2
+        dest: /etc/systemd/system/phc2sys.service
         owner: root
         group: root
 
     - name: Start phc2sys service if not started
       service:
         name: phc2sys
+        enabled: true
+        daemon_reload: true
         state: started
 
