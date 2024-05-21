@@ -41,17 +41,33 @@
         owner: root
         group: systemd-network
 
-- name: Apply systemd-networkd config with role
+- name: Apply network config with netplan
   become: true
   hosts:
     - cluster_machines
     - standalone_machine
-  vars_files:
-    - ../vars/network_vars.yml
-  vars:
-    systemd_networkd_apply_config: "{{ apply_network_config | default(false) }}"
-  roles:
-    - systemd_networkd
+  tasks:
+    - name: Remove all preinstalled Netplan configuration files
+      file:
+        path: /etc/netplan
+        state: absent
+    - name: Create /etc/netplan directory
+      file:
+        path: /etc/netplan
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+    - name: Copy Netplan configuration file
+      template:
+        src: ../templates/netplan.yaml.j2
+        dest: /etc/netplan/01-seapath.yaml
+        owner: root
+        group: root
+        mode: '0600'
+    - name: Apply Netplan configuration
+      command: netplan apply
+      register: result
 
 - name: Apply systemd-networkd config on VMs
   become: true

@@ -1,0 +1,19 @@
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    {{ network_interface }}:
+      dhcp4: no
+      dhcp6: no
+  bridges:
+    br0:
+      interfaces:
+        - {{ network_interface }}
+      addresses:
+        - {{ ip_addr }}/24
+      routes:
+        - to: 0.0.0.0/0
+          via: {{ gateway_addr }}
+      nameservers:
+        addresses:
+          - {{ dns_servers }}
