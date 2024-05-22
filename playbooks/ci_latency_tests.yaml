@@ -96,6 +96,8 @@
 - name: Launch pcap sending
   hosts: publisher_machine
   become: true
+  vars:
+      pcap_loop: 10
   tasks:
     - name: "Create pcaps directory if it doesn't exist"
       file:
@@ -108,16 +110,11 @@
         dest: "/tmp/latency_tests/pcaps"
 
     - name: "Send pcap from publisher"
-      command: "bittwist -i {{ sv_interface }} \
-              /tmp/latency_tests/pcaps/{{ pcap_file }}"
+      command: "bittwist \
+                -i {{ sv_interface }} \
+                -l {{ pcap_loop }} \
+                /tmp/latency_tests/pcaps/{{ pcap_file }}"
       register: cmd
-
-    - name: "Wait for pcaps to be received by sv_timestamp_logger"
-      pause:
-          seconds: 5
-
-    - debug: msg= "{{ cmd.stderr }}"
-      when: ansible_verbosity >= 2
 
 - name: Fetch results
   hosts:
