@@ -1,7 +1,10 @@
 [Global]
-slaveOnly                1
-gmCapable                1
-
+{% if ptp_slave %}
+slaveOnly		 1
+{% else %}
+slaveOnly		 0
+gmCapable		 1
+{% endif %}
 domainNumber             0
 
 # Announce interval: 1s
@@ -20,7 +23,7 @@ priority1                255
 priority2                255
 # Default clock class : any specialised clock will be better (ie a GPS Grand Master Clock)
 network_transport        L2
-delay_mechanism          P2P
+delay_mechanism          E2E
 clockClass 248
 clockAccuracy 0xFE
 offsetScaledLogVariance 0xFFFF
