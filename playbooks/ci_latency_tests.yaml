@@ -96,8 +96,6 @@
 - name: Launch pcap sending
   hosts: publisher_machine
   become: true
-  vars:
-      pcap_loop: 10
   tasks:
     - name: "Create pcaps directory if it doesn't exist"
       file:

@@ -6,6 +6,9 @@
 
 name: CI weekly Yocto
 
+env:
+    PCAP_LOOP: 6000
+
 on:
   schedule:
     - cron: '30 22 * * 6'
