@@ -45,7 +45,7 @@ then
 fi
 
 echo "Install roles in requirements.yaml"
-ansible-galaxy install --roles-path="$(pwd)/roles" -r ansible-requirements.yaml
+ansible-galaxy install --force --roles-path="$(pwd)/roles" -r ansible-requirements.yaml
 
 echo "Install collections in ansible-requirements.yaml"
 ansible-galaxy collection install --collections-path="$(pwd)/collections" -r \
