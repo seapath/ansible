@@ -33,38 +33,20 @@
         - 01-init
         - 00-init-dhcp
         - 00-init
-    - name: Copy 80-wired networkd file
-      ansible.builtin.copy:
-        src: ../src/debian/80-wired.network
-        dest: /etc/systemd/network/80-wired.network
-        mode: '0640'
-        owner: root
-        group: systemd-network
+    - block:
+        - name: Copy Netplan configuration file
+          template:
+            src: "{{ netplan_template_path }}"
+            dest: /etc/netplan/01-seapath.yaml
+            owner: root
+            group: root
+            mode: '0600'
+        - name: Apply Netplan configuration
+          command: netplan apply
+          register: result
+      when: netplan_template_path is defined
 
-- name: Apply systemd-networkd config with role
-  become: true
-  hosts:
-    - cluster_machines
-    - standalone_machine
-  vars_files:
-    - ../vars/network_vars.yml
-  vars:
-    systemd_networkd_apply_config: "{{ apply_network_config | default(false) }}"
-  roles:
-    - systemd_networkd
-
-- name: Apply systemd-networkd config on VMs
-  become: true
-  hosts:
-    - VMs
-  vars_files:
-    - ../vars/network_vars.yml
-  vars:
-    systemd_networkd_apply_config: "true"
-  roles:
-    - systemd_networkd
-
-- name: Configure cluster network
+- name: Configure HSR cluster network
   hosts: cluster_machines
   become: true
   tasks:
@@ -77,18 +59,6 @@
           state: stopped
           enabled: false
         when: "'hsr.service' in services"
-      - name: Remove team0 bridge in OVS
-        command: "/usr/bin/ovs-vsctl --if-exists del-br team0"
-      - name: Create team0 bridge in OVS
-        command: "/usr/bin/ovs-vsctl add-br team0"
-      - name: Add interface team0_0 to team0 bridge
-        command: "/usr/bin/ovs-vsctl -- --if-exists del-port {{ team0_0 }} -- add-port team0 {{ team0_0 }}"
-      - name: Add interface team0_1 to team0 bridge
-        command: "/usr/bin/ovs-vsctl -- --if-exists del-port {{ team0_1 }} -- add-port team0 {{ team0_1 }}"
-      - name: Enable RSTP on team0 bridge
-        command: "/usr/bin/ovs-vsctl set Bridge team0 rstp_enable=true"
-      - name: Set RSTP priority on team0 bridge
-        command: "/usr/bin/ovs-vsctl set Bridge team0 other_config=rstp-priority={{ br_rstp_priority }}"
       when:
         - cluster_protocol is not defined or cluster_protocol != "HSR" or hsr_mac_address is not defined
         - skip_recreate_team0_config is not defined or skip_recreate_team0_config is not true
@@ -216,48 +186,6 @@
         state: absent
         regexp: '^127.*debian'
 
-- name: Configure DNS with resolved
-  hosts:
-    - cluster_machines
-    - standalone_machine
-    - VMs
-  become: true
-  tasks:
-    - block:
-      - name: configure LLMNR /etc/systemd/resolved.conf
-        lineinfile:
-          dest: /etc/systemd/resolved.conf
-          regexp: "^#?LLMNR="
-          line: "LLMNR=no"
-          state: present
-        register: resolved_conf1
-      - name: configure DNS /etc/systemd/resolved.conf
-        lineinfile:
-          dest: /etc/systemd/resolved.conf
-          regexp: "^#?DNS="
-          line: "DNS={{ dns_servers }}"
-          state: present
-        register: resolved_conf2
-      - name: Create resolv.conf stub link
-        ansible.builtin.file:
-          src: /run/systemd/resolve/resolv.conf
-          dest: /etc/resolv.conf
-          state: link
-          force: true
-        register: resolved_conf3
-      - name: Enable systemd-resolved
-        ansible.builtin.systemd:
-          name: systemd-resolved
-          state: started
-          enabled: true
-      - name: Restart systemd-resolved
-        ansible.builtin.systemd:
-          name: systemd-resolved
-          state: restarted
-          enabled: true
-        when: resolved_conf1.changed or resolved_conf2.changed or resolved_conf3.changed
-      when: dns_servers is defined
-
 - name: disable resolved if no dns server is defined
   hosts:
     - cluster_machines
@@ -372,40 +300,6 @@
         interface: "{{ item.key }}"
         sriov_network_pool_name: "{{ 'sr-iov-net-' + item.key }}"
       when: sriov is defined
-
-- name: configure guests br0 interfaces
-  hosts: cluster_machines
-  become: true
-  tasks:
-    - debug:
-        var: item.value
-      with_items: "{{ interfaces_on_br0 | dict2items }}"
-      when: interfaces_on_br0 is defined
-    - name: create 00-INTERFACEX.netdev
-      template:
-        src: ../templates/00-INTERFACEX.netdev.j2
-        dest: /etc/systemd/network/00-{{ item.key }}.netdev
-        owner: "root"
-        group: "systemd-network"
-        mode: '0644'
-      with_items: "{{ interfaces_on_br0 | dict2items }}"
-      when: interfaces_on_br0 is defined
-      register: interfaces_br0_netdev
-    - name: create 00-INTERFACEX.network
-      template:
-        src: ../templates/00-INTERFACEX.network.j2
-        dest: /etc/systemd/network/00-{{ item.key }}.network
-        owner: "root"
-        group: "systemd-network"
-        mode: '0644'
-      with_items: "{{ interfaces_on_br0 | dict2items }}"
-      when: interfaces_on_br0 is defined
-      register: interfaces_br0_network
-    - name: Reload systemd-networkd configuration
-      ansible.builtin.service:
-        name: systemd-networkd
-        state: reloaded
-      when: interfaces_br0_netdev.changed or interfaces_br0_netdev.changed
 
 - name: push iptables rules
   hosts: cluster_machines
