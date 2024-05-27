@@ -13,6 +13,9 @@ on:
   workflow_call:
   workflow_dispatch:
 
+permissions:
+  actions: write
+
 jobs:
   ansible-lint:
     runs-on: self-hosted
