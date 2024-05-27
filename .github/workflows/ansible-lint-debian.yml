@@ -12,6 +12,9 @@ on:
     branches: [debian-main]
   workflow_call:
 
+permissions:
+  actions: write
+
 jobs:
   ansible-lint:
     runs-on: self-hosted
