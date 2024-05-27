@@ -7,7 +7,8 @@
 name: CI weekly Yocto
 
 env:
-    PCAP_LOOP: 6000
+  WORK_DIR: /tmp/seapath_ci_${{ github.run_id }}_${{ github.run_attempt }}_${{ github.sha }}
+  PCAP_LOOP: 6000
 
 on:
   schedule:
@@ -19,5 +20,42 @@ permissions:
   checks: write
 
 jobs:
-  call-workflow:
-    uses: ./.github/workflows/ci-yocto.yml
+  CI:
+    runs-on: [self-hosted, runner-SFL]
+    steps:
+
+      - name: Initialize sources
+        run: mkdir ${{ env.WORK_DIR }}; cd ${{ env.WORK_DIR }};
+             git clone -q --depth 1 --recurse-submodules -b main https://github.com/seapath/ci ci;
+             echo "CI sources downloaded successfully";
+             ci/launch-yocto.sh init;
+
+      - name: Configure SEAPATH
+        id: conf
+        run: cd ${{ env.WORK_DIR }};
+             ci/launch-yocto.sh conf;
+
+      - name: Launch system tests
+        run: cd ${{ env.WORK_DIR }};
+             ci/launch-yocto.sh system;
+
+      - name: Deploy VMs
+        run: cd ${{ env.WORK_DIR }};
+            ci/launch-yocto.sh deploy_vms;
+
+      - name: Launch VMs tests
+        run: cd ${{ env.WORK_DIR }};
+             ci/launch-yocto.sh test_vms;
+
+      - name: Launch latency tests
+        run: cd ${{ env.WORK_DIR }};
+            ci/launch-yocto.sh test_latency
+
+      - name: Upload test report
+        if: ${{ always() && steps.conf.conclusion == 'success' }}
+        run: cd ${{ env.WORK_DIR }};
+             ci/launch-yocto.sh report;
+
+      - name: Clean
+        if: always()
+        run: rm -rf $WORK_DIR;
