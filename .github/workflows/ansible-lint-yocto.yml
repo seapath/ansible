@@ -12,6 +12,9 @@ on:
     branches: [main]
   workflow_call:
 
+permissions:
+  checks: write
+
 jobs:
   ansible-lint:
     runs-on: self-hosted

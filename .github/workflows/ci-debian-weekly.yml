@@ -13,6 +13,10 @@ on:
   workflow_call:
   workflow_dispatch:
 
+permissions:
+  actions: write
+  checks: write
+
 jobs:
   CI:
     runs-on: [self-hosted, runner-RTE-12]

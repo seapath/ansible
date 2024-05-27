@@ -12,6 +12,10 @@ on:
     branches: [main]
   workflow_call:
 
+permissions:
+  actions: write
+  checks: write
+
 jobs:
   CI:
     runs-on: [self-hosted, runner-SFL]

@@ -11,6 +11,9 @@ on:
     - cron: '30 22 * * 6'
   workflow_dispatch:
 
+permissions:
+  actions: write
+
 jobs:
   call-workflow:
     uses: ./.github/workflows/ansible-lint-yocto.yml
