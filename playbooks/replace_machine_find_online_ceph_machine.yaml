@@ -16,7 +16,7 @@
         machine_up: "{{ not machine_up_raw.failed }}"
 
 - name: Register the machine to use to control Ceph
-  hosts: localhost
+  hosts: "{{ mon_group_name|default('mons') }}"
   vars:
     mon_group_name: mons
     unvalid_machine_filter: ":!{{ machine_to_remove | default(mon_to_kill | default('fake')) }}"
