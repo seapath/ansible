@@ -287,9 +287,14 @@
     enabled: yes
     state: started
 
-
 - name: enable libvirtd.service
   ansible.builtin.systemd:
     name: libvirtd.service
     enabled: yes
     state: started
+
+- name: Create system alternative for a debian kvm path
+  alternatives:
+    name: "debian kvm"
+    path: "/usr/libexec/qemu-kvm"
+    link: "/usr/bin/qemu-system-x86_64"
