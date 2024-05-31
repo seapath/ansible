@@ -39,7 +39,7 @@ all:
           vm_template: "../templates/vm/guest.xml.j2"
           vm_disk: "../vm_images/guest.img.gz"
           disk_extract: true
-          local_disk:
+          additionnal_disk:
               - disk_file: second_disk.qcow2
           vm_features: []
           preferred_host: pc3 # Optional
@@ -65,7 +65,7 @@ all:
 #                 templates/vm/guest.xml.j2. In most cases, you should not
 #                 change this.
 #  * vm_disk: the image to use for the VM creation
-#  * local_disk: list of additionnal VM disks.
+#  * additionnal_disk: list of additionnal VM disks.
 #    ** disk_file: name of the disk.
 #  * disk_extract: if the disk image is gzipped, set the value to true.
 #  * vm_features: the VM feature (list). Can contained one or more of the

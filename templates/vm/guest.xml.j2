@@ -103,8 +103,8 @@
            <target dev="vda" bus="virtio"/>
         </disk>
         {% endif %}
-        {% if vm.local_disk is defined %}
-        {% for disk in vm.local_disk %}
+        {% if vm.additionnal_disk is defined %}
+        {% for disk in vm.additionnal_disk %}
         <disk type="file" device="disk">
            <driver name="qemu" type="{{ 'raw' if vm.disk_extract is defined and vm.disk_extract | bool is defined else 'qcow2' }}"/>
            <source file="/var/lib/libvirt/images/{{ disk.disk_file }}"/>
