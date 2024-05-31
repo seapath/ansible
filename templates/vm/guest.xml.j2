@@ -89,6 +89,13 @@
     </pm>
     <devices>
         <emulator>/usr/bin/qemu-system-x86_64</emulator>
+        {% if vm.standalone_main_disk is defined %}
+        <disk type="file" device="disk">
+           <driver name="qemu" type="{{ 'raw' if vm.disk_extract is defined and vm.disk_extract | bool is defined else 'qcow2' }}"/>
+           <source file="/var/lib/libvirt/images/{{ vm.standalone_main_disk }}"/>
+           <target dev="vda" bus="virtio"/>
+        </disk>
+        {% endif %}
         {% if vm.local_disk is defined %}
         {% for disk in vm.local_disk %}
         <disk type="file" device="disk">
