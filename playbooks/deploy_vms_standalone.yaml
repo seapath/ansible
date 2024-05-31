@@ -47,6 +47,13 @@
         creates: "{{ hostvars[item].inventory_hostname }}.img"
       with_items: "{{ groups['VMs'] }}"
       when: disk_copy | bool and hostvars[item].disk_extract is defined and hostvars[item].disk_extract | bool
+    - name: Add main disk to disk list
+      # This is only done in standalone because the disk is handled by vm-manager in the cluster
+      set_fact:
+        standalone_main_disk: "{{ hostvars[item].inventory_hostname }}.qcow2"
+      delegate_to: "{{ item }}"
+      delegate_facts: true
+      with_items: "{{ groups['VMs'] }}"
     - name: export VM config for debug in /tmp
       template:
         src: "{{ hostvars[item].vm_template }}"
