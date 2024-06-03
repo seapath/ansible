@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  actions: write
+  checks: write
 
 jobs:
   call-workflow:
