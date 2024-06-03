@@ -272,3 +272,10 @@
     name: ptp_vsock.service
     enabled: yes
     state: started
+
+- block:
+  - name: make sure conntrackd package is installed
+    ansible.builtin.apt:
+      name: conntrackd
+      state: present
+  when: conntrackd_ip_list is defined

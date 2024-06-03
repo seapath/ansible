@@ -89,6 +89,11 @@
         command: "/usr/bin/ovs-vsctl set Bridge team0 rstp_enable=true"
       - name: Set RSTP priority on team0 bridge
         command: "/usr/bin/ovs-vsctl set Bridge team0 other_config=rstp-priority={{ br_rstp_priority }}"
+      - name: Restart conntrackd
+        ansible.builtin.systemd:
+          name: conntrackd
+          state: restarted
+        when: conntrackd_ip_list is defined
       when:
         - cluster_protocol is not defined or cluster_protocol != "HSR" or hsr_mac_address is not defined
         - skip_recreate_team0_config is not defined or skip_recreate_team0_config is not true
@@ -444,6 +449,32 @@
       ansible.builtin.shell:
         cmd: "/usr/sbin/iptables-restore < /etc/iptables/rules.v4"
       when: iptables_rules.changed or iptables_rules_template.changed
+
+- name: conntrackd
+  hosts: cluster_machines
+  become: true
+  tasks:
+    - block:
+        - name: copy conntrackd.conf file
+          template:
+            src: ../src/conntrackd/conntrackd.conf.j2
+            dest: /etc/conntrackd/conntrackd.conf
+            group: root
+            owner: root
+            mode: '0644'
+          register: conntrackdconf
+        - name: enable conntrackd.service
+          ansible.builtin.systemd:
+            name: conntrackd.service
+            enabled: yes
+            state: started
+        - name: enable conntrackd.service
+          ansible.builtin.systemd:
+            name: conntrackd.service
+            enabled: yes
+            state: restarted
+          when: conntrackdconf.changed
+      when: conntrackd_ip_list is defined
 
 - name: Configure snmp
   hosts:

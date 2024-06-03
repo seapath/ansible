@@ -1,0 +1,50 @@
+Sync {
+        Mode NOTRACK {
+                DisableInternalCache on
+                DisableExternalCache on
+                StartupResync on
+        }
+        Multicast {
+                IPv4_address 225.0.0.50
+                Group 3780
+		IPv4_interface {{ cluster_ip_addr }}
+                Interface team0
+                SndSocketBuffer 1249280
+                RcvSocketBuffer 1249280
+                Checksum on
+        }
+        Options {
+                TCPWindowTracking Off
+                ExpectationSync On
+        }
+}
+General {
+        Systemd on
+        HashSize 32768
+        HashLimit 131072
+        Syslog on
+        LockFile /var/lock/conntrackd.lock
+        UNIX {
+                Path /var/run/conntrackd.sock
+        }
+        NetlinkBufferSize 2097152
+        NetlinkBufferSizeMaxGrowth 8388608
+        NetlinkOverrunResync On
+        NetlinkEventsReliable Off
+        EventIterationLimit 100
+        Filter From Kernelspace {
+                Protocol Accept {
+                        TCP
+                }
+                Address Accept {
+                        {{ conntrackd_ip_list | indent( width=24, first=False) }}
+                }
+                State Accept {
+                        ESTABLISHED CLOSED TIME_WAIT CLOSE_WAIT for TCP
+                }
+        }
+        Scheduler {
+                Type RR
+                Priority 0
+        }
+}
