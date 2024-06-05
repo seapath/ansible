@@ -5,6 +5,15 @@
 # Pacemaker.
 
 ---
+
+- name: Get distrebution variables
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  tasks:
+  - include_vars: "../vars/{{ ansible_distribution }}_paths.yml"
+
 - name: Configure SEAPATH specific files
   hosts: cluster_machines
   become: true
@@ -104,10 +113,6 @@
   hosts: unconfigured_machine_group
   become: true
   tasks:
-      - include_vars: ../vars/debian_paths.yml
-        when: ansible_distribution == 'Debian'
-      - include_vars: ../vars/centos_paths.yml
-        when: ansible_distribution == 'CentOS'
       - name: Start Pacemaker
         ansible.builtin.systemd:
             name: pacemaker
