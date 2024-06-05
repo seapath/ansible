@@ -6,6 +6,14 @@
 # can be used on cluster machines and VMs.
 
 ---
+- name: Get distrebution variables
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  tasks:
+  - include_vars: "../vars/{{ ansible_distribution }}_paths.yml"
+
 - name: Network configuration basics
   hosts:
     - cluster_machines
@@ -180,10 +188,6 @@
   vars:
     apply_config: "{{ apply_network_config | default(false) }}"
   tasks:
-    - include_vars: ../vars/debian_paths.yml
-      when: ansible_distribution == 'Debian'
-    - include_vars: ../vars/centos_paths.yml
-      when: ansible_distribution == 'CentOS'
     - name: Create OVS configuration
       template:
         src: ../templates/ovs_configuration.json.j2
@@ -376,10 +380,6 @@
   vars:
     apply_config: "{{ apply_network_config | default(false) }}"
   tasks:
-    - include_vars: ../vars/debian_paths.yml
-      when: ansible_distribution == 'Debian'
-    - include_vars: ../vars/centos_paths.yml
-      when: ansible_distribution == 'CentOS'
     - name: Populate service facts
       service_facts:
     - name: stop and disable systemd-timesyncd if it exists
@@ -433,10 +433,6 @@
     - VMs
   become: true
   tasks:
-    - include_vars: ../vars/debian_paths.yml
-      when: ansible_distribution == 'Debian'
-    - include_vars: ../vars/centos_paths.yml
-      when: ansible_distribution == 'CentOS'
     - name: stop and disable chrony
       service:
         name: "{{ service_name_chrony }}"

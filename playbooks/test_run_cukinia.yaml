@@ -5,6 +5,15 @@
 # CSV.
 
 ---
+
+- name: Get distrebution variables
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  tasks:
+  - include_vars: "../vars/{{ ansible_distribution }}_paths.yml"
+
 - hosts:
     - cluster_machines
     - standalone_machine
@@ -17,10 +26,6 @@
     tests_result_name: "cukinia_{{ inventory_hostname }}.xml"
     cukinia_test_prefix: ".."
   tasks:
-    - include_vars: ../vars/debian_paths.yml
-      when: ansible_distribution == 'Debian'
-    - include_vars: ../vars/centos_paths.yml
-      when: ansible_distribution == 'CentOS'
     - name: Create temporary Cukinia directory
       tempfile:
         state: directory
@@ -47,10 +52,6 @@
     cluster_tests_result_name: "cukinia_cluster_{{ inventory_hostname }}.xml"
     cukinia_test_prefix: ".."
   tasks:
-    - include_vars: ../vars/debian_paths.yml
-      when: ansible_distribution == 'Debian'
-    - include_vars: ../vars/centos_paths.yml
-      when: ansible_distribution == 'CentOS'
     - name: Run tests cluster test
       shell:
         cmd: >-
