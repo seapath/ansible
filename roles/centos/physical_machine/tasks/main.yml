@@ -163,6 +163,10 @@
     state: directory
     mode: '0755'
 
+- name: temp fix for synchronize to force evaluate variables
+  set_fact:
+    ansible_host: "{{ ansible_host }}"
+
 - name: Synchronization of src python3-setup-ovs on the control machine to dest on the remote hosts
   ansible.posix.synchronize:
     src: ../src/debian/python3-setup-ovs
