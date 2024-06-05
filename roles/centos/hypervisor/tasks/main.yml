@@ -249,11 +249,9 @@
 
 - name: Copy ptp_status executable files
   ansible.builtin.copy:
-    src: ../src/debian/ptpstatus/{{ item }}
-    dest: /usr/local/bin/{{ item }}
+    src: ../src/debian/ptpstatus/ptpstatus_script/ptpstatus.sh
+    dest: /usr/local/bin/ptpstatus.sh
     mode: '0755'
-  with_items:
-    - ptpstatus.sh
 - name: Copy ptp_vsock executable files
   ansible.builtin.copy:
     src: ../src/debian/ptp_vsock.py
