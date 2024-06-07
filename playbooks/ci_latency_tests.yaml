@@ -52,6 +52,7 @@
         daemon-reload: true
         state: restarted
 
+- name: Launch sv timestamp logger on publisher
   hosts: publisher_machine
   become: true
   tasks:
