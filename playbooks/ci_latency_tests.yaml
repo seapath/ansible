@@ -11,6 +11,7 @@
         file:
           path: "/tmp/latency_tests/"
           state: directory
+          mode: '0777'
       - name: "Copy archive"
         copy:
           src: "../ci_latency_tests/build/sv_timestamp_logger.tar"
@@ -116,16 +117,17 @@
       register: cmd
 
 - name: Fetch results
+  become: true
   hosts:
       - VMs
       - publisher_machine
-  become: true
   tasks:
     - name: "Stop docker container"
       command: docker stop sv_timestamp_logger
 
     - name: "Copy results to ansible directory"
-      fetch:
+      synchronize:
         src: "/tmp/latency_tests/ts_{{ inventory_hostname }}.txt"
         dest: "../ci_latency_tests/results/"
-        flat: yes
+        mode: pull
+        rsync_path: rsync
