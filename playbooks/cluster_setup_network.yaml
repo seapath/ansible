@@ -475,6 +475,13 @@
             state: restarted
           when: conntrackdconf.changed
       when: conntrackd_ip_list is defined
+    - block:
+        - name: stop and disable conntrackd.service
+          ansible.builtin.systemd:
+            name: conntrackd.service
+            enabled: no
+            state: stopped
+      when: conntrackd_ip_list is defined
 
 - name: Configure snmp
   hosts:
