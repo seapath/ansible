@@ -152,18 +152,6 @@
     - "ovs"
   when: removeslices.changed
 
-- name: make sure tuned package is installed
-  ansible.builtin.apt:
-    name: tuned
-    state: present
-
-- name: Remove tuna
-  ansible.builtin.apt:
-    autoremove: yes
-    purge: true
-    name: tuna
-    state: absent
-
 - name: Remove old isolation files
   file:
     state: absent
@@ -272,10 +260,3 @@
     name: ptp_vsock.service
     enabled: yes
     state: started
-
-- block:
-  - name: make sure conntrackd package is installed
-    ansible.builtin.apt:
-      name: conntrackd
-      state: present
-  when: conntrackd_ip_list is defined
