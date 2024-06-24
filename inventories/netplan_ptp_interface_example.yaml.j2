@@ -1,0 +1,21 @@
+# Copyright (C) 2024, SFL (https://savoirfairelinux.com)
+# SPDX-License-Identifier: Apache-2.0
+# This netplan file defines an interface for receiving PTP frames
+# If ptp_vlanid is define, this interface will be on a vlan
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    {{ ptp_interface }}:
+      dhcp4: no
+      dhcp6: no
+      optional: true
+{% if ptp_vlanid is defined %}
+  vlans:
+    {{ ptp_interface }}.{{ ptp_vlanid }}:
+      id: {{ ptp_vlanid }}
+      link: {{ ptp_interface }}
+      addresses: []
+      dhcp4: no
+      dhcp6: no
+{% endif %}
