@@ -14,17 +14,17 @@
   become: true
   tasks:
     - block:
-      - name: wipe the /etc/systemd/network/ directory content 1/2, list files
+      - name: wipe the /etc/netplan/ directory content 1/2, list files
         find:
-          paths: /etc/systemd/network/
+          paths: /etc/netplan/
           patterns: "*"
-        register: networkd_files_to_delete
-      - name: wipe the /etc/systemd/network/ directory content 2/2, remove files
+        register: network_files_to_delete
+      - name: wipe the /etc/netplan/ directory content 2/2, remove files
         file:
           path: "{{ item.path }}"
           state: absent
-        with_items: "{{ networkd_files_to_delete.files }}"
-      when: remove_all_networkd_config is defined and remove_all_networkd_config is true
+        with_items: "{{ network_files_to_delete.files }}"
+      when: remove_all_network_config is defined and remove_all_network_config is true
     - name: Remove FAI network configuration
       file:
         path: "/etc/systemd/network/{{ item }}.network"
