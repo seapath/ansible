@@ -1,3 +1,9 @@
+- name: Ensure netplan package is installed
+  apt:
+    name: netplan.io
+    state: present
+    update_cache: yes
+    install_recommends: no
 - name: disable vim defaults
   lineinfile:
     dest: /etc/vim/vimrc
