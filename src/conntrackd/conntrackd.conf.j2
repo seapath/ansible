@@ -36,8 +36,8 @@ General {
                 Protocol Accept {
                         TCP
                 }
-                Address Accept {
-                        {{ conntrackd_ip_list | indent( width=24, first=False) }}
+                Address Ignore {
+                        {{ conntrackd_ignore_ip_list | indent( width=24, first=False) }}
                 }
                 State Accept {
                         ESTABLISHED CLOSED TIME_WAIT CLOSE_WAIT for TCP

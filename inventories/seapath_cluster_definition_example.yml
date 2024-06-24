@@ -337,7 +337,8 @@ all:
         extra_debiansnmp_sudoers: |
           Debian-snmp     ALL = (hacluster) NOPASSWD:EXEC: /usr/local/bin/snmp_crmstatus.sh ""
 
-        # optional conntrackd synchronization configuration. This is useful when using the hosts as routers if you want the conntrack tables to be synchronized among hosts. If conntrackd_ip_list is defined it will enable the appropriate portion of the playbook, and the content will be used as the list of IP addresses to enable conntrack synchronization on.
-        conntrackd_ip_list: |
-          IPv4_address 10.0.0.0/8
-          IPv4_address 192.168.99.0/24
+        # optional conntrackd synchronization configuration. This is useful when using the hosts as routers if you want the conntrack tables to be synchronized among hosts. If conntrackd_ignore_ip_list is defined it will enable the appropriate portion of the playbook, and the content will be used as the list of IP addresses to IGNORE when synchronizing the conntrack table
+        conntrackd_ignore_ip_list: |
+          IPv4_address 127.0.0.0/8
+          IPv4_address 172.0.0.0/8
+          IPv4_address 192.0.0.0/8
