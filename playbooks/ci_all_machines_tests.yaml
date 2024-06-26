@@ -4,7 +4,10 @@
 # Ansible playbook that runs all Cukinia's tests.
 
 ---
-- hosts: "{{ machines_tested | default('cluster_machines') }}"
+- hosts: 
+    - cluster_machines
+    - standalone_machine
+    - VMs
   name: Cukinia tests
   tasks:
     - name: Create temporary Cukinia directory
@@ -23,4 +26,18 @@
         dest: >-
           {{ cukinia_test_prefix | default('..') }}/cukinia_{{ inventory_hostname
           }}.xml
+        flat: yes       
+
+- hosts: 
+    - cluster_machines
+    - standalone_machine
+  name: Get system info
+  tasks:
+    - name: Execute script
+      script: ../scripts/ci_system_info.py '{{ tmp_cukinia_dir.path }}/system_info.adoc'
+    - name: Fetch results
+      fetch: 
+        src: '{{ tmp_cukinia_dir.path }}/system_info.adoc'
+        dest: "{{ cukinia_test_prefix | default('..') }}/system_info.adoc"
         flat: yes
+...
