@@ -3,24 +3,30 @@
 network:
   version: 2
   ethernets:
-    team00:
-      match:
-        name: "{{ team0_0|default('0') }}"
+    "{{ team0_0|default('0') }}":
       mtu: 1800
       dhcp4: no
       dhcp6: no
       optional: true
-    team01:
-      match:
-        name: "{{ team0_1|default('0') }}"
+    "{{ team0_1|default('0') }}":
       mtu: 1800
       dhcp4: no
       dhcp6: no
       optional: true
+  bridges:
     team0:
+      interfaces:
+        - "{{ team0_0|default('0') }}"
+        - "{{ team0_1|default('0') }}"
       addresses:
         - "{{ cluster_ip_addr|default('0') }}/{{ subnet|default(24) }}"
+      openvswitch:
+        rstp: true
+        other-config:
+          rstp-priority: "{{ br_rstp_priority }}"
+      parameters:
+        stp: false
+        forward-delay: 4
       mtu: 1800
       dhcp4: no
       dhcp6: no
-      optional: true
