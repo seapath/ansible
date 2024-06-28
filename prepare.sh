@@ -7,7 +7,7 @@
 
 set -e
 
-cd "$(dirname "$(readlink -f \\"$0\\")")"
+cd "$(dirname "$(readlink -f "$0")")"
 
 if [ $# -ne 0 ] ; then
     echo "prepare.sh take no argument" 1>&2
