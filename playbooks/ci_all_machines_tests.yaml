@@ -40,4 +40,18 @@
         src: '{{ tmp_cukinia_dir.path }}/system_info.adoc'
         dest: "{{ cukinia_test_prefix | default('..') }}/system_info.adoc"
         flat: yes
+
+- hosts: 
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  name: Launch cyclictest
+  tasks:
+    - name: Execute script
+      script: ../scripts/run_cyclictest.py '{{ tmp_cukinia_dir.path }}/cyclictest.txt'
+    - name: Fetch results
+      fetch: 
+        src: '{{ tmp_cukinia_dir.path }}/cyclictest.txt'
+        dest: "{{ cukinia_test_prefix | default('..') }}/cyclictest_{{ inventory_hostname }}.txt"
+        flat: yes
 ...
