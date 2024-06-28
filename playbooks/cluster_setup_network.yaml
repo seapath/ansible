@@ -240,7 +240,7 @@
         lineinfile:
           dest: /etc/systemd/resolved.conf
           regexp: "^#?DNS="
-          line: "DNS={{ dns_servers }}"
+          line: "DNS={{ dns_servers | join(' ') if dns_servers is not string else dns_servers }}"
           state: present
         register: resolved_conf2
       - name: Create resolv.conf stub link
