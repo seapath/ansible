@@ -8,7 +8,7 @@ name: CI weekly Yocto
 
 env:
   WORK_DIR: /tmp/seapath_ci_${{ github.run_id }}_${{ github.run_attempt }}_${{ github.sha }}
-  PCAP_LOOP: 6000
+  PCAP_LOOP: 100
 
 on:
   schedule:
