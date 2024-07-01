@@ -44,8 +44,8 @@ skip_reboot_setup_network: true
 # It must be used with apply_network_config set to false, otherwise the reboot is already avoided.
 skip_recreate_team0_config: true
 # If set to true, the team0 ovs bridge of the cluster won't be destroyed and recreated by the network playbook.
-remove_all_networkd_config: true
-# If set to true, the network playbook will start by wiping the /etc/systemd/network/ directory content, this can help cleaning old conflicting files.
+remove_all_network_config: true
+# If set to true, the network playbook will start by wiping the /etc/netplan/ directory content, this can help cleaning old conflicting files.
 # THIS MUST NOT BE USED WITH skip_recreate_team0_config at the same time or the cluster network config won't be recreated.
 ```
 

@@ -14,17 +14,17 @@
   become: true
   tasks:
     - block:
-      - name: wipe the /etc/systemd/network/ directory content 1/2, list files
+      - name: wipe the network directory content 1/2, list files
         find:
-          paths: /etc/systemd/network/
+          paths: ["/etc/systemd/network/", "/etc/netplan"]
           patterns: "*"
-        register: networkd_files_to_delete
-      - name: wipe the /etc/systemd/network/ directory content 2/2, remove files
+        register: network_files_to_delete
+      - name: wipe the network directory content 2/2, remove files
         file:
           path: "{{ item.path }}"
           state: absent
-        with_items: "{{ networkd_files_to_delete.files }}"
-      when: remove_all_networkd_config is defined and remove_all_networkd_config is true
+        with_items: "{{ network_files_to_delete.files }}"
+      when: remove_all_network_config is defined and remove_all_network_config is true
     - name: Remove FAI network configuration
       file:
         path: "/etc/systemd/network/{{ item }}.network"
@@ -41,7 +41,7 @@
         owner: root
         group: systemd-network
 
-- name: Apply systemd-networkd config with role
+- name: Apply network with systemd-networkd roles
   become: true
   hosts:
     - cluster_machines
@@ -51,9 +51,10 @@
   vars:
     systemd_networkd_apply_config: "{{ apply_network_config | default(false) }}"
   roles:
-    - systemd_networkd
+    - role: systemd_networkd
+      when: netplan_configurations is not defined
 
-- name: Apply systemd-networkd config on VMs
+- name: Apply network with systemd-networkd roles on VMs
   become: true
   hosts:
     - VMs
@@ -62,7 +63,40 @@
   vars:
     systemd_networkd_apply_config: "true"
   roles:
-    - systemd_networkd
+    - role: systemd_networkd
+      when: netplan_configurations is not defined
+
+- name: Apply network config with netplan
+  become: true
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  tasks:
+    - block:
+        - name: Create /etc/netplan directory
+          file:
+            path: /etc/netplan
+            state: directory
+            owner: root
+            group: root
+            mode: '0755'
+        - name: Copy Netplan configuration file
+          template:
+            src: "../{{ item }}"
+            dest: "/etc/netplan/{{ item | basename | replace('.j2', '') }}"
+            owner: root
+            group: root
+            mode: '0600'
+          with_items: "{{ netplan_configurations }}"
+          notify: Apply Netplan configuration
+        - name: avoid reboot for netplan
+          set_fact:
+            need_reboot: false
+      when: netplan_configurations is defined
+  handlers:
+    - name: Apply Netplan configuration
+      command: netplan apply
 
 - name: Configure cluster network
   hosts: cluster_machines
@@ -97,6 +131,7 @@
       when:
         - cluster_protocol is not defined or cluster_protocol != "HSR" or hsr_mac_address is not defined
         - skip_recreate_team0_config is not defined or skip_recreate_team0_config is not true
+        - netplan_configurations is not defined
     - block:
       - name: copy hsr.sh script
         template:
@@ -309,7 +344,9 @@
           state: restarted
           enabled: true
         when: resolved_conf1.changed or resolved_conf2.changed or resolved_conf3.changed
-      when: dns_servers is defined
+      when:
+      - dns_servers is defined
+      - netplan_configurations is not defined
 
 - name: disable resolved if no dns server is defined
   hosts:
@@ -376,7 +413,7 @@
         daemon_reload: true
       when:
         - timemasterconf1.changed or timemasterconf2.changed or timemasterconf3.changed
-        - apply_config or (need_reboot is defined and not need_reboot)
+        - apply_config or need_reboot is not defined or not need_reboot
 
 - name: Stop chrony service
   hosts:
@@ -397,21 +434,23 @@
     - standalone_machine
   become: true
   tasks:
-    - name: Create systemd-networkd-wait-online.service.d directory
-      file:
-        path: /etc/systemd/system/systemd-networkd-wait-online.service.d/
-        state: directory
-        owner: root
-        group: root
-        mode: 0755
-    - name: Copy systemd-networkd-wait-online.service overide
-      template:
-        src: ../templates/systemd-networkd-wait-online.service.j2
-        dest: /etc/systemd/system/systemd-networkd-wait-online.service.d/override.conf
-    - name: enable systemd-networkd-wait-online.service
-      ansible.builtin.systemd:
-        name: systemd-networkd-wait-online.service
-        enabled: yes
+    - block:
+        - name: Create systemd-networkd-wait-online.service.d directory
+          file:
+            path: /etc/systemd/system/systemd-networkd-wait-online.service.d/
+            state: directory
+            owner: root
+            group: root
+            mode: 0755
+        - name: Copy systemd-networkd-wait-online.service overide
+          template:
+            src: ../templates/systemd-networkd-wait-online.service.j2
+            dest: /etc/systemd/system/systemd-networkd-wait-online.service.d/override.conf
+        - name: enable systemd-networkd-wait-online.service
+          ansible.builtin.systemd:
+            name: systemd-networkd-wait-online.service
+            enabled: yes
+      when: netplan_configurations is not defined
 
 - name: Configure sriov libvirt network pool
   hosts:
