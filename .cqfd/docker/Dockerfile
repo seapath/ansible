@@ -17,6 +17,7 @@ RUN set -x \
         rstcheck \
         rsync \
         ruby-asciidoctor-pdf \
+        npm \
         vim \
     && sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen \
     && python3 -m venv --system-site-packages /env \
