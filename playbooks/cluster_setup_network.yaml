@@ -413,7 +413,9 @@
       when: interfaces_br0_netdev.changed or interfaces_br0_netdev.changed
 
 - name: push iptables rules
-  hosts: cluster_machines
+  hosts:
+    - cluster_machines
+    - standalone_machine
   tasks:
     - name: check presence of iptables_rules_path file
       delegate_to: localhost

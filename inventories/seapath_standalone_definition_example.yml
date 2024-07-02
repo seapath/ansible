@@ -86,6 +86,8 @@ all:
                                 - "ssh-rsa key1XXX"
                                 - "ssh-rsa key2XXX"
 
+                            iptables_rules_path: "../inventories/iptables_rules_example.txt" #when defined, it uploads this file to /etc/iptables/rules.v4 and loads those rules
+                            #iptables_rules_template_path: "../inventories/iptables_rules_example.txt.j2" #when defined, it templates then uploads this file to /etc/iptables/rules.v4 and loads those rules
                             chrony_wait_timeout_sec: 180 #time in seconds the boot sequence will wait for chrony to sync. Optional : default is 180
 
                             # Optional list of local files to upload to the remote machines
