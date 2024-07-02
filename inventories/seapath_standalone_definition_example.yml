@@ -14,21 +14,27 @@ all:
                             ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
                             ansible_remote_tmp: /tmp/.ansible/tmp
 
+                            # Netplan configuration files. These are examples.
+                            # For advance configuration, the user must write its own.
+                            netplan_configurations :
+                             - inventories/netplan_admin_br0_example.yaml.j2
+                             - inventories/netplan_ptp_interface_example.yaml.j2
+
                             # snmp network settings
                             snmp_admin_ip_addr: 10.10.11.1 #used to listen to snmp requests
 
                             # Main network configuration
-                            network_interface: enp1s0
+                            network_interface: enp1s0 #admin interface
                             ip_addr: "{{ ansible_host }}"
-                            subnet: 24
+                            subnet: 25 #default is 24, override if necessary
                             dns_servers: #remove this variable to disable dns, leave this variable empty for DNS via DHCP
                               - 10.10.2.1
                             gateway_addr: 10.0.0.1
-                            ntp_servers:
-                              - "185.254.101.25"
-                              - "51.145.123.29"
-                            #ovs_vsctl_cmds: # Extra ovs-vsctl commands to be run by the network playbook
-                            #  - "set Bridge brBRIDGE1 netflow=@nf0 -- --id=@nf0 create NetFlow targets=\\\"192.168.10.1:2055\\\" add_id_to_interface=true"
+
+                            # OVS configuration (see ovs_topology inventory)
+                            brBRIDGE1_ext: eno1234 #physical nic to use with BRIDGE1
+                            ovs_vsctl_cmds: # Extra ovs-vsctl commands to be run by the network playbook
+                              - "set Bridge brBRIDGE1 netflow=@nf0 -- --id=@nf0 create NetFlow targets=\\\"192.168.10.1:2055\\\" add_id_to_interface=true"
 
                             # Syslog log sending configuration
                             # Syslog client keys. If not set, syslog will send logs using an unencrypted connection.
@@ -39,11 +45,17 @@ all:
                             syslog_tcp_port: 514 #optional: default is 601. Used only if syslog_tls_ca and syslog_tls_key are not defined
                             logstash_server_ip: 10.10.10.10
 
-                            # Other Network configuration
+                            # PTP network settings
                             ptp_interface: "enp1s0f1" #OPTIONAL PTP Interface
                             ptp_vlanid: 100 #OPTIONAL VlanID for PTP
                             ptp_delay_mechanism: P2P # OPTIONAL E2E or P2P defaut is P2P
                             ptp_network_transport: L2 # OPTIONAL L2 or UDPv4 default is L2
+
+                            # NTP servers used by timemaster
+                            ntp_servers:
+                              - "185.254.101.25"
+                              - "51.145.123.29"
+
                             # SRIOV, Optional configuration
                             sriov_driver: 'igb'
                             sriov:
