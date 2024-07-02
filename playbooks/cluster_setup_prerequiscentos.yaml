@@ -1,0 +1,69 @@
+# Copyright (C) 2023, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+- name: Prerequis machine centos
+  gather_facts: True
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  become: true
+  roles:
+    - centos
+- name: Prerequis physical machine centos
+  gather_facts: True
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  become: true
+  roles:
+    - centos/physical_machine
+- name: Prerequis hypervisor centos
+  hosts:
+    - hypervisors
+    - standalone_machine
+  become: true
+  roles:
+    - centos/hypervisor
+
+- name: Disable libvirt-guests.service
+  hosts:
+    - cluster_machines
+  become: true
+  tasks:
+    - name: disable libvirt-guests.service
+      ansible.builtin.systemd:
+        name: libvirt-guests.service
+        enabled: no
+        state: stopped
+
+- name: upload extra files
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  become: true
+  tasks:
+    - name: upload extra files
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: "{{ item.owner | default('root') }}"
+        group: "{{ item.group | default('root') }}"
+        mode: "{{ item.mode | default('0644') }}"
+        backup: yes
+      with_items: "{{ upload_files }}"
+      when:
+        - upload_files is defined
+        - item.extract is not defined or item.extract is false
+    - name: upload extra files and extract them
+      unarchive:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: "{{ item.owner | default('root') }}"
+        group: "{{ item.group | default('root') }}"
+        mode: "{{ item.mode | default('0644') }}"
+      with_items: "{{ upload_files }}"
+      when:
+        - upload_files is defined
+        - item.extract is defined and item.extract is true

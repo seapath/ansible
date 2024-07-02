@@ -5,6 +5,15 @@
 # Pacemaker.
 
 ---
+
+- name: Get distrebution variables
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  tasks:
+  - include_vars: "../vars/{{ ansible_distribution }}_paths.yml"
+
 - name: Configure SEAPATH specific files
   hosts: cluster_machines
   become: true
@@ -100,6 +109,7 @@
       when: groups['valid_machine'] is defined
 
 - name: Setup Pacemaker
+  gather_facts: True
   hosts: unconfigured_machine_group
   become: true
   tasks:
@@ -109,13 +119,13 @@
             state: started
             enabled: true
       - name: wait for pacemaker
-        command: crm status
+        command: "{{ crm_command_path }} status"
         register: result
         until: result.rc == 0
         retries: 3
         delay: 1
       - name: Disable stonith
-        command: crm configure property stonith-enabled=false
+        command: "{{ crm_command_path }} configure property stonith-enabled=false"
         run_once: true
         when: groups['valid_machine'] is undefined
 

@@ -5,11 +5,21 @@
 # CSV.
 
 ---
+
+- name: Get distrebution variables
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  tasks:
+  - include_vars: "../vars/{{ ansible_distribution }}_paths.yml"
+
 - hosts:
     - cluster_machines
     - standalone_machine
     - VMs
   name: Cukinia tests
+  gather_facts: True
   become: true
   vars:
     tests_format: junitxml
@@ -24,7 +34,7 @@
       shell:
         cmd: >-
           MACHINENAME={{ cukinia_namespace | default(inventory_hostname) }}
-          cukinia -f {{ tests_format }}
+          {{ cukinia_command_path }} -f {{ tests_format }}
           -o {{ tmp_cukinia_dir.path }}/{{ tests_result_name }} || true
     - name: Fetch result
       fetch:
@@ -35,6 +45,7 @@
 - hosts:
     - cluster_machines
   name: Cukinia tests
+  gather_facts: True
   become: true
   vars:
     tests_format: junitxml
@@ -44,7 +55,7 @@
     - name: Run tests cluster test
       shell:
         cmd: >-
-          cukinia -f {{ tests_format }}
+          {{ cukinia_command_path }} -f {{ tests_format }}
           -o {{ tmp_cukinia_dir.path }}/{{ cluster_tests_result_name }}
           /etc/cukinia/cukinia-cluster.conf || true
       run_once: true

@@ -1,0 +1,320 @@
+- name: enable docker.service
+  ansible.builtin.systemd:
+    name: docker.service
+    enabled: yes
+    state: started
+- name: enable docker.socket
+  ansible.builtin.systemd:
+    name: docker.socket
+    enabled: yes
+    state: started
+
+- name: add vhost_vsock to /etc/modules-load.d
+  ansible.builtin.copy:
+    src: ../src/debian/modules/vhost_vsock.conf
+    dest: /etc/modules-load.d/vhost_vsock.conf
+    owner: root
+    group: root
+    mode: 0751
+
+- name: add sriov driver to /etc/modules-load.d
+  ansible.builtin.copy:
+    src: ../src/debian/modules/sriov_driver.conf
+    dest: /etc/modules-load.d/sriov_driver.conf
+    owner: root
+    group: root
+    mode: 0751
+  when: sriov_driver is defined
+- name: load the sriov module
+  community.general.modprobe:
+    name: "{{ sriov_driver }}"
+    state: present
+  when: sriov_driver is defined
+
+- name: add sriov sysfs rules
+  template:
+    src: ../templates/sriov.conf.j2
+    dest: /etc/tmpfiles.d/sriov.conf
+    mode: '0644'
+  with_items: "{{ sriov | dict2items }}"
+  when: sriov is defined
+  register: sriov_tmpfiles
+- name: Copy sysfs.d cpumask
+  template:
+    src: ../templates/tmpfiles-workqueue_cpumask.conf.j2
+    dest: /etc/tmpfiles.d/tmpfiles-workqueue_cpumask.conf
+    mode: '0644'
+  register: tmpfiles_cpumask
+
+- name: "irqbalance conf"
+  lineinfile:
+    path: /etc/sysconfig/irqbalance
+    regexp: '^#?IRQBALANCE_BANNED_CPULIST=".*"$'
+    line: 'IRQBALANCE_BANNED_CPULIST="{{ isolcpus }}"'
+    state: present
+  register: irqbalanceconf1
+  when: isolcpus is defined
+- name: "irqbalance conf revert"
+  lineinfile:
+    path: /etc/sysconfig/irqbalance
+    regexp: '^#?IRQBALANCE_BANNED_CPULIST=(.*)$'
+    line: '#IRQBALANCE_BANNED_CPULIST=\1'
+    state: present
+    backrefs: yes
+  register: irqbalanceconf2
+  when: isolcpus is not defined
+- name: restart irqbalance
+  ansible.builtin.systemd:
+    name: irqbalance.service
+    enabled: yes
+    state: restarted
+  when: irqbalanceconf1.changed or irqbalanceconf2.changed
+
+- name: "systemd conf RuntimeWatchdogSec"
+  lineinfile:
+    path: /etc/systemd/system.conf
+    regexp: '^RuntimeWatchdogSec=.*$'
+    line: "RuntimeWatchdogSec=20"
+    state: present
+- name: "systemd conf RebootWatchdogSec"
+  lineinfile:
+    path: /etc/systemd/system.conf
+    regexp: '^RebootWatchdogSec=.*$'
+    line: "RebootWatchdogSec=5min"
+    state: present
+
+- block:
+  - name: "Create systemd slices override (folder)"
+    file:
+      path: /etc/systemd/system.control/{{ item }}.slice.d
+      state: directory
+      owner: root
+      group: root
+      mode: 0755
+    with_items:
+      - "system"
+      - "user"
+      - "machine"
+  - name: create systemd slices override (files)
+    template:
+      src: ../templates/systemd_slice_override.j2
+      dest: /etc/systemd/system.control/{{ item.name }}.slice.d/50-AllowedCPUs.conf
+      owner: root
+      group: root
+      mode:  0644
+    with_items:
+      - { name: "system", description: "system slice", allowedcpus: "{{ cpusystem }}" }
+      - { name: "user", description: "user slice", allowedcpus: "{{ cpuuser }}" }
+      - { name: "machine", description: "machine slice", allowedcpus: "{{ cpumachines }}" }
+  when:
+    - cpusystem is defined
+    - cpuuser is defined
+    - cpumachines is defined
+- name: Create systemd slices override REVERT
+  file:
+    path: /etc/systemd/system.control/{{ item }}.slice.d
+    state: absent
+  with_items:
+    - "system"
+    - "user"
+    - "machine"
+  when: cpusystem is not defined or cpuuser is not defined or cpumachines is not defined
+
+- name: create systemd slices
+  template:
+    src: ../templates/systemd_slice.j2
+    dest: /etc/systemd/system/{{ item.name }}.slice
+    owner: root
+    group: root
+    mode:  0644
+  with_items:
+    - { name: "machine-rt", description: "VM rt slice", wants: "machine.slice", allowedcpus: "{{ cpumachinesrt }}" }
+    - { name: "machine-nort", description: "VM nonrt slice", wants: "machine.slice", allowedcpus: "{{ cpumachinesnort }}" }
+    - { name: "ovs", description: "ovs slice", wants: "", allowedcpus: "{{ cpuovs }}" }
+  register: newslices
+  when:
+    - cpumachinesrt is defined
+    - cpumachinesnort is defined
+    - cpuovs is defined
+- name: create systemd slices REVERT
+  file:
+    path: /etc/systemd/system/{{ item }}.slice
+    state: absent
+  with_items:
+    - "machine-rt"
+    - "machine-nort"
+    - "ovs"
+  register: removeslices
+  when: cpumachinesrt is not defined and cpumachinesnort is not defined and cpuovs is not defined
+
+- name: start new slices
+  ansible.builtin.systemd:
+    name: "{{ item }}.slice"
+    state: restarted
+    daemon_reload: yes
+  with_items:
+    - "machine-rt"
+    - "machine-nort"
+    - "ovs"
+  when: newslices.changed
+- name: start new slices REVERT
+  ansible.builtin.systemd:
+    name: "{{ item }}.slice"
+    state: stopped
+    daemon_reload: yes
+  with_items:
+    - "machine-rt"
+    - "machine-nort"
+    - "ovs"
+  when: removeslices.changed
+
+- name: make sure tuned package is installed
+  ansible.builtin.dnf:
+    name:
+     - tuned
+     - tuned-profiles-nfv
+     - tuned-profiles-realtime
+    state: present
+
+- name: Remove old isolation files
+  file:
+    state: absent
+    path: "{{ item }}"
+  with_items:
+    - /etc/sysfs.d/00-workqueue_cpumask.conf
+    - /etc/systemd/system/kthread-taskset.service
+    - /usr/local/bin/taskset_boot.sh
+    - /etc/systemd/system/multi-user.target.wants/kthread-taskset.service
+    - /etc/sysctl.d/00-schedrt.conf
+    - /etc/default/grub.d/10-isolcpus.cfg
+
+- name: create tuned seapath-rt profile folder
+  file:
+    path: /etc/tuned/seapath-rt-host
+    state: directory
+    mode: '0755'
+
+- name: copy seapath-rt-host tuned profile conf
+  template:
+    src: ../src/tuned/tuned.conf.j2
+    dest: /etc/tuned/seapath-rt-host/tuned.conf
+    group: root
+    owner: root
+    mode: '0644'
+
+- name: remove tuned dynamic tuning
+  lineinfile:
+    path: /etc/tuned/tuned-main.conf
+    state: present
+    regexp: '^#?dynamic_tuning = .*$'
+    line: 'dynamic_tuning = 0'
+
+- name: enable tuned.service
+  ansible.builtin.systemd:
+    name: tuned.service
+    enabled: yes
+    state: restarted
+
+- name: load seapath-rt-host tuned profile
+  ansible.builtin.command: tuned-adm profile seapath-rt-host
+  when: isolcpus is defined
+
+- name: unload tuned profile
+  ansible.builtin.command: tuned-adm off
+  when: isolcpus is not defined
+
+
+- name: Create ovs-vswitchd.service.d directory
+  file:
+    path: /etc/systemd/system/ovs-vswitchd.service.d/
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+- name: Copy ovs-vswitchd.service drop-in
+  ansible.builtin.copy:
+    src: ../src/debian/ovs-vswitchd_override.conf
+    dest: /etc/systemd/system/ovs-vswitchd.service.d/override.conf
+    owner: root
+    group: root
+    mode: 0644
+  register: ovsvswitchd
+- name: Restart ovs-vswitchd
+  ansible.builtin.systemd:
+    state: restarted
+    daemon_reload: yes
+    name: ovs-vswitchd
+  when: ovsvswitchd.changed
+
+
+- name: Copy ptp_status executable files
+  ansible.builtin.copy:
+    src: ../src/debian/ptpstatus/ptpstatus_script/ptpstatus.sh
+    dest: /usr/local/bin/ptpstatus.sh
+    mode: '0755'
+- name: Copy ptp_vsock executable files
+  ansible.builtin.copy:
+    src: ../src/debian/ptp_vsock.py
+    dest: /usr/local/bin/ptp_vsock.py
+    mode: '0755'
+
+- name: Copy ptp_status.service
+  ansible.builtin.copy:
+    src: ../src/debian/ptpstatus/ptpstatus.service
+    dest: /etc/systemd/system/ptpstatus.service
+    mode: '0644'
+  register: ptpstatus
+- name: Copy ptp_vsock.service
+  ansible.builtin.copy:
+    src: ../src/debian/ptp_vsock.service
+    dest: /etc/systemd/system/ptp_vsock.service
+    mode: '0644'
+  register: ptpvsock
+- name: daemon-reload ptp status
+  ansible.builtin.service:
+    daemon_reload: yes
+  when: ptpstatus.changed or ptpvsock.changed
+- name: enable ptpstatus.service
+  ansible.builtin.systemd:
+    name: ptpstatus.service
+    enabled: yes
+    state: started
+- name: enable ptp_vsock.service
+  ansible.builtin.systemd:
+    name: ptp_vsock.service
+    enabled: yes
+    state: started
+
+- name: Create conntrackd.service.d directory
+  file:
+    path: /etc/systemd/system/conntrackd.service.d/
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+- name: Copy conntrackd.service drop-in
+  ansible.builtin.copy:
+    src: ../src/debian/conntrackd_override.conf
+    dest: /etc/systemd/system/conntrackd.service.d/override.conf
+    owner: root
+    group: root
+    mode: 0644
+  register: conntrackd
+- name: Restart conntrackd
+  ansible.builtin.systemd:
+    state: restarted
+    daemon_reload: yes
+    name: conntrackd
+  when: conntrackd.changed
+
+- name: enable libvirtd.service
+  ansible.builtin.systemd:
+    name: libvirtd.service
+    enabled: yes
+    state: started
+
+- name: Create system alternative for a debian kvm path
+  alternatives:
+    name: "debian kvm"
+    path: "/usr/libexec/qemu-kvm"
+    link: "/usr/bin/qemu-system-x86_64"

@@ -6,6 +6,14 @@
 # can be used on cluster machines and VMs.
 
 ---
+- name: Get distrebution variables
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  tasks:
+  - include_vars: "../vars/{{ ansible_distribution }}_paths.yml"
+
 - name: Network configuration basics
   hosts:
     - cluster_machines
@@ -137,6 +145,7 @@
       when: cluster_protocol is defined and cluster_protocol == "HSR" and hsr_mac_address is defined
 
 - name: Configure OVS
+  gather_facts: True
   hosts:
     - cluster_machines
     - standalone_machine
@@ -148,7 +157,7 @@
       template:
         src: ../templates/ovs_configuration.json.j2
         dest: /etc/ovs_configuration.json
-        validate: setup_ovs.py -v -c -f %s
+        validate: "{{ setup_ovs_command_path }} -v -c -f %s"
       register: ovs_conf
     - name: Restart seapath-config_ovs
       ansible.builtin.systemd:
@@ -278,6 +287,7 @@
     when: dns_servers is not defined
 
 - name: Configure TimeMaster
+  gather_facts: True
   hosts:
     - cluster_machines
     - standalone_machine
@@ -296,11 +306,11 @@
     - name: Create timemaster configuration
       template:
         src: ../templates/timemaster.conf.j2
-        dest: /etc/linuxptp/timemaster.conf
+        dest: "{{ path_timemaster_conf }}"
       register: timemasterconf1
     - name: comment pool configuration in chrony.conf
       replace:
-        path: /etc/chrony/chrony.conf
+        path: "{{ path_chrony_conf }}"
         regexp: '^(pool .*)'
         replace: '#\1'
       register: timemasterconf2
@@ -331,6 +341,7 @@
         - apply_config or (need_reboot is defined and not need_reboot)
 
 - name: Stop chrony service
+  gather_facts: True
   hosts:
     - cluster_machines
     - standalone_machine
@@ -339,7 +350,7 @@
   tasks:
     - name: stop and disable chrony
       service:
-        name: "chrony"
+        name: "{{ service_name_chrony }}"
         state: stopped
         enabled: false
 
