@@ -281,4 +281,4 @@
     state: restarted
     daemon_reload: yes
     name: conntrackd
-  when: conntrackd.changed
+  when: conntrackd.changed and conntrackd_ignore_ip_list is defined

@@ -93,7 +93,7 @@
         ansible.builtin.systemd:
           name: conntrackd
           state: restarted
-        when: conntrackd_ip_list is defined
+        when: conntrackd_ignore_ip_list is defined
       when:
         - cluster_protocol is not defined or cluster_protocol != "HSR" or hsr_mac_address is not defined
         - skip_recreate_team0_config is not defined or skip_recreate_team0_config is not true
@@ -474,14 +474,14 @@
             enabled: yes
             state: restarted
           when: conntrackdconf.changed
-      when: conntrackd_ip_list is defined
+      when: conntrackd_ignore_ip_list is defined
     - block:
         - name: stop and disable conntrackd.service
           ansible.builtin.systemd:
             name: conntrackd.service
             enabled: no
             state: stopped
-      when: conntrackd_ip_list is defined
+      when: conntrackd_ignore_ip_list is defined
 
 - name: Configure snmp
   hosts:
