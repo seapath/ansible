@@ -45,11 +45,12 @@ then
 fi
 
 echo "Install roles in requirements.yaml"
-ansible-galaxy install --roles-path="$(pwd)/roles" -r ansible-requirements.yaml
+ansible-galaxy install --roles-path="$(pwd)/roles" \
+    -r ansible-requirements.yaml --force
 
 echo "Install collections in ansible-requirements.yaml"
 ansible-galaxy collection install --collections-path="$(pwd)/collections" -r \
-    ansible-requirements.yaml
+    ansible-requirements.yaml --force
 
 echo "Update git submodules"
 git submodule update --init -f
