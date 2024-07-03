@@ -10,6 +10,7 @@
   register: presencevm
 - debug:
     var: presencevm
+    verbosity: 2
 
 - name: Check tmp folder permission
   file:
@@ -21,11 +22,10 @@
   when: qcow2tmpuploadfolder is defined
 
 - block:
-
       - name: "Copy {{ item }} system disk on target"
         copy:
-          src: "{{ hostvars[item].vm_disk | default(vms_disks_directory + '/' + item + '.qcow2') }}"
-          dest: "{{ qcow2tmpuploadfolder | default('/tmp') + '/' + 'os.qcow2' }}"
+          src: "{{ vm_file }}"
+          dest: "{{ vm_file_dest }}"
         vars:
           ansible_remote_tmp: "{{ qcow2tmpuploadfolder | default(omit) }}"
         when: disk_copy | bool
@@ -33,9 +33,9 @@
         cluster_vm:
           name: "{{ item }}"
           command: create
-          system_image: "{{ qcow2tmpuploadfolder | default('/tmp') + '/' + 'os.qcow2' }}"
+          system_image: "{{ vm_file_dest }}"
           force: true
-          live_migration: "{{ livemigration_user is defined }}"
+          live_migration: "{{ hostvars[item].live_migration | default(false) }}"
           migration_user: "{{ livemigration_user | default(omit) }}"
           migrate_to_timeout: "{{ hostvars[item].migrate_to_timeout | default(omit) }}"
           migration_downtime: "{{ hostvars[item].migration_downtime | default(omit) }}"
@@ -53,11 +53,12 @@
                | replace('\n', '') }}
       - name: Remove temporary file
         file:
-          path: "{{ qcow2tmpuploadfolder | default('/tmp') + '/' + 'os.qcow2' }}"
+          path: "{{ vm_file_dest }}"
           state: absent
       - name: Wait for VM connections
         wait_for_connection:
         delegate_to: "{{ item }}"
-        when: hostvars[item].wait_for_connection is defined and hostvars[item].wait_for_connection
-
+        when:
+          - hostvars[item].wait_for_connection is defined
+          - hostvars[item].wait_for_connection
   when: presencevm.status == "Undefined" or (hostvars[item].force is defined and hostvars[item].force)
