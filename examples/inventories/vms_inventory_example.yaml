@@ -13,6 +13,7 @@ all:
           vm_disk: "../vm_images/guest.qcow2"
           vm_features: []
           preferred_host: pc1 # Optional
+          force: true
           bridges:
             - name: "br0" # Change the bridge name
               mac_address: "52:54:00:c4:ff:02" # change the MAC address
@@ -84,6 +85,8 @@ all:
 #    ** isolated: to enable CPU pinning
 #    ** dpdk: to use link to VM with a OVS/DPDK bridge
 #    ** rt: to enable real time tweaks
+#  * force: Should the VM replace an existing VM with the same name
+#           Optional, default is false.
 #  * cpuset: list of the CPU to use (int list). Use only with isolated.
 #  * nb_cpu: the number of cpu to use when the vm is not isolated.
 #            otherwise the length of cpuset is used. Optional (default : 1)
