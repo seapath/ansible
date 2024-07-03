@@ -199,6 +199,34 @@
         dest: /etc/hosts
         state: absent
         regexp: '^127.*debian'
+
+- name: Configure hosts and hostname
+  hosts:
+    - standalone_machine
+    - VMs
+  become: true
+  tasks:
+    - name: Set hostname
+      hostname:
+        name: "{{ hostname | default(inventory_hostname) }}"
+        use: systemd
+    - name: Build hosts file
+      lineinfile:
+        dest: /etc/hosts
+        line: "{{ ip_addr }} {{ inventory_hostname }} {{ hostname | default('') }}"
+        state: present
+    - name: remove 'debian' from hosts file
+      lineinfile:
+        dest: /etc/hosts
+        state: absent
+        regexp: '^127.*debian'
+
+- name: Push hosts file
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  become: true
+  tasks:
     - block:
         - name: Check if the hosts file exists
           delegate_to: localhost
@@ -240,27 +268,6 @@
             state: absent
           when: hosts_file_exists.stat.exists
       when: hosts_path is defined
-
-- name: Configure hosts and hostname
-  hosts:
-    - standalone_machine
-    - VMs
-  become: true
-  tasks:
-    - name: Set hostname
-      hostname:
-        name: "{{ hostname | default(inventory_hostname) }}"
-        use: systemd
-    - name: Build hosts file
-      lineinfile:
-        dest: /etc/hosts
-        line: "{{ ip_addr }} {{ inventory_hostname }} {{ hostname | default('') }}"
-        state: present
-    - name: remove 'debian' from hosts file
-      lineinfile:
-        dest: /etc/hosts
-        state: absent
-        regexp: '^127.*debian'
 
 - name: Configure DNS with resolved
   hosts:
