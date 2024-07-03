@@ -121,7 +121,7 @@
         when: groups['valid_machine'] is undefined
 
 - name: run extra CRM commands
-  hosts: all
+  hosts: cluster_machines
   become: true
   tasks:
       - name: run extra CRM configuration commands
