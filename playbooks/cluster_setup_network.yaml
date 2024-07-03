@@ -481,7 +481,7 @@
             name: conntrackd.service
             enabled: no
             state: stopped
-      when: conntrackd_ignore_ip_list is defined
+      when: conntrackd_ignore_ip_list is not defined
 
 - name: Configure snmp
   hosts:
