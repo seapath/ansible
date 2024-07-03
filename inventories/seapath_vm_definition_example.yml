@@ -6,11 +6,24 @@ all:
   children:
     VMs:
       hosts:
+        guest0:
+          description: "Simple VM"
+          ansible_host: 192.168.212.130 # Update the VM IP
+          vm_template: "../templates/vm/guest.xml.j2"
+          vm_disk: "../vm_images/guest.qcow2"
+          vm_features: []
+          preferred_host: pc1 # Optional
+          force: true
+          bridges:
+            - name: "br0" # Change the bridge name
+              mac_address: "52:54:00:c4:ff:02" # change the MAC address
         guest1:
-          description: "example VM"
+          description: "Complex VM"
           ansible_host: 192.168.212.131 # Update the VM IP
           vm_template: "../templates/vm/guest.xml.j2"
           vm_disk: "../vm_images/guest.qcow2"
+          additionnal_disk:
+              - disk_file: second-disk.qcow2
           migration_downtime: 5000 #optional
           live_migration: true # enable live migration. Optional, default is false
           cpuset: [4, 6] # CPUs list to use.
@@ -40,8 +53,6 @@ all:
           vm_template: "../templates/vm/guest.xml.j2"
           vm_disk: "../vm_images/guest.img.gz"
           disk_extract: true
-          additionnal_disk:
-              - disk_file: second_disk.qcow2
           vm_features: []
           preferred_host: pc3 # Optional
           bridges:
@@ -54,7 +65,7 @@ all:
         gateway_addr: 192.168.212.1 # Update the Gateway IP addr
         grub_append: "console=ttyS0,115200" # Optional variable to add grub argument for boot.
           # This one for example create a tty that can be accessed with `virsh console`
-        wait_for_connection: True # at the end of guest deployment, wait for an ssh connection before moving forward, default is False
+        wait_for_connection: true # at the end of guest deployment, wait for an ssh connection before moving forward, default is False
 
 # This inventory can be customize using those fields :
 #  * name: the VM name (string). Only on standalone. Default
@@ -74,6 +85,8 @@ all:
 #    ** isolated: to enable CPU pinning
 #    ** dpdk: to use link to VM with a OVS/DPDK bridge
 #    ** rt: to enable real time tweaks
+#  * force: Should the VM replace an existing VM with the same name
+#           Optional, default is false.
 #  * cpuset: list of the CPU to use (int list). Use only with isolated.
 #  * nb_cpu: the number of cpu to use when the vm is not isolated.
 #            otherwise the length of cpuset is used. Optional (default : 1)
@@ -88,7 +101,7 @@ all:
 #  * migration_downtime: max downtime during live migration in milliseconds.
 #                        Optional, default is 0.
 #  * live_migration: # enable live migration. Optional, default is false
-#  * pci_passthrough: a list containing dictionaries of the PIC devices to
+#  * pci_passthrough: a list containing dictionaries of the PCI devices to
 #                     passthrough.
 #    ** domain: PCI domain (int)
 #    ** bus: PCI bus (int)
