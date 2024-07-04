@@ -1,5 +1,5 @@
-# Copyright (C) 2020, RTE (http://www.rte-france.com)
-# Copyright (C) 2023 Savoir-faire Linux, Inc.
+# Copyright (C) 2020-2024, RTE (http://www.rte-france.com)
+# Copyright (C) 2023-2024 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 # This Ansible playbook configures the networks and defines the hostnames. It
@@ -36,18 +36,35 @@
   hosts: cluster_machines
   become: true
   tasks:
-    - name: Remove team0 bridge in OVS
-      command: "/usr/bin/ovs-vsctl --if-exists del-br team0"
-    - name: Create team0 bridge in OVS
-      command: "/usr/bin/ovs-vsctl add-br team0"
-    - name: Enable RSTP on team0 bridge
-      command: "/usr/bin/ovs-vsctl set Bridge team0 rstp_enable=true"
-    - name: Set RSTP priority on team0 bridge
-      command: "/usr/bin/ovs-vsctl set Bridge team0 other_config=rstp-priority=16384"
-    - name: Add interface team0_0 to team0 bridge
-      command: "/usr/bin/ovs-vsctl -- --if-exists del-port {{ team0_0 }} -- add-port team0 {{ team0_0 }}"
-    - name: Add interface team0_1 to team0 bridge
-      command: "/usr/bin/ovs-vsctl -- --if-exists del-port {{ team0_1 }} -- add-port team0 {{ team0_1 }}"
+    - name: Populate service facts
+      service_facts:
+    - block:
+      - name: stop and disable hsr service if it exists
+        service:
+          name: "hsr"
+          state: stopped
+          enabled: false
+        when: "'hsr.service' in services"
+      - name: Remove team0 bridge in OVS
+        command: "/usr/bin/ovs-vsctl --if-exists del-br team0"
+      - name: Create team0 bridge in OVS
+        command: "/usr/bin/ovs-vsctl add-br team0"
+      - name: Add interface team0_0 to team0 bridge
+        command: "/usr/bin/ovs-vsctl -- --if-exists del-port {{ team0_0 }} -- add-port team0 {{ team0_0 }}"
+      - name: Add interface team0_1 to team0 bridge
+        command: "/usr/bin/ovs-vsctl -- --if-exists del-port {{ team0_1 }} -- add-port team0 {{ team0_1 }}"
+      - name: Enable RSTP on team0 bridge
+        command: "/usr/bin/ovs-vsctl set Bridge team0 rstp_enable=true"
+      - name: Set RSTP priority on team0 bridge
+        command: "/usr/bin/ovs-vsctl set Bridge team0 other_config=rstp-priority={{ br_rstp_priority | default(16384) }}"
+      - name: Restart conntrackd
+        ansible.builtin.systemd:
+          name: conntrackd
+          state: restarted
+        when: conntrackd_ignore_ip_list is defined
+      when:
+        - cluster_protocol is not defined or cluster_protocol != "HSR" or hsr_mac_address is not defined
+        - skip_recreate_team0_config is not defined or skip_recreate_team0_config is not true
 
 - name: Configure OVS
   hosts:
@@ -153,6 +170,62 @@
         replace: '{{ cluster_ip_addr }} {{ inventory_hostname }} rbd'
       when: cluster_ip_addr is defined
 
+- name: Configure DNS with resolved
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  become: true
+  tasks:
+    - block:
+      - name: configure LLMNR /etc/systemd/resolved.conf
+        lineinfile:
+          dest: /etc/systemd/resolved.conf
+          regexp: "^#?LLMNR="
+          line: "LLMNR=no"
+          state: present
+        register: resolved_conf1
+      - name: configure DNS /etc/systemd/resolved.conf
+        lineinfile:
+          dest: /etc/systemd/resolved.conf
+          regexp: "^#?DNS="
+          line: "DNS={{ dns_servers | join(' ') if dns_servers is not string else dns_servers }}"
+          state: present
+        register: resolved_conf2
+      - name: Create resolv.conf stub link
+        ansible.builtin.file:
+          src: /run/systemd/resolve/resolv.conf
+          dest: /etc/resolv.conf
+          state: link
+          force: true
+        register: resolved_conf3
+      - name: Enable systemd-resolved
+        ansible.builtin.systemd:
+          name: systemd-resolved
+          state: started
+          enabled: true
+      - name: Restart systemd-resolved
+        ansible.builtin.systemd:
+          name: systemd-resolved
+          state: restarted
+          enabled: true
+        when: resolved_conf1.changed or resolved_conf2.changed or resolved_conf3.changed
+      when: dns_servers is defined
+
+- name: disable resolved if no dns server is defined
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  become: true
+  tasks:
+  - name: Stop and disable systemd-resolved
+    ansible.builtin.systemd:
+      name: systemd-resolved
+      state: stopped
+      enabled: false
+    when: dns_servers is not defined
+
 - name: Configure syslog-ng
   hosts:
     - cluster_machines
@@ -255,7 +328,9 @@
       when: "'chrony.service' in services"
 
 - name: Configure systemd-networkd-wait-online.service
-  hosts: hypervisors
+  hosts:
+    - cluster_machines
+    - standalone_machine
   tasks:
     - block:
         - name: Create systemd-networkd-wait-online.service.d directory
