@@ -43,6 +43,8 @@ all:
               # The interface used to connect to the other machine in the
               # cluster. Use it only in a case of triangle cluster
               team0_1: enp1s0f1
+              # rstp priority on the cluster network. Optional, default is 16384
+              br_rstp_priority: 12288
               custom_network:
                 # Arbitrary list name. Must begin with 00-
                 00-br0ExternalPort:
@@ -63,7 +65,6 @@ all:
             hypervisor2:
               ansible_host: 192.168.217.16
               network_interface: br1
-              dns_server: 9.9.9.9
               ip_addr: 192.168.217.16
               gateway_addr: 192.168.217.1
               # Number of hugepages to reserve. Optional default is 4
@@ -90,12 +91,6 @@ all:
             # Set true to restart after setting kernel parameters (default is
             # false)
             kernel_parameters_restart: true
-            # Automatic creation of a Linux bridge. The hypervisor is
-            # connnected to the bridge via the interface "network interface".
-            # VMs can therefore communicate with the hypervisor via this
-            # bridge, and it also allows hypervisors and VMs to be configured
-            # via a single interface.
-            create_br0_bridge: true
             # OVS bridges and ports description.
             # See OVS_configuration.adoc for more details.
             # Declared here, bridges configuration is the same for all
@@ -164,7 +159,6 @@ all:
               ansible_host: 192.168.217.11
               # The network interface to configure
               network_interface: enp0s2
-              dns_server: 9.9.9.9
               ip_addr: 192.168.217.11
               gateway_addr: 192.168.1.254
               subnet: 24
@@ -199,16 +193,12 @@ all:
     # it will be apply during the next reboot
     # This variable is optional (default: false)
     apply_network_config: true
-    # NTP server to use
-    ntp_servers: 192.168.217.1
-    # NTP failback servers. Optional variable
-    fallback_ntp_servers: >-
-      0.fr.pool.ntp.org
-      1.fr.pool.ntp.org
-      2.fr.pool.ntp.org
-      3.fr.pool.ntp.org
+    # NTP servers to use
+    ntp_servers:
+     - "185.254.101.25"
+     - "51.145.123.29"
     # DNS server ip. The variable must be defined but can be empty.
-    dns_server: 9.9.9.9
+    dns_servers: 9.9.9.9
     # Ceph public network
     ceph_public_network: "192.168.217.0/24"
     # Ceph internal cluster network. It can be the same as public network or a
