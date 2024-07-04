@@ -1,4 +1,5 @@
 # Copyright (C) 2020, RTE (http://www.rte-france.com)
+# Copyright (C) 2024, SFL (https://savoirfairelinux.com)
 # SPDX-License-Identifier: Apache-2.0
 
 # This playbook configures and sets up Ceph. It is called by the playbook
@@ -8,6 +9,7 @@
 - name: Prepare Ceph installation
   hosts:
       mons
+  become: true
   tasks:
       - name: Create Ceph log directory
         file:
@@ -28,6 +30,7 @@
 - name: Ceph OSD disk
   hosts:
       osds
+  become: true
   tasks:
       - name: Cleanup Ceph OSD disks with ceph-volume
         command: "ceph-volume lvm zap {{ ceph_osd_disk }} --destroy"
@@ -39,6 +42,7 @@
 - name: Disable unwanted Ceph mgr module
   hosts:
       mons
+  become: true
   tasks:
       - name: Disable Ceph mgr restful module
         command: ceph mgr module disable restful
@@ -46,6 +50,7 @@
 - name: Configure rbd
   hosts:
       osds
+  become: true
   tasks:
       - name: Disable rbd lock
         command: rbd config global set global rbd_default_features 'layering, deep-flatten'
