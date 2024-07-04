@@ -1,4 +1,5 @@
 # Copyright (C) 2021, RTE (http://www.rte-france.com)
+# Copyright (C) 2024 Savoir-faire Linux, Inc
 # SPDX-License-Identifier: Apache-2.0
 # Task to deploy a VM
 
@@ -26,16 +27,14 @@
         copy:
           src: "{{ vm_file }}"
           dest: "{{ vm_file_dest }}"
-        vars:
-          ansible_remote_tmp: "{{ qcow2tmpuploadfolder | default(omit) }}"
-        when: disk_copy | bool
+        when: disk_copy | default(true) | bool
       - name: "Create {{ item }}"
         cluster_vm:
           name: "{{ item }}"
           command: create
           system_image: "{{ vm_file_dest }}"
           force: true
-          live_migration: "{{ hostvars[item].live_migration | default('') }}"
+          live_migration: "{{ hostvars[item].live_migration | default(false) }}"
           migration_user: "{{ livemigration_user | default(omit) }}"
           migrate_to_timeout: "{{ hostvars[item].migrate_to_timeout | default(omit) }}"
           migration_downtime: "{{ hostvars[item].migration_downtime | default(omit) }}"
@@ -61,4 +60,8 @@
         when:
           - hostvars[item].wait_for_connection is defined
           - hostvars[item].wait_for_connection
+  vars:
+    vm_file: "{{ hostvars[item].vm_disk | default( (vms_disks_directory|default('')) ~ '/' ~ item ~ '.qcow2') }}"
+    vm_file_dest: "{{ qcow2tmpuploadfolder | default('/tmp') + '/os.qcow2' }}"
+
   when: presencevm.status == "Undefined" or (hostvars[item].force is defined and hostvars[item].force)
