@@ -9,6 +9,7 @@
 - name: Configure ssh keys between hosts
   hosts: hypervisors
   gather_facts: true
+  become: true
   tasks:
       - block:
         - name: Create live migration user
