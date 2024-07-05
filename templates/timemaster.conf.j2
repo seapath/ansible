@@ -7,7 +7,7 @@
 [ptp_domain 0]
 ntp_options poll 0
 {% if ptp_vlanid is defined %}
-interfaces {{ 'ptp' }}
+interfaces {{ ptp_interface + '.' + ptp_vlanid|string }}
 {% else %}
 interfaces {{ ptp_interface }}
 {% endif %}
@@ -27,7 +27,7 @@ ntp_program chronyd
 [chrony.conf]
 include /etc/chrony.conf
 {% if ntp_servers is defined %}
-{%- for line in ntp_servers %}{% if ptp_interface is not defined and loop.index==1 %}server {{ line }} prefer iburst maxsamples 10
+{%- for line in ntp_servers %}{% if ptp_interface is not defined and loop.index==1 %}server {{ line }} trust iburst maxsamples 10
 {% else %}server {{ line }} iburst maxsamples 10
 {% endif %}{% endfor %}
 {% endif %}
