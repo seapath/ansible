@@ -39,10 +39,23 @@
 - name: Disable unwanted Ceph mgr module
   hosts:
       mons
+  vars_files:
+    - ../vars/ceph_group_vars/all.yml
   tasks:
-      - name: Disable Ceph mgr restful module
-        command: ceph mgr module disable restful
+      - name: Disable Ceph mgr cephadm prometheus rook modules
+        command: "ceph mgr module disable {{ item }}"
         run_once: true
+        loop:
+          - cephadm
+          - prometheus
+          - rook
+      - name: Disable ceph dashboard and restful modules
+        command: "ceph mgr module disable {{ item }}"
+        run_once: true
+        loop:
+          - dashboard
+          - restful
+        when: not dashboard_enabled | default(false) | bool
 - name: Configure rbd
   hosts:
       osds
