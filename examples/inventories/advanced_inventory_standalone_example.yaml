@@ -27,8 +27,12 @@ all:
               # Gateway IP Addr. The variable must be define but
               # can be empty
               gateway_addr: 192.168.216.1
-              # NTP server to use
-              ntp_servers: 192.168.216.1
+              # Netplan configuration files. These are examples.
+              # For advance configuration, the user must write its own.
+              netplan_configurations :
+               - inventories/netplan_admin_br0_example.yaml.j2
+               - inventories/netplan_ptp_interface_example.yaml.j2
+               - inventories/netplan_cluster_example.yaml.j2
               # Set true to restart after setting kernel parameters (default is
               # false)
               kernel_parameters_restart: true
@@ -72,8 +76,12 @@ all:
     # it will be apply during the next reboot
     # This variable is optional (default: false)
     apply_network_config: true
-    # DNS server ip. The variable must be defined but can be empty.
-    dns_server:
+    # DNS servers ip. The variable can be a list
+    dns_servers: 9.9.9.9
+    # NTP servers used by timemaster
+    ntp_servers:
+     - "185.254.101.25"
+     - "51.145.123.29"
     # Change the Ansible working folder to a rw accessible folder
     ansible_remote_tmp: /tmp/.ansible/tmp
     # The syslog server IP address where logs are centralized
