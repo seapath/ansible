@@ -45,22 +45,6 @@ all:
               team0_1: enp1s0f1
               # rstp priority on the cluster network. Optional, default is 16384
               br_rstp_priority: 12288
-              custom_network:
-                # Arbitrary list name. Must begin with 00-
-                00-br0ExternalPort:
-                  - Match:
-                      # The name of the interface to configure
-                      - Name: "br0ExternalPort"
-                  - Network:
-                      # The interface IP address with it
-                      # subnetwork
-                      - Address: "10.0.24.3/24"
-                # The interface used to configure the cluster
-                00-cluster:
-                  - Match:
-                      - Name: "{{ cluster_interface }}"
-                  - Network:
-                      - Address: "{{ cluster_ip_addr }}/24"
 
             hypervisor2:
               ansible_host: 192.168.217.16
@@ -85,12 +69,17 @@ all:
               - eth1: 8-11,12-15
 
 
-
           # hypervisors groupe variables
           vars:
             # Set true to restart after setting kernel parameters (default is
             # false)
             kernel_parameters_restart: true
+            # Netplan configuration files. These are examples.
+            # For advance configuration, the user must write its own.
+            netplan_configurations :
+             - inventories/netplan_admin_br0_example.yaml.j2
+             - inventories/netplan_ptp_interface_example.yaml.j2
+             - inventories/netplan_cluster_example.yaml.j2
             # OVS bridges and ports description.
             # See OVS_configuration.adoc for more details.
             # Declared here, bridges configuration is the same for all
@@ -162,6 +151,9 @@ all:
               ip_addr: 192.168.217.11
               gateway_addr: 192.168.1.254
               subnet: 24
+              netplan_configurations :
+               - inventories/netplan_admin_br0_example.yaml.j2
+               - inventories/netplan_cluster_example.yaml.j2
     # Ceph Monitor group where a Ceph monitor will be installed
     mons:
       hosts:
@@ -193,7 +185,7 @@ all:
     # it will be apply during the next reboot
     # This variable is optional (default: false)
     apply_network_config: true
-    # NTP servers to use
+    # NTP servers used by timemaster
     ntp_servers:
      - "185.254.101.25"
      - "51.145.123.29"
