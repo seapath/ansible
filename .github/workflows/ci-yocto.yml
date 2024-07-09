@@ -24,7 +24,7 @@ jobs:
 
       - name: Initialize sources
         run: mkdir ${{ env.WORK_DIR }}; cd ${{ env.WORK_DIR }};
-             git clone -q --depth 1 --recurse-submodules -b main https://github.com/seapath/ci ci;
+             git clone -q --depth 1 --recurse-submodules -b clickable_compliance_matrix_yocto https://github.com/seapath/ci ci;
              echo "CI sources downloaded successfully";
              ci/launch-yocto.sh init;
 
@@ -53,7 +53,3 @@ jobs:
         if: ${{ always() && steps.conf.conclusion == 'success' }}
         run: cd ${{ env.WORK_DIR }};
              ci/launch-yocto.sh report;
-
-      - name: Clean
-        if: always()
-        run: rm -rf $WORK_DIR;
