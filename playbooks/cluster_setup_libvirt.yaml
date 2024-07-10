@@ -1,5 +1,5 @@
 # Copyright (C) 2022, RTE (http://www.rte-france.com)
-# Copyright (C) 2024, SFL (https://savoirfairelinux.com)
+# Copyright (C) 2024 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 # This Ansible playbook configures libvirt to work with Ceph. It is
