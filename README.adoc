@@ -287,14 +287,11 @@ Or if you use `cqfd`:
 
  $ cqfd run ansible-playbook -i inventories/standalone_inventory.yaml playbooks/cluster_setup_configure_hosts.yaml
 
-=== Generate SEAPATH Ansible modules documentation
+=== SEAPATH Ansible modules documentation
 
-The SEAPATH Ansible modules documentation can be generated using the command:
+The SEAPATH Ansible modules documentation is published on ansible-galaxy
 
- $ cqfd -b module_documentation
-
-The generated documentation is in HTML format and can be found in
-_module_documentation/index.html_.
+https://galaxy.ansible.com/ui/repo/published/seapath/cluster_vm/content/module/cluster_vm/
 
 
 === Deploy a virtual machine on seapath
@@ -306,6 +303,7 @@ You can also create a yocto VM using the flavour cqfd _guest_efi_, as described 
  $ cqfd -b guest_efi
 
 To deploy this machine on the cluster, follow these steps :
+- Create a folder `vm_images` at the base of this repo
 - Place the generated qcow2 file in the `vm_images` directory with the name `guest.qcow2`.
 - Create an inventory describing your virtual machines. An example can be found in `examples/inventories`
 - For a cluster, call the playbook `playbooks/deploy_vms_cluster.yaml`
