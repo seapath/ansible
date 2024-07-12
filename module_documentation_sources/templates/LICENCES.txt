@@ -1,3 +1,0 @@
-This files comme from Ansible repository: https://github.com/ansible/ansible
-All files are undex GPLv3.0 or later version.
-SPDX-License-Identifier: GPL-3.0-or-later
