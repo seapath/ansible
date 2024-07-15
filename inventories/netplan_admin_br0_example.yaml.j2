@@ -1,0 +1,39 @@
+# Copyright (C) 2024 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+# This netplan file defines a bridge on the admin network interface.
+# When defined on a VM xml file, this bridge can be used to administrate both
+# the hypervisor and the VM on the same physical interface.
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    # Put all physical interfaces to up
+    wired:
+      match:
+        name: "en*|eth*"
+      dhcp4: no
+    {{ network_interface }}:
+      dhcp4: no
+      dhcp6: no
+  bridges:
+    br0:
+      interfaces:
+        - {{ network_interface }}
+      addresses:
+        - {{ ip_addr }}/{{ subnet | default(24) }}
+{% if gateway_addr is defined %}
+      routes:
+        - to: default
+          via: {{ gateway_addr }}
+{% endif %}
+      dhcp4: no
+      dhcp6: no
+{% if dns_servers is defined %}
+      nameservers:
+        addresses:
+{% if dns_servers is string %}
+          - {{ dns_servers }}
+{% elif dns_servers is iterable %}
+          - {{ dns_servers | join("\n          - ") }}
+{% endif %}
+{% endif %}

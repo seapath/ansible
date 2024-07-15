@@ -29,10 +29,20 @@
         var: hostvars[item]
         verbosity: 2
       with_items: "{{ groups['VMs'] }}"
+    - name: Check tmp folder permission
+      file:
+        path: "{{ qcow2tmpuploadfolder }}"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0755'
+      when: qcow2tmpuploadfolder is defined
     - name: Copy the disk on target
       copy:
         src: "{{ hostvars[item].vm_disk }}"
         dest: "{{ disk_pool }}/{{ hostvars[item].inventory_hostname }}.qcow2"
+      vars:
+        ansible_remote_tmp: "{{ qcow2tmpuploadfolder | default(omit) }}"
       with_items: "{{ groups['VMs'] }}"
       when: disk_copy | bool and (hostvars[item].disk_extract is not defined or not hostvars[item].disk_extract | bool)
     - name: Copy the gziped disk on target
