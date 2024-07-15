@@ -27,6 +27,8 @@
         copy:
           src: "{{ vm_file }}"
           dest: "{{ vm_file_dest }}"
+        vars:
+          ansible_remote_tmp: "{{ qcow2tmpuploadfolder | default(omit) }}"
         when: disk_copy | default(true) | bool
       - name: "Create {{ item }}"
         cluster_vm:
