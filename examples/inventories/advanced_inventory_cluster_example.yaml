@@ -207,3 +207,5 @@ all:
     # The name of the user used for the livemigration
     # If not set, livemigration will be disabled
     livemigration_user: username
+    # qcow2tmpuploadfolder: folder to store the qcow2 file while importing a guest.
+    qcow2tmpuploadfolder: "/data/.ansible"
