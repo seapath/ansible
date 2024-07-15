@@ -99,21 +99,12 @@
   hosts: publisher_machine
   become: true
   tasks:
-    - name: "Create pcaps directory if it doesn't exist"
-      file:
-        path: "/tmp/latency_tests/pcaps"
-        state: directory
-
-    - name: "Copy pcap file on publisher"
-      copy:
-        src: "{{ pcap_path }}/{{ pcap_file }}"
-        dest: "/tmp/latency_tests/pcaps"
-
     - name: "Send pcap from publisher"
-      command: "bittwist \
-                -i {{ sv_interface }} \
-                -l {{ pcap_loop }} \
-                /tmp/latency_tests/pcaps/{{ pcap_file }}"
+      command: >-
+          bittwist
+            -i {{ sv_interface }}
+            -l {{ pcap_loop }}
+            /seapath-ci/pcaps/{{ pcap_file }}
       register: cmd
 
 - name: Fetch results
