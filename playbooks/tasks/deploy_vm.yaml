@@ -63,5 +63,6 @@
   vars:
     vm_file: "{{ hostvars[item].vm_disk | default( (vms_disks_directory|default('')) ~ '/' ~ item ~ '.qcow2') }}"
     vm_file_dest: "{{ qcow2tmpuploadfolder | default('/tmp') + '/os.qcow2' }}"
+    ansible_remote_tmp: "{{ qcow2tmpuploadfolder | default(omit) }}"
 
   when: presencevm.status == "Undefined" or (hostvars[item].force is defined and hostvars[item].force)
