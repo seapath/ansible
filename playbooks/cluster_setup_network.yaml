@@ -260,6 +260,7 @@
   hosts:
     - cluster_machines
     - standalone_machine
+    - VMs
   become: true
   tasks:
     - block:
