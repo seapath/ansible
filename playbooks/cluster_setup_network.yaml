@@ -248,7 +248,7 @@
     - name: Build hosts file
       lineinfile:
         dest: /etc/hosts
-        line: "{{ ip_addr }} {{ inventory_hostname }} {{ hostname | default('') }}"
+        line: "{{ ip_addr | default( ansible_host ) }} {{ inventory_hostname }} {{ hostname | default('') }}"
         state: present
     - name: remove 'debian' from hosts file
       lineinfile:
