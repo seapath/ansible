@@ -1,7 +1,0 @@
-# Copyright (C) 2020, RTE (http://www.rte-france.com)
-# SPDX-License-Identifier: Apache-2.0
----
-rbd_pool: rbd
-libvirt_pool: ceph
-force: false
-size_unit: G

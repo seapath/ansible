@@ -1,1 +1,0 @@
-../../seapath_import_vm_disk/files/remove_disk.sh
