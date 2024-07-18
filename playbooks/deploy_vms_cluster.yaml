@@ -1,5 +1,5 @@
 # Copyright (C) 2021, RTE (http://www.rte-france.com)
-# Copyright (C) 2024, SFL (https://savoirfairelinux.com)
+# Copyright (C) 2024 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
 # Deploy all VMs define in the VMs group
 
@@ -12,10 +12,6 @@
     - name: "Deploy VMs"
       include_tasks: tasks/deploy_vm.yaml
       loop: "{{ groups['VMs'] }}"
-      vars:
-        disk_copy: true
-        vm_file: "{{ hostvars[item].vm_disk | default( (vms_disks_directory|default('')) ~ '/' ~ item ~ '.qcow2') }}"
-        vm_file_dest: "{{ qcow2tmpuploadfolder | default('/tmp') + '/os.qcow2' }}"
     - name: "Define colocation constraints"
       include_tasks: tasks/colocation.yaml
       loop: "{{ groups['VMs'] }}"

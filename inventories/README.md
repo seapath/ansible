@@ -1,5 +1,5 @@
 <!-- Copyright (C) 2020, RTE (http://www.rte-france.com) -->
-<!-- Copyright (C) 2024, SFL (https://savoirfairelinux.com) -->
+<!-- Copyright (C) 2024 Savoir-faire Linux, Inc. -->
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 
 # Inventories directory

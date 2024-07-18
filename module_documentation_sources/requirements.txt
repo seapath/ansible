@@ -1,7 +1,0 @@
-jinja2
-PyYAML
-rstcheck
-sphinx
-sphinx-notfound-page
-Pygments >= 2.4.0
-ansible >= 2.9,<2.10

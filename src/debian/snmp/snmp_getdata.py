@@ -12,12 +12,12 @@ def writeline(oid,line):
     f.write(oid + ":" + line + "\n")
 
 def singlelinetooid(oid,title,line):
-    writeline(oid, title)
+#    writeline(oid, title)
     line = line.lstrip().rstrip()
     writeline(oid + ".0", line)
 
 def multilinetooid(oid,title,multistr):
-    writeline(oid, title)
+#    writeline(oid, title)
     linenumber = 0
     for line in multistr.splitlines():
         linenumber = linenumber + 1
@@ -26,7 +26,7 @@ def multilinetooid(oid,title,multistr):
     writeline(oid + ".0", str(linenumber))
 
 def dictarrayoid(oid,title,a):
-    writeline(oid, title)
+#    writeline(oid, title)
     keys = list(a[0].keys())
     for key in keys:
         writeline(oid + ".0." + str(keys.index(key)), key)
@@ -327,6 +327,7 @@ done
                 multilinetooid(base_oid + ".1.11.0.1", title + " summary", data1)
                 data2 = json.dumps(dict_status["crm_mon"]["nodes"])
                 multilinetooid(base_oid + ".1.11.0.2", title + " nodes", data2)
+                continue
             except ExpatError:
                 pass
 

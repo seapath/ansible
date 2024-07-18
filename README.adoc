@@ -290,14 +290,11 @@ Or if you use `cqfd`:
  $ cqfd run ansible-playbook -i inventories/cluster_inventory.yaml -i inventories/networktopology_inventory.yaml playbooks/cluster_setup_hardened_debian.yaml
 
 
-=== Generate SEAPATH Ansible modules documentation
+=== SEAPATH Ansible modules documentation
 
-The SEAPATH Ansible modules documentation can be generated using the command:
+The SEAPATH Ansible modules documentation is published on ansible-galaxy
 
- $ cqfd -b module_documentation
-
-The generated documentation is in HTML format and can be found in
-_module_documentation/index.html_.
+https://galaxy.ansible.com/ui/repo/published/seapath/cluster_vm/content/module/cluster_vm/
 
 
 === Deploy a virtual machine on seapath
@@ -305,6 +302,7 @@ _module_documentation/index.html_.
 A basic virtual machine for SEAPATH based on debian can be created using the https://github.com/seapath/build_debian_iso#build-a-virtual-machine-image[build_debian_iso] repository.
 
 To deploy this machine on the cluster, follow these steps :
+- Create a folder `vm_images` at the base of this repo
 - Place the generated qcow2 file in the `vm_images` directory with the name `guest.qcow2`.
 - Create an inventory describing your virtual machines. Follow the example `inventories/seapath_vm_definition_example.yml`
 - Call the playbook `playbooks/deploy_vms_cluster.yaml`
