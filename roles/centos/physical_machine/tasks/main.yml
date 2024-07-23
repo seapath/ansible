@@ -332,10 +332,10 @@
         line: "{{ item }}"
       with_items: "{{ extra_kernel_modules | default([]) }}"
 
-- name: Add admin user to libvirt and haclient groups
+- name: Add admin user to libvirt group
   user:
     name: "{{ admin_user }}"
-    groups: libvirt,haclient
+    groups: libvirt
     append: yes
 
 
