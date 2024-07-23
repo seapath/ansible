@@ -26,6 +26,17 @@
   roles:
     - centos/hypervisor
 
+- name: Add admin user to haclient group
+  hosts:
+    - cluster_machines
+  become: true
+  tasks:
+    - name: Add admin user to haclient group
+      user:
+        name: "{{ admin_user }}"
+        groups: haclient
+        append: yes
+
 - name: Disable libvirt-guests.service
   hosts:
     - cluster_machines
