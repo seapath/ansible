@@ -67,10 +67,14 @@ options:
         arguments I(name), I(metadata_name)
       - C(define_colocation) Define colocation rules. Require
         arguments I(name), I(colocated_vms)
+      - C(add_pacemaker_remote) Add a pacemaker remote. Require arguments
+        I(name), −I(remote_name), I(remote_address)
+      - C(remove_pacemaker_remote) Remove a pacemaker remote. Require arguments
+        I(name)
     choices: [ create, remove, list_vms, start, status, stop, clone,
     list_snapshots, create_snapshot,remove_snapshot, rollback_snapshot,
     purge_image, list_metadata, get_metadata, disable, enable,
-    define_colocation]
+    define_colocation, add_pacemaker_remote, remove_pacemaker_remote]
     type: str
   xml:
     description:
@@ -210,7 +214,27 @@ options:
       - list of crm config to run when enabling this guest
       - This parameter is optional
     type: list
-
+  remote_name:
+    description:
+      - Name of the remote to add (if I(remote_address) is not set, the remote
+        name is used as the remote address)
+      - This parameter is required if I(command) is C(add_pacemaker_remote)
+    type: str
+  remote_address:
+    description:
+      - Address of the remote to add
+      - This parameter is required if I(command) is C(add_pacemaker_remote)
+    type: str
+  remote_port:
+    description:
+      - Port of the remote to add
+      - This parameter is optional if I(command) is C(add_pacemaker_remote)
+    type: int
+  remote_timeout:
+    description:
+      - Timeout (in seconds) of the remote to add
+      - This parameter is optional if I(command) is C(add_pacemaker_remote)
+    type: int
 requirements:
     - python >= 3.7
     - librbd
@@ -352,6 +376,22 @@ EXAMPLES = r"""
     command: create
     crm_config_cmd:
      - location ping_test_GUEST1 GUEST1 rule pingd: defined pingd
+
+# Configure a pacemaker remote
+- name: Add a pacemaker remote
+  cluster_vm:
+    name: guest0
+    command: add_pacemaker_remote
+    remote_name: remote1
+    remote_address: 192.168.2.6
+    remote_port: 3121
+    remote_timeout: 20
+
+# Remove a pacemaker remote
+- name: Remove a pacemaker remote
+  cluster_vm:
+    name: guest0
+    command: remove_pacemaker_remote
 """
 
 RETURN = """
@@ -431,6 +471,8 @@ commands_list = [
     "list_metadata",
     "get_metadata",
     "define_colocation",
+    "add_pacemaker_remote",
+    "remove_pacemaker_remote",
 ]
 
 
@@ -480,6 +522,10 @@ def run_module():
         strong=dict(type="bool", required=False, default=False),
         colocated_vms=dict(type="list", required=False),
         crm_config_cmd=dict(type="list", required=False),
+        remote_name=dict(type="str", require=False),
+        remote_address=dict(type="str", require=False),
+        remote_port=dict(type="str", require=False),
+        remote_timeout=dict(type="str", require=False),
     )
     result = {}
     required = [
@@ -499,6 +545,9 @@ def run_module():
         ("command", "rollback_snapshot", ("name", "snapshot_name")),
         ("command", "list_snapshots", ("name",)),
         ("command", "define_colocation", ("name", "colocated_vms")),
+        ("command", "add_pacemaker_remote", ("name", "remote_name",
+                                             "remote_address")),
+        ("command", "remove_pacemaker_remote", ("name",)),
     ]
     module = AnsibleModule(
         argument_spec=module_args,
@@ -536,6 +585,10 @@ def run_module():
     colocated_vms = args.get("colocated_vms", [])
     crm_config_cmd = args.get("crm_config_cmd", None)
     priority = args.get("priority", None)
+    pacemaker_remote = args.get("remote_name", None)
+    pacemaker_remote_address = args.get("remote_address", None)
+    pacemaker_remote_port = args.get("remote_port", None)
+    pacemaker_remote_timeout = args.get("remote_timeout", None)
 
     vm_name_command_list = commands_list.copy()
     vm_name_command_list.remove("list_vms")
@@ -666,6 +719,16 @@ def run_module():
             vm_manager.add_colocation(
                 vm_name, *colocated_vms, strong=strong_constraint
             )
+        elif command == "add_pacemaker_remote":
+            vm_manager.add_pacemaker_remote(
+                vm_name,
+                pacemaker_remote,
+                pacemaker_remote_address,
+                remote_node_port=pacemaker_remote_port,
+                remote_node_timeout=pacemaker_remote_timeout,
+            )
+        elif command == "remove_pacemaker_remote":
+            vm_manager.remove_pacemaker_remote(vm_name)
         else:
             module.fail_json(
                 msg="{} `command` is not implemented yet".format(command)
