@@ -1,4 +1,4 @@
-# Copyright (C) 2023, RTE (http://www.rte-france.com)
+# Copyright (C) 2024 Red Hat, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 # This playbook setup SEAPATH on a CentOs Steam machine

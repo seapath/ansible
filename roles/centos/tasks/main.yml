@@ -1,3 +1,6 @@
+# Copyright (C) 2024 Red Hat, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
 - name: disable vim defaults
   lineinfile:
     dest: /etc/vimrc

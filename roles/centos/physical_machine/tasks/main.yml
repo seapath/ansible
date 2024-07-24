@@ -1,3 +1,6 @@
+# Copyright (C) 2024 Red Hat, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
 # We need to restart nginx if it's running and know if gunicorn socket is present
 - name: Populate service facts
   service_facts:
