@@ -52,6 +52,6 @@
     - name: Restart to configure Debian
       reboot:
       when:
-        - skip_reboot_setup_debian is not defined or not skip_reboot_setup_debian
+        - skip_reboot_setup is not defined or not skip_reboot_setup
     - name: Wait for host to be online
       wait_for_connection:
