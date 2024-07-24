@@ -10,7 +10,6 @@
   hosts:
     - cluster_machines
     - standalone_machine
-    - VMs
   tasks:
     - name: Retrieve Seapath system version
       command: "cat /etc/redhat-release"
