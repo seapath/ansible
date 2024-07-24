@@ -13,7 +13,7 @@
   tasks:
   - name: CI configure skip setup_debian reboots
     set_fact:
-      skip_reboot_setup_debian: true
+      skip_reboot_setup: true
       skip_reboot_setup_network: true
 - import_playbook: ./cluster_setup_debian.yaml
 - import_playbook: ./cluster_setup_hardened_debian.yaml
