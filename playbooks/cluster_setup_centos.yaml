@@ -1,10 +1,9 @@
 # Copyright (C) 2023, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
-# This playbook setup SEAPATH on a debian machine
+# This playbook setup SEAPATH on a CentOs Steam machine
 # The machine must previously have been flashed
-# with an iso created by build_debian_iso
-# This playbooks can also configure VMs created with build_debian_iso
+# with an CentOS Stream with kickstart based on https://github.com/yairpod/SEAPATH_CentOS_Stream_Kickstart
 
 - name: Check if we are using a correct seapath flavor
   hosts:
