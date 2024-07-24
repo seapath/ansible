@@ -115,6 +115,9 @@ all:
                               - { src: '../inventories_private/toto.txt', dest: '/tmp/toto' }
                               # you can also upload and uncompress an archive file (set extract: true), in that case the destination must be a folder
                               - { src: '../inventories_private/toto.tar.bz2', dest: '/tmp/folder1', extract: true }
+                            commands_to_run_after_upload:
+                              - "/usr/bin/systemctl restart snmpd"
+
 
                             # optional extra directives to add to snmpd.conf
                             extra_snmpd_directives: |
