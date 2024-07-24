@@ -149,6 +149,7 @@ all:
                         # Realtime/CPUs cgroups isolation configuration
                         # All those parameters are optional.
                         isolcpus: "2-5,14-17" # CPUs to isolate
+                        #custom_tuned_profile_path: ../inventories/custom_tuned.conf.j2
 
                         cpusystem: "0,12" # CPUs reserves for system
                         cpuuser: "1,13" # CPUs reserves for user applications
