@@ -26,7 +26,7 @@ all:
                             # Main network configuration
                             network_interface: enp1s0 #admin interface
                             ip_addr: "{{ ansible_host }}"
-                            subnet: 25 #default is 24, override if necessary
+                            subnet: 25 #subnet for main interface (br0), default is 24, override if necessary
                             dns_servers: #remove this variable to disable dns, leave this variable empty for DNS via DHCP
                               - 10.10.2.1
                             gateway_addr: 10.0.0.1
