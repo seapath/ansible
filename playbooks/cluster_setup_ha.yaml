@@ -11,7 +11,6 @@
   hosts:
     - cluster_machines
     - standalone_machine
-    - VMs
   tasks:
   - include_vars: "../vars/{{ ansible_distribution }}_paths.yml"
 
