@@ -8,7 +8,7 @@
     - standalone_machine
     - VMs
   become: true
-  gather_facts: True
+  gather_facts: true
   tasks:
     - name: Copy Cukinia's tests
       synchronize:

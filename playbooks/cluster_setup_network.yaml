@@ -7,6 +7,7 @@
 
 ---
 - name: Get distrebution variables
+  gather_facts: true
   hosts:
     - cluster_machines
     - standalone_machine
@@ -181,7 +182,6 @@
       when: cluster_protocol is defined and cluster_protocol == "HSR" and hsr_mac_address is defined
 
 - name: Configure OVS
-  gather_facts: True
   hosts:
     - cluster_machines
     - standalone_machine
@@ -374,7 +374,6 @@
     when: dns_servers is not defined
 
 - name: Configure TimeMaster
-  gather_facts: True
   hosts:
     - cluster_machines
     - standalone_machine
@@ -428,7 +427,6 @@
         - apply_config or need_reboot is not defined or not need_reboot
 
 - name: Stop chrony service
-  gather_facts: True
   hosts:
     - cluster_machines
     - standalone_machine

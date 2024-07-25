@@ -19,7 +19,7 @@
     - standalone_machine
     - VMs
   name: Cukinia tests
-  gather_facts: True
+  gather_facts: true
   become: true
   vars:
     tests_format: junitxml
@@ -45,7 +45,6 @@
 - hosts:
     - cluster_machines
   name: Cukinia tests
-  gather_facts: True
   become: true
   vars:
     tests_format: junitxml

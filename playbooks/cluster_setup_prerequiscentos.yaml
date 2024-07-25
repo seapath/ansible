@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 - name: Prerequis machine centos
-  gather_facts: True
+  gather_facts: true
   hosts:
     - cluster_machines
     - standalone_machine
@@ -11,7 +11,6 @@
   roles:
     - centos
 - name: Prerequis physical machine centos
-  gather_facts: True
   hosts:
     - cluster_machines
     - standalone_machine
