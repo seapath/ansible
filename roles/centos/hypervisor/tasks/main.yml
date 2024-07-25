@@ -36,7 +36,7 @@
 
 - name: add sriov sysfs rules
   template:
-    src: ../templates/sriov.conf.j2
+    src: templates/sriov.conf.j2
     dest: /etc/tmpfiles.d/sriov.conf
     mode: '0644'
   with_items: "{{ sriov | dict2items }}"
@@ -44,7 +44,7 @@
   register: sriov_tmpfiles
 - name: Copy sysfs.d cpumask
   template:
-    src: ../templates/tmpfiles-workqueue_cpumask.conf.j2
+    src: templates/tmpfiles-workqueue_cpumask.conf.j2
     dest: /etc/tmpfiles.d/tmpfiles-workqueue_cpumask.conf
     mode: '0644'
   register: tmpfiles_cpumask
