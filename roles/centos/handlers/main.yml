@@ -9,3 +9,4 @@
   ansible.builtin.systemd:
     name: syslog-ng
     state: restarted
+
