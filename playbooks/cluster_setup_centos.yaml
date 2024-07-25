@@ -6,19 +6,16 @@
 # with an CentOS Stream with kickstart based on https://github.com/yairpod/SEAPATH_CentOS_Stream_Kickstart
 
 - name: Check if we are using a correct seapath flavor
+  gather_facts: true
   hosts:
     - cluster_machines
     - standalone_machine
   tasks:
-    - name: Retrieve Seapath system version
-      command: "cat /etc/redhat-release"
-      register: "uname_output"
-
     - name: Check if current Ansible branch is compatible
       fail:
         msg: "The current branch (debian-main) is incompatible with the Yocto version of SEAPATH. Please use the main branch to configure this machine"
       failed_when:
-        - not(uname_output.stdout | regex_search("CentOS"))
+        - not( ansible_distribution | regex_search("CentOS|RedHat"))
 
 - import_playbook: cluster_setup_prerequiscentos.yaml
 - import_playbook: cluster_setup_network.yaml

@@ -7,30 +7,16 @@
 # This playbooks can also configure VMs created with build_debian_iso
 
 - name: Check if we are using a correct seapath flavor
+  gather_facts: true
   hosts:
     - cluster_machines
     - standalone_machine
-    - VMs
   tasks:
-    - name: Retrieve redhat-release
-      stat:
-        path: /etc/redhat-release
-      register: "redhat_output"
-
-    - name: Retrieve debian-version
-      stat:
-        path: /etc/debian_version
-      register: "debian_output"
-
-    - name: Print both versions
-      ansible.builtin.debug:
-        msg: redhat_output {{ redhat_output.stat.exists }} debian_output {{ debian_output.stat.exists }}
-
     - name: Check if current Ansible branch is compatible
       fail:
         msg: "The current branch (debian-main) is incompatible with the Yocto version of SEAPATH. Please use the main branch to configure this machine"
       failed_when:
-        - not(redhat_output.stat.exists) and not(debian_output.stat.exists )
+        - not( ansible_distribution | regex_search("Debian|CentOS|RedHat"))
 
 - import_playbook: cluster_setup_prerequiscentos.yaml
   when:
