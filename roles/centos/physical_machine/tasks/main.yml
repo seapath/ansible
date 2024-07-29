@@ -349,7 +349,7 @@
 
 - name: add br_netfilter to /etc/modules-load.d
   ansible.builtin.copy:
-    src: ../src/debian/modules/netfilter.conf
+    src: ../src/centos/modules/netfilter.conf
     dest: /etc/modules-load.d/netfilter.conf
     owner: root
     group: root
