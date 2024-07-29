@@ -14,7 +14,7 @@
 
 - name: add vhost_vsock to /etc/modules-load.d
   ansible.builtin.copy:
-    src: ../src/debian/modules/vhost_vsock.conf
+    src: ../src/centos/modules/vhost_vsock.conf
     dest: /etc/modules-load.d/vhost_vsock.conf
     owner: root
     group: root
@@ -22,7 +22,7 @@
 
 - name: add sriov driver to /etc/modules-load.d
   ansible.builtin.copy:
-    src: ../src/debian/modules/sriov_driver.conf
+    src: ../src/centos/modules/sriov_driver.conf
     dest: /etc/modules-load.d/sriov_driver.conf
     owner: root
     group: root
