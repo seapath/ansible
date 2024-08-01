@@ -78,6 +78,11 @@
       when:
         - upload_files is defined
         - item.extract is defined and item.extract is true
+    - name: run extra commands after upload
+      command: "{{ item }}"
+      loop: "{{ commands_to_run_after_upload }}"
+      when: commands_to_run_after_upload is defined
+
 
 - name: Remove what is not needed after installation
   hosts:

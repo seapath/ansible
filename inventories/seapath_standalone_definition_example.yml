@@ -26,7 +26,7 @@ all:
                             # Main network configuration
                             network_interface: enp1s0 #admin interface
                             ip_addr: "{{ ansible_host }}"
-                            subnet: 25 #default is 24, override if necessary
+                            subnet: 25 #subnet for main interface (br0), default is 24, override if necessary
                             dns_servers: #remove this variable to disable dns, leave this variable empty for DNS via DHCP
                               - 10.10.2.1
                             gateway_addr: 10.0.0.1
@@ -63,6 +63,7 @@ all:
 
                             # Realtime/CPUs cgroups isolation configuration
                             isolcpus: "2-5,14-17" # CPUs to isolate
+                            #custom_tuned_profile_path: ../inventories/custom_tuned.conf.j2
 
                             cpusystem: "0,12" # CPUs reserves for system
                             cpuuser: "1,13" # CPUs reserves for user applications
@@ -114,6 +115,9 @@ all:
                               - { src: '../inventories_private/toto.txt', dest: '/tmp/toto' }
                               # you can also upload and uncompress an archive file (set extract: true), in that case the destination must be a folder
                               - { src: '../inventories_private/toto.tar.bz2', dest: '/tmp/folder1', extract: true }
+                            commands_to_run_after_upload:
+                              - "/usr/bin/systemctl restart snmpd"
+
 
                             # optional extra directives to add to snmpd.conf
                             extra_snmpd_directives: |

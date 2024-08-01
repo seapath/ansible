@@ -170,9 +170,13 @@
     state: directory
     mode: '0755'
 
+- name: tuned path
+  set_fact:
+    tuned_path: "{{ custom_tuned_profile_path if custom_tuned_profile_path is defined else '../src/tuned/tuned.conf.j2' }}"
+
 - name: copy seapath-rt-host tuned profile conf
   template:
-    src: ../src/tuned/tuned.conf.j2
+    src: "{{ tuned_path }}"
     dest: /etc/tuned/seapath-rt-host/tuned.conf
     group: root
     owner: root

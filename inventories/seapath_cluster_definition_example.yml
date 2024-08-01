@@ -20,7 +20,7 @@ all:
                             # Main network configuration
                             network_interface: eno8303 #admin interface
                             ip_addr: "{{ ansible_host }}"
-                            subnet: 25 #default is 24, override if necessary
+                            subnet: 25 #subnet for main interface (br0), default is 24, override if necessary
                             #br0vlan: 159 #if the main interface on br0 is on a vlan that the host must manage
 
                             # snmp network settings
@@ -39,6 +39,7 @@ all:
                             cluster_next_ip_addr : "192.168.55.2" #node 2 cluster network ip
                             cluster_previous_ip_addr : "192.168.55.3" #node 3 cluster network ip
                             cluster_ip_addr: "192.168.55.1"
+                            #team0subnet: 24 #subnet for cluster interface (team0), default is 24, override if necessary
 
                             # OVS configuration (see ovs_topology inventory)
                             br_rstp_priority: 12288
@@ -82,6 +83,7 @@ all:
                             cluster_next_ip_addr : "192.168.55.3" #node 3 cluster network ip
                             cluster_previous_ip_addr :  "192.168.55.1" #node 1 cluster network ip
                             cluster_ip_addr: "192.168.55.2"
+                            #team0subnet: 24 #subnet for cluster interface (team0), default is 24, override if necessary
                             br_rstp_priority: 16384
                             brBRIDGE1_ext: eno1234 #physical nic to use with BRIDGE1 (see the ovs topology inventory)
 
@@ -120,6 +122,7 @@ all:
                             cluster_next_ip_addr : "192.168.55.1" #ip de hyperviseur 1
                             cluster_previous_ip_addr :  "192.168.55.2" #ip de l'hyperviseur 2
                             cluster_ip_addr: "192.168.55.3"
+                            #team0subnet: 24 #subnet for cluster interface (team0), default is 24, override if necessary
                             br_rstp_priority: 16384
                             brBRIDGE1_ext: eno1234 #physical nic to use with BRIDGE1 (see the ovs topology inventory)
 
@@ -149,6 +152,7 @@ all:
                         # Realtime/CPUs cgroups isolation configuration
                         # All those parameters are optional.
                         isolcpus: "2-5,14-17" # CPUs to isolate
+                        #custom_tuned_profile_path: ../inventories/custom_tuned.conf.j2
 
                         cpusystem: "0,12" # CPUs reserves for system
                         cpuuser: "1,13" # CPUs reserves for user applications
@@ -339,6 +343,8 @@ all:
           - { src: '../inventories_private/toto.txt', dest: '/tmp/toto' }
           # you can also upload and uncompress an archive file (set extract: true), in that case the destination must be a folder
           - { src: '../inventories_private/toto.tar.bz2', dest: '/tmp/folder1', extract: true }
+        commands_to_run_after_upload:
+          - "/usr/bin/systemctl restart snmpd"
 
         # optional extra directives to add to snmpd.conf
         extra_snmpd_directives: |
