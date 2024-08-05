@@ -24,8 +24,8 @@ ntp_program chronyd
 [chrony.conf]
 include /etc/chrony/chrony.conf
 {% if ntp_servers is defined %}
-{%- for line in ntp_servers %}{% if ptp_interface is not defined and loop.index==1 %}server {{ line }} trust iburst maxsamples 10
-{% else %}server {{ line }} iburst maxsamples 10
+{%- for line in ntp_servers %}{% if ptp_interface is not defined and loop.index==1 %}server {{ line }} trust iburst maxsamples 10 minsamples 10 maxpoll 6 minpoll 6
+{% else %}server {{ line }} iburst maxsamples 10 minsamples 10 maxpoll 6 minpoll 6
 {% endif %}{% endfor %}
 {% endif %}
 
