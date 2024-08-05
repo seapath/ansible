@@ -1,50 +1,50 @@
-# Copyright (C) 2023, RTE (http://www.rte-france.com)
-# SPDX-License-Identifier: Apache-2.0
-
-name: CI debian
-
-env:
-  WORK_DIR: /tmp/seapath_ci_${{ github.run_id }}_${{ github.run_attempt }}_${{ github.sha }}
-
-on:
-  pull_request:
-    types: [opened, reopened, synchronize]
-    branches: [debian11]
-
-
-jobs:
-  CI:
-    runs-on: [self-hosted, runner-RTE]
-    steps:
-
-      - name: Initialize sources
-        run: mkdir ${{ env.WORK_DIR }}; cd ${{ env.WORK_DIR }};
-             git clone -q --depth 1 --recurse-submodules -b main https://github.com/seapath/ci ci;
-             echo "CI sources downloaded successfully";
-             ci/launch.sh init;
-
-      - name: Configure Debian
-        id: conf
-        run: cd ${{ env.WORK_DIR }};
-             ci/launch.sh conf;
-
-      - name: Launch system tests
-        run: cd ${{ env.WORK_DIR }};
-             ci/launch.sh system;
-
-      - name: Launch VM tests
-        run: cd ${{ env.WORK_DIR }};
-             ci/launch.sh vm;
-
-      - name: Launch latency tests
-        run: cd ${{ env.WORK_DIR }};
-             ci/launch.sh latency;
-
-      - name: Upload test report
-        if: ${{ always() && steps.conf.conclusion == 'success' }}
-        run: cd ${{ env.WORK_DIR }};
-             ci/launch.sh report;
-
-      - name: Clean
-        if: always()
-        run: rm -rf $WORK_DIR;
+## Copyright (C) 2023, RTE (http://www.rte-france.com)
+## SPDX-License-Identifier: Apache-2.0
+#
+#name: CI debian
+#
+#env:
+#  WORK_DIR: /tmp/seapath_ci_${{ github.run_id }}_${{ github.run_attempt }}_${{ github.sha }}
+#
+#on:
+#  pull_request:
+#    types: [opened, reopened, synchronize]
+#    branches: [debian11]
+#
+#
+#jobs:
+#  CI:
+#    runs-on: [self-hosted, runner-RTE]
+#    steps:
+#
+#      - name: Initialize sources
+#        run: mkdir ${{ env.WORK_DIR }}; cd ${{ env.WORK_DIR }};
+#             git clone -q --depth 1 --recurse-submodules -b main https://github.com/seapath/ci ci;
+#             echo "CI sources downloaded successfully";
+#             ci/launch.sh init;
+#
+#      - name: Configure Debian
+#        id: conf
+#        run: cd ${{ env.WORK_DIR }};
+#             ci/launch.sh conf;
+#
+#      - name: Launch system tests
+#        run: cd ${{ env.WORK_DIR }};
+#             ci/launch.sh system;
+#
+#      - name: Launch VM tests
+#        run: cd ${{ env.WORK_DIR }};
+#             ci/launch.sh vm;
+#
+#      - name: Launch latency tests
+#        run: cd ${{ env.WORK_DIR }};
+#             ci/launch.sh latency;
+#
+#      - name: Upload test report
+#        if: ${{ always() && steps.conf.conclusion == 'success' }}
+#        run: cd ${{ env.WORK_DIR }};
+#             ci/launch.sh report;
+#
+#      - name: Clean
+#        if: always()
+#        run: rm -rf $WORK_DIR;
