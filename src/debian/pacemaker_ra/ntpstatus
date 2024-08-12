@@ -274,7 +274,7 @@ ntpstatus_validate() {
 : ${OCF_RESKEY_CRM_meta_interval:=0}
 : ${OCF_RESKEY_CRM_meta_globally_unique:="false"}
 : ${OCF_RESKEY_ntpstatus:="ntpstatus"}
-: ${OCF_RESKEY_dampen:=5}
+: ${OCF_RESKEY_dampen:=75}
 : ${OCF_RESKEY_multiplier:=1000}
 
 if [ -z "$OCF_RESKEY_state" ]; then
