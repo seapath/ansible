@@ -123,5 +123,5 @@ all:
                             extra_snmpd_directives: |
                               extend crmstatus /usr/bin/timeout 1s /usr/bin/sudo -u hacluster /usr/local/bin/snmp_crmstatus.sh
                             # optional extra permissions to add to Debian-snmp sudoers file
-                            extra_debiansnmp_sudoers: |
+                            extra_usersnmp_sudoers: |
                               Debian-snmp     ALL = (hacluster) NOPASSWD:EXEC: /usr/local/bin/snmp_crmstatus.sh ""
