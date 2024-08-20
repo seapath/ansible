@@ -152,18 +152,6 @@
     - "ovs"
   when: removeslices.changed
 
-- name: Remove old isolation files
-  file:
-    state: absent
-    path: "{{ item }}"
-  with_items:
-    - /etc/sysfs.d/00-workqueue_cpumask.conf
-    - /etc/systemd/system/kthread-taskset.service
-    - /usr/local/bin/taskset_boot.sh
-    - /etc/systemd/system/multi-user.target.wants/kthread-taskset.service
-    - /etc/sysctl.d/00-schedrt.conf
-    - /etc/default/grub.d/10-isolcpus.cfg
-
 - name: create tuned seapath-rt profile folder
   file:
     path: /etc/tuned/seapath-rt-host
