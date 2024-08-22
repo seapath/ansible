@@ -33,15 +33,12 @@ all:
                - inventories/netplan_admin_br0_example.yaml.j2
                - inventories/netplan_ptp_interface_example.yaml.j2
                - inventories/netplan_cluster_example.yaml.j2
+              # Optional variable to append extra kernel parameters.
+              extra_kernel_parameters: >-
+                vfio_iommu_type1.allow_unsafe_interrupts=1
               # Set true to restart after setting kernel parameters (default is
               # false)
               kernel_parameters_restart: true
-              # Automatic creation of a Linux bridge. The hypervisor is
-              # connnected to the bridge via the interface "network interface".
-              # VMs can therefore communicate with the hypervisor via this
-              # bridge, and it also allows hypervisors and VMs to be configured
-              # via a single interface.
-              create_br0_bridge: true
               # Configure Host NICs IRQs affinity.
               # Optional, only useful with RT containers or macvtag VMs
               nics_affinity:
