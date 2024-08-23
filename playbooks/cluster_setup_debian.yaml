@@ -25,23 +25,10 @@
 - import_playbook: cluster_setup_prerequisdebian.yaml
 - import_playbook: cluster_setup_network.yaml
 
-# Importing cluster playbooks only for cluster machines
 - import_playbook: cluster_setup_ceph.yaml
-  when:
-    - groups['cluster_machines'] is defined
-    - inventory_hostname in groups['cluster_machines']
 - import_playbook: cluster_setup_libvirt.yaml
-  when:
-    - groups['cluster_machines'] is defined
-    - inventory_hostname in groups['cluster_machines']
 - import_playbook: cluster_setup_add_livemigration_user.yaml
-  when:
-    - groups['cluster_machines'] is defined
-    - inventory_hostname in groups['cluster_machines']
 - import_playbook: cluster_setup_ha.yaml
-  when:
-    - groups['cluster_machines'] is defined
-    - inventory_hostname in groups['cluster_machines']
 
 - name: Restart all hosts
   hosts:
