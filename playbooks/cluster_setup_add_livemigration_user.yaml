@@ -7,7 +7,7 @@
 
 ---
 - name: Configure ssh keys between hosts
-  hosts: hypervisors
+  hosts: hypervisors:&cluster_machines
   gather_facts: true
   become: true
   tasks:
