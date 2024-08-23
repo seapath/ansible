@@ -8,7 +8,7 @@
 
 ---
 - name: Configure libvirt rbd secret
-  hosts: hypervisors
+  hosts: hypervisors:&cluster_machines
   become: true
   pre_tasks:
       - name: Try to get already defined secret
@@ -71,7 +71,7 @@
 
 
 - name: Create rbd pool
-  hosts: hypervisors
+  hosts: hypervisors:&cluster_machines
   become: true
   vars:
     rbd_pool_name: "{{ libvirt_rbd_pool | default('rbd') }}"
@@ -103,7 +103,7 @@
       changed_when: false
 
 - name: Update libvirtd configuration
-  hosts: hypervisors
+  hosts: hypervisors:&cluster_machines
   become: true
   tasks:
     - name: Create libvirt group
