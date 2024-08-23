@@ -1,0 +1,47 @@
+# Copyright (C) 2020, RTE (http://www.rte-france.com)
+# Copyright (C) 2024 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+# This role configures the kernel paremeters.
+# It is called during yocto prerequisites, but can also be called alone.
+
+---
+- name: Check if we need to add extra kernel parameters
+  command: "grep -q '{{ extra_kernel_parameters }}' /proc/cmdline"
+  register: extra_param_raw
+  failed_when: extra_param_raw.rc > 1
+  changed_when: false
+  when: extra_kernel_parameters is defined
+- name: Register result extra kernel parameters check
+  set_fact:
+    extra_param_needed: true
+  when:
+    - extra_kernel_parameters is defined
+    - extra_param_raw.rc == 1
+
+- block:
+    - name: Find the boot partition path
+      ansible.builtin.script:
+        cmd: find_boot_partition.sh
+      register: boot_partition_path
+      changed_when: false
+    - name: Mount the partition
+      mount:
+        path: /boot
+        fstype: vfat
+        src: "{{ boot_partition_path.stdout | trim }}"
+        state: mounted
+    - name: "Check that {{ config_file }} exists"
+      command: test -f "{{ config_file }}"
+      changed_when: false
+    - name: Set extra kernel parameters
+      replace:
+        path: "{{ config_file }}"
+        regexp: '(root=.*)'
+        replace: '\1 {{ extra_kernel_parameters }}'
+      when: extra_param_needed is defined
+    - include_tasks: tasks/soft_restart_machine.yaml
+      when:
+        - kernel_parameters_restart is defined
+        - kernel_parameters_restart
+  when: extra_param_needed is defined
