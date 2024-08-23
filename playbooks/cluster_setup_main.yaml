@@ -1,29 +1,27 @@
 # Copyright (C) 2021, RTE (http://www.rte-france.com)
+# Copyright (C) 2024 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-# This playbook includes the other playbooks that configure the cluster and
-# allows you to configure it from a single playbook. It is the first playbook to
-# call.
+# This playbook includes the other playbooks that configure SEAPATH machines and
+# the cluster. It is the first playbook to call.
+# It requires SEAPATH Yocto flashed on the machine.
 
 ---
-
 - name: Check if we are using a correct seapath flavor
   hosts:
     - cluster_machines
     - standalone_machine
     - VMs
+  gather_facts: true
   tasks:
-    - name: Retrieve Seapath system version
-      command: "uname -a"
-      register: "uname_output"
-
     - name: Check if current Ansible branch is compatible
       fail:
-        msg: "The current branch (main) is incompatible with the Debian version of SEAPATH. Please use the debian-main branch to configure this machine"
+        msg: "The current branch (main) only compatible with the Yocto version of SEAPATH. Please use the debiancentos branch to configure this machine"
       failed_when:
-        - uname_output.stdout | regex_search("Debian")
+        - not( ansible_distribution | regex_search("Yocto"))
 
-- import_playbook: cluster_setup_configure_hosts.yaml
+- import_playbook: cluster_setup_prerequisyocto.yaml
+- import_playbook: cluster_setup_network.yaml
 - import_playbook: cluster_setup_ceph.yaml
 - import_playbook: cluster_setup_libvirt.yaml
 - import_playbook: cluster_setup_add_livemigration_user.yaml
