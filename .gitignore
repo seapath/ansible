@@ -13,6 +13,7 @@ playbooks/*
 !playbooks/tasks/
 !playbooks/deploy_*.yaml
 !playbooks/update*.yaml
+!playbooks/seapath_setup_*.yaml
 inventories/*
 !inventories/README.adoc
 
