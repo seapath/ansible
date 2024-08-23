@@ -12,4 +12,4 @@
     - name: Reboot the system
       reboot:
 
-- import_playbook: cluster_setup_main.yaml
+- import_playbook: seapath_setup_main.yaml

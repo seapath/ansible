@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # This Ansible playbook configures libvirt to work with Ceph. It is
-# called by the playbook cluster_setup_main.yaml, but can also be
+# called by the playbook seapath_setup_main.yaml, but can also be
 # called independently.
 
 ---

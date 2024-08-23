@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Ansible playbook that creates the cluster by configuring Corosync and
-# Pacemaker. It is called by the playbook cluster_setup_main.yaml, but it can
+# Pacemaker. It is called by the playbook seapath_setup_main.yaml, but it can
 # also be called independently.
 
 ---
