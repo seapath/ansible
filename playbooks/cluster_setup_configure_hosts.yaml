@@ -3,15 +3,5 @@
 # SPDX-License-Identifier: Apache-2.0
 # This Ansible playbook configures a SEAPATH machine.
 ---
-- name: Add kernel parameters
-  hosts:
-    - cluster_machines
-    - standalone_machine
-  roles:
-    - role: yocto/kernel_params
-- name: Configure hugepages
-  hosts: hypervisors
-  become: true
-  roles:
-    - role: yocto/hugepages
+- import_playbook: cluster_setup_prerequisyocto.yaml
 - import_playbook: cluster_setup_network.yaml

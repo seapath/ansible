@@ -1,0 +1,19 @@
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# Copyright (C) 2024 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+# This Ansible playbook configures a SEAPATH machine.
+# It launches the Yocto flavor specific tasks
+
+- name: Add kernel parameters
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  roles:
+    - yocto/kernel_params
+
+- name: Configure hugepages
+  hosts: hypervisors
+  become: true
+  roles:
+    - yocto/hugepages
