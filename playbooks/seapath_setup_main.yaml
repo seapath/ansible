@@ -22,6 +22,8 @@
 
 - import_playbook: seapath_setup_prerequisyocto.yaml
 - import_playbook: seapath_setup_network.yaml
+- import_playbook: seapath_setup_time_synchronization.yaml
+
 - import_playbook: cluster_setup_ceph.yaml
 - import_playbook: cluster_setup_libvirt.yaml
 - import_playbook: cluster_setup_add_livemigration_user.yaml
