@@ -1,0 +1,76 @@
+# Copyright (C) 2020, RTE (http://www.rte-france.com)
+# Copyright (C) 2024 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+# This Ansible playbook configures the PTP and NTP using timemaster.
+
+---
+- name: Get distribution variables
+  gather_facts: true
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  tasks:
+  - include_vars: "../vars/{{ ansible_distribution }}_paths.yml"
+
+- name: Configure TimeMaster
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  become: true
+  tasks:
+    - name: Populate service facts
+      service_facts:
+    - name: stop and disable systemd-timesyncd if it exists
+      service:
+        name: "systemd-timesyncd"
+        state: stopped
+        enabled: false
+      when: "'systemd-timesyncd.service' in services"
+    - name: Create timemaster configuration
+      template:
+        src: ../templates/timemaster.conf.j2
+        dest: "{{ path_timemaster_conf }}"
+      register: timemasterconf1
+    - name: comment pool configuration in chrony.conf
+      replace:
+        path: "{{ path_chrony_conf }}"
+        regexp: '^(pool .*)'
+        replace: '#\1'
+      register: timemasterconf2
+    - name: Create timemaster.service.d directory
+      file:
+        path: /etc/systemd/system/timemaster.service.d/
+        state: directory
+        owner: root
+        group: root
+        mode: 0755
+    - name: Copy timemaster.service overide
+      template:
+        src: ../templates/timemaster.service.j2
+        dest: /etc/systemd/system/timemaster.service.d/override.conf
+      register: timemasterconf3
+    - name: Enable timemaster
+      service:
+        name: "timemaster"
+        enabled: true
+    - name: restart timemaster if necessary
+      service:
+        name: "timemaster"
+        state: restarted
+        enabled: true
+        daemon_reload: true
+      when:
+        - timemasterconf1.changed or timemasterconf2.changed or timemasterconf3.changed
+
+- name: Stop chrony service
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  become: true
+  tasks:
+    - name: Stop and disable chrony
+      service:
+        name: "{{ service_name_chrony }}"
+        state: stopped
+        enabled: false

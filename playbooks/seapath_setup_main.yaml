@@ -27,6 +27,14 @@
   when: ansible_distribution | regex_search("Debian")
 
 - import_playbook: seapath_setup_network.yaml
+- import_playbook: seapath_setup_time_synchronization.yaml
+- name: Configure snmp
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  become: true
+  roles:
+    - snmp
 
 - import_playbook: cluster_setup_ceph.yaml
 - import_playbook: cluster_setup_libvirt.yaml
