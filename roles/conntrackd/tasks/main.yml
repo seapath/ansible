@@ -1,0 +1,50 @@
+- name: Create conntrackd.service.d directory
+  file:
+    path: /etc/systemd/system/conntrackd.service.d/
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+- name: Copy conntrackd.service drop-in
+  ansible.builtin.copy:
+    src: conntrackd_override.conf
+    dest: /etc/systemd/system/conntrackd.service.d/override.conf
+    owner: root
+    group: root
+    mode: 0644
+  register: conntrackd
+- name: Restart conntrackd
+  ansible.builtin.systemd:
+    state: restarted
+    daemon_reload: yes
+    name: conntrackd
+  when: conntrackd.changed and conntrackd_ignore_ip_list is defined
+- block:
+    - name: copy conntrackd.conf file
+      template:
+        src: conntrackd.conf.j2
+        dest: /etc/conntrackd/conntrackd.conf
+        group: root
+        owner: root
+        mode: '0644'
+      register: conntrackdconf
+    - name: enable conntrackd.service
+      ansible.builtin.systemd:
+        name: conntrackd.service
+        enabled: yes
+        state: started
+    - name: enable conntrackd.service
+      ansible.builtin.systemd:
+        name: conntrackd.service
+        enabled: yes
+        state: restarted
+      when: conntrackdconf.changed
+  when: conntrackd_ignore_ip_list is defined
+- block:
+    - name: stop and disable conntrackd.service
+      ansible.builtin.systemd:
+        name: conntrackd.service
+        enabled: no
+        state: stopped
+  when: conntrackd_ignore_ip_list is not defined
+
