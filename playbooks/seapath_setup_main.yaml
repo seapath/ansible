@@ -7,18 +7,16 @@
 # The machine must previously have been flashed
 # with an iso created by build_debian_iso or CentOS with appropriate kickstart file
 # This playbooks can also configure VMs created with build_debian_iso
+# This playbook also configures Yocto standalone machine (no cluster)
 
-- name: Check if we are using a correct seapath flavor
-  gather_facts: true
+- name: Gather ansible_distribution
   hosts:
     - cluster_machines
     - standalone_machine
   tasks:
-    - name: Check if current Ansible branch is compatible
-      fail:
-        msg: "The current branch (debian-main) is incompatible with the Yocto version of SEAPATH. Please use the main branch to configure this machine"
-      failed_when:
-        - not( ansible_distribution | regex_search("Debian|CentOS|RedHat"))
+    - name: Gather only the ansible_distribution fact
+      ansible.builtin.setup:
+        filter: ansible_distribution
 
 - import_playbook: seapath_setup_prerequiscentos.yaml
   when: ansible_distribution | regex_search("CentOS|RedHat")
