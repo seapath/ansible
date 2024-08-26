@@ -23,7 +23,7 @@
   when: ceph_osd_disk is defined
 - name: Restrict ceph sudoers file
   template:
-    src: ../src/debian/sudoers/ceph.j2
+    src: sudoers/ceph.j2
     dest: /etc/sudoers.d/ceph-smartctl
     owner: root
     group: root
@@ -54,7 +54,7 @@
   with_items: "{{ hardened_services }}"
 - name: Add systemd service hardening rules for physical machines
   copy:
-    src: "../src/debian/{{ item }}_hardening.conf"
+    src: "{{ item }}_hardening.conf"
     dest: "/etc/systemd/system/{{ item }}.service.d/hardening.conf"
   register: services_to_restart
   with_items: "{{ hardened_services }}"

@@ -136,7 +136,7 @@
 
 - name: Copy sysctl rules
   ansible.builtin.copy:
-    src: ../src/debian/sysctl/{{ item }}
+    src: "{{ item }}"
     dest: /etc/sysctl.d/{{ item }}
     mode: '0644'
   with_items:
@@ -177,7 +177,7 @@
 
 - name: Copy consolevm.sh
   template:
-    src: ../src/debian/consolevm.sh.j2
+    src: consolevm.sh.j2
     dest: /usr/local/bin/consolevm
     mode: '0755'
 
@@ -221,7 +221,7 @@
 
 - name: Copy Pacemaker Seapath Resource-Agent files
   ansible.posix.synchronize:
-    src: ../src/debian/pacemaker_ra/
+    src: pacemaker_ra/
     dest: /usr/lib/ocf/resource.d/seapath/
     rsync_opts:
     - "--chmod=F755"
@@ -229,7 +229,7 @@
 
 - name: Copy chrony-wait.service
   template:
-    src: ../src/debian/chrony-wait.service.j2
+    src: chrony-wait.service.j2
     dest: /etc/systemd/system/chrony-wait.service
     owner: root
     group: root
@@ -253,7 +253,7 @@
     mode: 0755
 - name: Copy libvirtd.service drop-in
   ansible.builtin.copy:
-    src: ../src/debian/libvirtd_override.conf
+    src: libvirtd_override.conf
     dest: /etc/systemd/system/libvirtd.service.d/override.conf
     owner: root
     group: root
@@ -268,7 +268,7 @@
     mode: 0755
 - name: Copy pacemaker.service drop-in
   template:
-    src: ../src/debian/pacemaker_override.conf.j2
+    src: pacemaker_override.conf.j2
     dest: /etc/systemd/system/pacemaker.service.d/override.conf
     owner: root
     group: root
@@ -324,7 +324,7 @@
 
 - name: Copy apparmor libvirt-qemu rules
   ansible.builtin.copy:
-    src: ../src/debian/etc_apparmor.d_abstractions_libvirt-qemu.conf
+    src: etc_apparmor.d_abstractions_libvirt-qemu.conf
     dest: /etc/apparmor.d/abstractions/libvirt-qemu
     mode: '0644'
 
@@ -352,7 +352,7 @@
     name: docker.service
 - name: "add initramfs-tools scripts: script file (LVM rebooter and log handling)"
   ansible.builtin.copy:
-    src: ../src/debian/initramfs-tools/scripts/
+    src: initramfs-tools/scripts/
     dest: /etc/initramfs-tools/scripts/
     mode: '0755'
   register: initramfs_tools_scripts
@@ -375,7 +375,7 @@
 
 - name: "Copy rebooter.conf"
   template:
-    src: ../src/debian/initramfs-tools/conf.d/rebooter.conf.j2
+    src: initramfs-tools/conf.d/rebooter.conf.j2
     dest: /etc/initramfs-tools/conf.d/rebooter.conf
 
 - name: "configure initramfs-tools to use busybox"
@@ -388,7 +388,7 @@
 
 - name: "add udev rules for lvm2 limitation"
   ansible.builtin.copy:
-    src: ../src/debian/69-lvm.rules
+    src: 69-lvm.rules
     dest: /etc/udev/rules.d/69-lvm.rules
     mode: '0644'
   when: ansible_distribution == 'Debian' and ansible_distribution_version | int >= 12
