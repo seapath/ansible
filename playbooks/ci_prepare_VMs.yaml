@@ -1,0 +1,24 @@
+# Copyright (C) 2024 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+# This playbook prepare the VMs that will be used on the CI.
+# It is not supposed to run on test or production VMs.
+# If a user want to configure a SEAPATH VM, we advise him to create it's own
+# playbook.
+
+---
+- name: Prepare VMs for cukina tests
+  hosts:
+    - VMs
+  become: true
+  tasks:
+    - name: Stop and disable chrony
+      ansible.builtin.systemd:
+        name: "chrony"
+        state: stopped
+        enabled: false
+    - name: Stop and disable systemd-resolved
+      ansible.builtin.systemd:
+        name: systemd-resolved
+        state: stopped
+        enabled: false
