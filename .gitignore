@@ -1,6 +1,5 @@
 # Ignore roles directory
 roles/systemd_networkd/
-roles/corosync/
 # Ignore collections directory
 collections/
 *.pdf
