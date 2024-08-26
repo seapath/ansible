@@ -1,0 +1,19 @@
+# Copyright (C) 2023 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+# Ansible playbook that runs all Cukinia's tests.
+
+---
+- hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  roles:
+    - ci_yocto/run_tests
+
+- hosts:
+    - cluster_machines
+    - standalone_machine
+  roles:
+    - ci_yocto/get_system_info
+...

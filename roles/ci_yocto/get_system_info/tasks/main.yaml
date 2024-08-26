@@ -1,0 +1,18 @@
+# Copyright (C) 2023 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+# This roles recover Ci machine info for openlab
+
+---
+- name: Create temporary test directory
+  tempfile:
+    state: directory
+  register: tmp_test_dir
+- name: Execute script
+  script: get_system_info.py '{{ tmp_test_dir.path }}/system_info.adoc'
+- name: Fetch results
+  fetch:
+    src: '{{ tmp_test_dir.path }}/system_info.adoc'
+    dest: "{{ cukinia_test_prefix | default('..') }}/system_info.adoc"
+    flat: yes
+...
