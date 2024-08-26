@@ -1,4 +1,4 @@
-# Copyright (C) 2022, RTE (http://www.rte-france.com)
+# Copyright (C) 2022-2024, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
 # Ansible playbook that creates the cluster by configuring Corosync and
@@ -58,14 +58,14 @@
     tmpdir: "/tmp"
   tasks:
     - block:
-        - name: Fetch corosync configuration 
-          fetch: 
+        - name: Fetch corosync configuration
+          fetch:
             src: "/etc/corosync/corosync.conf"
             dest: "{{ tmpdir }}/corosync.conf"
             flat: true
           run_once: true
-        - name: Fetch corosync key 
-          fetch: 
+        - name: Fetch corosync key
+          fetch:
             src: "/etc/corosync/authkey"
             dest: "{{ tmpdir }}/authkey"
             flat: true
@@ -79,14 +79,14 @@
     tmpdir: "/tmp"
   tasks:
     - block:
-        - name: Install corosync configuration 
+        - name: Install corosync configuration
           copy:
             src: "{{ tmpdir }}/corosync.conf"
             dest: /etc/corosync/corosync.conf
             owner: root
             group: root
             mode: '0644'
-        - name: Install corosync key 
+        - name: Install corosync key
           copy:
             src: "{{ tmpdir }}/authkey"
             dest: /etc/corosync/authkey
