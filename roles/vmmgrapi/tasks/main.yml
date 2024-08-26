@@ -1,0 +1,135 @@
+# We need to restart nginx if it's running and know if gunicorn socket is present
+- name: Populate service facts
+  service_facts:
+#- name: Print service facts
+#  ansible.builtin.debug:
+#    var: ansible_facts.services
+- name: install vm-mgr http interface
+  vars:
+    vmmgrapi_certs_dir: "/var/local/vmmgrapi/certs"
+  block:
+    - name: create vm-mgr api certs folder
+      file:
+        path: "{{ vmmgrapi_certs_dir }}"
+        state: directory
+        mode: 0755
+
+    - name: upload cert/key if provided
+      copy:
+        src: "{{ item }}"
+        dest: "{{ vmmgrapi_certs_dir }}/{{ item }}"
+        mode: '0644'
+      with_items:
+        - "{{ vmmgr_http_tls_crt_path }}"
+        - "{{ vmmgr_http_tls_key_path }}"
+      when:
+        - vmmgr_http_tls_crt_path is defined
+        - vmmgr_http_tls_key_path is defined
+
+    - name: create certificat / key if not provided
+      command: openssl req -x509 -nodes -days 9125 -newkey rsa:4096 -subj "/C=FR/ST=seapath/L=seapath/O=seapath/OU=seapath/CN=seapath" -keyout "{{ vmmgrapi_certs_dir }}/seapath.key" -out "{{ vmmgrapi_certs_dir }}/seapath.crt"
+      args:
+        creates: "{{ item }}"
+      with_items:
+        - "{{ vmmgrapi_certs_dir }}/seapath.crt"
+        - "{{ vmmgrapi_certs_dir }}/seapath.key"
+
+    - name: Correct certificates rights
+      file:
+        path: "{{ vmmgrapi_certs_dir }}/{{ item }}"
+        mode: 0644
+      loop:
+        - "seapath.crt"
+
+    - name: Correct private keys rights
+      file:
+        path: "{{ vmmgrapi_certs_dir }}/{{ item }}"
+        mode: 0640
+      loop:
+        - "seapath.key"
+
+    - name: Check permission on authentication file
+      ansible.builtin.file:
+        path: "{{ vmmgr_http_local_auth_file }}"
+        owner: www-data
+        group: www-data
+        mode: '0600'
+        state: touch
+      when: vmmgr_http_local_auth_file is defined
+
+    - name: Copy nginx.conf
+      template:
+        src: nginx.conf.j2
+        dest: /etc/nginx/nginx.conf
+        mode: '0600'
+      register: nginx_conf
+
+    - name: restart nginx if needed
+      ansible.builtin.systemd:
+        name: nginx.service
+        enabled: no
+        state: stopped
+      when:
+        - nginx_conf.changed
+        - services['nginx.service']['state'] == "running"
+
+    - name: Copy vmmgrapi files
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: /var/local/vmmgrapi/{{ item }}
+        mode: '0644'
+      with_items:
+        - wsgi.py
+
+    - name: Copy vmmgrapi systemd files
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: /etc/systemd/system/{{ item }}
+        mode: '0644'
+      with_items:
+        - gunicorn.socket
+        - gunicorn.service
+      register: vmmgrapi_systemd
+
+    - name: daemon-reload vmmgrapi
+      ansible.builtin.service:
+        daemon_reload: yes
+      when: vmmgrapi_systemd.changed
+
+    - name: restart gunicorn.socket if needed
+      ansible.builtin.systemd:
+        name: gunicorn.socket
+        enabled: yes
+        state: restarted
+      when: vmmgrapi_systemd.changed
+
+    - name: start and enable gunicorn.socket
+      ansible.builtin.systemd:
+        name: gunicorn.socket
+        enabled: yes
+        state: started
+
+  when: enable_vmmgr_http_api is defined and enable_vmmgr_http_api is true
+
+- name: disable gunicorn.socket if http flask api is not enabled
+  ansible.builtin.systemd:
+    name: gunicorn.socket
+    enabled: no
+    state: stopped
+  when:
+    - enable_vmmgr_http_api is not defined or enable_vmmgr_http_api is false
+    - services['gunicorn.socket'] is defined
+
+- name: disable nginx.service all the time, if it exists
+  ansible.builtin.systemd:
+    name: nginx.service
+    enabled: no
+  when:
+    - services['nginx.service'] is defined
+
+- name: disable gunicorn.service all the time, if it exists
+  ansible.builtin.systemd:
+    name: gunicorn.service
+    enabled: no
+  when:
+    - services['gunicorn.service'] is defined

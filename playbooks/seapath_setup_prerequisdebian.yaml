@@ -18,6 +18,7 @@
   roles:
     - debian_physical_machine
     - backup_restore
+    - vmmgrapi
 - name: Prerequis hypervisor debian
   hosts:
     - hypervisors
