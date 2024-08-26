@@ -85,7 +85,7 @@
 
 - name: "Install hardened sysfs rules"
   copy:
-    src: ../src/debian/sysctl/90-sysctl-hardening.conf
+    src: sysctl/90-sysctl-hardening.conf
     dest: /etc/sysctl.d/zz-sysctl-hardening.conf
   notify: update sysfs values using sysctl
   when: not revert
@@ -98,7 +98,7 @@
 
 - name: "Install network hardened sysfs rules"
   copy:
-    src: ../src/debian/sysctl/99-sysctl-network.conf
+    src: sysctl/99-sysctl-network.conf
     dest: /etc/sysctl.d/99-sysctl-network.conf
   notify: update sysfs values using sysctl
   when: not revert
@@ -111,7 +111,7 @@
 
 - name: "Install random-root-passwd.service"
   copy:
-    src: ../src/debian/random-root-passwd.service
+    src: random-root-passwd.service
     dest: /etc/systemd/system/random-root-passwd.service
   when: not revert
   register: random_root
@@ -135,7 +135,7 @@
 
 - name: "Enable private TMPDIR"
   copy:
-    src: ../src/debian/mktmpdir.sh
+    src: mktmpdir.sh
     dest: /etc/profile.d/mktmpdir.sh
   when: not revert
 - name: "Disable private TMPDIR"
@@ -146,7 +146,7 @@
 
 - name: "Set bash timeout to 300s"
   copy:
-    src: ../src/debian/terminal_idle.sh
+    src: terminal_idle.sh
     dest: /etc/profile.d/terminal_idle.sh
   when: not revert
 - name: "Unset bash timeout"
@@ -157,7 +157,7 @@
 
 - name: Install openssh hardening rules
   template:
-    src: ../src/debian/ssh-audit_hardening.conf.j2
+    src: ssh-audit_hardening.conf.j2
     dest: /etc/ssh/sshd_config.d/ssh-audit_hardening.conf
   when: not revert
 - name: Uninstall openssh hardening rules
@@ -176,7 +176,7 @@
 
 - name: Install sudo special rules following ansi bp28 r39
   copy:
-    src: ../src/debian/sudoers/security
+    src: sudoers/security
     dest: /etc/sudoers.d/00-security
     owner: root
     group: root
@@ -226,7 +226,7 @@
 
 - name: Disable require tty for cockpit
   copy:
-    src: ../src/debian/sudoers/cockpit
+    src: sudoers/cockpit
     dest: /etc/sudoers.d/cockpit
   when: not revert and cockpit_status.rc == 0
 
@@ -277,22 +277,22 @@
 
 - name: Disable su
   copy:
-    src: ../src/debian/hardened_pam_su
+    src: hardened_pam_su
     dest: /etc/pam.d/su
   when: not revert
 - name: Disable su-l
   copy:
-    src: ../src/debian/hardened_pam_su
+    src: hardened_pam_su
     dest: /etc/pam.d/su-l
   when: not revert
 - name: Restore su pam setting
   copy:
-    src: ../src/debian/default_pam_su
+    src: default_pam_su
     dest: /etc/pam.d/su
   when: revert
 - name: Restore su -l pam setting
   copy:
-    src: ../src/debian/default_pam_su-l
+    src: default_pam_su-l
     dest: /etc/pam.d/su-l
   when: revert
 
@@ -334,7 +334,7 @@
   with_items: "{{ hardened_services }}"
 - name: Add systemd service hardening rules
   copy:
-    src: "../src/debian/{{ item }}_hardening.conf"
+    src: "{{ item }}_hardening.conf"
     dest: "/etc/systemd/system/{{ item }}.service.d/hardening.conf"
   register: services_to_restart
   with_items: "{{ hardened_services }}"
@@ -370,12 +370,12 @@
 
 - name: copy syslog.conf
   copy:
-    src: ../src/debian/auditd/syslog.conf
+    src: auditd/syslog.conf
     dest: /etc/audit/plugins.d/syslog.conf
 
 - name: copy audit.rules
   copy:
-    src: ../src/debian/auditd/audit.rules
+    src: auditd/audit.rules
     dest: /etc/audit/rules.d/audit.rules
 
 - name: Update grub

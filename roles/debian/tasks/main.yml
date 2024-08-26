@@ -22,7 +22,7 @@
     mode: '0755'
 - name: Copy syslog-ng conf file
   template:
-    src: ../templates/syslog-ng.conf.j2
+    src: syslog-ng.conf.j2
     dest: /etc/syslog-ng/syslog-ng.conf
     mode: '0644'
   notify: restart syslog-ng
@@ -78,7 +78,7 @@
 
 - name: Copy journald conf file
   ansible.builtin.copy:
-    src: ../src/debian/journald.conf
+    src: journald.conf
     dest: /etc/systemd/journald.conf
     mode: '0644'
   register: journaldconf
@@ -124,7 +124,7 @@
 
 - name: Copy sysctl rules
   ansible.builtin.copy:
-    src: ../src/debian/sysctl/{{ item }}
+    src: "{{ item }}"
     dest: /etc/sysctl.d/{{ item }}
     mode: '0644'
   with_items:

@@ -81,7 +81,7 @@
       - "machine"
   - name: create systemd slices override (files)
     template:
-      src: ../templates/systemd_slice_override.j2
+      src: systemd_slice_override.j2
       dest: /etc/systemd/system.control/{{ item.name }}.slice.d/50-AllowedCPUs.conf
       owner: root
       group: root
@@ -106,7 +106,7 @@
 
 - name: create systemd slices
   template:
-    src: ../templates/systemd_slice.j2
+    src: systemd_slice.j2
     dest: /etc/systemd/system/{{ item.name }}.slice
     owner: root
     group: root
@@ -160,7 +160,7 @@
 
 - name: tuned path
   set_fact:
-    tuned_path: "{{ custom_tuned_profile_path if custom_tuned_profile_path is defined else '../src/tuned/tuned.conf.j2' }}"
+    tuned_path: "{{ custom_tuned_profile_path if custom_tuned_profile_path is defined else 'tuned.conf.j2' }}"
 
 - name: copy seapath-rt-host tuned profile conf
   template:
@@ -201,7 +201,7 @@
     mode: 0755
 - name: Copy ovs-vswitchd.service drop-in
   ansible.builtin.copy:
-    src: ../src/debian/ovs-vswitchd_override.conf
+    src: ovs-vswitchd_override.conf
     dest: /etc/systemd/system/ovs-vswitchd.service.d/override.conf
     owner: root
     group: root
@@ -222,7 +222,7 @@
     mode: '0755'
 - name: Copy ptp_vsock executable files
   ansible.builtin.copy:
-    src: ../src/debian/ptp_vsock.py
+    src: ptp_vsock.py
     dest: /usr/local/bin/ptp_vsock.py
     mode: '0755'
 
@@ -234,7 +234,7 @@
   register: ptpstatus
 - name: Copy ptp_vsock.service
   ansible.builtin.copy:
-    src: ../src/debian/ptp_vsock.service
+    src: ptp_vsock.service
     dest: /etc/systemd/system/ptp_vsock.service
     mode: '0644'
   register: ptpvsock
@@ -262,7 +262,7 @@
     mode: 0755
 - name: Copy conntrackd.service drop-in
   ansible.builtin.copy:
-    src: ../src/debian/conntrackd_override.conf
+    src: conntrackd_override.conf
     dest: /etc/systemd/system/conntrackd.service.d/override.conf
     owner: root
     group: root
