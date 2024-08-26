@@ -9,11 +9,6 @@ roles:
       scm: git
       version: "790a38204da23cc245d641d6d807de5b7793ea1f"
 
-    - name: "corosync"
-      src: "https://github.com/seapath/corosync-ansible"
-      scm: git
-      version: "d7e30a7ad979e08af5e9a5696deb8039e6f52d78"
-
 collections:
     - name: "community.libvirt"
       version: "1.0.2"

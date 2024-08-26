@@ -1,0 +1,53 @@
+# Copyright (C) 2024, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+system {
+  sched_rr: no
+  priority: -20
+}
+totem {
+	version: 2
+        netmtu: 1500
+        vsftype: ykb
+        transport: udpu
+        cluster_name: seapath
+        ip_version: ipv4
+	token: 1000
+	interface {
+		ringnumber: 0
+	}
+}
+
+nodelist {
+{% for node in corosync_node_list %}
+	node {
+		ring0_addr: {{ node }}
+		nodeid: {{ loop.index }}
+	}
+{% endfor %}
+}
+
+quorum {
+        provider: corosync_votequorum
+}
+
+logging {
+        timestamp: off
+        fileline: off
+        function_name: off
+        to_stderr: on
+        to_logfile: off
+        to_syslog: on
+        logfile_priority: info
+        syslog_facility: daemon
+        syslog_priority: info
+        debug: off
+        logger_subsys {
+                subsys: QUORUM
+                debug: off
+        }
+}
+
+qb {
+        ipc_type: native
+}
