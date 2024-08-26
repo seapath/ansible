@@ -1,0 +1,14 @@
+# Copyright (C) 2022, RTE (http://www.rte-france.com)
+# Copyright (C) 2024 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+# This role configures the number of hugepages available.
+# It is called during yocto prerequisites, but can also be called alone.
+
+---
+- name: Setup hugepages number
+  copy:
+    content: "{{ hugepages_number }}"
+    dest: /etc/hugepages_nb.conf
+  notify:
+    - Restart hugepages service

@@ -26,6 +26,9 @@
 - import_playbook: seapath_setup_prerequisdebian.yaml
   when: ansible_distribution | regex_search("Debian")
 
+- import_playbook: seapath_setup_prerequisyocto.yaml
+  when: ansible_distribution | regex_search("Yocto")
+
 - import_playbook: seapath_setup_network.yaml
 - import_playbook: seapath_setup_time_synchronization.yaml
 - name: Configure snmp
