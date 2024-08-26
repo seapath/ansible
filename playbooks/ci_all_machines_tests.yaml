@@ -1,0 +1,57 @@
+# Copyright (C) 2023 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+# Ansible playbook that runs all Cukinia's tests.
+
+---
+- hosts: 
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  name: Cukinia tests
+  tasks:
+    - name: Create temporary Cukinia directory
+      tempfile:
+        state: directory
+      register: tmp_cukinia_dir
+    - name: Common tests
+      shell:
+        cmd: >-
+          MACHINENAME={{ cukinia_namespace | default(inventory_hostname) }}
+          cukinia -f junitxml -o {{ tmp_cukinia_dir.path }}/cukinia.xml
+          /etc/cukinia/cukinia.conf || true
+    - name: Fetch result
+      fetch:
+        src: '{{ tmp_cukinia_dir.path }}/cukinia.xml'
+        dest: >-
+          {{ cukinia_test_prefix | default('..') }}/cukinia_{{ inventory_hostname
+          }}.xml
+        flat: yes       
+
+- hosts: 
+    - cluster_machines
+    - standalone_machine
+  name: Get system info
+  tasks:
+    - name: Execute script
+      script: ../scripts/ci_system_info.py '{{ tmp_cukinia_dir.path }}/system_info.adoc'
+    - name: Fetch results
+      fetch: 
+        src: '{{ tmp_cukinia_dir.path }}/system_info.adoc'
+        dest: "{{ cukinia_test_prefix | default('..') }}/system_info.adoc"
+        flat: yes
+
+- hosts: 
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  name: Launch cyclictest
+  tasks:
+    - name: Execute script
+      script: ../scripts/run_cyclictest.py '{{ tmp_cukinia_dir.path }}/cyclictest.txt'
+    - name: Fetch results
+      fetch: 
+        src: '{{ tmp_cukinia_dir.path }}/cyclictest.txt'
+        dest: "{{ cukinia_test_prefix | default('..') }}/cyclictest_{{ inventory_hostname }}.txt"
+        flat: yes
+...

@@ -1,0 +1,33 @@
+# Copyright (C) 2024 Savoir-faire Linux, Inc.
+# SPDX-Licence-Identifier: Apache-2.0
+
+# Ansible playbook that deploy and set-up ptp on vms for a standalone machine
+
+- import_playbook: deploy_vms_standalone.yaml
+
+- name: Check if phc2sys service is already started
+  hosts: VMs
+  tasks:
+    - name: Populate service facts
+      service_facts:
+
+    - name: Ensure phc2sys service is stopped
+      systemd:
+        name: phc2sys
+        state: stopped
+      when: "'phc2sys' in services"
+
+    - name: Copy systemd service file to server
+      template:
+        src: ../templates/phc2sys.service.j2
+        dest: /etc/systemd/system/phc2sys.service
+        owner: root
+        group: root
+
+    - name: Start phc2sys service if not started
+      service:
+        name: phc2sys
+        enabled: true
+        daemon_reload: true
+        state: started
+
