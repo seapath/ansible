@@ -11,7 +11,7 @@
   vars:
     revert: false
   roles:
-    - debian/hardening
+    - debian_hardening
 - name: Add hardened for SEAPATH physical machines
   become: true
   hosts:
@@ -20,7 +20,7 @@
   vars:
     revert: false
   roles:
-    - debian/hardening/physical_machine
+    - debian_hardening_physical_machine
 
 - name: Reboot to apply hardening
   become: true

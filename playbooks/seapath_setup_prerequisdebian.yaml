@@ -16,14 +16,14 @@
     - standalone_machine
   become: true
   roles:
-    - debian/physical_machine
+    - debian_physical_machine
 - name: Prerequis hypervisor debian
   hosts:
     - hypervisors
     - standalone_machine
   become: true
   roles:
-    - debian/hypervisor
+    - debian_hypervisor
 
 - name: Add admin user to haclient group
   hosts:
