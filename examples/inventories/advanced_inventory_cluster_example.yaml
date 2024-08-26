@@ -14,6 +14,8 @@ all:
         hypervisors:
           hosts:
             hypervisor1:
+              # Name of the machine. If not set, ansible hostname will be used.
+              hostname: "node1"
               # Change IP address according to your setup
               ansible_host: 192.168.217.15
               # The network interface that will be used by the hypervisor to
@@ -47,6 +49,8 @@ all:
               br_rstp_priority: 12288
 
             hypervisor2:
+              # Name of the machine. If not set, ansible hostname will be used.
+              hostname: "node2"
               ansible_host: 192.168.217.16
               network_interface: br1
               ip_addr: 192.168.217.16
@@ -145,6 +149,8 @@ all:
         observers:
           hosts:
             observer:
+              # Name of the machine. If not set, ansible hostname will be used.
+              hostname: "obs"
               ansible_host: 192.168.217.11
               # The network interface to configure
               network_interface: enp0s2

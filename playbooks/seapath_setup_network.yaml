@@ -82,6 +82,7 @@
           name: conntrackd
           state: restarted
         when: conntrackd_ignore_ip_list is defined
+        failed_when: false
       when:
         - cluster_protocol is not defined or cluster_protocol != "HSR" or hsr_mac_address is not defined
         - skip_recreate_team0_config is not defined or skip_recreate_team0_config is not true
@@ -115,35 +116,51 @@
         - not apply_config
         - ovs_conf.changed
 
-- name: Configure hostname
-  hosts:
-    - cluster_machines
-    - standalone_machine
+- name: Configure hosts and hostname
+  hosts: cluster_machines
   become: true
   tasks:
     - name: Set hostname
       hostname:
-        name: "{{ inventory_hostname }}"
+        name: "{{ hostname | default(inventory_hostname) }}"
         use: systemd
-
-- name: Configure hosts
-  hosts: cluster_machines
-  become: true
-  tasks:
-    - name: Build hosts file
+    - name: Build hosts file (Cluster Network)
       lineinfile:
         dest: /etc/hosts
-        regexp: '.*{{ item }}(| rbd)$'
-        line: "{{ hostvars[item].cluster_ip_addr }} {{ item }}{% if item == inventory_hostname %} rbd{% endif %}"
+        regexp: '.*{{ hostvars[item].hostname | default(item) }}(| rbd)$'
+        line: "{{ hostvars[item].cluster_ip_addr }} {{ item }} {{ hostvars[item].hostname | default('') }}{% if hostvars[item].hostname is defined %} {% endif %}{% if item == inventory_hostname %}rbd{% endif %}"
         state: present
       when: hostvars[item].cluster_ip_addr is defined
       loop: "{{ groups['cluster_machines'] }}"
+    - name: Build hosts file (Public Network)
+      # if cluster_ip_addr is not defined, we consider there is no cluster Network.
+      # Ceph will use the public network instead.
+      lineinfile:
+        dest: /etc/hosts
+        regexp: '.*{{ hostvars[item].hostname | default(item) }}(| rbd)$'
+        line: "{{ hostvars[item].ip_addr }} {{ item }} {{ hostvars[item].hostname | default('') }}{% if hostvars[item].hostname is defined %} {% endif %}{% if item == inventory_hostname %}rbd{% endif %}"
+        state: present
+      when: hostvars[item].cluster_ip_addr is undefined
     - name: Add rbd in hosts file
       replace:
         path: /etc/hosts
         regexp: '.*{{ inventory_hostname }}$'
         replace: '{{ cluster_ip_addr }} {{ inventory_hostname }} rbd'
       when: cluster_ip_addr is defined
+
+- name: Configure hosts and hostname
+  hosts: standalone_machine
+  become: true
+  tasks:
+    - name: Set hostname
+      hostname:
+        name: "{{ hostname | default(inventory_hostname) }}"
+        use: systemd
+    - name: Build hosts file
+      lineinfile:
+        dest: /etc/hosts
+        line: "{{ ip_addr | default( ansible_host ) }} {{ inventory_hostname }} {{ hostname | default('') }}"
+        state: present
 
 - name: Configure DNS with resolved
   hosts:
