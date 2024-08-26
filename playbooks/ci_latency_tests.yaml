@@ -1,0 +1,124 @@
+# Copyright (C) 2024 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Copy docker tar image
+  hosts:
+      - publisher_machine
+      - VMs
+  tasks:
+      - name: "Create latency_tests directory if it doesn't exist"
+        file:
+          path: "/tmp/latency_tests/"
+          state: directory
+          mode: '0777'
+      - name: "Copy archive"
+        copy:
+          src: "../ci_latency_tests/build/sv_timestamp_logger.tar"
+          dest: "/tmp/latency_tests/"
+
+- name: Synchronise machines with PTP
+  become: true
+  vars:
+      - phc_delay: -37
+  hosts:
+      - publisher_machine
+  tasks:
+    - name: Copy ptp4l.service
+      template:
+          src: ../templates/ptp4l.service.j2
+          dest: /etc/systemd/system/ptp4l.service
+
+    - name: Copy ptp4l.conf
+      template:
+          src: ../templates/ptp4l.conf.j2
+          dest: /etc/linuxptp/ptp4l.conf
+
+    - name: Enable ptp4l.service
+      systemd:
+          name: ptp4l
+          enabled: true
+          daemon-reload: true
+          state: restarted
+
+    - name: Send phc2sys.service
+      template:
+        src: ../templates/phc2sys.service.j2
+        dest: /etc/systemd/system/phc2sys.service
+
+    - name: Enable phc2sys.service
+      systemd:
+        name: phc2sys
+        enabled: true
+        daemon-reload: true
+        state: restarted
+
+- name: Launch sv timestamp logger on publisher
+  hosts: publisher_machine
+  become: true
+  tasks:
+    - name: Load Docker archive
+      command: "docker image load -i /tmp/latency_tests/sv_timestamp_logger.tar"
+
+    - name: Launch sv timestamp logger
+      command: >-
+        docker run
+        --rm
+        --name sv_timestamp_logger
+        -d
+        --network host
+        -v /tmp:/tmp
+        --cap-add=NET_ADMIN
+        --cap-add=SYS_NICE
+        sv_timestamp_logger
+        -d {{ sv_interface }}
+        -f "/tmp/latency_tests/ts_{{ inventory_hostname }}.txt"
+        -t
+
+- name: Launch sv timestamp logger on VMs
+  hosts: VMs
+  become: true
+  tasks:
+    - name: Load Docker archive
+      command: "docker image load -i /tmp/latency_tests/sv_timestamp_logger.tar"
+
+    - name: Launch sv timestamp logger
+      command: >-
+        docker run
+        --name sv_timestamp_logger
+        -d
+        --rm
+        --network host
+        -v /tmp:/tmp
+        --cap-add=SYS_NICE
+        sv_timestamp_logger
+        -d {{ sv_interface }}
+        -f "/tmp/latency_tests/ts_{{ inventory_hostname }}.txt"
+
+- name: Launch pcap sending
+  hosts: publisher_machine
+  become: true
+  tasks:
+    - name: "Send pcap from publisher"
+      command: >-
+          bittwist
+            -i {{ sv_interface }}
+            -l {{ pcap_loop }}
+            /seapath-ci/pcaps/{{ pcap_file }}
+      register: cmd
+
+- name: Fetch results
+  become: true
+  hosts:
+      - VMs
+      - publisher_machine
+  tasks:
+    - name: "Stop docker container"
+      command: docker stop sv_timestamp_logger
+
+    - name: "Copy results to ansible directory"
+      synchronize:
+        src: "/tmp/latency_tests/ts_{{ inventory_hostname }}.txt"
+        dest: "../ci_latency_tests/results/"
+        mode: pull
+        rsync_path: rsync
