@@ -1,0 +1,12 @@
+# Copyright (C) 2024 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+path_timemaster_conf: "/etc/linuxptp/timemaster.conf"
+path_chrony_conf: "/etc/chrony.conf"
+
+service_name_chrony: "chronyd"
+service_name_udev: "systemd-udevd"
+crm_command_path: "/usr/bin/crm"
+cukinia_command_path: "/usr/sbin/cukinia"
+setup_ovs_command_path: "/usr/bin/setup_ovs.py"
