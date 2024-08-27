@@ -1,3 +1,7 @@
+# Copyright (C) 2024 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
 - name: ceph pv ang vg expansion
   block:
     - set_fact:

@@ -1,3 +1,7 @@
+# Copyright (C) 2024 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
 - name: Create conntrackd.service.d directory
   file:
     path: /etc/systemd/system/conntrackd.service.d/

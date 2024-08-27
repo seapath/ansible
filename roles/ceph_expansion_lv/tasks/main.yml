@@ -1,46 +1,50 @@
-  - name: Check if lv_ceph has to be expanded
-    set_fact:
-      expand_lv: "{{ (lvm_volumes[0].data_size | regex_replace('[A-Za-z]*', '') | int) > ansible_lvm['lvs'][lvm_volumes[0].data]['size_g'] | int }}"
-    when: ansible_lvm is defined and lvm_volumes is defined
-  - name: Increase ceph LV and OSD
-    block:
-      - name: Increase lv size
-        community.general.lvol:
-          vg: "{{ lvm_volumes[0].data_vg }}"
-          lv: "{{ lvm_volumes[0].data }}"
-          size: "{{ lvm_volumes[0].data_size }}"
-        register: lv_resized
-      - name: find the osd number
-        find:
-          paths: /var/lib/ceph/osd/
-          file_type: directory
-          patterns: "ceph-[0-9]"
-          use_regex: yes
-        register: ceph_osd_number
-      - name: resize OSDS
-        block:
-          - name: stop ceph-osd
-            ansible.builtin.systemd:
-              name: ceph-osd.target
-              state: stopped
-          - name: pause 3s
-            command: "sleep 3"
-          - name: Resize ceph-osd
-            command: "{{ item }}"
-            with_items:
-              - "/usr/bin/ceph-bluestore-tool bluefs-bdev-expand --path {{ ceph_osd_number.files[0].path }}"
-              - "/usr/bin/ceph-bluestore-tool bluefs-bdev-expand --path {{ ceph_osd_number.files[0].path }}"
-          - name: start ceph-osd
-            ansible.builtin.systemd:
-              name: ceph-osd.target
-              state: started
-          - name: wait for cluster to be HEALTH_OK
-            command: '/usr/bin/ceph status --format=json'
-            register: osdsdown
-            until: osdsdown.stdout | from_json | community.general.json_query('health.status') == "HEALTH_OK"
-            retries: 20
-            delay: 2
-        when:
-          - lv_resized.changed
-          - ceph_osd_number.files | length > 0
-    when: expand_lv is defined and expand_lv
+# Copyright (C) 2024 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Check if lv_ceph has to be expanded
+  set_fact:
+    expand_lv: "{{ (lvm_volumes[0].data_size | regex_replace('[A-Za-z]*', '') | int) > ansible_lvm['lvs'][lvm_volumes[0].data]['size_g'] | int }}"
+  when: ansible_lvm is defined and lvm_volumes is defined
+- name: Increase ceph LV and OSD
+  block:
+    - name: Increase lv size
+      community.general.lvol:
+        vg: "{{ lvm_volumes[0].data_vg }}"
+        lv: "{{ lvm_volumes[0].data }}"
+        size: "{{ lvm_volumes[0].data_size }}"
+      register: lv_resized
+    - name: find the osd number
+      find:
+        paths: /var/lib/ceph/osd/
+        file_type: directory
+        patterns: "ceph-[0-9]"
+        use_regex: yes
+      register: ceph_osd_number
+    - name: resize OSDS
+      block:
+        - name: stop ceph-osd
+          ansible.builtin.systemd:
+            name: ceph-osd.target
+            state: stopped
+        - name: pause 3s
+          command: "sleep 3"
+        - name: Resize ceph-osd
+          command: "{{ item }}"
+          with_items:
+            - "/usr/bin/ceph-bluestore-tool bluefs-bdev-expand --path {{ ceph_osd_number.files[0].path }}"
+            - "/usr/bin/ceph-bluestore-tool bluefs-bdev-expand --path {{ ceph_osd_number.files[0].path }}"
+        - name: start ceph-osd
+          ansible.builtin.systemd:
+            name: ceph-osd.target
+            state: started
+        - name: wait for cluster to be HEALTH_OK
+          command: '/usr/bin/ceph status --format=json'
+          register: osdsdown
+          until: osdsdown.stdout | from_json | community.general.json_query('health.status') == "HEALTH_OK"
+          retries: 20
+          delay: 2
+      when:
+        - lv_resized.changed
+        - ceph_osd_number.files | length > 0
+  when: expand_lv is defined and expand_lv
