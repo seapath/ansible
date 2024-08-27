@@ -1,0 +1,80 @@
+- name: Try to get already defined secret
+  shell:
+    cmd: virsh secret-list |grep "ceph" |grep -oE '[a-f0-9]+-[a-f0-9]+-[a-f0-9]+-[a-f0-9]+-[a-f0-9]+'
+  register: secret_defined
+  failed_when: secret_defined.rc > 1
+  changed_when: false
+- debug:
+    var: secret_defined
+- name: Check if a secret pool has to be created
+  set_fact:
+    create_secret_pool: "{% if hostvars[item]['secret_defined'].stdout == '' %}true{% else %}{{ create_secret_pool | default(false) }}{% endif %}"
+  loop: "{{ groups['hypervisors'] }}"
+
+- block:
+    - name: Check if the secret is already defined
+      set_fact:
+        libvirt_uuid_rbd: "{% if hostvars[item]['secret_defined'].stdout != '' %}{{ hostvars[item]['secret_defined'].stdout }}{% else %}{{ libvirt_uuid_rbd | default('') }}{% endif %}"
+      loop: "{{ groups['hypervisors'] }}"
+    - debug:
+        msg: "Found UUID {{ libvirt_uuid_rbd }}"
+      when: libvirt_uuid_rbd | length > 0
+      run_once: true
+    - name: Generate secret uuid
+      command: uuidgen
+      changed_when: false
+      register: raw_uuid
+      run_once: true
+      when: libvirt_uuid_rbd | length == 0
+    - name: Register uuid
+      set_fact:
+        libvirt_uuid_rbd: "{{ raw_uuid.stdout }}"
+      when: libvirt_uuid_rbd | length == 0
+    - name: Get Ceph libvirt client key
+      command: ceph auth get-key client.libvirt
+      changed_when: false
+      register: ceph_key
+      run_once: true
+  when: create_secret_pool
+
+- block:
+  - name: Copy libvirt xml secret file
+    template:
+        src: secret.xml.j2
+        dest: /tmp/secret.xml
+  - name: Create libvirt rbd secret
+    command: virsh secret-define /tmp/secret.xml
+    when: not secret_defined.failed
+  - name: Remove temporary file
+    file:
+        path: /tmp/secret.xml
+        state: absent
+  - name: Set key in libvirt secret
+    command: 'virsh secret-set-value --secret "{{ libvirt_uuid_rbd }}" --base64 "{{ ceph_key.stdout }}"'
+  when:
+    - create_secret_pool
+    - secret_defined.stdout == ''
+
+- name: Get secret UUID
+  shell:
+    cmd: virsh secret-list |grep "ceph" |grep -oE '[a-f0-9]+-[a-f0-9]+-[a-f0-9]+-[a-f0-9]+-[a-f0-9]+'
+  register: secret_uuid_raw
+- name: Register secret UUID
+  set_fact:
+    libvirt_uuid_rbd: "{{ secret_uuid_raw.stdout }}"
+- name: Create libvirt pool link with rbd pool
+  community.libvirt.virt_pool:
+      command: define
+      xml: '{{ lookup("template", "libvirt_pool.xml.j2") }}'
+      name: "{{ pool_name }}"
+- name: Start libvirt pool
+  community.libvirt.virt_pool:
+      state: active
+      name: "{{ pool_name }}"
+- name: Autostart pool
+  community.libvirt.virt_pool:
+      autostart: yes
+      name: "{{ pool_name }}"
+- name: Refresh pool
+  command: virsh pool-refresh --pool ceph
+  changed_when: false
