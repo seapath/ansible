@@ -28,6 +28,12 @@
         state: stopped
         enabled: false
       when: "'systemd-timesyncd.service' in services"
+    - name: Create a linuxptp directory if it does not exist
+      file:
+        path: /etc/linuxptp
+        state: directory
+        mode: '0755'
+      when: ansible_distribution | regex_search("Yocto")
     - name: Create timemaster configuration
       template:
         src: ../templates/timemaster.conf.j2
