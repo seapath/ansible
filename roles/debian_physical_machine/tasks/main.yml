@@ -222,5 +222,3 @@
     insertafter: 'devices {'
     line: "        types = [ \"rbd\", 1024 ]"
     state: present
-
-
