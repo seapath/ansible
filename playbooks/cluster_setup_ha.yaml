@@ -145,9 +145,10 @@
   become: true
   tasks:
       - name: run extra CRM configuration commands
-        command: "/usr/sbin/crm configure {{ item }}"
+        command: "/usr/bin/crm configure {{ item }}"
         when: extra_crm_cmd_to_run is defined
         run_once: true
-        no_log: true
-        failed_when: 0 == 1
         loop: "{{ extra_crm_cmd_to_run }}"
+        register: crm_cmd_result
+        changed_when: crm_cmd_result.rc == 0
+        failed_when: crm_cmd_result.rc != 0 and crm_cmd_result.stderr.find('same ID') == -1
