@@ -1,0 +1,4 @@
+- name: Remove /var/log/syslog-ng
+  file:
+    state: absent
+    path: /var/log/syslog-ng

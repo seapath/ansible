@@ -4,8 +4,13 @@
 # This playbook call all necessary playbooks to configure the CI and the SEAPATH
 # cluster
 ---
-- import_playbook: ./ci_cleanup_syslog.yaml
-- import_playbook: ./ci_restore_snapshot.yaml
+- name: Cleanup syslog-ng files and restore snapshot
+  hosts: cluster_machines
+  become: true
+  roles:
+    - ci_cleanup_syslog
+    - ci_restore_snapshot
+
 - name: CI configure skip reboot
   hosts:
     - cluster_machines
@@ -15,5 +20,6 @@
     set_fact:
       skip_reboot_setup: true
       skip_reboot_setup_network: true
+
 - import_playbook: ./seapath_setup_main.yaml
 - import_playbook: ./seapath_setup_hardened_debian.yaml
