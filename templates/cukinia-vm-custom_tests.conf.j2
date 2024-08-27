@@ -1,9 +1,0 @@
-# Copyright (C) 2021, RTE (http://www.rte-france.com)
-# SPDX-License-Identifier: Apache-2.0
-
-logging class "${MACHINENAME:-$(hostname)}"
-logging suite vm
-
-cukinia_log "--- Run custom script ---"
-
-as "Run script {{ test_script }}" cukinia_cmd "{{ test_script }}"

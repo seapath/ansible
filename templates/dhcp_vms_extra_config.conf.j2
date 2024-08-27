@@ -1,5 +1,0 @@
-{% for VM in groups['VMs'] %}
-{% if hostvars[VM].use_dhcp is defined and hostvars[VM].use_dhcp %}
-dhcp-host={{ hostvars[VM].mac_address }},{{ hostvars[VM].ansible_host }}
-{% endif %}
-{% endfor %}
