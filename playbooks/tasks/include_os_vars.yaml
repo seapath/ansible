@@ -1,0 +1,16 @@
+# Copyright (C) 2024 Savoir-faire Linux, Inc
+# SPDX-License-Identifier: Apache-2.0
+# Task to include the right OS specific vars
+
+---
+- name: Include Debian-specific variables
+  include_vars: "../../vars/Debian_paths.yml"
+  when: ansible_distribution | regex_search("Debian")
+
+- name: Include CentOS-specific variables
+  include_vars: "../../vars/CentOS_paths.yml"
+  when: ansible_distribution | regex_search("CentOS|RedHat")
+
+- name: Include CentOS-specific variables
+  include_vars: "../../vars/Yocto_paths.yml"
+  when: ansible_distribution | regex_search("Yocto")

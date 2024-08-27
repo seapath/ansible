@@ -6,13 +6,14 @@
 
 ---
 
-- name: Get distrebution variables
-  gather_facts: true
+- name: Get distribution variables
   hosts:
     - cluster_machines
     - standalone_machine
+  gather_facts: true
   tasks:
-  - include_vars: "../vars/{{ ansible_distribution }}_paths.yml"
+    - name: Call include OS vars task
+      include_tasks: tasks/include_os_vars.yaml
 
 - name: Configure SEAPATH specific files
   hosts: cluster_machines

@@ -6,12 +6,13 @@
 
 ---
 - name: Get distribution variables
-  gather_facts: true
   hosts:
     - cluster_machines
     - standalone_machine
+  gather_facts: true
   tasks:
-  - include_vars: "../vars/{{ ansible_distribution }}_paths.yml"
+    - name: Call include OS vars task
+      include_tasks: tasks/include_os_vars.yaml
 
 - name: Configure TimeMaster
   hosts:

@@ -1,5 +1,5 @@
-- name: Get distrebution variables
-  include_vars: "../vars/{{ ansible_distribution }}_paths.yml"
+- name: Call include OS vars task
+  include_tasks: ../playbooks/tasks/include_os_vars.yaml
 
 - name: configure snmp
   block:
