@@ -1,0 +1,173 @@
+# Copyright (C) 2022-2024, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# Ansible playbook that configure corosync to use a qDevice for the cluster.
+
+---
+
+- name: Initialize qNetd
+  hosts: observers
+  become: true
+  run_once: true
+  tasks:
+    - name: Create qNetd certificate
+      command: "corosync-qnetd-certutil -i"
+      register: qnetd_cert_cmd
+      failed_when: qnetd_cert_cmd.rc > 0 and qnetd_cert_cmd.stderr.find('already exists') == -1
+      changed_when: qnetd_cert_cmd.rc == 0
+      notify:
+        - restart qnetd
+      when: corosync_use_qdevice is defined and corosync_use_qdevice
+    - block:
+      - name: fetch qnetd certificate
+        command: "cat /etc/corosync/qnetd/nssdb/qnetd-cacert.crt"
+        register: qnetd_cert_cmd
+      - name: Export qNetd certificate inside corosync nodes variables
+        add_host:
+          name: "{{ item }}"
+          qnetd_cert: "{{ qnetd_cert_cmd.stdout }}"
+        with_items: "{{ groups['corosync_machines'] }}"
+      when: qnetd_cert_cmd.changed
+  handlers:
+    - name: restart qnetd
+      systemd:
+        name: corosync-qnetd
+        state: restarted
+        enabled: true
+
+- name: import qNetd certificate
+  hosts: corosync_machines
+  become: true
+  vars:
+    corosync_cluster_name: "{{ cluster_name | default('seapath') }}"
+  tasks:
+    - block:
+        - name: Copy the certificate
+          copy:
+            content: "{{ qnetd_cert }}"
+            dest: "{{ ansible_remote_tmp }}/qnetd-cacert.crt"
+            owner: root
+            group: root
+            mode: '0644'
+        - name: Import the certificate
+          command: "corosync-qdevice-net-certutil -i -c {{ ansible_remote_tmp }}/qnetd-cacert.crt"
+        - name: Generate the certificate request
+          command: "corosync-qdevice-net-certutil -r -n {{ corosync_cluster_name }}"
+          run_once: true
+        - name: fetch the certificate request
+          command: "cat /etc/corosync/qdevice/net/nssdb/qdevice-net-node.crq"
+          register: qdevice_crq_cmd
+          run_once: true
+        - name: Export certificate request inside a observer variable
+          add_host:
+            name: "{{ groups['observers'][0] }}"
+            qdevice_crq: "{{ qdevice_crq_cmd.stdout }}"
+          run_once: true
+      when: qnetd_cert is defined
+  post_tasks:
+    - name: Remove temporary files
+      file:
+        path: "{{ ansible_remote_tmp }}/qnetd-cacert.crt"
+        state: absent
+      when: qnetd_cert is defined
+
+- name: import qDevice certificate request
+  hosts: observers
+  become: true
+  run_once: true
+  vars:
+    corosync_cluster_name: "{{ cluster_name | default('seapath') }}"
+  tasks:
+    - block:
+        - name: Copy the certificate request
+          copy:
+            content: "{{ qdevice_crq }}"
+            dest: "{{ ansible_remote_tmp }}/qdevice-net-node.crq"
+            owner: root
+            group: root
+            mode: '0644'
+        - name: sign certificate request
+          command: >-
+           corosync-qnetd-certutil -s
+            -c {{ ansible_remote_tmp }}/qdevice-net-node.crq
+            -n {{ corosync_cluster_name }}
+        - name: fetch the certificate
+          command: "cat /etc/corosync/qnetd/nssdb/cluster-{{ corosync_cluster_name }}.crt"
+          register: qdevice_cert_cmd
+        - name: Export certificate inside corosync nodes variables
+          add_host:
+            name: "{{ item }}"
+            qdevice_cert: "{{ qdevice_cert_cmd.stdout }}"
+          with_items: "{{ groups['corosync_machines'] }}"
+      when: qdevice_crq is defined
+  post_tasks:
+    - name: Remove temporary files
+      file:
+        path: "{{ ansible_remote_tmp }}qdevice-net-node.crq"
+        state: absent
+      when: qdevice_crq is defined
+
+- name: import qDevice certificate
+  hosts: corosync_machines
+  become: true
+  run_once: true
+  tasks:
+    - block:
+        - name: Copy the certificate
+          copy:
+            content: "{{ qdevice_cert }}"
+            dest: "{{ ansible_remote_tmp }}/cluster.crt"
+            owner: root
+            group: root
+            mode: '0644'
+        - name: Import the certificate
+          command: "corosync-qdevice-net-certutil -M -c {{ ansible_remote_tmp }}/cluster.crt"
+        - name: fetch p12 file
+          command: "cat /etc/corosync/qdevice/net/nssdb/qdevice-net-node.p12"
+          register: qdevice_p12_cmd
+        - name: Export certificate and key inside corosync nodes variables
+          add_host:
+            name: "{{ item }}"
+            qdevice_p12: "{{ qdevice_p12_cmd.stdout }}"
+          with_items: "{{ groups['corosync_machines'] }}"
+      when: qdevice_cert is defined
+  post_tasks:
+    - name: Remove temporary files
+      run_once: true
+      file:
+        path: "{{ ansible_remote_tmp }}/cluster.crt"
+        state: absent
+      when: qdevice_cert is defined
+
+- name: import qDevice p12 file
+  hosts: "{{ groups['corosync_machines'][1:] }}"
+  become: true
+  tasks:
+    - block:
+        - name: Copy the p12 file
+          copy:
+            content: "{{ qdevice_p12 }}"
+            dest: "{{ ansible_remote_tmp }}/qdevice-net-node.p12"
+            owner: root
+            group: root
+            mode: '0644'
+        - name: Import the p12 file
+          command: "corosync-qdevice-net-certutil -m -c {{ ansible_remote_tmp }}/qdevice-net-node.p12"
+      when: qdevice_p12 is defined
+  post_tasks:
+    - name: Remove temporary files
+      file:
+        path: "{{ ansible_remote_tmp }}/qdevice-net-node.p12"
+        state: absent
+      when: qdevice_p12 is defined
+
+- name: Start corosync-qdevice
+  hosts: corosync_machines
+  become: true
+  tasks:
+    - name: Start the qdevice service
+      systemd:
+        name: corosync-qdevice
+        state: started
+        enabled: true
+      when: corosync_use_qdevice is defined and corosync_use_qdevice

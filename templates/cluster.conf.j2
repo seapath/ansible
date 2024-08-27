@@ -1,8 +1,7 @@
 [machines]
-hypervisor1 = {{ groups['hypervisors'][0] }}
-hypervisor2 = {{ groups['hypervisors'][1] }}
-{% if ( groups['observers'] is defined) and groups['observers'] %}
+{% for hypervisor in groups['hypervisors'] %}
+hypervisor{{loop.index}} = {{ hypervisor }}
+{% endfor %}
+{% if ( groups['observers'] is defined) and groups['observers'] and (corosync_use_qdevice is undefined or not corosync_use_qdevice) %}
 observer = {{ groups['observers'][0] }}
-{% else %}
-hypervisor3 = {{ groups['hypervisors'][2] }}
 {% endif %}

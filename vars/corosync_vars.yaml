@@ -5,7 +5,10 @@
 corosync_cluster_name: "{{ cluster_name | default('seapath') }}"
 corosync_expected_votes: "{{ groups['cluster_machines'] | length }}"
 corosync_transport: 'udpu'
-corosync_node_list: "{{ groups['cluster_machines'] | list }}"
+_corosync_use_qdevice: "{{ corosync_use_qdevice | default(false) }}"
+corosync_node_group: "{{ 'hypervisors' if _corosync_use_qdevice else 'cluster_machines' }}"
+corosync_node_list: "{{ groups[corosync_node_group] | list }}"
 corosync_force_regenerate_authkey: false
 corosync_interfaces:
     ringnumber: 0
+corosync_qdevice: "{{ groups['observers'][0] if _corosync_use_qdevice else omit }}"

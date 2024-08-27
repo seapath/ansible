@@ -6,8 +6,21 @@
 # also be called independently.
 
 ---
-- name: Configure SEAPATH specific files
+- name: Search for corosync nodes
   hosts: cluster_machines
+  become: true
+  tasks:
+    - name: Create a group with corosync_machines
+      add_host:
+        name: "{{ item }}"
+        groups: corosync_machines
+      changed_when: false
+      run_once: true
+      loop: "{{ groups['cluster_machines'] }}"
+      when: item not in groups['observers'] or corosync_use_qdevice is undefined or not corosync_use_qdevice
+
+- name: Configure SEAPATH specific files
+  hosts: corosync_machines
   become: true
   tasks:
   - name: Save cluster machine informations
@@ -15,8 +28,9 @@
         src: ../templates/cluster.conf.j2
         dest: /etc/cluster.conf
 
+
 - name: Check if corosync is already setup
-  hosts: cluster_machines
+  hosts: corosync_machines
   become: true
   tasks:
     - name: check corosync service status
@@ -30,7 +44,7 @@
         name: "{{ item }}"
         groups: unconfigured_machine_group
       run_once: true
-      loop: "{{ groups['cluster_machines'] }}"
+      loop: "{{ groups['corosync_machines'] }}"
       changed_when: false
       when: hostvars[item].corosync_service_status.changed
     - name: Create a group with valid_machines
@@ -38,12 +52,14 @@
         name: "{{ item }}"
         groups: valid_machine
       run_once: true
-      loop: "{{ groups['cluster_machines'] }}"
+      loop: "{{ groups['corosync_machines'] }}"
       changed_when: false
       when: not hostvars[item].corosync_service_status.changed
 
+
+
 - name: Setup Corosync from scratch
-  hosts: cluster_machines
+  hosts: corosync_machines
   become: true
   vars_files:
       - ../vars/corosync_vars.yaml
@@ -93,12 +109,16 @@
             owner: root
             group: root
             mode: '0400'
-        - name: Start pacemaker
+        - name: Start corosync
           ansible.builtin.systemd:
               name: corosync
               state: started
               enabled: true
       when: groups['valid_machine'] is defined
+
+- name: Run qdevice setup
+  import_playbook: cluster_setup_ha_qdevice.yaml
+  when: corosync_use_qdevice is defined and corosync_use_qdevice
 
 - name: Setup Pacemaker
   hosts: unconfigured_machine_group
@@ -121,7 +141,7 @@
         when: groups['valid_machine'] is undefined
 
 - name: run extra CRM commands
-  hosts: cluster_machines
+  hosts: corosync_machines
   become: true
   tasks:
       - name: run extra CRM configuration commands
