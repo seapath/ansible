@@ -1,0 +1,48 @@
+# Copyright (C) 2024 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- block:
+  - name: configure LLMNR /etc/systemd/resolved.conf
+    lineinfile:
+      dest: /etc/systemd/resolved.conf
+      regexp: "^#?LLMNR="
+      line: "LLMNR=no"
+      state: present
+    register: resolved_conf1
+  - name: configure DNS /etc/systemd/resolved.conf
+    lineinfile:
+      dest: /etc/systemd/resolved.conf
+      regexp: "^#?DNS="
+      line: "DNS={{ dns_servers | join(' ') if dns_servers is not string else dns_servers }}"
+      state: present
+    register: resolved_conf2
+  - name: Create resolv.conf stub link
+    ansible.builtin.file:
+      src: /run/systemd/resolve/resolv.conf
+      dest: /etc/resolv.conf
+      state: link
+      force: true
+    register: resolved_conf3
+  - name: Enable systemd-resolved
+    ansible.builtin.systemd:
+      name: systemd-resolved
+      state: started
+      enabled: true
+  - name: Restart systemd-resolved
+    ansible.builtin.systemd:
+      name: systemd-resolved
+      state: restarted
+      enabled: true
+    when: resolved_conf1.changed or resolved_conf2.changed or resolved_conf3.changed
+  when:
+  - dns_servers is defined
+  - netplan_configurations is not defined
+
+- name: disable resolved if no dns server is defined
+  ansible.builtin.systemd:
+    name: systemd-resolved
+    state: stopped
+    enabled: false
+  when: dns_servers is not defined
+

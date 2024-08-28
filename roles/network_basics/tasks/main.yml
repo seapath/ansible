@@ -1,0 +1,31 @@
+# Copyright (C) 2024 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- block:
+  - name: wipe the network directory content 1/2, list files
+    find:
+      paths: ["/etc/systemd/network/", "/etc/netplan"]
+      patterns: "*"
+    register: network_files_to_delete
+  - name: wipe the network directory content 2/2, remove files
+    file:
+      path: "{{ item.path }}"
+      state: absent
+    with_items: "{{ network_files_to_delete.files }}"
+  when: remove_all_network_config is defined and remove_all_network_config is true
+- name: Remove FAI network configuration
+  file:
+    path: "/etc/systemd/network/{{ item }}.network"
+    state: absent
+  with_items:
+    - 01-init
+    - 00-init-dhcp
+    - 00-init
+- name: Copy 80-wired networkd file
+  ansible.builtin.copy:
+    src: 80-wired.network
+    dest: /etc/systemd/network/80-wired.network
+    mode: '0640'
+    owner: root
+    group: systemd-network

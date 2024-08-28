@@ -1,0 +1,37 @@
+# Copyright (C) 2024 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: check presence of iptables_rules_path file
+  delegate_to: localhost
+  stat:
+    path: "{{ iptables_rules_path }}"
+  when: iptables_rules_path is defined
+  register: iptables_rules_path_present
+- name: copy iptables rules file
+  become: true
+  ansible.builtin.copy:
+    src: "{{ iptables_rules_path }}"
+    dest: /etc/iptables/rules.v4
+    mode: "0644"
+  when: iptables_rules_path is defined and iptables_rules_path_present.stat.exists
+  register: iptables_rules
+- name: check presence of iptables_rules_template_path file
+  delegate_to: localhost
+  stat:
+    path: "{{ iptables_rules_template_path }}"
+  when: iptables_rules_template_path is defined
+  register: iptables_rules_template_path_present
+- name: copy iptables rules template file
+  become: true
+  template:
+    src: "{{ iptables_rules_template_path }}"
+    dest: /etc/iptables/rules.v4
+    mode: "0644"
+  when: iptables_rules_template_path is defined and iptables_rules_template_path_present.stat.exists
+  register: iptables_rules_template
+- name: reload iptables rules if needed
+  become: true
+  ansible.builtin.shell:
+    cmd: "/usr/sbin/iptables-restore < /etc/iptables/rules.v4"
+  when: iptables_rules.changed or iptables_rules_template.changed

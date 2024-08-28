@@ -1,0 +1,30 @@
+# Copyright (C) 2024 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Create OVS configuration
+  template:
+    src: ovs_configuration.json.j2
+    dest: /etc/ovs_configuration.json
+    validate: setup_ovs.py -v -c -f %s
+  register: ovs_conf
+- name: Restart seapath-config_ovs
+  ansible.builtin.systemd:
+    name: seapath-config_ovs
+    state: restarted
+  when:
+    - apply_config
+    - ovs_conf.changed
+- name: Register reboot
+  set_fact:
+    need_reboot: true
+  when:
+    - not apply_config
+    - ovs_conf.changed
+
+- name: run extra ovs-vsctl configuration commands
+  command: "/usr/bin/ovs-vsctl {{ item }}"
+  when:
+    - ovs_vsctl_cmds is defined
+  loop: "{{ ovs_vsctl_cmds }}"
+

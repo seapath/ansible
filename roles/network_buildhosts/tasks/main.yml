@@ -1,0 +1,80 @@
+# Copyright (C) 2024 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Set hostname
+  hostname:
+    name: "{{ hostname | default(inventory_hostname) }}"
+    use: systemd
+- name: Build hosts file (Cluster Network)
+  lineinfile:
+    dest: /etc/hosts
+    regexp: '.*{{ hostvars[item].hostname | default(item) }}(| rbd)$'
+    line: "{{ hostvars[item].cluster_ip_addr }} {{ item }} {{ hostvars[item].hostname | default('') }}{% if hostvars[item].hostname is defined %} {% endif %}{% if item == inventory_hostname %}rbd{% endif %}"
+    state: present
+  loop: "{{ groups['cluster_machines'] | default([]) }}"
+  when: hostvars[item].cluster_ip_addr is defined
+- name: Build hosts file (Public Network) 
+  # if cluster_ip_addr is not defined, we consider there is no cluster Network.
+  # Ceph will use the public network instead.
+  lineinfile:
+    dest: /etc/hosts
+    regexp: '.*{{ hostvars[item].hostname | default(item) }}(| rbd)$'
+    line: "{{ hostvars[item].ip_addr }} {{ item }} {{ hostvars[item].hostname | default('') }}{% if hostvars[item].hostname is defined %} {% endif %}{% if item == inventory_hostname %}rbd{% endif %}"
+    state: present
+  loop: "{{ groups['cluster_machines'] | default([]) }}"
+  when: hostvars[item].cluster_ip_addr is undefined
+- name: Build hosts file for Standalone machines
+  lineinfile:
+    dest: /etc/hosts
+    line: "{{ ip_addr | default( ansible_host ) }} {{ inventory_hostname }} {{ hostname | default('') }}"
+    state: present
+  when: inventory_hostname in groups['standalone_machine']|default([])
+- name: remove 'debian' from hosts file
+  lineinfile:
+    dest: /etc/hosts
+    state: absent
+    regexp: '^127.*debian'
+
+- name: push custom host file
+  block:
+    - name: Check if the hosts file exists
+      delegate_to: localhost
+      stat:
+        path: "{{ hosts_path }}"
+      register: hosts_file_exists
+      become: false
+    - name: Read the hosts file content if it exists
+      delegate_to: localhost
+      slurp:
+        src: "{{ hosts_path }}"
+      register: hosts_content
+      when: hosts_file_exists.stat.exists
+      become: false
+    - name: Create a temporary file with the hosts content
+      template:
+        src: "{{ hosts_path }}"
+        dest: /tmp/hosts_temp
+      vars:
+        hosts_content: "{{ (hosts_content.content | b64decode).splitlines() }}"
+      when: hosts_file_exists.stat.exists
+    - name: Read the temporary hosts file content
+      slurp:
+        src: /tmp/hosts_temp
+      register: temp_hosts_content
+      when: hosts_file_exists.stat.exists
+    - name: Ensure /etc/hosts contains the updated user hosts content
+      blockinfile:
+        path: /etc/hosts
+        block: |
+          {% for line in (temp_hosts_content.content | b64decode).splitlines() %}
+          {{ line }}
+          {% endfor %}
+        marker: "# {mark} user hosts file"
+      when: hosts_file_exists.stat.exists
+    - name: Remove the temporary hosts file
+      file:
+        path: /tmp/hosts_temp
+        state: absent
+      when: hosts_file_exists.stat.exists
+  when: hosts_path is defined
