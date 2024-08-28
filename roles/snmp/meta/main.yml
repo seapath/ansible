@@ -3,7 +3,7 @@
 ---
 galaxy_info:
   author: "Seapath"
-  description: deploys cukinia tests
+  description: Configure the seapath snmp stack
   license: Apache-2.0
   min_ansible_version: 2.9.10
   platforms:
