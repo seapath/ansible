@@ -1,0 +1,79 @@
+# Copyright (C) 2024 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Copy Cukinia's tests
+  synchronize:
+    src: cukinia-tests/cukinia
+    dest: /etc/
+    delete: true
+    rsync_opts:
+      - "--exclude=*.j2"
+- name: Copy Cukinia's tests templates
+  template:
+    src: cukinia-tests/cukinia/{{ item.src }}
+    dest: /etc/cukinia/{{ item.dest }}
+  with_items:
+      - { src: 'common_security_tests.d/apt.conf.j2',
+          dest: 'common_security_tests.d/apt.conf' }
+      - { src: 'hypervisor_security_tests.d/shadow.conf.j2',
+          dest: 'hypervisor_security_tests.d/shadow.conf' }
+      - { src: 'hypervisor_security_tests.d/passwd.conf.j2',
+          dest: 'hypervisor_security_tests.d/passwd.conf' }
+      - { src: 'hypervisor_security_tests.d/groups.conf.j2',
+          dest: 'hypervisor_security_tests.d/groups.conf' }
+      - { src: 'common_security_tests.d/sudo.conf.j2',
+          dest: 'common_security_tests.d/sudo.conf' }
+- name: Create /usr/share/cukinia/includes
+  file:
+    path: /usr/share/cukinia/includes
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+- name: Copy Cukinia's includes
+  copy:
+    src: cukinia-tests/includes/
+    dest: /usr/share/cukinia/includes/
+- name: Create /usr/share/testdata
+  file:
+    path: /usr/share/testdata
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+
+- name: tasks only on hosts
+  block:
+    - name: Copy vm.xml
+      copy:
+        src: cukinia-tests/vm_manager_testdata/vm.xml
+        dest: /usr/share/testdata
+    - name: Copy wrong_vm_config.xml
+      copy:
+        src: cukinia-tests/vm_manager_testdata/wrong_vm_config.xml
+        dest: /usr/share/testdata
+    - name: Create a symlink cukinia.conf to cukinia-hypervisor.conf
+      file:
+        src: /etc/cukinia/cukinia-hypervisor.conf
+        dest: /etc/cukinia/cukinia.conf
+        state: link
+  when: "'hypervisors' in group_names"
+
+- name: Create /etc/cukinia.conf for observers
+  block:
+    - name: Create a symlink cukinia.conf to cukinia-observer.conf
+      file:
+        src: /etc/cukinia/cukinia-observer.conf
+        dest: /etc/cukinia/cukinia.conf
+        state: link
+  when: "'observers' in group_names"
+
+- name: Create /etc/cukinia.conf for VMs
+  block:
+    - name: Create a symlink cukinia.conf to cukinia-observer.conf
+      file:
+        src: /etc/cukinia/cukinia-observer.conf
+        dest: /etc/cukinia/cukinia.conf
+        state: link
+  when: "'VMs' in group_names"

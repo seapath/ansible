@@ -3,12 +3,12 @@
 	url = https://github.com/ceph/ceph-ansible.git
 	ignore = dirty
 	branch = stable-6.0
-[submodule "src/cukinia-tests"]
-	path = src/cukinia-tests
+[submodule "roles/deploy_cukinia_tests/cukinia-tests"]
+	path = roles/deploy_cukinia_tests/cukinia-tests
 	url = https://github.com/seapath/cukinia-tests.git
         branch = main
-[submodule "src/cukinia"]
-	path = src/cukinia
+[submodule "roles/deploy_cukinia/files/cukinia"]
+	path = roles/deploy_cukinia/files/cukinia
 	url = https://github.com/savoirfairelinux/cukinia.git
         branch = master
 [submodule "roles/deploy_python3_setup_ovs/files/python3-setup-ovs"]
