@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   CI:
-    runs-on: [self-hosted, runner-RTE-12]
+    runs-on: [self-hosted, runner-RTE-12, runner-redhat]
     steps:
 
       - name: Initialize sources
