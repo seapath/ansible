@@ -14,6 +14,7 @@ RUN set -x \
         locales \
         git \
         python3-full \
+        python3-matplotlib \
         rstcheck \
         rsync \
         ruby-asciidoctor-pdf \
