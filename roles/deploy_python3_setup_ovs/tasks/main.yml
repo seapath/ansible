@@ -1,0 +1,28 @@
+# Copyright (C) 2024 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Synchronization of src python3-setup-ovs on the control machine to dest on the remote hosts
+  ansible.posix.synchronize:
+    src: python3-setup-ovs
+    dest: /tmp/src
+    rsync_opts:
+      - "--chown=root:root"
+- name: Install python3-setup-ovs
+  command:
+    cmd: /usr/bin/python3 setup.py install
+    chdir: /tmp/src/python3-setup-ovs
+- name: Copy seapath-config_ovs.service
+  ansible.builtin.copy:
+    src: seapath-config_ovs.service
+    dest: /etc/systemd/system/seapath-config_ovs.service
+    mode: '0644'
+  register: seapathconfigovs
+- name: daemon-reload seapath-config_ovs
+  ansible.builtin.service:
+    daemon_reload: yes
+  when: seapathconfigovs.changed
+- name: enable seapath-config_ovs.service
+  ansible.builtin.systemd:
+    name: seapath-config_ovs.service
+    enabled: yes

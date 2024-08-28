@@ -3,14 +3,6 @@
 	url = https://github.com/ceph/ceph-ansible.git
 	ignore = dirty
 	branch = stable-6.0
-[submodule "src/debian/python3-setup-ovs"]
-	path = src/debian/python3-setup-ovs
-	url = https://github.com/seapath/python3-setup-ovs.git
-	branch = main
-[submodule "src/debian/vm_manager"]
-	path = src/debian/vm_manager
-	url = https://github.com/seapath/vm_manager.git
-        branch = main
 [submodule "src/cukinia-tests"]
 	path = src/cukinia-tests
 	url = https://github.com/seapath/cukinia-tests.git
@@ -19,3 +11,9 @@
 	path = src/cukinia
 	url = https://github.com/savoirfairelinux/cukinia.git
         branch = master
+[submodule "roles/deploy_python3_setup_ovs/files/python3-setup-ovs"]
+	path = roles/deploy_python3_setup_ovs/files/python3-setup-ovs
+	url = https://github.com/seapath/python3-setup-ovs.git
+[submodule "roles/deploy_vm_manager/files/vm_manager"]
+	path = roles/deploy_vm_manager/files/vm_manager
+	url = https://github.com/seapath/vm_manager.git

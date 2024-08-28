@@ -1,0 +1,19 @@
+# Copyright (C) 2024 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Synchronization of src vm_manager on the control machine to dest on the remote hosts
+  ansible.posix.synchronize:
+    src: vm_manager
+    dest: /tmp/src
+    rsync_opts:
+      - "--chown=root:root"
+- name: Install vm_manager
+  command:
+    cmd: /usr/bin/python3 setup.py install
+    chdir: /tmp/src/vm_manager
+- name: Create a symbolic link
+  ansible.builtin.file:
+    src: /usr/local/bin/vm_manager_cmd.py
+    dest: /usr/local/bin/vm-mgr
+    state: link

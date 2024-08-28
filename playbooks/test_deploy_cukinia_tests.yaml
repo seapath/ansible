@@ -59,11 +59,11 @@
   tasks:
     - name: Copy vm.xml
       copy:
-        src: ../src/debian/vm_manager/vm_manager/testdata/vm.xml
+        src: ../roles/deploy_vm_manager/files/vm_manager/vm_manager/testdata/vm.xml
         dest: /usr/share/testdata
     - name: Copy wrong_vm_config.xml
       copy:
-        src: ../src/debian/vm_manager/vm_manager/testdata/wrong_vm_config.xml
+        src: ../roles/deploy_vm_manager/files/vm_manager/vm_manager/testdata/wrong_vm_config.xml
         dest: /usr/share/testdata
 
 
