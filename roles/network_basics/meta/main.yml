@@ -1,0 +1,13 @@
+# Copyright (C) 2024 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+galaxy_info:
+  author: "Seapath"
+  description: does the basic network stuff, cleaning and setting defaults
+  license: Apache-2.0
+  min_ansible_version: 2.9.10
+  platforms:
+  - name: Debian
+    versions:
+    - all
+dependencies: []

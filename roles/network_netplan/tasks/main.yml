@@ -1,0 +1,25 @@
+# Copyright (C) 2024 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- block:
+    - name: Create /etc/netplan directory
+      file:
+        path: /etc/netplan
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+    - name: Copy Netplan configuration file
+      template:
+        src: "../{{ item }}"
+        dest: "/etc/netplan/{{ item | basename | replace('.j2', '') }}"
+        owner: root
+        group: root
+        mode: '0600'
+      with_items: "{{ netplan_configurations }}"
+      notify: Apply Netplan configuration
+    - name: avoid reboot for netplan
+      set_fact:
+        need_reboot: false
+  when: netplan_configurations is defined

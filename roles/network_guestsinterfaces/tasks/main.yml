@@ -1,0 +1,34 @@
+# Copyright (C) 2024 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- debug:
+    var: item.value
+  with_items: "{{ interfaces_on_br0 | dict2items }}"
+  when: interfaces_on_br0 is defined
+- name: create 00-INTERFACEX.netdev
+  template:
+    src: 00-INTERFACEX.netdev.j2
+    dest: /etc/systemd/network/00-{{ item.key }}.netdev
+    owner: "root"
+    group: "systemd-network"
+    mode: '0644'
+  with_items: "{{ interfaces_on_br0 | dict2items }}"
+  when: interfaces_on_br0 is defined
+  register: interfaces_br0_netdev
+- name: create 00-INTERFACEX.network
+  template:
+    src: 00-INTERFACEX.network.j2
+    dest: /etc/systemd/network/00-{{ item.key }}.network
+    owner: "root"
+    group: "systemd-network"
+    mode: '0644'
+  with_items: "{{ interfaces_on_br0 | dict2items }}"
+  when: interfaces_on_br0 is defined
+  register: interfaces_br0_network
+- name: Reload systemd-networkd configuration
+  ansible.builtin.service:
+    name: systemd-networkd
+    state: reloaded
+  when: interfaces_br0_netdev.changed or interfaces_br0_netdev.changed
+

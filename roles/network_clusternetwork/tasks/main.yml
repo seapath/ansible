@@ -1,0 +1,74 @@
+# Copyright (C) 2024 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Populate service facts
+  service_facts:
+- block:
+  - name: stop and disable hsr service if it exists
+    service:
+      name: "hsr"
+      state: stopped
+      enabled: false
+    when: "'hsr.service' in services"
+  - name: Remove team0 bridge in OVS
+    command: "/usr/bin/ovs-vsctl --if-exists del-br team0"
+  - name: Create team0 bridge in OVS
+    command: "/usr/bin/ovs-vsctl add-br team0"
+  - name: Add interface team0_0 to team0 bridge
+    command: "/usr/bin/ovs-vsctl -- --if-exists del-port {{ team0_0 }} -- add-port team0 {{ team0_0 }}"
+  - name: Add interface team0_1 to team0 bridge
+    command: "/usr/bin/ovs-vsctl -- --if-exists del-port {{ team0_1 }} -- add-port team0 {{ team0_1 }}"
+  - name: Enable RSTP on team0 bridge
+    command: "/usr/bin/ovs-vsctl set Bridge team0 rstp_enable=true"
+  - name: Set RSTP priority on team0 bridge
+    command: "/usr/bin/ovs-vsctl set Bridge team0 other_config=rstp-priority={{ br_rstp_priority }}"
+  - name: Restart conntrackd
+    ansible.builtin.systemd:
+      name: conntrackd
+      state: restarted
+    when: conntrackd_ignore_ip_list is defined
+    failed_when: false
+  when:
+    - cluster_protocol is not defined or cluster_protocol != "HSR" or hsr_mac_address is not defined
+    - skip_recreate_team0_config is not defined or skip_recreate_team0_config is not true
+    - netplan_configurations is not defined
+- block:
+  - name: copy hsr.sh script
+    template:
+      src: hsr.sh.j2
+      dest: /usr/local/sbin/hsr.sh
+      mode: 0755
+      owner: root
+      group: root
+    register: hsr1
+  - name: copy hsrstop.sh script
+    template:
+      src: hsrstop.sh.j2
+      dest: /usr/local/sbin/hsrstop.sh
+      mode: 0755
+      owner: root
+      group: root
+    register: hsr2
+  - name: copy hsr systemd service file
+    ansible.builtin.copy:
+      src: hsr.service
+      dest: /etc/systemd/system/hsr.service
+      mode: '0644'
+    register: hsr3
+  - name: daemon-reload hsr
+    ansible.builtin.service:
+      daemon_reload: yes
+    when: hsr1.changed or hsr2.changed or hsr3.changed
+  - name: enable hsr.service
+    ansible.builtin.systemd:
+      name: hsr.service
+      enabled: yes
+    register: hsrservice
+  - name: Restart hsr
+    ansible.builtin.systemd:
+      name: hsr
+      state: restarted
+    when: hsr1.changed or hsr2.changed or hsr3.changed or hsrservice.changed
+  when: cluster_protocol is defined and cluster_protocol == "HSR" and hsr_mac_address is defined
+

@@ -5,377 +5,39 @@
 # This Ansible playbook configures the networks and defines the hostnames.
 
 ---
-- name: Get distribution variables
-  gather_facts: true
-  hosts:
-    - cluster_machines
-    - standalone_machine
-  tasks:
-  - include_vars: "../vars/{{ ansible_distribution | replace(' ', '_') }}_paths.yml"
-
-- name: Network configuration basics
+- name: Network configuration
   hosts:
     - cluster_machines
     - standalone_machine
   become: true
-  tasks:
-    - block:
-      - name: wipe the network directory content 1/2, list files
-        find:
-          paths: ["/etc/systemd/network/", "/etc/netplan"]
-          patterns: "*"
-        register: network_files_to_delete
-      - name: wipe the network directory content 2/2, remove files
-        file:
-          path: "{{ item.path }}"
-          state: absent
-        with_items: "{{ network_files_to_delete.files }}"
-      when: remove_all_network_config is defined and remove_all_network_config is true
-    - name: Remove FAI network configuration
-      file:
-        path: "/etc/systemd/network/{{ item }}.network"
-        state: absent
-      with_items:
-        - 01-init
-        - 00-init-dhcp
-        - 00-init
-    - name: Copy 80-wired networkd file
-      ansible.builtin.copy:
-        src: ../src/debian/80-wired.network
-        dest: /etc/systemd/network/80-wired.network
-        mode: '0640'
-        owner: root
-        group: systemd-network
-
-- name: Apply network with systemd-networkd roles
-  become: true
-  hosts:
-    - cluster_machines
-    - standalone_machine
   vars_files:
     - ../vars/network_vars.yml
-  vars:
-    systemd_networkd_apply_config: "{{ apply_network_config | default(false) }}"
   roles:
+    - role: network_basics
     - role: systemd_networkd
+      vars:
+        systemd_networkd_apply_config: "{{ apply_network_config | default(false) }}"
       when: netplan_configurations is not defined
-
-- name: Apply network config with netplan
-  become: true
-  hosts:
-    - cluster_machines
-    - standalone_machine
-  tasks:
-    - block:
-        - name: Create /etc/netplan directory
-          file:
-            path: /etc/netplan
-            state: directory
-            owner: root
-            group: root
-            mode: '0755'
-        - name: Copy Netplan configuration file
-          template:
-            src: "../{{ item }}"
-            dest: "/etc/netplan/{{ item | basename | replace('.j2', '') }}"
-            owner: root
-            group: root
-            mode: '0600'
-          with_items: "{{ netplan_configurations }}"
-          notify: Apply Netplan configuration
-        - name: avoid reboot for netplan
-          set_fact:
-            need_reboot: false
-      when: netplan_configurations is defined
-  handlers:
-    - name: Apply Netplan configuration
-      command: netplan apply
+    - role: network_netplan
 
 - name: Configure cluster network
   hosts: cluster_machines
   become: true
-  tasks:
-    - name: Populate service facts
-      service_facts:
-    - block:
-      - name: stop and disable hsr service if it exists
-        service:
-          name: "hsr"
-          state: stopped
-          enabled: false
-        when: "'hsr.service' in services"
-      - name: Remove team0 bridge in OVS
-        command: "/usr/bin/ovs-vsctl --if-exists del-br team0"
-      - name: Create team0 bridge in OVS
-        command: "/usr/bin/ovs-vsctl add-br team0"
-      - name: Add interface team0_0 to team0 bridge
-        command: "/usr/bin/ovs-vsctl -- --if-exists del-port {{ team0_0 }} -- add-port team0 {{ team0_0 }}"
-      - name: Add interface team0_1 to team0 bridge
-        command: "/usr/bin/ovs-vsctl -- --if-exists del-port {{ team0_1 }} -- add-port team0 {{ team0_1 }}"
-      - name: Enable RSTP on team0 bridge
-        command: "/usr/bin/ovs-vsctl set Bridge team0 rstp_enable=true"
-      - name: Set RSTP priority on team0 bridge
-        command: "/usr/bin/ovs-vsctl set Bridge team0 other_config=rstp-priority={{ br_rstp_priority }}"
-      - name: Restart conntrackd
-        ansible.builtin.systemd:
-          name: conntrackd
-          state: restarted
-        when: conntrackd_ignore_ip_list is defined
-        failed_when: false
-      when:
-        - cluster_protocol is not defined or cluster_protocol != "HSR" or hsr_mac_address is not defined
-        - skip_recreate_team0_config is not defined or skip_recreate_team0_config is not true
-        - netplan_configurations is not defined
-    - block:
-      - name: copy hsr.sh script
-        template:
-          src: ../src/debian/hsr.sh.j2
-          dest: /usr/local/sbin/hsr.sh
-          mode: 0755
-          owner: root
-          group: root
-        register: hsr1
-      - name: copy hsrstop.sh script
-        template:
-          src: ../src/debian/hsrstop.sh.j2
-          dest: /usr/local/sbin/hsrstop.sh
-          mode: 0755
-          owner: root
-          group: root
-        register: hsr2
-      - name: copy hsr systemd service file
-        ansible.builtin.copy:
-          src: ../src/debian/hsr.service
-          dest: /etc/systemd/system/hsr.service
-          mode: '0644'
-        register: hsr3
-      - name: daemon-reload hsr
-        ansible.builtin.service:
-          daemon_reload: yes
-        when: hsr1.changed or hsr2.changed or hsr3.changed
-      - name: enable hsr.service
-        ansible.builtin.systemd:
-          name: hsr.service
-          enabled: yes
-        register: hsrservice
-      - name: Restart hsr
-        ansible.builtin.systemd:
-          name: hsr
-          state: restarted
-        when: hsr1.changed or hsr2.changed or hsr3.changed or hsrservice.changed
-      when: cluster_protocol is defined and cluster_protocol == "HSR" and hsr_mac_address is defined
+  roles:
+    - network_clusternetwork
 
-- name: Configure OVS
+- name: Configure OVS, hosts and hostname, then DNS with resolved, then systemd-networkd-wait-online.service
   hosts:
     - cluster_machines
     - standalone_machine
   become: true
-  vars:
-    apply_config: "{{ apply_network_config | default(false) }}"
-  tasks:
-    - name: Create OVS configuration
-      template:
-        src: ../templates/ovs_configuration.json.j2
-        dest: /etc/ovs_configuration.json
-        validate: "{{ setup_ovs_command_path }} -v -c -f %s"
-      register: ovs_conf
-    - name: Restart seapath-config_ovs
-      ansible.builtin.systemd:
-        name: seapath-config_ovs
-        state: restarted
-      when:
-        - apply_config
-        - ovs_conf.changed
-    - name: Register reboot
-      set_fact:
-        need_reboot: true
-      when:
-        - not apply_config
-        - ovs_conf.changed
-
-    - name: run extra ovs-vsctl configuration commands
-      command: "/usr/bin/ovs-vsctl {{ item }}"
-      when:
-        - ovs_vsctl_cmds is defined
-      loop: "{{ ovs_vsctl_cmds }}"
-
-- name: Configure hosts and hostname
-  hosts: cluster_machines
-  become: true
-  tasks:
-    - name: Set hostname
-      hostname:
-        name: "{{ hostname | default(inventory_hostname) }}"
-        use: systemd
-    - name: Build hosts file (Cluster Network)
-      lineinfile:
-        dest: /etc/hosts
-        regexp: '.*{{ hostvars[item].hostname | default(item) }}(| rbd)$'
-        line: "{{ hostvars[item].cluster_ip_addr }} {{ item }} {{ hostvars[item].hostname | default('') }}{% if hostvars[item].hostname is defined %} {% endif %}{% if item == inventory_hostname %}rbd{% endif %}"
-        state: present
-      when: hostvars[item].cluster_ip_addr is defined
-      loop: "{{ groups['cluster_machines'] }}"
-    - name: Build hosts file (Public Network) # if cluster_ip_addr is not defined, we consider there is no cluster Network. Ceph will use the public network instead.
-      lineinfile:
-        dest: /etc/hosts
-        regexp: '.*{{ hostvars[item].hostname | default(item) }}(| rbd)$'
-        line: "{{ hostvars[item].ip_addr }} {{ item }} {{ hostvars[item].hostname | default('') }}{% if hostvars[item].hostname is defined %} {% endif %}{% if item == inventory_hostname %}rbd{% endif %}"
-        state: present
-      when: hostvars[item].cluster_ip_addr is undefined
-      loop: "{{ groups['cluster_machines'] }}"
-    - name: remove 'debian' from hosts file
-      lineinfile:
-        dest: /etc/hosts
-        state: absent
-        regexp: '^127.*debian'
-
-- name: Configure hosts and hostname
-  hosts:
-    - standalone_machine
-  become: true
-  tasks:
-    - name: Set hostname
-      hostname:
-        name: "{{ hostname | default(inventory_hostname) }}"
-        use: systemd
-    - name: Build hosts file
-      lineinfile:
-        dest: /etc/hosts
-        line: "{{ ip_addr | default( ansible_host ) }} {{ inventory_hostname }} {{ hostname | default('') }}"
-        state: present
-    - name: remove 'debian' from hosts file
-      lineinfile:
-        dest: /etc/hosts
-        state: absent
-        regexp: '^127.*debian'
-
-- name: Push hosts file
-  hosts:
-    - cluster_machines
-    - standalone_machine
-  become: true
-  tasks:
-    - block:
-        - name: Check if the hosts file exists
-          delegate_to: localhost
-          stat:
-            path: "{{ hosts_path }}"
-          register: hosts_file_exists
-          become: false
-        - name: Read the hosts file content if it exists
-          delegate_to: localhost
-          slurp:
-            src: "{{ hosts_path }}"
-          register: hosts_content
-          when: hosts_file_exists.stat.exists
-          become: false
-        - name: Create a temporary file with the hosts content
-          template:
-            src: "{{ hosts_path }}"
-            dest: /tmp/hosts_temp
-          vars:
-            hosts_content: "{{ (hosts_content.content | b64decode).splitlines() }}"
-          when: hosts_file_exists.stat.exists
-        - name: Read the temporary hosts file content
-          slurp:
-            src: /tmp/hosts_temp
-          register: temp_hosts_content
-          when: hosts_file_exists.stat.exists
-        - name: Ensure /etc/hosts contains the updated user hosts content
-          blockinfile:
-            path: /etc/hosts
-            block: |
-              {% for line in (temp_hosts_content.content | b64decode).splitlines() %}
-              {{ line }}
-              {% endfor %}
-            marker: "# {mark} user hosts file"
-          when: hosts_file_exists.stat.exists
-        - name: Remove the temporary hosts file
-          file:
-            path: /tmp/hosts_temp
-            state: absent
-          when: hosts_file_exists.stat.exists
-      when: hosts_path is defined
-
-- name: Configure DNS with resolved
-  hosts:
-    - cluster_machines
-    - standalone_machine
-  become: true
-  tasks:
-    - block:
-      - name: configure LLMNR /etc/systemd/resolved.conf
-        lineinfile:
-          dest: /etc/systemd/resolved.conf
-          regexp: "^#?LLMNR="
-          line: "LLMNR=no"
-          state: present
-        register: resolved_conf1
-      - name: configure DNS /etc/systemd/resolved.conf
-        lineinfile:
-          dest: /etc/systemd/resolved.conf
-          regexp: "^#?DNS="
-          line: "DNS={{ dns_servers | join(' ') if dns_servers is not string else dns_servers }}"
-          state: present
-        register: resolved_conf2
-      - name: Create resolv.conf stub link
-        ansible.builtin.file:
-          src: /run/systemd/resolve/resolv.conf
-          dest: /etc/resolv.conf
-          state: link
-          force: true
-        register: resolved_conf3
-      - name: Enable systemd-resolved
-        ansible.builtin.systemd:
-          name: systemd-resolved
-          state: started
-          enabled: true
-      - name: Restart systemd-resolved
-        ansible.builtin.systemd:
-          name: systemd-resolved
-          state: restarted
-          enabled: true
-        when: resolved_conf1.changed or resolved_conf2.changed or resolved_conf3.changed
-      when:
-      - dns_servers is defined
-      - netplan_configurations is not defined
-
-- name: disable resolved if no dns server is defined
-  hosts:
-    - cluster_machines
-    - standalone_machine
-  become: true
-  tasks:
-  - name: Stop and disable systemd-resolved
-    ansible.builtin.systemd:
-      name: systemd-resolved
-      state: stopped
-      enabled: false
-    when: dns_servers is not defined
-
-- name: Configure systemd-networkd-wait-online.service
-  hosts:
-    - cluster_machines
-    - standalone_machine
-  become: true
-  tasks:
-    - block:
-        - name: Create systemd-networkd-wait-online.service.d directory
-          file:
-            path: /etc/systemd/system/systemd-networkd-wait-online.service.d/
-            state: directory
-            owner: root
-            group: root
-            mode: 0755
-        - name: Copy systemd-networkd-wait-online.service overide
-          template:
-            src: ../templates/systemd-networkd-wait-online.service.j2
-            dest: /etc/systemd/system/systemd-networkd-wait-online.service.d/override.conf
-        - name: enable systemd-networkd-wait-online.service
-          ansible.builtin.systemd:
-            name: systemd-networkd-wait-online.service
-            enabled: yes
-      when: netplan_configurations is not defined
+  roles:
+    - role: network_configovs
+      vars:
+        apply_config: "{{ apply_network_config | default(false) }}"
+    - network_buildhosts
+    - network_resolved
+    - network_networkdwait
 
 - name: Configure sriov libvirt network pool
   hosts:
@@ -383,86 +45,28 @@
   become: true
   tasks:
     - name: calling sriov network pool creation (with a loop)
-      include_tasks: tasks/sriov_pool.yaml
-      with_items: "{{ sriov | dict2items }}"
+      include_role:
+        name: network_sriovpool
       vars:
         interface: "{{ item.key }}"
         sriov_network_pool_name: "{{ 'sr-iov-net-' + item.key }}"
+      loop: "{{ sriov | dict2items }}"
       when: sriov is defined
-
-- name: configure guests br0 interfaces
-  hosts: cluster_machines
-  become: true
-  tasks:
-    - debug:
-        var: item.value
-      with_items: "{{ interfaces_on_br0 | dict2items }}"
-      when: interfaces_on_br0 is defined
-    - name: create 00-INTERFACEX.netdev
-      template:
-        src: ../templates/00-INTERFACEX.netdev.j2
-        dest: /etc/systemd/network/00-{{ item.key }}.netdev
-        owner: "root"
-        group: "systemd-network"
-        mode: '0644'
-      with_items: "{{ interfaces_on_br0 | dict2items }}"
-      when: interfaces_on_br0 is defined
-      register: interfaces_br0_netdev
-    - name: create 00-INTERFACEX.network
-      template:
-        src: ../templates/00-INTERFACEX.network.j2
-        dest: /etc/systemd/network/00-{{ item.key }}.network
-        owner: "root"
-        group: "systemd-network"
-        mode: '0644'
-      with_items: "{{ interfaces_on_br0 | dict2items }}"
-      when: interfaces_on_br0 is defined
-      register: interfaces_br0_network
-    - name: Reload systemd-networkd configuration
-      ansible.builtin.service:
-        name: systemd-networkd
-        state: reloaded
-      when: interfaces_br0_netdev.changed or interfaces_br0_netdev.changed
 
 - name: push iptables rules
   hosts:
     - cluster_machines
     - standalone_machine
-  tasks:
-    - name: check presence of iptables_rules_path file
-      delegate_to: localhost
-      stat:
-        path: "{{ iptables_rules_path }}"
-      when: iptables_rules_path is defined
-      register: iptables_rules_path_present
-    - name: copy iptables rules file
-      become: true
-      ansible.builtin.copy:
-        src: "{{ iptables_rules_path }}"
-        dest: /etc/iptables/rules.v4
-        mode: "0644"
-      when: iptables_rules_path is defined and iptables_rules_path_present.stat.exists
-      register: iptables_rules
-    - name: check presence of iptables_rules_template_path file
-      delegate_to: localhost
-      stat:
-        path: "{{ iptables_rules_template_path }}"
-      when: iptables_rules_template_path is defined
-      register: iptables_rules_template_path_present
-    - name: copy iptables rules template file
-      become: true
-      template:
-        src: "{{ iptables_rules_template_path }}"
-        dest: /etc/iptables/rules.v4
-        mode: "0644"
-      when: iptables_rules_template_path is defined and iptables_rules_template_path_present.stat.exists
-      register: iptables_rules_template
+  roles:
+    - iptables
 
-    - name: reload iptables rules if needed
-      become: true
-      ansible.builtin.shell:
-        cmd: "/usr/sbin/iptables-restore < /etc/iptables/rules.v4"
-      when: iptables_rules.changed or iptables_rules_template.changed
+- name: configure guests br0 interfaces
+  become: true
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  roles:
+    - network_guestsinterfaces
 
 - name: conntrackd
   hosts: cluster_machines
@@ -473,6 +77,7 @@
 - name: Restart machine if needed
   hosts:
     - cluster_machines
+    - standalone_machine
   become: true
   tasks:
     - block:
