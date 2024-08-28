@@ -5,6 +5,15 @@
 # SEAPATH.
 
 ---
-- import_playbook: ./test_deploy_cukinia.yaml
+
+- name: deploy cukinia
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  become: true
+  roles:
+    - deploy_cukinia
+
 - import_playbook: ./test_deploy_cukinia_tests.yaml
 - import_playbook: ./test_run_cukinia.yaml
