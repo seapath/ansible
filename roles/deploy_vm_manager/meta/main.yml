@@ -1,6 +1,8 @@
+# Copyright (C) 2024 RTE
+# SPDX-License-Identifier: Apache-2.0
 ---
 galaxy_info:
-  author: "RTE"
+  author: "Seapath"
   description: deploys vm_manager
   license: Apache-2.0
   min_ansible_version: 2.9.10
