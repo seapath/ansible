@@ -1,0 +1,11 @@
+---
+galaxy_info:
+  author: "RTE"
+  description: deploys vm_manager
+  license: Apache-2.0
+  min_ansible_version: 2.9.10
+  platforms:
+  - name: Debian
+    versions:
+    - all
+dependencies: []
