@@ -60,6 +60,11 @@ priority2                255
 # Default clock class : any specialised clock will be better (ie a GPS Grand Master Clock)
 clockClass               248
 
+# Default timeout to get the TX timestamp (1 ms) might be low on a loaded system
+# For example, with IGB driver, a kworker (SCHED_OTHER) wakeup is on the critical
+# path and may have to wait a tick to be scheduled.
+tx_timestamp_timeout    10
+
 [chronyd]
 path /usr/sbin/chronyd
 
