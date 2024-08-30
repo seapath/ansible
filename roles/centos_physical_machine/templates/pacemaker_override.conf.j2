@@ -1,0 +1,10 @@
+[Unit]
+Wants=libvirtd.service
+After=libvirtd.service
+
+[Install]
+WantedBy=corosync.service
+
+[Service]
+TimeoutStopSec={{ pacemaker_shutdown_timeout | default("2min") }}
+TimeoutStartSec=60s

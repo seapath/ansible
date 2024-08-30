@@ -1,0 +1,248 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2024 Red Hat, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+- name: Copy sysctl rules
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: /etc/sysctl.d/{{ item }}
+    mode: '0644'
+  with_items:
+    - 00-bridge_nf_call.conf
+  register: sysctl1
+
+- name: Add sysctl conf from inventory (extra_sysctl_physical_machines)
+  ansible.builtin.copy:
+    dest: /etc/sysctl.d/00-seapathextra_physicalmachines.conf
+    mode: '0644'
+    content: "{{ extra_sysctl_physical_machines }}"
+  when: extra_sysctl_physical_machines is defined
+  register: sysctl2
+
+- name: restart systemd-sysctl if needed
+  ansible.builtin.systemd:
+    name: systemd-sysctl.service
+    state: restarted
+  when: sysctl1.changed or sysctl2.changed
+
+- name: create src folder on hosts
+  file:
+    path: /tmp/src
+    state: directory
+    mode: '0755'
+
+- name: temp fix for synchronize to force evaluate variables
+  set_fact:
+    ansible_host: "{{ ansible_host }}"
+
+- name: Copy consolevm.sh
+  template:
+    src: consolevm.sh.j2
+    dest: /usr/local/bin/consolevm
+    mode: '0755'
+
+- name: create /usr/lib/ocf/resource.d/seapath on hosts
+  file:
+    path: /usr/lib/ocf/resource.d/seapath
+    state: directory
+    mode: '0755'
+
+- name: Copy Pacemaker Seapath Resource-Agent files
+  ansible.posix.synchronize:
+    src: pacemaker_ra/
+    dest: /usr/lib/ocf/resource.d/seapath/
+    rsync_opts:
+    - "--chmod=F755"
+    - "--chown=root:root"
+
+- name: Copy chrony-wait.service
+  template:
+    src: chrony-wait.service.j2
+    dest: /etc/systemd/system/chrony-wait.service
+    owner: root
+    group: root
+    mode: '0644'
+  register: chronywait
+- name: daemon-reload chrony-wait.service
+  ansible.builtin.service:
+    daemon_reload: yes
+  when: chronywait.changed
+- name: enable chrony-wait.service
+  ansible.builtin.systemd:
+    name: chrony-wait.service
+    enabled: yes
+
+- name: Create libvirtd.service.d directory
+  file:
+    path: /etc/systemd/system/libvirtd.service.d/
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+- name: Create pacemaker.service.d directory
+  file:
+    path: /etc/systemd/system/pacemaker.service.d/
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+- name: Copy pacemaker.service drop-in
+  template:
+    src: pacemaker_override.conf.j2
+    dest: /etc/systemd/system/pacemaker.service.d/override.conf
+    owner: root
+    group: root
+    mode: 0644
+  notify: daemon-reload
+  register: pacemaker_corosync
+- name: Get Pacemaker service Status
+  ansible.builtin.systemd:
+    name: "pacemaker.service"
+  register: pacemaker_service_status
+- name: disable pacemaker (reinstall step 1/2)
+  ansible.builtin.systemd:
+    name: pacemaker.service
+    enabled: no
+  when: pacemaker_corosync.changed and pacemaker_service_status.status.UnitFileState == "enabled"
+- name: enable pacemaker (reinstall step 2/2)
+  ansible.builtin.systemd:
+    name: pacemaker.service
+    enabled: yes
+  when: pacemaker_corosync.changed and pacemaker_service_status.status.UnitFileState == "enabled"
+
+- name: Add extra modules to the kernel
+  block:
+    - name: create extra modules conf file
+      ansible.builtin.file:
+        path: /etc/modules-load.d/extra_modules.conf
+        owner: root
+        group: root
+        mode: 0751
+        state: touch
+    - name: add extra modules to conf file
+      lineinfile:
+        dest: /etc/modules-load.d/extra_modules.conf
+        state: present
+        regexp: "^{{ item }}$"
+        line: "{{ item }}"
+      with_items: "{{ extra_kernel_modules | default([]) }}"
+
+- name: Add admin user to libvirt group
+  user:
+    name: "{{ admin_user }}"
+    groups: libvirt
+    append: yes
+
+
+- name: Creating libvirt user with libvirtd permissions
+  user: name=libvirt
+    group=libvirt
+    shell=/bin/false
+
+- name: add br_netfilter to /etc/modules-load.d
+  ansible.builtin.copy:
+    src: modules/netfilter.conf
+    dest: /etc/modules-load.d/netfilter.conf
+    owner: root
+    group: root
+    mode: 0751
+
+- name: lineinfile in hosts file for logstash-seapath
+  lineinfile:
+    dest: /etc/hosts
+    regexp: '.* logstash-seapath$'
+    line: "{{ logstash_server_ip }} logstash-seapath"
+    state: present
+  when: logstash_server_ip is defined
+
+- name: Make libvirt use the "machine-id" way to determine host UUID
+  lineinfile:
+    dest: /etc/libvirt/libvirtd.conf
+    regexp: "^#?host_uuid_source ="
+    line: "host_uuid_source = \"machine-id\""
+    state: present
+- name: restart libvirtd
+  ansible.builtin.systemd:
+    name: libvirtd.service
+    state: restarted
+
+- name: enable virtsecretd
+  ansible.builtin.systemd:
+    name: virtsecretd.service
+    enabled: yes
+    state: started
+
+- name: enable docker.service
+  ansible.builtin.systemd:
+    name: docker.service
+- name: "add initramfs-tools scripts: script file (LVM rebooter and log handling)"
+  ansible.builtin.copy:
+    src: initramfs-tools/scripts/
+    dest: /etc/initramfs-tools/scripts/
+    mode: '0755'
+  register: initramfs_tools_scripts
+
+- name: "get the /var/log/ device"
+  command: "findmnt -n -o SOURCE --target /var/log"
+  register: varlog_dev
+
+- name: "set_fact /var/log/ device"
+  set_fact:
+    lvm_rebooter_log_device: "{{ varlog_dev.stdout }}"
+
+- name: "get the /var/log/ relative path"
+  shell: "realpath --relative-to=$(findmnt -n -o TARGET --target /var/log/) /var/log"
+  register: varlog_path
+
+- name: "set_fact /var/log/ relative path"
+  set_fact:
+    lvm_rebooter_log_path: "{{ varlog_path.stdout }}"
+
+- name: "Copy rebooter.conf"
+  template:
+    src: initramfs-tools/conf.d/rebooter.conf.j2
+    dest: /etc/dracut.conf.d/rebooter.conf
+
+- name: "configure initramfs-tools to use busybox"
+  lineinfile:
+    dest: /etc/dracut.conf
+    regexp: "^#?BUSYBOX="
+    line: "BUSYBOX=y"
+    state: present
+  register: initramfs_busybox
+
+- name: "rebuild initramfs if necessary"
+  command:
+    cmd: /usr/bin/dracut --regenerate-all --force
+  when: initramfs_tools_scripts.changed or initramfs_busybox.changed
+
+- name: "add rbd type to lvm.conf"
+  ansible.builtin.lineinfile:
+    path: /etc/lvm/lvm.conf
+    insertafter: 'devices {'
+    line: "        types = [ \"rbd\", 1024 ]"
+    state: present
+
+- name: "Configure firewalld for ceph"
+  block:
+    - name: "Configure firewalld for ceph monitor"
+      ansible.posix.firewalld:
+        port: 3300/tcp
+        permanent: true
+        state: enabled
+    - name: "Configure firewalld for ceph monitor legacy v1 port"
+      ansible.posix.firewalld:
+        port: 6789/tcp
+        permanent: true
+        state: enabled
+    - name: "Configure firewalld for ceph OSD"
+      ansible.posix.firewalld:
+        port: 6800-7300/tcp
+        permanent: true
+        state: enabled
+
+- name: "Configure firewalld for high-availability services"
+  ansible.posix.firewalld:
+    service: high-availability
+    permanent: true
+    state: enabled

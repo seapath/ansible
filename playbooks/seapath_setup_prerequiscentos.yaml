@@ -16,14 +16,14 @@
     - standalone_machine
   become: true
   roles:
-    - centos/physical_machine
+    - centos_physical_machine
 - name: Prerequis hypervisor centos
   hosts:
     - hypervisors
     - standalone_machine
   become: true
   roles:
-    - centos/hypervisor
+    - centos_hypervisor
 
 - name: Add admin user to haclient group
   hosts:
