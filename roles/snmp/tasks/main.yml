@@ -32,7 +32,7 @@
           name: "{{ snmp_user_name }}"
           uid: 902
           group: "{{ snmp_user_name }}"
-    when: getent_passwd['{{ snmp_user_name }}'][1] != "902" or getent_group['{{ snmp_user_name }}'][1] != "902"
+    when: getent_passwd[snmp_user_name][1] != '902' or getent_group[snmp_user_name][1] != '902'
 
   - name: temp fix for synchronize to force evaluate variables
     set_fact:
