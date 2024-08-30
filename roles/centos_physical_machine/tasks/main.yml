@@ -35,6 +35,14 @@
   set_fact:
     ansible_host: "{{ ansible_host }}"
 
+- name: deploy vm_manager
+  include_role:
+    name: deploy_vm_manager
+
+- name: deploy python3-setup-ovs
+  include_role:
+    name: deploy_python3_setup_ovs
+
 - name: Copy consolevm.sh
   template:
     src: consolevm.sh.j2
