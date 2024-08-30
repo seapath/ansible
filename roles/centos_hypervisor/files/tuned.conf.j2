@@ -1,0 +1,20 @@
+[main]
+include=realtime-virtual-host
+summary=Seapath profile for RT host (Seapath Rt Host = SRH)
+
+[variables]
+isolated_cores={{ isolcpus | default('') }}
+non_isolated_cores_expanded=${f:cpulist_unpack:${non_isolated_cores}}
+
+[sysctl]
+kernel.printk=3 1 1 7
+
+[sysfs]
+/sys/module/kvm/parameters/halt_poll_ns = 0
+
+[bootloader]
+cmdline_srh=+processor.max_cstate=1 intel_idle.max_cstate=1 cpufreq.default_governor=performance rcu_nocb_poll
+
+[scheduler]
+# for i in `pgrep rcuc` ; do grep Cpus_allowed_list /proc/$i/status ; done
+group.rcuc=0:f:10:*:^\[rcuc

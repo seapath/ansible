@@ -1,0 +1,7 @@
+[Unit]
+Description={{ item.description }}
+Before=slices.target
+Wants={{ item.wants }}
+
+[Slice]
+AllowedCPUs={{ item.allowedcpus }}
