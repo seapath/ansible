@@ -1,4 +1,6 @@
 #!/bin/bash
+# Copyright (C) 2024 RTE
+# SPDX-License-Identifier: Apache-2.0
 
 conffile=/etc/backup-restore.conf
 # clean screen proportion

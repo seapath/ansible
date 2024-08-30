@@ -17,6 +17,7 @@
   become: true
   roles:
     - debian_physical_machine
+    - backup_restore
 - name: Prerequis hypervisor debian
   hosts:
     - hypervisors
