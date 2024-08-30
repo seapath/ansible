@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# Copyright (C) 2024 RTE
+# SPDX-License-Identifier: Apache-2.0
 import sys
 import lxml.etree as le
 

@@ -1,4 +1,6 @@
 #!/bin/bash
+# Copyright (C) 2024 RTE
+# SPDX-License-Identifier: Apache-2.0
 
 local_dir=$1
 remote_shell=$2
