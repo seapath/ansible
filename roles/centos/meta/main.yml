@@ -1,0 +1,14 @@
+# Copyright (C) 2024 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+galaxy_info:
+  author: "Seapath"
+  description: Prerequisite for all centos machine
+  min_ansible_version: 2.9.10
+  license: Apache-2.0
+  platforms:
+  - name: Centos
+    versions:
+    - all
+dependencies: []
+

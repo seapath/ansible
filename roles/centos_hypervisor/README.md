@@ -1,6 +1,6 @@
-# Debian Hypervisor Role
+# CentOS Hypervisor Role
 
-This role apply the hypervisor specific configurations (virtualisation, realtime...) for Debian machines
+This role applies the hypervisor specific configurations (virtualisation, realtime...) for Centos machines
 
 ## Requirements
 
@@ -25,5 +25,5 @@ no requirement.
 ```yaml
 - hosts: cluster_machines
   roles:
-    - { role: seapath_ansible.debian_hypervisor }
+    - { role: seapath_ansible.centos_hypervisor }
 ```
