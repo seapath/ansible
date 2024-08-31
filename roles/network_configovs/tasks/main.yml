@@ -2,11 +2,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+- include_vars: "{{ ansible_distribution | replace(' ', '_') }}.yml"
+
 - name: Create OVS configuration
   template:
     src: ovs_configuration.json.j2
     dest: /etc/ovs_configuration.json
-    validate: setup_ovs.py -v -c -f %s
+    validate: "{{ setup_ovs_command_path }} -v -c -f %s"
   register: ovs_conf
 - name: Restart seapath-config_ovs
   ansible.builtin.systemd:

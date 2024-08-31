@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- include_vars: "{{ ansible_distribution }}.yml"
+- include_vars: "{{ ansible_distribution | replace(' ', '_') }}.yml"
 
 - name: Save cluster machine informations
   template:

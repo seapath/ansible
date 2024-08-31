@@ -1,0 +1,5 @@
+# Copyright (C) 2024 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+setup_ovs_command_path: "setup_ovs.py"

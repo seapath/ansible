@@ -2,13 +2,4 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-path_timemaster_conf: "/etc/linuxptp/timemaster.conf"
-path_chrony_conf: "/etc/chrony/chrony.conf"
-
-snmp_user_name: "Debian-snmp"
-service_name_chrony: "chrony"
-service_name_udev: "systemd-udev-trigger"
-snmp_sudoers_path: "../src/debian/sudoers/Debian-snmp.j2"
-crm_command_path: "crm"
 cukinia_command_path: "cukinia"
-setup_ovs_command_path: "setup_ovs.py"
