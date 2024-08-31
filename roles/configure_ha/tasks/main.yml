@@ -1,0 +1,145 @@
+# Copyright (C) 2024 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- include_vars: "{{ ansible_distribution }}.yml"
+
+- name: Save cluster machine informations
+  template:
+    src: cluster.conf.j2
+    dest: /etc/cluster.conf
+
+# Check if corosync is already setup
+- name: check corosync service status
+  systemd:
+    name: corosync
+    state: started
+  check_mode: true
+  register: corosync_service_status
+- name: Create a group with unconfigured_machines
+  add_host:
+    name: "{{ item }}"
+    groups: unconfigured_machine_group
+  run_once: true
+  loop: "{{ groups['cluster_machines'] }}"
+  changed_when: false
+  when: hostvars[item].corosync_service_status.changed
+- name: Create a group with valid_machines
+  add_host:
+    name: "{{ item }}"
+    groups: valid_machine
+  run_once: true
+  loop: "{{ groups['cluster_machines'] }}"
+  changed_when: false
+  when: not hostvars[item].corosync_service_status.changed
+
+# Setup Corosync from scratch
+- name: Setup Corosync from scratch
+  block:
+    - name: templating corosync.conf
+      template:
+        src: corosync.conf.j2
+        dest: /etc/corosync/corosync.conf
+      register: corosync_conf
+    - name: Restart Corosync
+      ansible.builtin.systemd:
+        name: corosync
+        state: restarted
+        enabled: yes
+      when: corosync_conf.changed
+  when: groups['valid_machine'] is undefined
+
+- name: Making sure that Corosync service is started
+  ansible.builtin.systemd:
+    name: corosync
+    state: started
+    enabled: yes
+
+- block:
+    - name: Fetch corosync configuration
+      fetch:
+        src: "/etc/corosync/corosync.conf"
+        dest: "{{ tmpdir }}/corosync.conf"
+        flat: true
+      run_once: true
+    - name: Fetch corosync key
+      fetch:
+        src: "/etc/corosync/authkey"
+        dest: "{{ tmpdir }}/authkey"
+        flat: true
+      run_once: true
+  when:
+    - groups['unconfigured_machine_group'] is defined
+    - "'valid_machine' in group_names"
+
+- name: Setup Corosync using existing configuration
+  block:
+    - name: Install corosync configuration
+      copy:
+        src: "{{ tmpdir }}/corosync.conf"
+        dest: /etc/corosync/corosync.conf
+        owner: root
+        group: root
+        mode: '0644'
+    - name: Install corosync key
+      copy:
+        src: "{{ tmpdir }}/authkey"
+        dest: /etc/corosync/authkey
+        owner: root
+        group: root
+        mode: '0400'
+    - name: Start pacemaker
+      ansible.builtin.systemd:
+          name: corosync
+          state: started
+          enabled: true
+  when:
+    - groups['valid_machine'] is defined
+    - "'unconfigured_machine_group' in group_names"
+
+- name: Setup Pacemaker on unconfigured_machine_group
+  block:
+    - name: Start Pacemaker
+      ansible.builtin.systemd:
+          name: pacemaker
+          state: started
+          enabled: true
+    - name: wait for pacemaker
+      command: "{{ crm_command_path }} status"
+      register: result
+      until: result.rc == 0
+      retries: 3
+      delay: 1
+    - name: Disable stonith
+      command: "{{ crm_command_path }} configure property stonith-enabled=false"
+      run_once: true
+      when: groups['valid_machine'] is undefined
+  when:
+    - "'unconfigured_machine_group' in group_names"
+
+# run extra CRM commands
+- name: run extra CRM configuration commands for vm-mgr http api
+  command:
+    cmd: crm -d config load update -
+    stdin: "{{ vmmgrapi_cmd_list }}"
+  when:
+    - enable_vmmgr_http_api is defined
+    - enable_vmmgr_http_api is true
+    - admin_cluster_ip is defined
+  run_once: true
+  register: vmmgrapi_cmd_list_task
+  changed_when: "'CIB commit successful' in vmmgrapi_cmd_list_task.stdout"
+  vars:
+    vmmgrapi_cmd_list: |
+      primitive ClusterIP IPaddr2 params ip={{ admin_cluster_ip }} cidr_netmask=32 op monitor interval=30s meta target-role=Started
+      primitive vmmgrapi systemd:nginx.service  op monitor interval=30s
+      colocation vmmgrapi_colocation inf: ClusterIP vmmgrapi
+      order order_ClusterIP_vmmgrapi ClusterIP vmmgrapi
+- name: run extra CRM configuration commands
+  command:
+    cmd: crm -d config load update -
+    stdin: "{{ extra_crm_cmd_to_run }}"
+  when: extra_crm_cmd_to_run is defined
+  run_once: true
+  register: extra_crm_cmd_to_run_task
+  changed_when: "'CIB commit successful' in extra_crm_cmd_to_run_task.stdout"
