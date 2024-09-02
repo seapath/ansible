@@ -22,7 +22,7 @@
   - name: Enable RSTP on team0 bridge
     command: "/usr/bin/ovs-vsctl set Bridge team0 rstp_enable=true"
   - name: Set RSTP priority on team0 bridge
-    command: "/usr/bin/ovs-vsctl set Bridge team0 other_config=rstp-priority={{ br_rstp_priority }}"
+    command: "/usr/bin/ovs-vsctl set Bridge team0 other_config=rstp-priority={{ br_rstp_priority | default(16384) }}"
   - name: Restart conntrackd
     ansible.builtin.systemd:
       name: conntrackd
