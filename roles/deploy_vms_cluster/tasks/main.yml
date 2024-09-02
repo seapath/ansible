@@ -1,7 +1,5 @@
-# Copyright (C) 2021, RTE (http://www.rte-france.com)
-# Copyright (C) 2024 Savoir-faire Linux, Inc
+# Copyright (C) 2024, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
-# Task to deploy a VM
 
 ---
 - name: "check presence of vm before copy"
@@ -67,3 +65,11 @@
     vm_file_dest: "{{ qcow2tmpuploadfolder | default('/tmp') + '/os.qcow2' }}"
 
   when: presencevm.status == "Undefined" or (hostvars[item].force is defined and hostvars[item].force)
+
+- name: "Define colocation constraints for {{ item }}"
+  cluster_vm:
+    name: "{{ item }}"
+    command: define_colocation
+    strong: "{{ hostvars[item].strong_colocation | default(false) }}"
+    colocated_vms: "{{ hostvars[item].colocated_vms }}"
+  when: hostvars[item].colocated_vms is defined

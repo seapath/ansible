@@ -1,7 +1,0 @@
-- name: "Define colocation constraints for {{ item }}"
-  cluster_vm:
-    name: "{{ item }}"
-    command: define_colocation
-    strong: "{{ hostvars[item].strong_colocation | default(false) }}"
-    colocated_vms: "{{ hostvars[item].colocated_vms }}"
-  when: hostvars[item].colocated_vms is defined
