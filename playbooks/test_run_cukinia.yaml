@@ -6,7 +6,7 @@
 
 ---
 
-- name: Get distrebution variables
+- name: Get distribution variables
   hosts:
     - cluster_machines
     - standalone_machine
