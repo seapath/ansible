@@ -9,9 +9,7 @@
   gather_facts: false
   become: true
   tasks:
-    - name: "Deploy VMs"
-      include_tasks: tasks/deploy_vm.yaml
-      loop: "{{ groups['VMs'] }}"
-    - name: "Define colocation constraints"
-      include_tasks: tasks/colocation.yaml
-      loop: "{{ groups['VMs'] }}"
+  - name: Deploy VMs on Cluster Role
+    with_items: "{{ groups['VMs'] }}"
+    include_role:
+      name: deploy_vms_cluster
