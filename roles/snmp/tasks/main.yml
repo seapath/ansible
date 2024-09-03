@@ -1,5 +1,5 @@
 - name: Get distrebution variables
-  include_vars: "../vars/{{ ansible_distribution }}_paths.yml"
+  include_vars: "../vars/{{ ansible_distribution | replace(' ', '_') }}_paths.yml"
 
 - name: configure snmp
   block:
