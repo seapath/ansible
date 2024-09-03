@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   ansible-lint:
-    runs-on: self-hosted
+    runs-on: runner-RTE-12
     steps:
 
       - name: Initialize sources
