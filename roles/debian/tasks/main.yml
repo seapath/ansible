@@ -245,3 +245,14 @@
 - name: update-grub
   command: update-grub
   when: updategrub0.changed or updategrub1.changed or updategrub2.changed
+
+- name: Stop and disable chrony
+  ansible.builtin.systemd:
+    name: "chrony"
+    state: stopped
+    enabled: false
+- name: Stop and disable systemd-resolved
+  ansible.builtin.systemd:
+    name: systemd-resolved
+    state: stopped
+    enabled: false

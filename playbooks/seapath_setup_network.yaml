@@ -2,8 +2,7 @@
 # Copyright (C) 2024 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-# This Ansible playbook configures the networks and defines the hostnames. It
-# can be used on cluster machines and VMs.
+# This Ansible playbook configures the networks and defines the hostnames.
 
 ---
 - name: Get distribution variables
@@ -11,7 +10,6 @@
   hosts:
     - cluster_machines
     - standalone_machine
-    - VMs
   tasks:
   - include_vars: "../vars/{{ ansible_distribution }}_paths.yml"
 
@@ -19,7 +17,6 @@
   hosts:
     - cluster_machines
     - standalone_machine
-    - VMs
   become: true
   tasks:
     - block:
@@ -63,24 +60,11 @@
     - role: systemd_networkd
       when: netplan_configurations is not defined
 
-- name: Apply network with systemd-networkd roles on VMs
-  become: true
-  hosts:
-    - VMs
-  vars_files:
-    - ../vars/network_vars.yml
-  vars:
-    systemd_networkd_apply_config: "true"
-  roles:
-    - role: systemd_networkd
-      when: netplan_configurations is not defined
-
 - name: Apply network config with netplan
   become: true
   hosts:
     - cluster_machines
     - standalone_machine
-    - VMs
   tasks:
     - block:
         - name: Create /etc/netplan directory
@@ -248,7 +232,6 @@
 - name: Configure hosts and hostname
   hosts:
     - standalone_machine
-    - VMs
   become: true
   tasks:
     - name: Set hostname
@@ -270,7 +253,6 @@
   hosts:
     - cluster_machines
     - standalone_machine
-    - VMs
   become: true
   tasks:
     - block:
@@ -319,7 +301,6 @@
   hosts:
     - cluster_machines
     - standalone_machine
-    - VMs
   become: true
   tasks:
     - block:
@@ -363,7 +344,6 @@
   hosts:
     - cluster_machines
     - standalone_machine
-    - VMs
   become: true
   tasks:
   - name: Stop and disable systemd-resolved
@@ -372,19 +352,6 @@
       state: stopped
       enabled: false
     when: dns_servers is not defined
-
-- name: Stop chrony service
-  hosts:
-    - cluster_machines
-    - standalone_machine
-    - VMs
-  become: true
-  tasks:
-    - name: stop and disable chrony
-      service:
-        name: "{{ service_name_chrony }}"
-        state: stopped
-        enabled: false
 
 - name: Configure systemd-networkd-wait-online.service
   hosts:
