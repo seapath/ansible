@@ -1,0 +1,77 @@
+# Configuration file for timemaster
+
+{% if ptp_interface is defined %}
+[ptp_domain 0]
+ntp_options poll 0
+{% if ptp_vlanid is defined %}
+interfaces {{ ptp_interface + '.' + ptp_vlanid|string }}
+{% else %}
+interfaces {{ ptp_interface }}
+{% endif %}
+delay 1e-9
+# delay:
+# This option sets the NTP delay of the source (in seconds). Half of this value
+# is included in the maximum assumed error which is used in the source selection
+# algorithm. Increasing the delay is useful to avoid having no majority in the
+# source selection or to make it prefer other sources.
+# The default is 1e-9 (1 nanosecond).
+# Leave as default to leave the error be computed via the std dev of measured samples.
+{% endif %}
+
+[timemaster]
+ntp_program chronyd
+
+[chrony.conf]
+include {{ path_chrony_conf }}
+{% if ntp_servers is defined %}
+{%- for line in ntp_servers %}{% if ptp_interface is not defined and loop.index==1 %}server {{ line }} trust iburst maxsamples 10 minsamples 10 maxpoll 6 minpoll 6
+{% else %}server {{ line }} iburst maxsamples 10 minsamples 10 maxpoll 6 minpoll 6
+{% endif %}{% endfor %}
+{% endif %}
+
+[ntp.conf]
+includefile /etc/ntp.conf
+
+[ptp4l.conf]
+slaveOnly             1
+
+# IEC 61850-9-3 Profile
+# (from : https://en.wikipedia.org/wiki/IEC/IEEE_61850-9-3)
+network_transport     {{ ptp_network_transport | default('L2') }}
+delay_mechanism       {{ ptp_delay_mechanism | default('P2P') }}
+domainNumber             0
+
+# Announce interval: 1s
+logAnnounceInterval      0
+
+# Sync interval: 1 s
+logSyncInterval          0
+
+# Pdelay interval: 1 s
+logMinPdelayReqInterval  0
+operLogPdelayReqInterval 0
+
+# Announce receipt time-out: 3 s (fixed)
+announceReceiptTimeout   3
+
+# Slave-only priority :
+priority1                255
+priority2                255
+# Default clock class : any specialised clock will be better (ie a GPS Grand Master Clock)
+clockClass               248
+
+[chronyd]
+path /usr/sbin/chronyd
+
+[ntpd]
+path /usr/sbin/ntpd
+options -u ntp:ntp -g
+
+[phc2sys]
+path /usr/sbin/phc2sys
+
+[ptp4l]
+path /usr/sbin/ptp4l
+# -l 4: "Reasonable" loglevel (synchronisation status change, init, ...)
+# -l 6: debug loglevel (PHC regulation values, offset every second)
+options --step_threshold 0.00001 -l 4
