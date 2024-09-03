@@ -3,9 +3,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # This Ansible playbook configures the networks and defines the hostnames. It
-# can be used on cluster machines and VMs. It is called by the playbook
-# seapath_setup_main.yaml, but can also be called independently, especially to
-# configure VMs.
+# can be used on cluster machines. It is called by the playbook
+# seapath_setup_main.yaml, but can also be called independently.
 
 ---
 
@@ -22,24 +21,11 @@
     - role: systemd_networkd
       when: netplan_configurations is not defined
 
-- name: Apply network with systemd-networkd roles on VMs
-  become: true
-  hosts:
-    - VMs
-  vars_files:
-    - ../vars/network_vars.yml
-  vars:
-    systemd_networkd_apply_config: "true"
-  roles:
-    - role: systemd_networkd
-      when: netplan_configurations is not defined
-
 - name: Apply network config with netplan
   become: true
   hosts:
     - cluster_machines
     - standalone_machine
-    - VMs
   tasks:
     - block:
         - name: Create /etc/netplan directory
@@ -163,7 +149,6 @@
   hosts:
     - cluster_machines
     - standalone_machine
-    - VMs
   become: true
   tasks:
     - block:
@@ -207,7 +192,6 @@
   hosts:
     - cluster_machines
     - standalone_machine
-    - VMs
   become: true
   tasks:
   - name: Stop and disable systemd-resolved
