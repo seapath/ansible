@@ -14,13 +14,6 @@
 - hosts:
     - cluster_machines
     - standalone_machine
-  name: Get system info
-  tasks:
-    - name: Execute script
-      script: ../scripts/ci_system_info.py '{{ tmp_cukinia_dir.path }}/system_info.adoc'
-    - name: Fetch results
-      fetch:
-        src: '{{ tmp_cukinia_dir.path }}/system_info.adoc'
-        dest: "{{ cukinia_test_prefix | default('..') }}/system_info.adoc"
-        flat: yes
+  roles:
+    - ci_yocto/get_system_info
 ...
