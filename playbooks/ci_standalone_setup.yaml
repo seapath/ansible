@@ -3,13 +3,12 @@
 
 ---
 
-- import_playbook: ci_reboot_on_usb_drive.yaml
-
-- name: Reflash the machine
-  hosts: standalone_machine
+- name: Configure next reboot to boot on USB drive
+  hosts:
+    - cluster_machines
+    - standalone_machine
   gather_facts: false
-  tasks:
-    - name: Reboot the system
-      reboot:
+  roles:
+    - ci_yocto/reboot_on_usb_drive
 
 - import_playbook: seapath_setup_main.yaml

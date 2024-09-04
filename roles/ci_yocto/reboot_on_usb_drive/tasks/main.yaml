@@ -1,0 +1,15 @@
+# Copyright (C) 2023-2024 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+#
+# This role reboot the CI machine on the USB key.
+# This key will automatically reflash the machine
+
+---
+- name: Configure the EFI to boot on USB drive
+  script: "configure_boot_next_usb_drive.sh"
+  register: result
+  changed_when: result.rc == 0
+  failed_when: result.rc == 1 or result.rc > 2
+
+- name: Reboot the system
+  reboot:
