@@ -125,3 +125,12 @@ all:
                             # optional extra permissions to add to Debian-snmp sudoers file
                             extra_usersnmp_sudoers: |
                               {{ snmp_user_name }}     ALL = (hacluster) NOPASSWD:EXEC: /usr/local/bin/snmp_crmstatus.sh ""
+
+                            # Account to be created for SNMP v3 support. Optional.
+                            #snmp_accounts:
+                            #  - name: user1
+                            #    password: mypassword1
+                            #  - name: user2
+                            #    password: mypassword2
+                            #  - name: user3
+                            #    password: mypassword3
