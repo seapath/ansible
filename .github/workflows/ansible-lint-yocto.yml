@@ -17,9 +17,9 @@ permissions:
 
 jobs:
   ansible-lint:
-    runs-on: self-hosted
+    runs-on: [self-hosted, runner-SFL]
     steps:
-
+      - uses: actions/checkout@v4
       - name: Initialize sources
         run: mkdir ${{ env.WORK_DIR }}; cd ${{ env.WORK_DIR }};
              git clone -q --depth 1 -b main https://github.com/seapath/ci ci;
