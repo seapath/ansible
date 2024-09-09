@@ -18,9 +18,9 @@ permissions:
 
 jobs:
   ansible-lint:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, runner-RTE-12]
     steps:
-      - uses: [self-hosted, runner-RTE-12]
+      - uses: actions/checkout@v2
         with:
           ref: debian-main
       - name: Initialize sources
