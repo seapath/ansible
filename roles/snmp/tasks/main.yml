@@ -1,4 +1,4 @@
-- name: Get distrebution variables
+- name: Get distribution variables
   include_vars: "../vars/{{ ansible_distribution | replace(' ', '_') }}_paths.yml"
 
 - name: configure snmp
@@ -77,6 +77,32 @@
       line: "After=network-online.target"
       state: present
 
+  - name: SNMP V3
+    block:
+      # restart is needed for /var/lib/snmp/snmpd.conf to exist
+      - name: restart snmpd
+        ansible.builtin.systemd:
+          name: snmpd.service
+          state: restarted
+          enabled: yes
+      - name: Stop service before snmp v3 related changed
+        ansible.builtin.service:
+          name: snmpd
+          state: stopped
+      - name: Remove usmUser lines in snmpd.conf
+        ansible.builtin.replace:
+          path: /var/lib/snmp/snmpd.conf
+          regexp: '^usmUser.*'
+          replace: ''
+      - name: Add new snmp v3 user account at the beginning of /var/lib/snmp/snmpd.conf
+        ansible.builtin.lineinfile:
+          path: /var/lib/snmp/snmpd.conf
+          line: "createUser {{ item.name }} SHA {{ item.password }} AES {{ item.password }}"
+          create: yes
+          insertbefore: BOF
+        loop: "{{ snmp_accounts }}"
+    when: snmp_accounts is defined and snmp_accounts | length > 0
+
   - name: restart snmpd
     ansible.builtin.systemd:
       name: snmpd.service
@@ -98,4 +124,3 @@
     state: stopped
     enabled: no
   when: snmp_admin_ip_addr is not defined
-
