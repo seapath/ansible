@@ -1,5 +1,5 @@
 [project]
-org='rte'
+org='seapath'
 name='ansible'
 flavors='prepare manual module_documentation ansible-lint export'
 
