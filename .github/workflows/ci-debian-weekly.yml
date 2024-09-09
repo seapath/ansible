@@ -25,7 +25,7 @@ jobs:
         run: mkdir ${{ env.WORK_DIR }}; cd ${{ env.WORK_DIR }};
              git clone -q --depth 1 --recurse-submodules -b main https://github.com/seapath/ci ci;
              echo "CI sources downloaded successfully";
-             GITHUB_REF=debian-main ci/launch.sh init;
+             GITHUB_REF=debiancentos ci/launch.sh init;
 
       - name: Configure Debian
         id: conf
