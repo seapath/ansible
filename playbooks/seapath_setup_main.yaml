@@ -48,6 +48,7 @@
 - import_playbook: cluster_setup_libvirt.yaml
 - import_playbook: cluster_setup_add_livemigration_user.yaml
 - import_playbook: cluster_setup_ha.yaml
+- import_playbook: standalone_autostart_vms.yaml
 
 - name: Restart all hosts
   hosts:
