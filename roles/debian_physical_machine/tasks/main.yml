@@ -244,21 +244,6 @@
     name: chrony-wait.service
     enabled: yes
 
-- name: Create libvirtd.service.d directory
-  file:
-    path: /etc/systemd/system/libvirtd.service.d/
-    state: directory
-    owner: root
-    group: root
-    mode: 0755
-- name: Copy libvirtd.service drop-in
-  ansible.builtin.copy:
-    src: libvirtd_override.conf
-    dest: /etc/systemd/system/libvirtd.service.d/override.conf
-    owner: root
-    group: root
-    mode: 0644
-  notify: daemon-reload
 - name: Create pacemaker.service.d directory
   file:
     path: /etc/systemd/system/pacemaker.service.d/
