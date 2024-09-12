@@ -80,13 +80,6 @@
     name: chrony-wait.service
     enabled: yes
 
-- name: Create libvirtd.service.d directory
-  file:
-    path: /etc/systemd/system/libvirtd.service.d/
-    state: directory
-    owner: root
-    group: root
-    mode: 0755
 - name: Create pacemaker.service.d directory
   file:
     path: /etc/systemd/system/pacemaker.service.d/
