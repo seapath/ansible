@@ -12,7 +12,7 @@
     - cluster_machines
     - standalone_machine
   tasks:
-  - include_vars: "../vars/{{ ansible_distribution }}_paths.yml"
+  - include_vars: "../vars/{{ ansible_distribution | replace(' ', '_') }}_paths.yml"
 
 - name: Configure SEAPATH specific files
   hosts: cluster_machines

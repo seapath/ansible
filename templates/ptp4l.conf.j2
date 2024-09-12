@@ -1,0 +1,29 @@
+[Global]
+{% if ptp_slave %}
+slaveOnly		 1
+{% else %}
+slaveOnly		 0
+gmCapable		 1
+{% endif %}
+domainNumber             0
+
+# Announce interval: 1s
+logAnnounceInterval      0
+
+# Sync interval: 1 s
+logSyncInterval          0
+
+# Pdelay interval: 1 s
+logMinPdelayReqInterval  0
+
+# Announce receipt time-out: 3 s (fixed)
+announceReceiptTimeout   3
+
+priority1                255
+priority2                255
+# Default clock class : any specialised clock will be better (ie a GPS Grand Master Clock)
+network_transport        L2
+delay_mechanism          E2E
+clockClass 248
+clockAccuracy 0xFE
+offsetScaledLogVariance 0xFFFF

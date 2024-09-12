@@ -1,0 +1,61 @@
+# Copyright (C) 2023-2024 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+name: CI Yocto
+
+env:
+  WORK_DIR: /tmp/seapath_ci_${{ github.run_id }}_${{ github.run_attempt }}_${{ github.sha }}
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [debiancentos]
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  checks: write
+
+jobs:
+  CI:
+    runs-on: [self-hosted, runner-SFL]
+    steps:
+
+      - name: Initialize sources
+        run: mkdir ${{ env.WORK_DIR }}; cd ${{ env.WORK_DIR }};
+             git clone -q --depth 1 --recurse-submodules -b main https://github.com/seapath/ci ci;
+             echo "CI sources downloaded successfully";
+             ci/launch-yocto.sh init;
+
+      - name: Configure SEAPATH
+        id: conf
+        run: cd ${{ env.WORK_DIR }};
+             mkdir -p ansible/examples/inventories;
+             cp ansible/inventories/netplan* ansible/examples/inventories/;
+             ci/launch-yocto.sh conf;
+
+      - name: Launch system tests
+        run: cd ${{ env.WORK_DIR }};
+             ci/launch-yocto.sh system;
+
+      - name: Deploy VMs
+        run: cd ${{ env.WORK_DIR }};
+            ci/launch-yocto.sh deploy_vms;
+
+      - name: Launch VMs tests
+        run: cd ${{ env.WORK_DIR }};
+             ci/launch-yocto.sh test_vms;
+
+      - name: Launch latency tests
+        run: cd ${{ env.WORK_DIR }};
+            ci/launch-yocto.sh test_latency
+
+      - name: Upload test report
+        if: ${{ always() && steps.conf.conclusion == 'success' }}
+        run: cd ${{ env.WORK_DIR }};
+             ci/launch-yocto.sh report;
+
+      - name: Clean
+        if: always()
+        run: rm -rf $WORK_DIR;

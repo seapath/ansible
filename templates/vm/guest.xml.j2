@@ -16,6 +16,7 @@
     <description>
         {{ vm.description |default("Test VM") }}
     </description>
+    {% if cpumachines is defined %}
     <resource>
     {% if "rt" in vm.vm_features %}
         <partition>/machine/rt</partition>
@@ -23,6 +24,7 @@
         <partition>/machine/nort</partition>
     {% endif %}
     </resource>
+    {% endif %}
     <vcpu placement="static">{{ cpu_nb }}</vcpu>
     {% if "dpdk" in vm.vm_features %}
     <memory unit="GiB">1</memory>
