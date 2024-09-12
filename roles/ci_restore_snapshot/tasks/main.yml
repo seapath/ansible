@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+- include_vars: "{{ ansible_distribution | replace(' ', '_') }}.yml"
+
 - name: "grub conf"
   lineinfile:
     dest: /etc/default/grub
@@ -14,7 +16,7 @@
     - efi=runtime
     - "{{ grub_append | default([]) }}"
 - name: Update grub
-  command: update-grub
+  command: "{{ grub_update_command }}"
 - name: Merge lvm snapshot
   command:
     cmd: lvconvert --merge vg1/root-snap
