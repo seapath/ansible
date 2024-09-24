@@ -15,8 +15,10 @@ all:
           preferred_host: pc1 # Optional
           force: true
           bridges:
-            - name: "br0" # Change the bridge name
+            - name: "ovs0" # Change the bridge name
               mac_address: "52:54:00:c4:ff:02" # change the MAC address
+              vlan:
+                vlan: 100 # Add a VLAN on the OVS port created
         guest1:
           description: "Complex VM"
           ansible_host: 192.168.212.131 # Update the VM IP
