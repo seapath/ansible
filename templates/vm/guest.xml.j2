@@ -136,6 +136,11 @@
             {% if bridge.type is defined %}
                 <virtualport type='{{ bridge.type }}'/>
             {% endif %}
+            {% if bridge.vlan is defined %}
+                <vlan>
+                    <tag id='{{ bridge.vlan.vlan_tag }}'/>
+                </vlan>
+            {% endif %}
         </interface>
         {% endfor %}
         {% endif %}
