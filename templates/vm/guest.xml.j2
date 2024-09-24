@@ -133,6 +133,9 @@
             <source bridge="{{ bridge.name }}"/>
             <mac address="{{ bridge.mac_address }}"/>
             <model type="virtio"/>
+            {% if bridge.type is defined %}
+                <virtualport type='{{ bridge.type }}'/>
+            {% endif %}
         </interface>
         {% endfor %}
         {% endif %}
