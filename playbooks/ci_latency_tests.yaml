@@ -89,11 +89,11 @@
         -d
         --rm
         --network host
-        -v /tmp:/tmp
+        -v /home/admin:/home/admin
         --cap-add=SYS_NICE
         sv_timestamp_logger
         -d {{ sv_interface }}
-        -f "/tmp/latency_tests/ts_{{ inventory_hostname }}.txt"
+        -f "/home/admin/ts_{{ inventory_hostname }}.txt"
 
 - name: Launch pcap sending
   hosts: publisher_machine
@@ -107,7 +107,7 @@
             /seapath-ci/pcaps/{{ pcap_file }}
       register: cmd
 
-- name: Fetch results
+- name: Stop Dockers
   become: true
   hosts:
       - VMs
@@ -116,9 +116,26 @@
     - name: "Stop docker container"
       command: docker stop sv_timestamp_logger
 
+- name: Fetch result publisher
+  become: true
+  hosts:
+      - publisher_machine
+  tasks:
     - name: "Copy results to ansible directory"
       synchronize:
         src: "/tmp/latency_tests/ts_{{ inventory_hostname }}.txt"
+        dest: "../ci_latency_tests/results/"
+        mode: pull
+        rsync_path: rsync
+
+- name: Fetch result VMs
+  become: true
+  hosts:
+      - VMs
+  tasks:
+    - name: "Copy results to ansible directory"
+      synchronize:
+        src: "/home/admin/ts_{{ inventory_hostname }}.txt"
         dest: "../ci_latency_tests/results/"
         mode: pull
         rsync_path: rsync
