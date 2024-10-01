@@ -214,44 +214,46 @@
     name: ovs-vswitchd
   when: ovsvswitchd.changed
 
+- name: ptp/vsock when ptp is enabled
+  block:
+    - name: Copy ptp_status executable files
+      ansible.builtin.copy:
+        src: ../src/debian/ptpstatus/ptpstatus_script/ptpstatus.sh
+        dest: /usr/local/bin/ptpstatus.sh
+        mode: '0755'
+    - name: Copy ptp_vsock executable files
+      ansible.builtin.copy:
+        src: ptp_vsock.py
+        dest: /usr/local/bin/ptp_vsock.py
+        mode: '0755'
 
-- name: Copy ptp_status executable files
-  ansible.builtin.copy:
-    src: ../src/debian/ptpstatus/ptpstatus_script/ptpstatus.sh
-    dest: /usr/local/bin/ptpstatus.sh
-    mode: '0755'
-- name: Copy ptp_vsock executable files
-  ansible.builtin.copy:
-    src: ptp_vsock.py
-    dest: /usr/local/bin/ptp_vsock.py
-    mode: '0755'
-
-- name: Copy ptp_status.service
-  ansible.builtin.copy:
-    src: ../src/debian/ptpstatus/ptpstatus.service
-    dest: /etc/systemd/system/ptpstatus.service
-    mode: '0644'
-  register: ptpstatus
-- name: Copy ptp_vsock.service
-  ansible.builtin.copy:
-    src: ptp_vsock.service
-    dest: /etc/systemd/system/ptp_vsock.service
-    mode: '0644'
-  register: ptpvsock
-- name: daemon-reload ptp status
-  ansible.builtin.service:
-    daemon_reload: yes
-  when: ptpstatus.changed or ptpvsock.changed
-- name: enable ptpstatus.service
-  ansible.builtin.systemd:
-    name: ptpstatus.service
-    enabled: yes
-    state: started
-- name: enable ptp_vsock.service
-  ansible.builtin.systemd:
-    name: ptp_vsock.service
-    enabled: yes
-    state: started
+    - name: Copy ptp_status.service
+      ansible.builtin.copy:
+        src: ../src/debian/ptpstatus/ptpstatus.service
+        dest: /etc/systemd/system/ptpstatus.service
+        mode: '0644'
+      register: ptpstatus
+    - name: Copy ptp_vsock.service
+      ansible.builtin.copy:
+        src: ptp_vsock.service
+        dest: /etc/systemd/system/ptp_vsock.service
+        mode: '0644'
+      register: ptpvsock
+    - name: daemon-reload ptp status
+      ansible.builtin.service:
+        daemon_reload: yes
+      when: ptpstatus.changed or ptpvsock.changed
+    - name: enable ptpstatus.service
+      ansible.builtin.systemd:
+        name: ptpstatus.service
+        enabled: yes
+        state: started
+    - name: enable ptp_vsock.service
+      ansible.builtin.systemd:
+        name: ptp_vsock.service
+        enabled: yes
+        state: started
+  when: ptp_interface is defined
 
 - name: Create conntrackd.service.d directory
   file:
