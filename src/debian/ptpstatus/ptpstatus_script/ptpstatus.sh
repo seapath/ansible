@@ -506,6 +506,8 @@ function getPtpStatus() {
 
   if [[ -S /var/run/timemaster/ptp4l.0.socket ]]; then
     PMC_SOCKET_OPTION="-s /var/run/timemaster/ptp4l.0.socket"
+  else
+    PMC_SOCKET_OPTION=""
   fi
 
   local _pmcOutput="$( \
