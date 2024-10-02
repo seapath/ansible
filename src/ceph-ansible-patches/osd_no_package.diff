@@ -1,5 +1,5 @@
 diff --git a/roles/ceph-osd/tasks/main.yml b/roles/ceph-osd/tasks/main.yml
-index 18595055..ee298a10 100644
+index 623731ddd..88d97f623 100644
 --- a/roles/ceph-osd/tasks/main.yml
 +++ b/roles/ceph-osd/tasks/main.yml
 @@ -15,16 +15,6 @@
@@ -19,10 +19,3 @@ index 18595055..ee298a10 100644
  - name: install numactl when needed
    package:
      name: numactl
-@@ -129,4 +119,4 @@
-     - not rolling_update | default(False) | bool
-     - openstack_config | bool
-     - inventory_hostname == groups[osd_group_name] | last
--  tags: wait_all_osds_up
-\ No newline at end of file
-+  tags: wait_all_osds_up
