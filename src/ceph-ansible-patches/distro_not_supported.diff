@@ -1,11 +1,11 @@
 diff --git a/roles/ceph-validate/tasks/check_system.yml b/roles/ceph-validate/tasks/check_system.yml
-index d4f927d9..777869a9 100644
+index dc8cdd6fd..62412ac6c 100644
 --- a/roles/ceph-validate/tasks/check_system.yml
 +++ b/roles/ceph-validate/tasks/check_system.yml
 @@ -19,11 +19,6 @@
      msg: "Architecture not supported {{ ansible_facts['architecture'] }}"
    when: ansible_facts['architecture'] not in ['x86_64', 'ppc64le', 'armv7l', 'aarch64']
-
+ 
 -- name: fail on unsupported distribution
 -  fail:
 -    msg: "Distribution not supported {{ ansible_facts['os_family'] }}"
@@ -13,4 +13,4 @@ index d4f927d9..777869a9 100644
 -
  - name: fail on unsupported CentOS release
    fail:
-     msg: "CentOS release not supported {{ ansible_facts['distribution_major_version'] }} with dashboard"
+     msg: "CentOS release {{ ansible_facts['distribution_major_version'] }} not supported with dashboard"
