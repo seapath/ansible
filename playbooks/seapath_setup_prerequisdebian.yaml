@@ -94,14 +94,14 @@
     - VMs
   become: true
   tasks:
-    - name: Uninstall apt packages not required after installation (all debian version)
-      apt:
-        name:
-          - fdisk
-          - ifupdown
-        state: absent
-        purge: yes
-        autoremove: yes
+    #- name: Uninstall apt packages not required after installation (all debian version)
+    #  apt:
+    #    name:
+    #      - fdisk
+    #      - ifupdown
+    #    state: absent
+    #    purge: yes
+    #    autoremove: yes
     - name: Uninstall apt packages not required after installation (only debian11)
       apt:
         name:
