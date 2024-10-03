@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright (C) 2024, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
 
 import socket,sys
 from time import sleep
