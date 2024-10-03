@@ -145,6 +145,14 @@
     state: present
   when: logstash_server_ip is defined
 
+- name: reset machine-id
+  command: "{{ item }}"
+  with_items:
+    - /usr/bin/rm -f /etc/machine-id
+    - /usr/bin/dbus-uuidgen --ensure=/etc/machine-id
+    - /usr/bin/rm /var/lib/dbus/machine-id
+    - /usr/bin/dbus-uuidgen --ensure
+
 - name: Make libvirt use the "machine-id" way to determine host UUID
   lineinfile:
     dest: /etc/libvirt/libvirtd.conf
@@ -160,51 +168,54 @@
   ansible.builtin.systemd:
     name: docker.service
 
-- name: "Add initramfs-tools scripts: script file (LVM rebooter and log handling)"
-  ansible.builtin.copy:
-    src: initramfs-tools/scripts/
-    dest: /etc/initramfs-tools/scripts/
-    mode: '0755'
-  notify: Rebuild initramfs if necessary
-
-- name: Get the /var/log/ device
-  command: "findmnt -n -o SOURCE --target /var/log"
-  register: varlog_dev
-  changed_when: false
-
-- name: Set fact /var/log/ device
-  set_fact:
-    lvm_rebooter_log_device: "{{ varlog_dev.stdout }}"
-
-- name: Get the /var/log/ relative path
-  shell: "realpath --relative-to=$(findmnt -n -o TARGET --target /var/log/) /var/log"
-  register: varlog_path
-  changed_when: false
-
-- name: Set fact /var/log/ relative path
-  set_fact:
-    lvm_rebooter_log_path: "{{ varlog_path.stdout }}"
-
-- name: Copy rebooter.conf
-  template:
-    src: initramfs-tools/conf.d/rebooter.conf.j2
-    dest: /etc/initramfs-tools/conf.d/rebooter.conf
-
-- name: Configure initramfs-tools to use busybox
-  lineinfile:
-    dest: /etc/initramfs-tools/initramfs.conf
-    regexp: "^#?BUSYBOX="
-    line: "BUSYBOX=y"
-    state: present
-  notify: Rebuild initramfs if necessary
-
-- name: Add udev rules for lvm2 limitation
-  ansible.builtin.copy:
-    src: 69-lvm.rules
-    dest: /etc/udev/rules.d/69-lvm.rules
-    mode: '0644'
-  when: ansible_distribution == 'Debian' and ansible_distribution_version | int >= 12
-  register: udevlvm
+#- name: "add initramfs-tools scripts: script file (LVM rebooter and log handling)"
+#  ansible.builtin.copy:
+#    src: initramfs-tools/scripts/
+#    dest: /etc/initramfs-tools/scripts/
+#    mode: '0755'
+#  register: initramfs_tools_scripts
+#
+#- name: "get the /var/log/ device"
+#  command: "findmnt -n -o SOURCE --target /var/log"
+#  register: varlog_dev
+#
+#- name: "set_fact /var/log/ device"
+#  set_fact:
+#    lvm_rebooter_log_device: "{{ varlog_dev.stdout }}"
+#
+#- name: "get the /var/log/ relative path"
+#  shell: "realpath --relative-to=$(findmnt -n -o TARGET --target /var/log/) /var/log"
+#  register: varlog_path
+#
+#- name: "set_fact /var/log/ relative path"
+#  set_fact:
+#    lvm_rebooter_log_path: "{{ varlog_path.stdout }}"
+#
+#- name: "Copy rebooter.conf"
+#  template:
+#    src: initramfs-tools/conf.d/rebooter.conf.j2
+#    dest: /etc/initramfs-tools/conf.d/rebooter.conf
+#
+#- name: "configure initramfs-tools to use busybox"
+#  lineinfile:
+#    dest: /etc/initramfs-tools/initramfs.conf
+#    regexp: "^#?BUSYBOX="
+#    line: "BUSYBOX=y"
+#    state: present
+#  register: initramfs_busybox
+#
+#- name: "add udev rules for lvm2 limitation"
+#  ansible.builtin.copy:
+#    src: 69-lvm.rules
+#    dest: /etc/udev/rules.d/69-lvm.rules
+#    mode: '0644'
+#  when: ansible_distribution == 'Debian' and ansible_distribution_version | int >= 12
+#  register: udevlvm
+#
+#- name: "rebuild initramfs if necessary"
+#  command:
+#    cmd: /usr/sbin/update-initramfs -u
+#  when: udevlvm.changed or initramfs_tools_scripts.changed or initramfs_busybox.changed
 
 - name: Add rbd type to lvm.conf
   ansible.builtin.lineinfile:

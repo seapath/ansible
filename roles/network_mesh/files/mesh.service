@@ -1,0 +1,12 @@
+[Unit]
+Description=set up the mesh wifi interface mesh0
+After=network.target
+Wants=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/mesh.sh
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target

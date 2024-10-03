@@ -1,0 +1,23 @@
+# Copyright (C) 2024 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Copy mesh service file
+  ansible.builtin.copy:
+    src: mesh.service
+    dest: /etc/systemd/system/mesh.service
+    mode: '0644'
+    owner: root
+  register: mesh1
+- name: Copy mesh program file
+  template:
+    src: mesh.sh.j2
+    dest: "/usr/local/sbin/mesh.sh"
+    mode: '0755'
+    owner: root
+  register: mesh2
+
+- name: Enable mesh service
+  service:
+    name: "mesh.service"
+    enabled: true

@@ -53,18 +53,18 @@
   when: sriov is defined
   notify: Restart sysfsutils
 
-- name: Systemd conf RuntimeWatchdogSec
-  lineinfile:
-    path: /etc/systemd/system.conf
-    regexp: '^RuntimeWatchdogSec=.*$'
-    line: "RuntimeWatchdogSec=20"
-    state: present
-- name: Systemd conf RebootWatchdogSec
-  lineinfile:
-    path: /etc/systemd/system.conf
-    regexp: '^RebootWatchdogSec=.*$'
-    line: "RebootWatchdogSec=5min"
-    state: present
+#- name: "systemd conf RuntimeWatchdogSec"
+#  lineinfile:
+#    path: /etc/systemd/system.conf
+#    regexp: '^RuntimeWatchdogSec=.*$'
+#    line: "RuntimeWatchdogSec=20"
+#    state: present
+#- name: "systemd conf RebootWatchdogSec"
+#  lineinfile:
+#    path: /etc/systemd/system.conf
+#    regexp: '^RebootWatchdogSec=.*$'
+#    line: "RebootWatchdogSec=5min"
+#    state: present
 
 - when:
     - cpusystem is defined

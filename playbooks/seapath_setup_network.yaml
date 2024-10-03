@@ -30,7 +30,7 @@
   hosts: cluster_machines
   become: true
   roles:
-    - network_clusternetwork
+    - network_mesh
 
 - name: Configure OVS, hosts and hostname, then DNS with resolved, then systemd-networkd-wait-online.service
   hosts:

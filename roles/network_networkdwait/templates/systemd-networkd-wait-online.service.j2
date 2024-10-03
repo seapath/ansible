@@ -1,3 +1,3 @@
 [Service]
 ExecStart=
-ExecStart=/lib/systemd/systemd-networkd-wait-online {% if interfaces_to_wait_for is defined %}{% for interface in interfaces_to_wait_for %}{{" -i " + interface}}{% endfor %}{% endif %}{% if cluster_protocol is defined and cluster_protocol == 'HSR' %} -i hsr0 {% elif cluster_ip_addr is defined %} -i team0 {% endif %}
+ExecStart=/lib/systemd/systemd-networkd-wait-online {% if interfaces_to_wait_for is defined %}{% for interface in interfaces_to_wait_for %}{{" -i " + interface}}{% endfor %}{% endif %}{% if cluster_protocol is defined and cluster_protocol == 'HSR' %} -i hsr0 {% elif cluster_ip_addr is defined %} -i mesh0 {% endif %}

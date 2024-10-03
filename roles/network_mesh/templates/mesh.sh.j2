@@ -1,0 +1,6 @@
+#!/bin/bash
+/usr/sbin/iw dev wlan1 interface add mesh0 type mp
+/usr/sbin/iw dev mesh0 set channel 4 HT40+
+/usr/sbin/ifconfig mesh0 up
+/usr/sbin/ip addr add {{ cluster_ip_addr }}/{{ subnet | default(24) }} dev mesh0
+/usr/sbin/iw dev mesh0 mesh join seapathmesh

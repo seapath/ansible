@@ -180,80 +180,80 @@
         src: sources.list.j2
         dest: /etc/apt/sources.list
 
-- name: Remove /etc/default/grub.d/*.cfg (FAI)
-  file:
-    path: "/etc/default/grub.d/{{ item }}"
-    state: absent
-  with_items:
-    - 20_efi_ipv6.cfg
-    - 30_console.cfg
-
-- name: Remove quiet from GRUB_CMDLINE_LINUX_DEFAULT option in grub conf
-  lineinfile:
-    dest: /etc/default/grub
-    regexp: "^(GRUB_CMDLINE_LINUX_DEFAULT=\")(.*?[ ])?quiet([ ].*)?(\")$"
-    line: '\1\2\3\4'
-    backrefs: yes
-  notify: Update-grub
-
-- name: Make sure GRUB_CMDLINE_LINUX_DEFAULT has no double space
-  lineinfile:
-    dest: /etc/default/grub
-    regexp: "^(GRUB_CMDLINE_LINUX_DEFAULT=\".*)[ ][ ](.*\")"
-    line: '\1 \2'
-    state: present
-    backrefs: yes
-  register: doublespace
-  until: not doublespace.changed
-  delay: 1
-  retries: 10
-
-- name: Make sure GRUB_CMDLINE_LINUX exists 1/2
-  lineinfile:
-    path: /etc/default/grub
-    regexp: "^GRUB_CMDLINE_LINUX=\".*\""
-    state: absent
-  check_mode: true
-  changed_when: false
-  register: check_grub_cmdline_linux
-
-- name: Make sure GRUB_CMDLINE_LINUX exists 2/2
-  lineinfile:
-    path: /etc/default/grub
-    state: present
-    line: "GRUB_CMDLINE_LINUX=\" \""
-  when: check_grub_cmdline_linux.found == 0
-
-- name: Make sure GRUB_CMDLINE_LINUX starts with a space
-  lineinfile:
-    dest: /etc/default/grub
-    regexp: "^(GRUB_CMDLINE_LINUX=)\"([ ]*)(.*)\""
-    line: '\1" \3"'
-    state: present
-    backrefs: yes
-
-- name: Make grub conf
-  lineinfile:
-    dest: /etc/default/grub
-    regexp: "^(GRUB_CMDLINE_LINUX=(?!.* {{ item }})\"[^\"]*)(\".*)"
-    line: '\1 {{ item }}\2'
-    state: present
-    backrefs: yes
-  notify: Update-grub
-  with_items:
-    - ipv6.disable=1
-    - efi=runtime
-    - fsck.mode=force
-    - fsck.repair=yes
-    - "{{ grub_append | default([]) }}"
-
-- name: Grub conf osprober
-  lineinfile:
-    dest: /etc/default/grub
-    regexp: '^#?GRUB_DISABLE_OS_PROBER=.*$'
-    line: 'GRUB_DISABLE_OS_PROBER=true'
-    state: present
-  notify: Update-grub
+#- name: Remove /etc/default/grub.d/*.cfg (FAI)
+#  file:
+#    path: "/etc/default/grub.d/{{ item }}"
+#    state: absent
+#  with_items:
+#    - 20_efi_ipv6.cfg
+#    - 30_console.cfg
+#
+#- name: Remove quiet from GRUB_CMDLINE_LINUX_DEFAULT option in grub conf
+#  lineinfile:
+#    dest: /etc/default/grub
+#    regexp: "^(GRUB_CMDLINE_LINUX_DEFAULT=\")(.*?[ ])?quiet([ ].*)?(\")$"
+#    line: '\1\2\3\4'
+#    backrefs: yes
+#  notify: Update-grub
+#
+#- name: Make sure GRUB_CMDLINE_LINUX_DEFAULT has no double space
+#  lineinfile:
+#    dest: /etc/default/grub
+#    regexp: "^(GRUB_CMDLINE_LINUX_DEFAULT=\".*)[ ][ ](.*\")"
+#    line: '\1 \2'
+#    state: present
+#    backrefs: yes
+#  register: doublespace
+#  until: not doublespace.changed
+#  delay: 1
+#  retries: 10
+#
+#- name: Make sure GRUB_CMDLINE_LINUX exists 1/2
+#  lineinfile:
+#    path: /etc/default/grub
+#    regexp: "^GRUB_CMDLINE_LINUX=\".*\""
+#    state: absent
+#  check_mode: true
+#  changed_when: false
+#  register: check_grub_cmdline_linux
+#
+#- name: Make sure GRUB_CMDLINE_LINUX exists 2/2
+#  lineinfile:
+#    path: /etc/default/grub
+#    state: present
+#    line: "GRUB_CMDLINE_LINUX=\" \""
+#  when: check_grub_cmdline_linux.found == 0
+#
+#- name: Make sure GRUB_CMDLINE_LINUX starts with a space
+#  lineinfile:
+#    dest: /etc/default/grub
+#    regexp: "^(GRUB_CMDLINE_LINUX=)\"([ ]*)(.*)\""
+#    line: '\1" \3"'
+#    state: present
+#    backrefs: yes
+#
+#- name: Make grub conf
+#  lineinfile:
+#    dest: /etc/default/grub
+#    regexp: "^(GRUB_CMDLINE_LINUX=(?!.* {{ item }})\"[^\"]*)(\".*)"
+#    line: '\1 {{ item }}\2'
+#    state: present
+#    backrefs: yes
+#  notify: Update-grub
+#  with_items:
+#    - ipv6.disable=1
+#    - efi=runtime
+#    - fsck.mode=force
+#    - fsck.repair=yes
+#    - "{{ grub_append | default([]) }}"
+#
+#- name: Grub conf osprober
+#  lineinfile:
+#    dest: /etc/default/grub
+#    regexp: '^#?GRUB_DISABLE_OS_PROBER=.*$'
+#    line: 'GRUB_DISABLE_OS_PROBER=true'
+#    state: present
+#  notify: Update-grub
 
 - name: Disable PerSourcePenalties
   lineinfile:
