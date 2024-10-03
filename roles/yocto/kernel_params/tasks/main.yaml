@@ -40,7 +40,7 @@
         regexp: '(root=.*)'
         replace: '\1 {{ extra_kernel_parameters }}'
       when: extra_param_needed is defined
-    - include_tasks: tasks/soft_restart_machine.yaml
+    - include_tasks: soft_restart_machine.yaml
       when:
         - kernel_parameters_restart is defined
         - kernel_parameters_restart
