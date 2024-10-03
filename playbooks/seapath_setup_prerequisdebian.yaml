@@ -24,6 +24,7 @@
   become: true
   roles:
     - debian_hypervisor
+    - ptp_status_vsock
 
 - name: Add admin user to haclient group
   hosts:
