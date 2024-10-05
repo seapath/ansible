@@ -61,11 +61,19 @@
         src: ../src/debian/corosync.conf.j2
         dest: /etc/corosync/corosync.conf
       when: groups['valid_machine'] is undefined
-    - name: Making sure that Corosync service is started
+      register: corosync_conf
+    - name: Restart Corosync
       ansible.builtin.systemd:
         name: corosync
         state: restarted
         enabled: yes
+      when: corosync_conf.changed
+    - name: Making sure that Corosync service is started
+      ansible.builtin.systemd:
+        name: corosync
+        state: started
+        enabled: yes
+      when: not corosync_conf.changed
 
 - name: Fetch existing corosync using configuration
   hosts: valid_machine
