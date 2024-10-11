@@ -12,7 +12,6 @@ ENV LC_ALL en_US.UTF-8
 RUN set -x \
     && apt-get update \
     && apt-get install -y \
-        ansible \
         ansible-lint \
         bash \
         docker.io \
@@ -37,6 +36,7 @@ RUN set -x \
     && sed -i "s/# en_US\.UTF-8 UTF-8/en_US\.UTF-8 UTF-8/" /etc/locale.gen \
     && locale-gen \
     && dpkg-reconfigure locales \
+    && pip install "ansible==2.10" \
     && rm -rf /var/lib/{apt,dpkg,cache,log}/*
 
 COPY check_yaml.sh /usr/bin/check_yaml
