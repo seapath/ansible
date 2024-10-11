@@ -40,3 +40,4 @@ RUN set -x \
     && rm -rf /var/lib/{apt,dpkg,cache,log}/*
 
 COPY check_yaml.sh /usr/bin/check_yaml
+COPY six.py /usr/lib/python3/dist-packages/ansible/module_utils/six/__init__.py
