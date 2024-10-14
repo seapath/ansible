@@ -17,7 +17,7 @@
             name: "{{ livemigration_user }}"
             shell: /bin/sh
             system: true
-            groups: qemu,haclient,admincluster,libvirt
+            groups: qemu,haclient,libvirt
             create_home: false
         - name: Unlock the user
           replace:
