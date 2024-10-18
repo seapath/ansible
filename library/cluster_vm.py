@@ -165,6 +165,47 @@ options:
         C(clone)
       - Metadata key must be composed of letters and numbers only
     type: dict
+  pacemaker_meta:
+    description:
+      - Pacemaker "meta" parameter to add
+      - This parameter is relevant only if the I(command) is C(create) or
+        C(clone), optional
+    type: dict
+  pacemaker_params:
+    description:
+      - Pacemaker "params" parameter to add
+      - This parameter is relevant only if the I(command) is C(create) or
+        C(clone), optional
+    type: dict
+  pacemaker_utilization:
+    description:
+      - Pacemaker "utilization" parameter to add
+      - This parameter is relevant only if the I(command) is C(create) or
+        C(clone), optional
+    type: dict
+  clear_pacemaker_meta:
+    description:
+      - Do not keep source pacemaker meta when cloning
+      - Optional parameter relevant only if I(command) is C(clone)
+    type: bool
+    default: false
+  clear_pacemaker_params:
+    description:
+      - Do not keep source pacemaker params when cloning
+      - Optional parameter relevant only if I(command) is C(clone)
+    type: bool
+    default: false
+  clear_pacemaker_utilization:
+    description:
+      - Do not keep source pacemaker utilization when cloning
+      - Optional parameter relevant only if I(command) is C(clone)
+    type: bool
+    default: false
+  disk_bus:
+    description:
+      - Disk bus type to use for the VM's disk (virtio, scsi, ide, etc.)
+    type: str
+    default: "virtio"
   purge_date:
     description:
       - Date until the snapshots must be removed
@@ -254,6 +295,15 @@ EXAMPLES = r"""
     metadata:
         myMetadata: value
         anotherMetadata: value
+    pacemaker_meta:
+        resource-stickiness: 1
+    pacemaker_params:
+        autoset_utilization_cpu: False
+        autoset_utilization_host_memory: False
+        autoset_utilization_hv_memory: False
+    pacemaker_utilization:
+        cpu: 4
+        memory: 2048
 
 # Remove a VM
 - name: Remove guest0
@@ -304,6 +354,7 @@ EXAMPLES = r"""
     src_name: guest0
     command: clone
     xml: "{{ lookup('template', 'my_vm_config.xml', errors='strict') }}"
+    clear_pacemaker_params: True
 
 # Create a VM snapshot
 - name: Create a snapshot of guest0
@@ -526,6 +577,17 @@ def run_module():
         remote_address=dict(type="str", require=False),
         remote_port=dict(type="str", require=False),
         remote_timeout=dict(type="str", require=False),
+        pacemaker_meta=dict(type="dict", require=False),
+        pacemaker_params=dict(type="dict", require=False),
+        pacemaker_utilization=dict(type="dict", require=False),
+        clear_pacemaker_meta=dict(type="bool", required=False, default=False),
+        clear_pacemaker_params=dict(
+            type="bool", required=False, default=False
+        ),
+        clear_pacemaker_utilization=dict(
+            type="bool", required=False, default=False
+        ),
+        disk_bus=dict(type="str", required=False, default="virtio"),
     )
     result = {}
     required = [
@@ -589,6 +651,15 @@ def run_module():
     pacemaker_remote_address = args.get("remote_address", None)
     pacemaker_remote_port = args.get("remote_port", None)
     pacemaker_remote_timeout = args.get("remote_timeout", None)
+    pacemaker_meta = args.get("pacemaker_meta", None)
+    pacemaker_params = args.get("pacemaker_params", None)
+    pacemaker_utilization = args.get("pacemaker_utilization", None)
+    clear_pacemaker_meta = args.get("clear_pacemaker_meta", False)
+    clear_pacemaker_params = args.get("clear_pacemaker_params", False)
+    clear_pacemaker_utilization = args.get(
+        "clear_pacemaker_utilization", False
+    )
+    disk_bus = args.get("disk_bus", "virtio")
 
     vm_name_command_list = commands_list.copy()
     vm_name_command_list.remove("list_vms")
@@ -626,6 +697,10 @@ def run_module():
                 "migration_downtime": migration_downtime,
                 "crm_config_cmd": crm_config_cmd,
                 "priority": priority,
+                "pacemaker_meta": pacemaker_meta,
+                "pacemaker_params": pacemaker_params,
+                "pacemaker_utilization": pacemaker_utilization,
+                "disk_bus": disk_bus,
             }
             vm_manager.create(vm_options)
         elif command == "clone":
@@ -645,6 +720,12 @@ def run_module():
                 "migration_downtime": migration_downtime,
                 "clear_constraint": clear_constraint,
                 "priority": priority,
+                "pacemaker_meta": pacemaker_meta,
+                "pacemaker_params": pacemaker_params,
+                "pacemaker_utilization": pacemaker_utilization,
+                "clear_pacemaker_meta": clear_pacemaker_meta,
+                "clear_pacemaker_params": clear_pacemaker_params,
+                "clear_pacemaker_utilization": clear_pacemaker_utilization,
             }
             vm_manager.clone(vm_options)
         elif command == "remove":
