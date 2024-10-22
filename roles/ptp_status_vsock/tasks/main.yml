@@ -6,7 +6,7 @@
   block:
     - name: Copy ptp_status executable files
       ansible.builtin.copy:
-        src: ptpstatus/ptpstatus_script/ptpstatus.sh
+        src: ptpstatus/ptpstatus.sh
         dest: /usr/local/bin/ptpstatus.sh
         mode: '0755'
     - name: Copy ptp_vsock executable files
