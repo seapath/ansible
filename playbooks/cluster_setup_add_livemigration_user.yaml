@@ -42,7 +42,7 @@
             group: "{{ livemigration_user }}"
         - name: Fetch the root keyfile
           fetch:
-            src: "/home/root/.ssh/id_rsa.pub"
+            src: "{{ ansible_env['HOME'] }}/.ssh/id_rsa.pub"
             dest: "buffer/{{ inventory_hostname }}-id_rsa.pub"
             flat: true
         - name: Copy the key add to authorized_keys using Ansible module
@@ -59,7 +59,7 @@
             flat: true
         - name: populate the known_hosts files
           known_hosts:
-            path: /home/root/.ssh/known_hosts
+            path: "{{ ansible_env['HOME'] }}/.ssh/known_hosts"
             name: "{{ item }}"
             key: "{{ item }} {{ lookup('file','buffer/' + item + '-ssh_host_ed25519_key.pub') }}"
           with_items: "{{ groups['hypervisors'] }}"
