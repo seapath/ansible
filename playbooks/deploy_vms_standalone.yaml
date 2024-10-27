@@ -18,3 +18,4 @@
   tasks:
     - name: Wait for VM connections
       wait_for_connection:
+      when: wait_for_connection | default(false)
