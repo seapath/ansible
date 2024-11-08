@@ -39,7 +39,7 @@
 
 - name: Configure snmp
   hosts:
-    - cluster_machines
+    - "{{ (groups['cluster_machines'] | difference(groups['observers'])) | join(',') }}"
     - standalone_machine
   become: true
   roles:
