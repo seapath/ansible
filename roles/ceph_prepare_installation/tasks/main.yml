@@ -18,6 +18,10 @@
       state: directory
   register: new_ceph_installation
 
+- name: Cleanup Ceph OSD disks with ceph-volume
+  command: "ceph-volume lvm zap {{ ceph_osd_disk }} --destroy"
+  when: new_ceph_installation.changed and ansible_distribution | regex_search("Yocto")
+
 - name: Prepare OSD disk
   block:
     - name: Refresh LVM VG
@@ -69,4 +73,4 @@
       when:
         - lvm_volumes is not defined or ansible_lvm['lvs'][lvm_volumes[0].data] is not defined
   when:
-    - new_ceph_installation.changed
+    - new_ceph_installation.changed and ansible_distribution | regex_search("Debian")
