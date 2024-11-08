@@ -18,8 +18,8 @@
   become: true
   gather_facts: yes
   roles:
-    - ceph_expansion_vg
-
+    - role: ceph_expansion_vg
+      when: ansible_distribution | regex_search("Debian")
 - name: Ceph Expansion LV
   hosts:
       osds
@@ -27,8 +27,8 @@
   gather_facts: yes
   serial: 1
   roles:
-    - ceph_expansion_lv
-
+    - role: ceph_expansion_lv
+      when: ansible_distribution | regex_search("Debian")
 - import_playbook: ../ceph-ansible/site.yml
 
 # Ceph mgr module which is enabled by default is not supported by SEAPATH.
