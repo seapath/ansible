@@ -36,6 +36,28 @@
 # Setup Corosync from scratch
 - name: Setup Corosync from scratch
   block:
+
+    - name: Generating /etc/corosync/authkey file
+      command:
+        /usr/sbin/corosync-keygen
+      run_once: true
+    - name: Waiting for /etc/corosync/authkey file
+      wait_for:
+        path: '/etc/corosync/authkey'
+        timeout: 30
+      when: inventory_hostname == play_hosts[0]
+    - name: Fetching /etc/corosync/authkey
+      slurp:
+        src: '/etc/corosync/authkey'
+      register: tmp_authkey
+      when: inventory_hostname == play_hosts[0]
+    - name: Synchronizing /etc/corosync/authkey everywhere
+      copy:
+        content: "{{ hostvars[play_hosts[0]].tmp_authkey['content'] | b64decode  }}"
+        dest: /etc/corosync/authkey
+        mode: 0400
+      when: inventory_hostname != play_hosts[0]
+
     - name: templating corosync.conf
       template:
         src: corosync.conf.j2
@@ -49,28 +71,22 @@
       when: corosync_conf.changed
   when: groups['valid_machine'] is undefined
 
-- name: Making sure that Corosync service is started
-  ansible.builtin.systemd:
-    name: corosync
-    state: started
-    enabled: yes
-
 - block:
     - name: Fetch corosync configuration
       fetch:
         src: "/etc/corosync/corosync.conf"
         dest: "{{ tmpdir }}/corosync.conf"
         flat: true
-      run_once: true
     - name: Fetch corosync key
       fetch:
         src: "/etc/corosync/authkey"
         dest: "{{ tmpdir }}/authkey"
         flat: true
-      run_once: true
+  run_once: true
+  delegate_to: "{{ groups['valid_machine'][0] }}"
   when:
+    - groups['valid_machine'] is defined
     - groups['unconfigured_machine_group'] is defined
-    - "'valid_machine' in group_names"
 
 - name: Setup Corosync using existing configuration
   block:
@@ -116,6 +132,12 @@
       when: groups['valid_machine'] is undefined
   when:
     - "'unconfigured_machine_group' in group_names"
+
+- name: Making sure that Corosync service is started
+  ansible.builtin.systemd:
+    name: corosync
+    state: started
+    enabled: yes
 
 # run extra CRM commands
 - name: run extra CRM configuration commands for vm-mgr http api
