@@ -59,7 +59,9 @@
     - name: exit playbook, if the monitor is not part of the inventory
       fail:
         msg: "It seems that the host given is not part of your inventory, please make sure it is."
-      when: mon_to_kill not in groups[mon_group_name]
+      when:
+        - mon_to_kill not in groups[mon_group_name]
+        - machine_to_remove not in groups[mon_group_name]
 
     - import_role:
         name: ceph-defaults
