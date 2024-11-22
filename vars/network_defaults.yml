@@ -1,9 +1,10 @@
 # Copyright (C) 2021, RTE (http://www.rte-france.com)
+# Copyright (C) 2024 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
 ---
 
-systemd_networkd_network_custom: "{{ custom_network | default([]) }}"
-systemd_networkd_netdev_custom: "{{ custom_netdev | default([]) }}"
+systemd_networkd_network_custom: "{{ custom_network | default({}) }}"
+systemd_networkd_netdev_custom: "{{ custom_netdev | default({}) }}"
 
 br0vlan_systemd_networkd_netdev:
   79-br0:
@@ -63,23 +64,6 @@ wired_systemd_networkd_network: "{{ br0vlan_systemd_networkd_network if br0vlan 
 
 systemd_networkd_netdev_nocluster: "{{ wired_systemd_networkd_netdev | combine(systemd_networkd_netdev_custom) }}"
 systemd_networkd_network_nocluster: "{{ wired_systemd_networkd_network | combine(systemd_networkd_network_custom) }}"
-
-team0_systemd_networkd_network:
-  79-team0:
-    - Match:
-        - Name: "team0"
-    - Network:
-        - Address: "{{ cluster_ip_addr|default('0') }}/{{ team0subnet | default(24) }}"
-  79-team0_0:
-    - Match:
-        - Name: "{{ team0_0|default('0') }}"
-    - Link:
-        - MTUBytes: 1800
-  79-team0_1:
-    - Match:
-        - Name: "{{ team0_1|default('0') }}"
-    - Link:
-        - MTUBytes: 1800
 
 systemd_networkd_network: "{{ systemd_networkd_network_nocluster|combine(team0_systemd_networkd_network) if cluster_ip_addr is defined else systemd_networkd_network_nocluster}}"
 systemd_networkd_netdev: "{{ systemd_networkd_netdev_nocluster }}"
