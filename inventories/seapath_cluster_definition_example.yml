@@ -15,7 +15,6 @@ all:
                             netplan_configurations :
                              - inventories/netplan_admin_br0_example.yaml.j2
                              - inventories/netplan_ptp_interface_example.yaml.j2
-                             - inventories/netplan_cluster_example.yaml.j2
 
                             # Main network configuration
                             network_interface: eno8303 #admin interface
@@ -60,7 +59,6 @@ all:
                             netplan_configurations :
                              - inventories/netplan_admin_br0_example.yaml.j2
                              - inventories/netplan_ptp_interface_example.yaml.j2
-                             - inventories/netplan_cluster_example.yaml.j2
 
                             # Main network configuration
                             network_interface: eno8303
@@ -96,10 +94,9 @@ all:
                             ansible_host: 10.10.10.3
                             hostname: "node3"
 
-                            netplan_configurations :
+                            netplan_configurations:
                              - inventories/netplan_admin_br0_example.yaml.j2
                              - inventories/netplan_ptp_interface_example.yaml.j2
-                             - inventories/netplan_cluster_example.yaml.j2
 
                             # Main network interface configuration
                             network_interface: eno8303

@@ -32,7 +32,6 @@
   when:
     - cluster_protocol is not defined or cluster_protocol != "HSR" or hsr_mac_address is not defined
     - skip_recreate_team0_config is not defined or skip_recreate_team0_config is not true
-    - netplan_configurations is not defined
 - block:
   - name: copy hsr.sh script
     template:
@@ -71,4 +70,3 @@
       state: restarted
     when: hsr1.changed or hsr2.changed or hsr3.changed or hsrservice.changed
   when: cluster_protocol is defined and cluster_protocol == "HSR" and hsr_mac_address is defined
-

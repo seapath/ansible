@@ -12,7 +12,11 @@
   become: true
   gather_facts: true
   vars_files:
-    - ../vars/network_vars.yml
+    - "../vars/network_team0.yml"
+  pre_tasks:
+    - name: Dynamically include network configuration variables
+      include_vars:
+        file: "../vars/network_{{ 'empty' if netplan_configurations is defined or (network_simple is defined and network_simple) else 'defaults' }}.yml"
   roles:
     - role: network_basics
     - role: systemd_networkd

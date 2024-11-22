@@ -47,6 +47,8 @@ skip_recreate_team0_config: true
 remove_all_network_config: true
 # If set to true, the network playbook will start by wiping the /etc/netplan/ directory content, this can help cleaning old conflicting files.
 # THIS MUST NOT BE USED WITH skip_recreate_team0_config at the same time or the cluster network config won't be recreated.
+network_simple: true
+# Do not apply the default network configuration. Only team0 will create. The “wired” connexion will not be configured. The bridges br0 and br0vlan will not be created.
 ```
 
 ### SEAPATH demo cluster inventory
