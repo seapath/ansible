@@ -8,8 +8,8 @@
       name: "{{ livemigration_user }}"
       shell: /bin/bash
       system: true
-      group: libvirt
-      create_home: true
+      groups: qemu,haclient,libvirt
+      create_home: false
   - name: Unlock the user
     replace:
         path: /etc/shadow
@@ -24,32 +24,23 @@
       ssh_key_file: .ssh/id_rsa
       ssh_key_passphrase: ""
       force: false
-  - name: create livemigration .ssh directory
+  - name: create livemigration ssh directory
     file:
-      path: "/home/{{ livemigration_user }}/.ssh"
+      path: "/etc/ssh/{{ livemigration_user }}"
       state: directory
-      mode: '0700'
+      mode: '0755'
       owner: "{{ livemigration_user }}"
-  - name: Get root user's home directory
-    shell: getent passwd root | cut -d ':' -f6
-    register: root_home_dir
+      group: "{{ livemigration_user }}"
   - name: Fetch the root keyfile
     fetch:
-      src: "{{ root_home_dir.stdout }}/.ssh/id_rsa.pub"
+      src: "{{ ansible_env['HOME'] }}/.ssh/id_rsa.pub"
       dest: "buffer/{{ inventory_hostname }}-id_rsa.pub"
       flat: true
   - name: Copy the key add to authorized_keys using Ansible module
     authorized_key:
       user: "{{ livemigration_user }}"
       state: present
-      path: "/home/{{ livemigration_user }}/.ssh/authorized_keys"
-      key: "{{ lookup('file','buffer/' + item + '-id_rsa.pub') }}"
-    with_items: "{{ groups['hypervisors'] }}"
-  - name: Copy the key to admin user's authorized_keys using Ansible module
-    authorized_key:
-      user: "{{ admin_user }}"
-      state: present
-      path: "/home/{{ admin_user }}/.ssh/authorized_keys"
+      path: "/etc/ssh/{{ livemigration_user }}/authorized_keys"
       key: "{{ lookup('file','buffer/' + item + '-id_rsa.pub') }}"
     with_items: "{{ groups['hypervisors'] }}"
   - name: Fetch the ssh keyfile
@@ -59,7 +50,7 @@
       flat: true
   - name: populate the known_hosts files
     known_hosts:
-      path: "{{ root_home_dir.stdout }}/.ssh/known_hosts"
+      path: "{{ ansible_env['HOME'] }}/.ssh/known_hosts"
       name: "{{ item }}"
       key: "{{ item }} {{ lookup('file','buffer/' + item + '-ssh_host_ed25519_key.pub') }}"
     with_items: "{{ groups['hypervisors'] }}"
