@@ -12,8 +12,7 @@
 
 - name: Configure snmp
   hosts:
-    - cluster_machines
-    - standalone_machine
+    - hypervisors
   become: true
   roles:
     - snmp
