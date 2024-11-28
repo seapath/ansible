@@ -1,0 +1,15 @@
+diff --git a/roles/ceph-validate/tasks/check_system.yml b/roles/ceph-validate/tasks/check_system.yml
+index dc8cdd6fd..4a9ffff4d 100644
+--- a/roles/ceph-validate/tasks/check_system.yml
++++ b/roles/ceph-validate/tasks/check_system.yml
+@@ -22,7 +22,9 @@
+ - name: fail on unsupported distribution
+   fail:
+     msg: "Distribution not supported {{ ansible_facts['os_family'] }}"
+-  when: ansible_facts['os_family'] not in ['Debian', 'RedHat', 'ClearLinux', 'Suse']
++  when:
++    - ansible_facts['os_family'] not in ['Debian', 'RedHat', 'ClearLinux', 'Suse']
++    - "'Yocto' not in ansible_distribution"
+ 
+ - name: fail on unsupported CentOS release
+   fail:
