@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- include_vars: "{{ ansible_distribution | replace(' ', '_') }}.yml"
+- include_vars: "{{ seapath_distro }}.yml"
 
 - name: "grub conf"
   lineinfile:

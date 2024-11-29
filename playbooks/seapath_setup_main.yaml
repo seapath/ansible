@@ -9,23 +9,21 @@
 # This playbooks can also configure VMs created with build_debian_iso
 # This playbook also configures Yocto standalone machine (no cluster)
 
-- name: Gather ansible_distribution
+- name: Detect Seapath distribution
   hosts:
     - cluster_machines
     - standalone_machine
-  tasks:
-    - name: Gather only the ansible_distribution fact
-      ansible.builtin.setup:
-        filter: ansible_distribution
+  roles:
+    - detect_seapath_distro
 
 - import_playbook: seapath_setup_prerequiscentos.yaml
-  when: ansible_distribution | regex_search("CentOS|RedHat")
+  when: seapath_distro == "CentOS"
 
 - import_playbook: seapath_setup_prerequisdebian.yaml
-  when: ansible_distribution | regex_search("Debian")
+  when: seapath_distro == "Debian"
 
 - import_playbook: seapath_setup_prerequisyocto.yaml
-  when: ansible_distribution | regex_search("Yocto")
+  when: seapath_distro == "Yocto"
 
 - import_playbook: seapath_setup_network.yaml
 

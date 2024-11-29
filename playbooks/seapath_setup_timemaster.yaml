@@ -1,15 +1,6 @@
 # Copyright (C) 2024, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
-- name: Gather ansible_distribution
-  hosts:
-    - cluster_machines
-    - standalone_machine
-  tasks:
-    - name: Gather only the ansible_distribution fact
-      ansible.builtin.setup:
-        filter: ansible_distribution
-
 - name: Configure timemaster
   hosts:
     - cluster_machines

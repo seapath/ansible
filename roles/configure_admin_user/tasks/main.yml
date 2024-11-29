@@ -17,4 +17,4 @@
         state: present
         key: "{{ lookup('file','buffer/' + item + '-id_rsa.pub') }}"
       with_items: "{{ groups['hypervisors'] }}"
-  when: ansible_distribution | regex_search("CentOS|Debian")
+  when: seapath_distro in [ "CentOS", "Debian" ]

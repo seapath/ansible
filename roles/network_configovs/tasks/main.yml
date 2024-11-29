@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- include_vars: "{{ ansible_distribution | replace(' ', '_') }}.yml"
+- include_vars: "{{ seapath_distro }}.yml"
 
 - name: Create OVS configuration
   template:
@@ -29,4 +29,3 @@
   when:
     - ovs_vsctl_cmds is defined
   loop: "{{ ovs_vsctl_cmds }}"
-

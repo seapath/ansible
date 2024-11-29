@@ -8,4 +8,5 @@ galaxy_info:
   - name: Debian
     versions:
     - all
-dependencies: []
+dependencies:
+  - role: detect_seapath_distro
