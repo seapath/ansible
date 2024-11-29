@@ -1,0 +1,19 @@
+# Copyright (C) 2024 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+---
+galaxy_info:
+  author: "Seapath"
+  description: Detect the SEAPATH distribution and set seapath_distro fact.
+  license: Apache-2.0
+  min_ansible_version: 2.9.10
+  platforms:
+    - name: Yocto
+      versions:
+      - all
+    - name: Debian
+      versions:
+      - all
+    - name: CentOS
+      versions:
+      - all
+dependencies: []

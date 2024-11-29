@@ -1,0 +1,35 @@
+# Copyright (C) 2024 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Gather only ansible_distribution facts
+  ansible.builtin.setup:
+    filter: ansible_distribution*
+
+- name: Detect Debian distribution
+  set_fact:
+    seapath_distro: Debian
+  when: ansible_distribution | regex_search("Debian")
+
+- name: Detect Centos distribution
+  set_fact:
+    seapath_distro: CentOS
+  when: ansible_distribution | regex_search("CentOS|RedHat")
+
+- name: Detect Yocto distribution
+  block:
+    - name: Search CPE_NAME field of {{ ansible_distribution_file_path }}
+      command: grep 'CPE_NAME.*cpe:/o:openembedded' {{ ansible_distribution_file_path }}
+      register: ret
+      failed_when: ret.rc != 0 and ret.rc != 1
+    - name: Set seapath_distro for Yocto distro
+      set_fact:
+        seapath_distro: Yocto
+      when: ret.rc == 0
+  when: seapath_distro is not defined
+
+- name: Check distro detection
+  fail:
+    msg: "The Seapath distribution could not be determined"
+  when: seapath_distro is not defined
+...
