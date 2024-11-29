@@ -49,7 +49,6 @@
           authorized_key:
             user: "{{ livemigration_user }}"
             state: present
-            path: "/etc/ssh/{{ livemigration_user }}/authorized_keys"
             key: "{{ lookup('file','buffer/' + item + '-id_rsa.pub') }}"
           with_items: "{{ groups['hypervisors'] }}"
         - name: Fetch the ssh keyfile
