@@ -4,7 +4,7 @@ This role configure the SNMP feature
 
 ## Requirements
 
-no requirement.
+- detect_seapath_distro
 
 ## Role Variables
 

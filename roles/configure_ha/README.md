@@ -4,7 +4,7 @@ This role configures the High Availability part of a seapath cluster (Corosync a
 
 ## Requirements
 
-no requirement.
+- detect_seapath_distro
 
 ## Role Variables
 

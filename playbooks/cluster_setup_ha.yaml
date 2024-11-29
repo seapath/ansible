@@ -8,7 +8,6 @@
 - name: Configure HA basics
   hosts: cluster_machines
   become: true
-  gather_facts: true
   vars:
     tmpdir: "/tmp"
     corosync_node_list: "{{ groups['cluster_machines'] | list }}"

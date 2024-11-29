@@ -11,8 +11,10 @@
     - cluster_machines
     - standalone_machine
     - VMs
+  roles:
+    - detect_seapath_distro
   tasks:
-  - include_vars: "../vars/{{ ansible_distribution }}_paths.yml"
+  - include_vars: "../vars/{{ seapath_distro }}_paths.yml"
 
 - hosts:
     - cluster_machines

@@ -3,7 +3,7 @@ This role copy the root ssh key to admin user's. This user is used by Debian whe
 
 ## Requirements
 
-no requirement.
+- detect_seapath_distro
 
 ## Role Variables
 

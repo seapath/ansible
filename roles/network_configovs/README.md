@@ -4,7 +4,7 @@ This role configures OVS
 
 ## Requirements
 
-no requirement.
+- detect_seapath_distro
 
 ## Role Variables
 
