@@ -1,0 +1,38 @@
+diff --git a/infrastructure-playbooks/purge-cluster.yml b/infrastructure-playbooks/purge-cluster.yml
+index 109a25697..29a0c842a 100644
+--- a/infrastructure-playbooks/purge-cluster.yml
++++ b/infrastructure-playbooks/purge-cluster.yml
+@@ -50,7 +50,7 @@
+ - name: check there's no ceph kernel threads present
+   hosts: clients
+   become: true
+-  gather_facts: false
++  gather_facts: true
+   any_errors_fatal: true
+   tasks:
+     - import_role:
+@@ -106,6 +106,7 @@
+         - rbd
+         - ceph
+         - libceph
++      when: "'Yocto' not in ansible_distribution"
+ 
+ 
+ - name: purge ceph nfs cluster
+@@ -545,6 +546,16 @@
+       when:
+         - containerized_deployment | bool
+           or ceph_volume_present.rc == 0
++        - "'Yocto' not in ansible_distribution"
++
++    - name: Get real path for OSD disk
++      command: "realpath {{ ceph_osd_disk }}" # Get the resolved path of the disk given initially by the "/dev/disk/by-path/" for ceph purposes
++      register: ceph_osd_realdisk
++      when: "'Yocto' in ansible_distribution"
++
++    - name: Cleanup Ceph OSD disks with ceph-volume
++      command: "ceph-volume lvm zap {{ ceph_osd_realdisk.stdout }} --destroy"
++      when: "'Yocto' in ansible_distribution"
+ 
+     - name: get ceph block partitions
+       shell: |
