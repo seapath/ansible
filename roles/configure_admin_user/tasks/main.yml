@@ -1,0 +1,20 @@
+# Copyright (C) 2024 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- block:
+    - name: Get root user's home directory
+      shell: getent passwd root | cut -d ':' -f6
+      register: root_home_dir
+    - name: Fetch the root keyfile
+      fetch:
+        src: "{{ root_home_dir.stdout }}/.ssh/id_rsa.pub"
+        dest: "buffer/{{ inventory_hostname }}-id_rsa.pub"
+        flat: true
+    - name: Copy the key to admin user's authorized_keys using Ansible module
+      authorized_key:
+        user: "{{ admin_user }}"
+        state: present
+        key: "{{ lookup('file','buffer/' + item + '-id_rsa.pub') }}"
+      with_items: "{{ groups['hypervisors'] }}"
+  when: ansible_distribution | regex_search("CentOS|Debian")
