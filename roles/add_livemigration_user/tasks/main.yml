@@ -1,4 +1,5 @@
 # Copyright (C) 2024 RTE
+# Copyright (C) 2024 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 ---
@@ -43,13 +44,6 @@
       user: "{{ livemigration_user }}"
       state: present
       path: "/home/{{ livemigration_user }}/.ssh/authorized_keys"
-      key: "{{ lookup('file','buffer/' + item + '-id_rsa.pub') }}"
-    with_items: "{{ groups['hypervisors'] }}"
-  - name: Copy the key to admin user's authorized_keys using Ansible module
-    authorized_key:
-      user: "{{ admin_user }}"
-      state: present
-      path: "/home/{{ admin_user }}/.ssh/authorized_keys"
       key: "{{ lookup('file','buffer/' + item + '-id_rsa.pub') }}"
     with_items: "{{ groups['hypervisors'] }}"
   - name: Fetch the ssh keyfile
