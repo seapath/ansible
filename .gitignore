@@ -14,6 +14,7 @@ playbooks/*
 !playbooks/standalone*
 !playbooks/deploy_*.yaml
 !playbooks/seapath_setup_*.yaml
+!playbooks/purge_ceph.yaml
 inventories/*
 !inventories/README.adoc
 !inventories/*example*
