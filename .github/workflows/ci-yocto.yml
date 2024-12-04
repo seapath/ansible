@@ -34,18 +34,22 @@ jobs:
              ci/launch-yocto.sh conf;
 
       - name: Launch system tests
+        if: ${{ always() && steps.conf.conclusion == 'success' }}
         run: cd ${{ env.WORK_DIR }};
              ci/launch-yocto.sh system;
 
       - name: Deploy VMs
+        if: ${{ always() && steps.conf.conclusion == 'success' }}
         run: cd ${{ env.WORK_DIR }};
             ci/launch-yocto.sh deploy_vms;
 
       - name: Launch VMs tests
+        if: ${{ always() && steps.conf.conclusion == 'success' }}
         run: cd ${{ env.WORK_DIR }};
              ci/launch-yocto.sh test_vms;
 
       - name: Launch latency tests
+        if: ${{ always() && steps.conf.conclusion == 'success' }}
         run: cd ${{ env.WORK_DIR }};
             ci/launch-yocto.sh test_latency
 
