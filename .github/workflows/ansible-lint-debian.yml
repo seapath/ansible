@@ -17,9 +17,8 @@ permissions:
 
 jobs:
   ansible-lint:
-    runs-on: runner-RTE-12
+    runs-on: ubuntu-latest
     steps:
-
       - name: Initialize sources
         run: mkdir ${{ env.WORK_DIR }}; cd ${{ env.WORK_DIR }};
              git clone -q --depth 1 -b ansible-lint-cqfd https://github.com/seapath/ci ci;
