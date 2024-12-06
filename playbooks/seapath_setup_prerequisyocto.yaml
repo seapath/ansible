@@ -17,3 +17,41 @@
   become: true
   roles:
     - yocto/hugepages
+
+- name: upload extra files
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  become: true
+  tasks:
+    - name: upload extra files
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: "{{ item.owner | default('root') }}"
+        group: "{{ item.group | default('root') }}"
+        mode: "{{ item.mode | default('0644') }}"
+        backup: yes
+      with_items: "{{ upload_files }}"
+      when:
+        - upload_files is defined
+        - item.extract is not defined or item.extract is false
+    - name: upload extra files and extract them
+      unarchive:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: "{{ item.owner | default('root') }}"
+        group: "{{ item.group | default('root') }}"
+        mode: "{{ item.mode | default('0644') }}"
+      with_items: "{{ upload_files }}"
+      when:
+        - upload_files is defined
+        - item.extract is defined and item.extract is true
+    - name: run extra commands after upload
+      shell: "{{ item }}"
+      tags:
+        - skip_ansible_lint
+      loop: "{{ commands_to_run_after_upload }}"
+      when: commands_to_run_after_upload is defined
+
