@@ -18,6 +18,7 @@ playbooks/*
 inventories/*
 !inventories/README.adoc
 !inventories/*example*
+!inventories/providers
 
 # Ide
 .idea/
