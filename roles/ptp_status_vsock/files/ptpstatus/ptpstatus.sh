@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
 # Read the LinuxPTP status with the pmc tool and derived the 61850 SmpSynch
 # status from it.
