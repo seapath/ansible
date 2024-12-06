@@ -4,7 +4,7 @@ Description=gets ptp status
 [Service]
 ExecStartPre=rm -rf /var/run/ptpstatus
 ExecStartPre=mkdir -p /var/run/ptpstatus
-ExecStart=/usr/local/bin/ptpstatus.sh /var/run/ptpstatus/ptp_state /var/run/ptpstatus/ptp_status
+ExecStart=/var/lib/ptp/ptpstatus.sh /var/run/ptpstatus/ptp_state /var/run/ptpstatus/ptp_status
 
 [Install]
 WantedBy=multi-user.target

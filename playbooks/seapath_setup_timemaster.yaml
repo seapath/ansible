@@ -8,3 +8,4 @@
   become: true
   roles:
     - timemaster
+    - ptp_status_vsock
