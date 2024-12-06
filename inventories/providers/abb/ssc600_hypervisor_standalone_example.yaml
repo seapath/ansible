@@ -1,0 +1,49 @@
+# Copyright (C) 2024, SFL (https://savoirfairelinux.com)
+# SPDX-License-Identifier: Apache-2.0
+
+---
+all:
+  children:
+    standalone_machine:
+      children:
+        hypervisors:
+          hosts:
+            abb-demoHyp:
+              ansible_host: "192.168.216.78" # Change to your hypervisor IP
+              gateway_addr: "192.168.216.1" # Change to your gateway IP
+              network_interface: "enp0s20f0u7" # Change to your management interface
+              ptp_interface: "enp0s20f0u3" # Change to your PTP interface
+              ip_addr: "{{ ansible_host }}"
+              cluster_interface: "{{ network_interface }}"
+              ntp_servers: "{{ gateway_addr }}"
+              syslog_server_ip: "{{ gateway_addr }}"
+              apply_network_config: false
+              kernel_parameters_restart: false
+              ignored_bridges: []
+              nics_affinity:
+              - enp88s0: 3  # Change to your NICs
+              ovs_bridges:
+                - name: ovsbr
+                  ports:
+                    - name: VM1.0
+                      type: tap
+                    - name: ovsbr_ext
+                      type: system
+                      interface: "enp0s20f0u3" # Change to your bridge interface
+              upload_files: # This file is given with the ssc600 sw package
+                - src: '../files/qemu.hook'
+                  dest: '/etc/libvirt/hooks/'
+                  mode: "0744"
+
+  vars:
+    ansible_connection: ssh
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_user: admin
+    ansible_become: true
+    ansible_become_method: sudo
+    ansible_become_flags: "-n -E"
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+    ansible_remote_tmp: /tmp/.ansible/tmp
+    bootloader_config_file: /boot/EFI/BOOT/grub.cfg
+    ansible_ssh_private_key_file: ~/.ssh/sfl-seapath
+    hugepages: 12

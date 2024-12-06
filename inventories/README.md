@@ -82,3 +82,7 @@ You have to change some variables (mainly network settings) to adjust the invent
 - public_network
 - admin_passwd
 - admin_ssh_keys
+
+### Provider examples
+
+You can find in the subdirectory `providers` some example for COTS VM from providers.
