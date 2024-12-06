@@ -33,14 +33,17 @@ jobs:
              ci/launch.sh conf;
 
       - name: Launch system tests
+        if: ${{ always() && steps.conf.conclusion == 'success' }}
         run: cd ${{ env.WORK_DIR }};
              ci/launch.sh system;
 
       - name: Launch VM tests
+        if: ${{ always() && steps.conf.conclusion == 'success' }}
         run: cd ${{ env.WORK_DIR }};
              ci/launch.sh vm;
 
       - name: Launch latency tests
+        if: ${{ always() && steps.conf.conclusion == 'success' }}
         run: cd ${{ env.WORK_DIR }};
              ci/launch.sh latency;
 

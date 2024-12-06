@@ -1,0 +1,61 @@
+# Copyright (C) 2024 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+
+- name: Check if the system have swupdate
+  command: swupdate -v
+  register: swupdate_version
+  ignore_errors: yes
+- fail:
+    msg: "Only Swupdate update is supported"
+  when: swupdate_version.rc != 0
+
+
+- name: Check the SEAPATH mode, cluster or standalone
+  stat:
+    path: /etc/corosync/corosync.conf
+  register: corosync_conf
+
+- block:
+    - name: Set hypervisor in maintenance mode
+      command: crm node standby "{{ inventory_hostname }}"
+    - name: Wait for all ressources to be migrated
+      shell:
+        cmd: crm status|grep "Migrating"|wc -l
+      register: check_migration
+      until: check_migration.stdout == '0'
+      retries: 10
+  when: corosync_conf.stat.exists
+
+- name: Copy SWU file on machine
+  copy:
+    src: "{{ swu_image_path }}"
+    dest: "/tmp/update.swu"
+- name: Apply update
+  command: swupdate -i /tmp/update.swu
+- name: Reboot host
+  reboot:
+    msg: "Reboot initiated by Ansible"
+    connect_timeout: 5
+    reboot_timeout: 600
+    pre_reboot_delay: 0
+    post_reboot_delay: 30
+    test_command: whoami
+- name: Wait systemd has finished to boot
+  command: systemctl is-system-running --wait
+  register: system_status
+  failed_when: system_status.rc != 0 and system_status.rc != 1
+  tags:
+    - skip_ansible_lint
+
+
+- name: unset maintenance mode for hypervisor
+  command: crm node online "{{ inventory_hostname }}"
+  when: corosync_conf.stat.exists
+
+- name: Check if update has succeed
+  shell:
+    cmd: journalctl -u swupdate_check.service -b |grep "Update have failed"|wc -l
+  register: update_status
+  failed_when: update_status.stdout != '0'
