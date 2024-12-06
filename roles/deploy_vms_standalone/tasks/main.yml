@@ -7,23 +7,46 @@
     command: list_vms
   register: all_vms
 
-- name: Stop VM
-  virt:
-    state: destroyed
-    name: "{{ item }}"
-  when:
-    - item in all_vms.list_vms
-    - hostvars[item].force is defined
-    - hostvars[item].force
+- name: Export VM config in /tmp
+  template:
+    src: "{{ hostvars[item].vm_template }}"
+    dest: "/tmp/{{ hostvars[item].inventory_hostname }}.xml"
   loop: "{{ groups['VMs'] }}"
 
-- name: Undefine VM
-  command: "virsh undefine --nvram {{ item }}"
-  when:
-    - item in all_vms.list_vms
-    - hostvars[item].force is defined
-    - hostvars[item].force
+- name: Parse the VM name from the XML configuration for each VM
+  xml:
+    path: "/tmp/{{ hostvars[item].inventory_hostname }}.xml"
+    xpath: "/domain/name"
+    content: text
+  register: vm_name_result
   loop: "{{ groups['VMs'] }}"
+
+- name: Filter vm_name_result to get host <> vm_name mapping
+  set_fact:
+    host_to_vm_name_map: >
+      {{
+        vm_name_result.results | map(attribute='item') | zip(
+        vm_name_result.results | map(attribute='matches') | map('first')) |
+        map('list')
+      }}
+
+- name: Stop VM
+  virt:
+    name: "{{ item[1].name }}"
+    state: destroyed
+  when:
+    - item[1].name in all_vms.list_vms
+    - hostvars[item[0]].force is defined
+    - hostvars[item[0]].force
+  loop: "{{ host_to_vm_name_map }}"
+
+- name: Undefine VM
+  command: "virsh undefine --nvram {{ item[1].name }}"
+  when:
+    - item[1].name in all_vms.list_vms
+    - hostvars[item[0]].force is defined
+    - hostvars[item[0]].force
+  loop: "{{ host_to_vm_name_map }}"
 
 - name: Print info
   debug:
@@ -83,15 +106,6 @@
   loop: "{{ groups['VMs'] }}"
   when: item not in all_vms.list_vms or (item in all_vms.list_vms and hostvars[item].force is defined and hostvars[item].force)
 
-- name: Export VM config for debug in /tmp
-  template:
-    src: "{{ hostvars[item].vm_template }}"
-    dest: "/tmp/{{ hostvars[item].inventory_hostname }}.xml"
-  vars:
-    vm: "{{ hostvars[item] }}"
-  when: ansible_verbosity >= 2
-  loop: "{{ groups['VMs'] }}"
-
 - name: Create VMs
   virt:
     command: define
@@ -104,7 +118,7 @@
 
 - name: Start VMs
   virt:
-    name: "{{ item }}"
+    name: "{{ item[1].name }}"
     state: running
-  loop: "{{ groups['VMs'] }}"
-  when: hostvars[item].enable | default(true)
+  loop: "{{ host_to_vm_name_map }}"
+  when: hostvars[item[0]].enable | default(true)
