@@ -1,4 +1,5 @@
 # Copyright (C) 2024 RTE
+# Copyright (C) 2024 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 ---
@@ -82,3 +83,12 @@
 - name: Refresh pool
   command: virsh pool-refresh --pool ceph
   changed_when: false
+
+- name: Copy libvirtd.conf
+  template:
+      src: libvirtd.conf.j2
+      dest: /etc/libvirt/libvirtd.conf
+      owner: root
+      group: root
+      mode: 0644
+  notify: restart libvirtd

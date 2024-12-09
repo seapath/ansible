@@ -1,0 +1,15 @@
+# Copyright (C) 2024 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+# Disable the TLS and TCP socket
+listen_tls = 0
+listen_tcp = 0
+# Disable the Unix socket access for other
+unix_sock_ro_perms = "0770"
+unix_sock_rw_perms = "0770"
+
+# Allow members of the libvirt group to access the socket
+unix_sock_group = "libvirt"
+
+# Set a UUID if the dmidecode command is unavailable
+host_uuid = "{{ inventory_hostname | to_uuid }}"
