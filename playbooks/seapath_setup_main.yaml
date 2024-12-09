@@ -13,6 +13,7 @@
   hosts:
     - cluster_machines
     - standalone_machine
+    - VMs
   roles:
     - detect_seapath_distro
 
