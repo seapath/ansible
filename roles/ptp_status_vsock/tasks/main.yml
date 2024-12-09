@@ -4,15 +4,20 @@
 ---
 - name: ptp/vsock when ptp_interface is enabled
   block:
+    - name: Create ptp directory
+      ansible.builtin.file:
+        path: /var/lib/ptp
+        state: directory
+        mode: '0755'
     - name: Copy ptp_status executable files
       ansible.builtin.copy:
         src: ptpstatus/ptpstatus.sh
-        dest: /usr/local/bin/ptpstatus.sh
+        dest: /var/lib/ptp/ptpstatus.sh
         mode: '0755'
     - name: Copy ptp_vsock executable files
       ansible.builtin.copy:
         src: ptp_vsock.py
-        dest: /usr/local/bin/ptp_vsock.py
+        dest: /var/lib/ptp/ptp_vsock.py
         mode: '0755'
     
     - name: Copy ptp_status.service
