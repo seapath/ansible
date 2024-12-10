@@ -27,6 +27,11 @@ jobs:
              echo "CI sources downloaded successfully";
              ci/launch.sh init;
 
+      - name: Launch Ansible-lint
+        run: |-
+          cd ${{ env.WORK_DIR }}/ansible
+          cqfd -b ansible-lint
+
       - name: Configure Debian
         id: conf
         run: cd ${{ env.WORK_DIR }};

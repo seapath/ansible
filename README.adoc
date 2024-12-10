@@ -7,7 +7,6 @@ Setup machines with Ansible
 :sectnumlevels: 1
 
 image::https://github.com/seapath/ansible/actions/workflows/ci-debian.yml/badge.svg["CI Debian status", link=https://github.com/seapath/ansible/actions/workflows/ci-debian.yml]
-image::https://github.com/seapath/ansible/actions/workflows/ansible-lint.yml/badge.svg["Ansible-lint status", link=https://github.com/seapath/ansible/actions/workflows/ansible-lint.yml]
 
 == Introduction
 
