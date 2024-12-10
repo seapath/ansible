@@ -38,11 +38,3 @@
   when:
   - dns_servers is defined
   - netplan_configurations is not defined
-
-- name: disable resolved if no dns server is defined
-  ansible.builtin.systemd:
-    name: systemd-resolved
-    state: stopped
-    enabled: false
-  when: dns_servers is not defined
-
