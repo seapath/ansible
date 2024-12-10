@@ -5,6 +5,7 @@ name: CI Yocto
 
 env:
   WORK_DIR: /tmp/seapath_ci_${{ github.run_id }}_${{ github.run_attempt }}_${{ github.sha }}
+  PCAP_LOOP: 18000 # 5 hours
 
 on:
   pull_request:
@@ -60,6 +61,6 @@ jobs:
         run: cd ${{ env.WORK_DIR }};
              ci/launch-yocto.sh report;
 
-      - name: Clean
-        if: always()
-        run: rm -rf $WORK_DIR;
+      # - name: Clean
+      #   if: always()
+      #   run: rm -rf $WORK_DIR;
