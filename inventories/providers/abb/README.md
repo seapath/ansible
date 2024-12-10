@@ -2,6 +2,7 @@
 
 This directory contains the example inventory files for the SSC600 SW from ABB. It can configure a standalone yocto hypervisor and a SSC600 SW VM.
 The VM name must contain the string "ssc600" to be recognized by the qemu hook provided by ABB. (See the files needed section).
+The VM deployment has been tested on a yocto and a debian hypervisor.
 
 ## Structure
 
