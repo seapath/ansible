@@ -16,3 +16,12 @@ Some files provided by ABB are needed to use these inventories:
 - qemu.hook
 
 To use them, they can be copied in the `files` directory at the root of ansible.
+
+## Prerequisite
+
+The VM need at least 30GB of free space. Ansible deploy it in the /var/lib/libvirt/images directory.
+> Make sure to have free 30GB on /var/lib directory
+
+## Cache L3 partitioning
+
+The L3 cache partitioning is not supported and would need to be tested with and without to see the impact.
