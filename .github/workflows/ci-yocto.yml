@@ -28,6 +28,11 @@ jobs:
              echo "CI sources downloaded successfully";
              ci/launch-yocto.sh init;
 
+      - name: Launch Ansible-lint
+        run: |-
+          cd ${{ env.WORK_DIR }}/ansible
+          cqfd -b ansible-lint
+
       - name: Configure SEAPATH
         id: conf
         run: cd ${{ env.WORK_DIR }};
