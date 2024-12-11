@@ -75,12 +75,14 @@
         <source dir="/var/run/ptpstatus"/>
         <target dir="ptp"/>
     </filesystem>
-    {% if vm.bridge is defined %}
+    {% if vm.bridges is defined %}
+    {% for bridge in vm.bridges %}
     <interface type="bridge">
     <source bridge="{{ bridge.name }}"/>
         <mac address="{{ bridge.mac_address }}"/>
         <model type="virtio"/>
     </interface>
+    {% endfor %}
     {% endif %}
     {% if vm.ovs is defined %}
     {% for bridge in vm.ovs %}
