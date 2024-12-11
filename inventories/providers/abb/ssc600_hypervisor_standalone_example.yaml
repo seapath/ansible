@@ -31,6 +31,7 @@ all:
     ansible_user: admin # Change to `ansible` if using seapath debian
     grub_append: "default_hugepagesz=1G hugepagesz=1G hugepages=6" # Set hugepages for debian only
     hugepages: 6 # Set hugepages for Yocto only
+    isolcpus: "4-N" # isolate CPUs for debian only
     ansible_connection: ssh
     ansible_python_interpreter: /usr/bin/python3
     admin_user: admin
