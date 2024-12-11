@@ -1,0 +1,184 @@
+# This inventory describes a SEAPATH cluster with two hypervisors and one observer.
+# It contains all required variables to configure and run your cluster.
+# Replace all the TODOs to fit your physical machines.
+# More informations on SEAPATH Wiki: https://lf-energy.atlassian.net/wiki/x/lIblAQ
+
+---
+cluster_machines:
+  children:
+    hypervisors:
+      hosts:
+        hypervisor1:
+          # TODO : Replace the variable by your IP or interfaces
+
+          # Admin network settings
+          ansible_host: 192.168.200.125
+          network_interface: eno1
+
+          # Cluster network settings
+          team0_0: "eno2"
+          team0_1: "eno3"
+          cluster_next_ip_addr : "192.168.55.2"
+          cluster_previous_ip_addr : "192.168.55.3"
+          cluster_ip_addr: "192.168.55.1"
+
+          # PTP configuration.
+          # Optional, remove if the machine is not synchronised with PTP
+          ptp_interface: "eno12419"
+
+        hypervisor2:
+          # TODO : Replace the variables by your IP or interfaces
+
+          # Admin network settings
+          ansible_host: 192.168.200.126
+          network_interface: eno1
+
+          # Cluster network settings
+          team0_0: "eno2"
+          team0_1: "eno3"
+          cluster_next_ip_addr : "192.168.55.3"
+          cluster_previous_ip_addr :  "192.168.55.1"
+          cluster_ip_addr: "192.168.55.2"
+
+          # PTP configuration.
+          # Optional, remove if the machine is not synchronised with PTP
+          ptp_interface: "eno12419"
+
+      vars:
+        livemigration_user: livemigration
+        isolcpus: "4-N" # TODO : Put the list of cpus to isolate.
+          # This variable is only used on Debian.
+          # On Yocto, it is configured in yocto-bsp
+
+    observers:
+      hosts:
+        observer:
+          # TODO : Replace the variables by your IP or interfaces
+
+          # Admin network settings
+          ansible_host: 192.168.200.10
+          network_interface: enp0s20f0u3u2
+
+          # Cluster network settings
+          team0_0: "enp2s0"
+          team0_1: "enp3s0"
+          cluster_next_ip_addr : "192.168.55.1"
+          cluster_previous_ip_addr :  "192.168.55.2"
+          cluster_ip_addr: "192.168.55.3"
+          br_rstp_priority: 12288 # Do not modify
+            # This value is needed only on third machine for the RSTP to work
+
+          # PTP configuration.
+          ptp_interface: "eno12419"
+
+  vars:
+    # Ansible vars
+    ansible_connection: ssh
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_remote_tmp: /tmp/.ansible/tmp
+    ansible_user: ansible # TODO: Put the name of your ansible user
+    # By default, this user is "ansible" on Debian and "admin" on Yocto
+
+    # Debian specific, remove if you use Yocto
+    admin_user: admin
+
+    # Main network configuration
+    gateway_addr: "192.168.200.1" # TODO : Put your gatway address
+    dns_servers: "192.168.200.1" # TODO : Put your dns address
+    ip_addr: "{{ ansible_host }}"
+    apply_network_config: true
+    # systemd-networkd is used by default to configure the network
+    # netplan can also be used to sum up complex network in one yaml file
+    # See the wiki for more informations : TODO put link
+
+    # NTP time synchronisation
+    ntp_servers:
+      - "185.254.101.25" # public ntp server
+      - "51.145.123.29"  # public ntp serve
+
+
+# ------------------------------------------------------------------------------
+# ------------------- Ceph configuration part ----------------------------------
+# ------------------------------------------------------------------------------
+
+# This part contains SEAPATH default ceph configuration
+# Change only the TODOs, Do not change the other variables, unless you know
+# exactly what you are doing.
+    ceph_origin: distro
+    cluster_network: "192.168.55.0/24" # TODO : Replace by the IP range of your cluster
+    public_network: "{{ cluster_network }}"
+    monitor_address: "{{ cluster_ip_addr }}"
+    configure_firewall: false
+    ntp_service_enabled: false
+    dashboard_enabled: false
+    ceph_conf_overrides:
+      global:
+        osd_pool_default_size: "{{ groups['hypervisors'] | length }}"
+        osd_pool_default_min_size: 2 # TODO
+          # Set to the minimum number of osd needed to run the cluster
+          # You probably want 2 in case of a three hypervisors configuration
+          # And 1 in case of a two hypervisors and one observer
+        osd_pool_default_pg_num: 128
+        osd_pool_default_pgp_num: 128
+        osd_crush_chooseleaf_type: 1
+        mon_osd_min_down_reporters: 1
+      mon:
+        auth_allow_insecure_global_id_reclaim: false
+      osd:
+        osd memory target: 8076326604
+
+# Ceph monitor. All machines in the cluster must be part of mons groups
+mons:
+  hosts:
+    hypervisor1:
+    hypervisor2:
+    observer:
+
+# Ceph OSD. Machines that will be used as OSDs (which will store data)
+osds:
+  hosts:
+    hypervisor1:
+    hypervisor2:
+  vars:
+    ceph_osd_disk: "/dev/disk/by-path/pci-0000:03:00.0-scsi-0:2:1:0" # TODO
+      # Set this to the path of the disk that will contains ceph data.
+      # The path can be found in "/dev/disk/by-path/"
+    devices: "{{ ceph_osd_disk }}"
+
+# Ceph clients. All machines in the cluster must be part of clients groups
+clients:
+  hosts:
+    hypervisor1:
+    hypervisor2:
+    observer:
+  vars:
+    user_config: true
+    rbd:
+      name: "rbd"
+      application: "rbd"
+      pg_autoscale_mode: on
+      target_size_ratio: 1
+    pools:
+      - "{{ rbd }}"
+    keys:
+      - name: client.libvirt
+        caps:
+          mon: 'profile rbd, allow command "osd blacklist"'
+          osd: "allow class-read object_prefix rbd_children, profile rbd pool=rbd"
+        mode: "{{ ceph_keyring_permissions }}"
+
+# ------------------------------------------------------------------------------
+# ----------------------- Empty groups, prevent warnings -----------------------
+# ------------------------------------------------------------------------------
+grafana-server:
+iscsigws:
+iscsi-gws:
+mdss:
+mgrs:
+nfss:
+rbdmirrors:
+rgwloadbalancers:
+rgws:
+standalone_machine:
+
+...

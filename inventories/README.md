@@ -7,82 +7,42 @@
 On SEAPATH, the definition of our setup must be described inside [Ansible inventories](https://docs.ansible.com/ansible/latest/inventory_guide/intro_inventory.html#passing-multiple-inventory-sources).
 You have to define your own inventories files which match with your setup.
 
-In this directory, you can find some commented examples of inventories for the following case:
-* a SEAPATH cluster demo which can be used to easily test SEAPATH with retails machines (use it as a POC, not in production)
-* a SEAPATH standalone hypervisor setup
-* a complex SEAPATH cluster
+## SEAPATH inventories examples
 
-It is possible with Ansible to provides [multiple inventories files](https://docs.ansible.com/ansible/latest/inventory_guide/intro_inventory.html#passing-multiple-inventory-sources), and we recommend using this feature for complex setup. In this directory, we have separated the "complex SEAPATH cluster" into three inventories. We have a dedicated inventory file for:
-* the physical machines
-* the cluster internal network (Open vSwitch topology)
-* the virtual machines
-## SEAPATH Ansible inventories examples description
+In the `examples` directory, you can find some commented and minimal examples of inventories for a standalone and cluster configuration.
 
-All inventories examples are in YAML format. The example inventories are:
-* `seapath_demo_cluster_definition_example.yml`: SEAPATH cluster demo
-* `seapath_standalone_definition_example.yml`: SEAPATH standalone hypervisor setup
-* The complex SEAPATH cluster inventories are:
-	* `seapath_cluster_definition_example.yml`: physical machines
-	* `seapath_ovstopology_definition_example.yml`: cluster internal network (Open vSwitch topology)
-	* `seapath_vm_definition_example.yml`: virtual machines
+It is possible with Ansible to provides [multiple inventories files](https://docs.ansible.com/ansible/latest/inventory_guide/intro_inventory.html#passing-multiple-inventory-sources), and we recommend using this feature for complex setup.
 
-The directory also contains the firewall rules `iptables_rules_example.txt` which are referring in `seapath_cluster_definition_example.yml`.
+All these inventories contain only the minimal variables required to configure and run SEAPATH. For advanced configuration, please refer to the [Ansible configuration](https://lf-energy.atlassian.net/wiki/x/lIblAQ) page on the wiki.
 
-The simple SEAPATH cluster inventory require only minor tweak to be adapted. In all other files described, all the options which do not match a realistic case and need to be modified are indicated.
+### Cluster inventory : seapath-cluster.yaml
 
-### Optional variables
+This inventory describes a cluster using two hypervisors and one observer. It is possible to use a three-hypervisor setup by adding a machine into the `hypervisors` section and removing the `observers` part.
+TODO : Put link to cluster architecture page on wiki when written
 
-You can find concrete examples of the variables in the inventories of this directory. Below are optional advanced variables that are not described in the examples.
+### Standalone inventory : seapath-standalone.yaml
 
-#### Network implementation
+This inventory describes a standalone SEAPATH machine. It contains virtualization and cybersecurity features of SEAPATH, but not the redundancy offered by the cluster.
 
-```yaml
-apply_network_config: true
-# If set to true, the OVS and systemd-network configuration will be applied at runtime, without a reboot.
-skip_reboot_setup_network: true
-# If set to true, the reboot at the end of the network playbook will be skipped. This is useful in the CI to apply all changes done by ansible within the final reboot. However, it can lead to race conditions if the inventory is not handled correctly.
-# It must be used with apply_network_config set to false, otherwise the reboot is already avoided.
-skip_recreate_team0_config: true
-# If set to true, the team0 ovs bridge of the cluster won't be destroyed and recreated by the network playbook.
-remove_all_network_config: true
-# If set to true, the network playbook will start by wiping the /etc/netplan/ directory content, this can help cleaning old conflicting files.
-# THIS MUST NOT BE USED WITH skip_recreate_team0_config at the same time or the cluster network config won't be recreated.
-network_simple: true
-# Do not apply the default network configuration. Only team0 will create. The “wired” connexion will not be configured. The bridges br0 and br0vlan will not be created.
-```
+### OVS inventory : seapath-ovs.yaml
 
-### SEAPATH demo cluster inventory
+This inventory describes a network Open vSwitch bridge over the cluster. It allows VM to communicate even after a migration toward another hypervisor.
+This work is done through the variable `ovs_bridges`, that is passed to [python3-setup-ovs](https://github.com/seapath/python3-setup-ovs) tool.
 
-If you are SEAPATH newcomer, you can use this example to create a SEAPATH POC cluster. At the opposite of a real SEAPATH cluster, which requires an advance machine with multiple cores and network cards. This example only requires one network interface and can be made with costumer retail machines.
+Note: The same extended network bridge is defined for all hypervisors through the variable `cluster_machines`.
 
-Of course, to achieve this, some concessions have been made. We keep only one network, as described in the schema below. Some advanced features have been removed.
+### Virtual machine inventory : seapath-vm-deployement.yaml
 
-<img src="./basic_cluster.png" alt="Exemple d'image" style="max-width:400px">
+This inventory describes the variables to deploy a Virtual machine on a hypervisor or on the cluster. It does not define any variables to configure what is inside the VM.
 
-#### ⚠ SEAPATH demo cluster inventory unsupported features ⚠
+Two files are required to deploy a virtual machine on SEAPATH :
+- A qemu image file (.qcow2, .iso or .img)
+- A Libvirt XML configuration file
 
-- Low latency network
-- Dedicated cluster network with redundancy
-- Advanced features like:
-    - SNMP
-    - Syslog log sending
-    - Advanced isolation
+The VM example inventory uses the template `templates/vm/guest.xml.j2` which aims to be a general purpose VM template for SEAPATH.
 
+If you aim to run virtual machine for production, we recommend proving your own Libvirt XML. Refer to the [Libvirt API documentation](https://libvirt.org/formatdomain.html) for more information.
 
-#### Variables to be configured to use the SEAPATH demo :
-
-You have to change some variables (mainly network settings) to adjust the inventory to your configuration:
-
-- ansible_host for each node (identical to the IP of the switch interface)
-- ceph_osd_disk to locate the disk used
-- (Optional) data_size and device_size can be modified depending on the space left on the ceph_osd_disk
-- gateway_addr
-- dns_servers
-- ntp_servers
-- public_network
-- admin_passwd
-- admin_ssh_keys
-
-### Provider examples
+## Provider examples
 
 You can find in the subdirectory `providers` some example for COTS VM from providers.
