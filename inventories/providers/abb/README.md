@@ -22,6 +22,16 @@ To use them, they can be copied in the `files` directory at the root of ansible.
 The VM need at least 30GB of free space. Ansible deploy it in the /var/lib/libvirt/images directory.
 > Make sure to have free 30GB on /var/lib directory
 
+## Example architecture
+
+The example inventories have been created to run the SSC600 VM using 2 interfaces (on the figure):
+- enp0s20f0u7: Ansible management, VM HMI, PTP
+- enp88s0: SVs
+
+The default br0 bridge is use.
+
+![architecture](ssc600-example-architecture.png)
+
 ## Cache L3 partitioning
 
 The L3 cache partitioning is not supported and would need to be tested with and without to see the impact.
