@@ -1,0 +1,50 @@
+# This inventory describes a virtual machine that will be deployed on a SEAPATH
+# cluster or standalone machine.
+# It gives two examples, the first on a critical (real-time) VM and the second
+# on a standard VM.
+#
+# Be careful that SEAPATH only handles how to deploy and run the virtual machine.
+# It does not handle any virtual machine inner configuration.
+#
+# Replace all the TODOs to fit your physical machines.
+# More informations on SEAPATH Wiki:
+# - General inventory : https://lf-energy.atlassian.net/wiki/x/lIblAQ
+# - guest.xml.j2 templated xml file : https://lf-energy.atlassian.net/wiki/x/ao3lAQ
+
+---
+VMs:
+  hosts:
+    rtvm:
+      vm_template: "../templates/vm/guest.xml.j2" # TODO: Replace with your template
+      vm_disk: "../vm_images/guest.qcow2" # TODO : Replace with your image name
+
+      # Connection test part. Remove if your vm has no ssh connection
+      ansible_host: 10.132.170.8 # TODO : Put the IP of your VM
+      wait_for_connection: true
+
+      # Configuration part. These variables only work with the guest.xml.j2 template
+      vm_features: ["rt", "isolated"] # features for real time VM
+      cpuset: [4, 5] # TODO : Replace by the hypervisor cpu you want to pin your VM on.
+      bridges:
+        - name: "br0"
+          mac_address: "52:54:00:e4:ff:02" # TODO
+            # Replace by the mac address you want for your VM
+
+    vm:
+      vm_template: "../templates/vm/guest.xml.j2" # TODO: Replace with your template
+      vm_disk: "../vm_images/guest.qcow2" # TODO : Replace with your image name
+
+      # Connection test part. Remove if your vm has no ssh connection
+      ansible_host: 10.132.170.9 # TODO : Put the IP of your VM
+      wait_for_connection: true
+
+      # Configuration part. These variables only work with the guest.xml.j2 template
+      vm_features: [] # features for non real-time VM
+      nb_cpu: 1 # TODO : Number of vCPU of your VM
+      bridges:
+        - name: "br0"
+          mac_address: "52:54:00:e4:ff:03" # TODO
+            # Replace by the mac address you want for your VM
+
+  vars:
+    ansible_user: ansible # Only for connection test

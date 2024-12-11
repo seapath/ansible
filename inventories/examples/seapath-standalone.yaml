@@ -1,0 +1,65 @@
+# This inventory describes a standalone SEAPATH machine (no cluster)
+# It contains all required variables to configure and run your standalone machine.
+# Replace all the TODOs to fit your physical machines.
+# More informations on SEAPATH Wiki: https://lf-energy.atlassian.net/wiki/x/lIblAQ
+
+---
+standalone_machine:
+  children:
+    hypervisors:
+      hosts:
+        hypervisor:
+          # TODO : Replace the variable by your IP or interfaces
+
+          # Admin network settings
+          ansible_host: 192.168.200.125
+          network_interface: eno1
+
+          # PTP configuration.
+          # Optional, remove if the machine is not synchronised with PTP
+          ptp_interface: "eno12419"
+
+
+  vars:
+    # Ansible vars
+    ansible_connection: ssh
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_remote_tmp: /tmp/.ansible/tmp
+    ansible_user: ansible # TODO: Put the name of your ansible user
+    # By default, this user is "ansible" on Debian and "admin" on Yocto
+
+    # Debian specific, remove if you use Yocto
+    admin_user: admin
+    isolcpus: "4-N" # TODO : Put the list of cpus to isolate.
+      # This variable is only used on Debian.
+      # On Yocto, it is configured in yocto-bsp
+
+    # Main network configuration
+    gateway_addr: "192.168.200.1" # TODO : Put your gatway address
+    dns_servers: "192.168.200.1" # TODO : Put your dns address
+    ip_addr: "{{ ansible_host }}"
+    apply_network_config: true
+    # systemd-networkd is used by default to configure the network
+    # netplan can also be used to sum up complex network in one yaml file
+    # See the wiki for more informations : TODO put link
+
+    # NTP time synchronisation
+    ntp_servers:
+      - "185.254.101.25" # public ntp server
+      - "51.145.123.29"  # public ntp serve
+
+# ------------------------------------------------------------------------------
+# ----------------------- Empty groups, prevent warnings -----------------------
+# ------------------------------------------------------------------------------
+grafana-server:
+iscsigws:
+iscsi-gws:
+mdss:
+mgrs:
+nfss:
+rbdmirrors:
+rgwloadbalancers:
+rgws:
+cluster_machines:
+
+...
