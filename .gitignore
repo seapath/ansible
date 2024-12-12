@@ -17,7 +17,7 @@ playbooks/*
 !playbooks/purge_ceph.yaml
 inventories/*
 !inventories/README.adoc
-!inventories/*example*
+!inventories/examples
 !inventories/providers
 
 # Ide

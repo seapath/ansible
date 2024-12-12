@@ -1,0 +1,40 @@
+# This inventory describes an extended OVS bridge over the SEAPATH cluster
+# It allows the VM to communicate even after a live migration.
+# It is not required for a SEAPATH cluster to work, it is given only as example
+# of the capabilites
+
+---
+cluster_machines:
+  children:
+    hypervisors:
+      vars:
+        ignored_bridges:
+          - "team0" # Do not modify. This bridge is created in a separate
+                    # playbook and should be left untouched.
+        ovs_bridges:
+          - name: brBRIDGE1
+            rstp_enable: true
+            other_config: "rstp-priority={{ br_rstp_priority | default(16384) }}"
+            ports:
+              - name: "brBRIDGE1_next"
+                type: vxlan
+                key: "1001"
+                remote_ip: "{{ cluster_next_ip_addr }}"
+              - name: "brBRIDGE1_previous"
+                type: vxlan
+                key: "1001"
+                remote_ip: "{{ cluster_previous_ip_addr }}"
+              - name: VM1.0  # a tap interface on this bridge for VM1
+                type: tap
+              - name: VM2.0  # a tap interface on this bridge for VM2
+                type: tap
+              - name: GEST_HOST # a local interface for the host
+                type: internal
+              - name: VM3.0  # a TRUNK interface for VM3
+                type: tap
+                trunks:
+                  - 33
+                  - 34
+              - name: VM4.0  # a access port (vlan 11) for VM4
+                type: tap
+                tag: 11
