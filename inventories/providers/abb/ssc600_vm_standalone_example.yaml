@@ -14,8 +14,8 @@ all:
           cpuset: [4, 5, 6, 7]
           emulatorpin: 3
           rt_priority: 50
-          ovs:
-            - ovs_port: VM1.0
+          bridges:
+            - name: "br0"
               mac_address: "52:54:00:c4:ff:06"
           sv_interfaces:
             - name: "enp88s0" # Change to your SV interface
