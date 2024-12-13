@@ -210,9 +210,17 @@
     group: root
     mode: 0644
   register: ovsvswitchd
+- name: Copy team0_x@.service file
+  ansible.builtin.copy:
+    src: team0_x@.service
+    dest: /etc/systemd/system/team0_x@.service
+    owner: root
+    group: root
+    mode: 0644
+  register: team0_x_service
 - name: Restart ovs-vswitchd
   ansible.builtin.systemd:
     state: restarted
     daemon_reload: yes
     name: ovs-vswitchd
-  when: ovsvswitchd.changed
+  when: ovsvswitchd.changed or team0_x_service.changed

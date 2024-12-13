@@ -1,2 +1,6 @@
 [Service]
 Slice=ovs.slice
+
+[Unit]
+Requires=team0_x@{{team0_0}}.service
+Requires=team0_x@{{team0_1}}.service
