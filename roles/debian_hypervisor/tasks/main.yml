@@ -202,9 +202,9 @@
     owner: root
     group: root
     mode: 0755
-- name: Copy ovs-vswitchd.service drop-in
-  ansible.builtin.copy:
-    src: ovs-vswitchd_override.conf
+- name: Create ovs-vswitchd.service drop-in
+  template:
+    src: ovs-vswitchd_override.conf.j2
     dest: /etc/systemd/system/ovs-vswitchd.service.d/override.conf
     owner: root
     group: root
