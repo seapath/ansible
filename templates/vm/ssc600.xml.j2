@@ -70,10 +70,11 @@
     <controller type="usb" index="0" model="none"/>
     <controller type="pci" index="0" model="pcie-root"/>
     <controller type="virtio-serial" index="0"/>
-    <filesystem type="mount" accessmode="mapped" readonly="on">
+    <filesystem type="mount" accessmode="mapped">
         <driver type="path" wrpolicy="immediate"/>
         <source dir="/var/run/ptpstatus"/>
         <target dir="ptp"/>
+        <readonly/>
     </filesystem>
     {% if vm.bridges is defined %}
     {% for bridge in vm.bridges %}
