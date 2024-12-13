@@ -7,7 +7,7 @@ The VM deployment has been tested on a yocto and a debian hypervisor.
 ## Structure
 
 - `ssc600_hypervisor_standalone_example.yaml`: The inventory for a standalone hypervisor
-- `ssc600_vm_standalone_example.yaml`: The inventory for the SSC600 VM
+- `ssc600_vm_example.yaml`: The inventory for the SSC600 VM
 
 ## Files needed
 
@@ -18,6 +18,8 @@ Some files provided by ABB are needed to use these inventories:
 To use them, they can be copied in the `files` directory at the root of ansible.
 
 > The raw image disk can be converted to qcow2 format. The disk_extract variable has to be set to false.
+
+In a cluster, the deployment playbook wants a qcow2 file. The conversion is needed and can be done with `qemu-img convert`
 
 ## Prerequisite
 
