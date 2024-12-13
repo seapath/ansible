@@ -1,0 +1,20 @@
+# Systemd unit wrapping around team0_* ports.
+# This can be used to synchronize ports link state with the service that use
+# them.
+
+[Unit]
+After=network.target
+DefaultDependencies=false
+Conflicts=shutdown.target
+Before=shutdown.target
+StopWhenUnneeded=true
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=networkctl up %i
+ExecStop=networkctl down %i
+
+[Install]
+# empty: This unit must be activated via Wants/Requires of other units that need
+# it
