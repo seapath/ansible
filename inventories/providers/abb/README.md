@@ -17,6 +17,8 @@ Some files provided by ABB are needed to use these inventories:
 
 To use them, they can be copied in the `files` directory at the root of ansible.
 
+> The raw image disk can be converted to qcow2 format. The disk_extract variable has to be set to false.
+
 ## Prerequisite
 
 The VM need at least 30GB of free space. Ansible deploy it in the /var/lib/libvirt/images directory.
