@@ -8,7 +8,11 @@ no requirement.
 
 ## Role Variables
 
-no variables.
+- cluster_ip_addr
+- cluster_protocol
+- interfaces_to_wait_for
+- team0_0
+- team0_1
 
 ## Example Playbook
 
