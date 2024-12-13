@@ -63,8 +63,13 @@
     <devices>
         <emulator>/usr/bin/qemu-system-x86_64</emulator>
         <disk type="file" device="disk">
+           {% if vm.disk_extract is defined and vm.disk_extract | bool %}
            <driver name="qemu" type="raw" cache='none' io='threads'/>
            <source file="/var/lib/libvirt/images/{{ vm.inventory_hostname }}.img"/>
+           {% else %}
+           <driver name="qemu" type="qcow2" cache='none' io='threads'/>
+           <source file="/var/lib/libvirt/images/{{ vm.inventory_hostname }}.qcow2"/>
+           {% endif %}
            <target dev="vda" bus="virtio"/>
         </disk>
     <controller type="usb" index="0" model="none"/>
