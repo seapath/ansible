@@ -62,6 +62,7 @@
     </pm>
     <devices>
         <emulator>/usr/bin/qemu-system-x86_64</emulator>
+        {% if 'standalone_machine' in groups and inventory_hostname in groups['standalone_machine'] %}
         <disk type="file" device="disk">
            {% if vm.disk_extract is defined and vm.disk_extract | bool %}
            <driver name="qemu" type="raw" cache='none' io='threads'/>
@@ -72,6 +73,7 @@
            {% endif %}
            <target dev="vda" bus="virtio"/>
         </disk>
+       {% endif %}
     <controller type="usb" index="0" model="none"/>
     <controller type="pci" index="0" model="pcie-root"/>
     <controller type="virtio-serial" index="0"/>
