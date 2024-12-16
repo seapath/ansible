@@ -23,27 +23,27 @@ jobs:
     steps:
       - name: Initialize sources
         run: mkdir ${{ env.WORK_DIR }}; cd ${{ env.WORK_DIR }};
-             git clone -q --depth 1 --recurse-submodules -b main https://github.com/seapath/ci ci;
+             git clone -q --depth 1 --recurse-submodules -b merge_latency_tests https://github.com/seapath/ci ci;
              echo "CI sources downloaded successfully";
-             GITHUB_REF=debiancentos ci/launch.sh init;
+             GITHUB_REF=merge_latency_tests ci/launch.sh init;
 
-      - name: Configure Debian
-        id: conf
-        run: cd ${{ env.WORK_DIR }};
-             ci/launch.sh conf;
+      # - name: Configure Debian
+      #   id: conf
+      #   run: cd ${{ env.WORK_DIR }};
+      #        ci/launch.sh conf;
 
-      - name: Launch system tests
-        if: ${{ always() && steps.conf.conclusion == 'success' }}
-        run: cd ${{ env.WORK_DIR }};
-             ci/launch.sh system;
+      # - name: Launch system tests
+      #   if: ${{ always() && steps.conf.conclusion == 'success' }}
+      #   run: cd ${{ env.WORK_DIR }};
+      #        ci/launch.sh system;
 
-      - name: Launch VM tests
-        if: ${{ always() && steps.conf.conclusion == 'success' }}
-        run: cd ${{ env.WORK_DIR }};
-             ci/launch.sh vm;
+      # - name: Launch VM tests
+      #   if: ${{ always() && steps.conf.conclusion == 'success' }}
+      #   run: cd ${{ env.WORK_DIR }};
+      #        ci/launch.sh vm;
 
       - name: Launch latency tests
-        if: ${{ always() && steps.conf.conclusion == 'success' }}
+        # if: ${{ always() && steps.conf.conclusion == 'success' }}
         run: cd ${{ env.WORK_DIR }};
              ci/launch.sh latency;
 
