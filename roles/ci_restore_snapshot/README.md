@@ -4,11 +4,11 @@ This role restores the LVM snapshot of the root LV and re-creates it
 
 ## Requirements
 
-- detect_seapath_distro
+No requirement.
 
 ## Role Variables
 
-- grub_append
+No variable.
 
 ## Example Playbook
 

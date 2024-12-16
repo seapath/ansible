@@ -10,6 +10,7 @@
   gather_facts: true
   roles:
     - ci_cleanup_syslog
+    - add_kernel_parameters
     - ci_restore_snapshot
 
 - name: CI configure skip reboot

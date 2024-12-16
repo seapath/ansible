@@ -2,21 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- include_vars: "{{ seapath_distro }}.yml"
 
-- name: "grub conf"
-  lineinfile:
-    dest: /etc/default/grub
-    regexp: "^(GRUB_CMDLINE_LINUX=(?!.* {{ item }})\"[^\"]*)(\".*)"
-    line: '\1 {{ item }}\2'
-    state: present
-    backrefs: yes
-  with_items:
-    - ipv6.disable=1
-    - efi=runtime
-    - "{{ grub_append | default([]) }}"
-- name: Update grub
-  command: "{{ grub_update_command }}"
 - name: Merge lvm snapshot
   command:
     cmd: lvconvert --merge vg1/root-snap

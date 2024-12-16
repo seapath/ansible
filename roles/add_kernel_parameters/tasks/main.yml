@@ -1,0 +1,50 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2024 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+
+- name: Check if we need to mount the boot partition
+  stat:
+    path: /usr/share/update/mount_boot.sh
+  register: mount_boot_script
+
+- name: Mount the boot partition if needed
+  command: /usr/share/update/mount_boot.sh
+  when: mount_boot_script.stat.exists
+
+- name: Detect the grub update command
+  stat:
+    path: /usr/sbin/update-grub
+  register: grub_update_command
+  when: grub_update_command is not defined
+
+- name: Set the grub update command to "update-grub"
+  set_fact:
+    grub_update_command: "update-grub"
+  when:
+    - grub_update_command is not defined
+    - grub_update_command.stat.exists
+
+- name: Set the grub update command to "grub2-mkconfig -o /boot/grub2/grub.cfg"
+  set_fact:
+    grub_update_command: "grub2-mkconfig -o /boot/grub2/grub.cfg"
+  when: grub_update_command is not defined
+
+- name: "grub conf"
+  lineinfile:
+    dest: /etc/default/grub
+    regexp: "^(GRUB_CMDLINE_LINUX=(?!.* {{ item }})\"[^\"]*)(\".*)"
+    line: '\1 {{ item }}\2'
+    state: present
+    backrefs: yes
+  with_items:
+    - ipv6.disable=1
+    - efi=runtime
+    - "{{ grub_append | default([]) }}"
+- name: Update grub
+  command: "{{ grub_update_command }}"
+
+- name: Umount the boot partition if needed
+  command: /usr/share/update/mount_boot.sh umount
+  when: mount_boot_script.stat.exists
