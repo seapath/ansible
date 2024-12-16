@@ -5,7 +5,7 @@ all:
   children:
     VMs:
       hosts:
-        ssc600-example:
+        ssc600example:
           description: "SSC600 VM Standalone Example"
           vm_template: "../templates/vm/ssc600.xml.j2"
           vm_disk: "../files/ssc600_disk.img.gz"
