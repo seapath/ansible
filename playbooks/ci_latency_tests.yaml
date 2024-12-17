@@ -5,6 +5,7 @@
 - name: Copy docker tar image
   hosts:
       - publisher_machine
+      - ci-tool
       - VMs
   tasks:
       - name: "Create latency_tests directory if it doesn't exist"
