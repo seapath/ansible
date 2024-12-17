@@ -52,6 +52,6 @@ jobs:
         run: cd ${{ env.WORK_DIR }};
              ci/launch.sh report;
 
-      - name: Clean
-        if: always()
-        run: rm -rf $WORK_DIR;
+      # - name: Clean
+      #   if: always()
+      #   run: rm -rf $WORK_DIR;
