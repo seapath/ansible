@@ -25,6 +25,8 @@
   hosts:
       - publisher_machine
       - ci-tool
+  tags:
+    - ptp
   tasks:
     - name: Copy ptp4l.service
       template:
