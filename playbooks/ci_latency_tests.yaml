@@ -79,7 +79,6 @@
         sv_timestamp_logger
         -d {{ sv_interface }}
         -f "/tmp/latency_tests/ts_{{ inventory_hostname }}.txt"
-        -t
 
 - name: Launch sv timestamp logger on VMs
   hosts:
@@ -99,7 +98,7 @@
         -v /tmp:/tmp
         --cap-add=SYS_NICE
         sv_timestamp_logger
-        -d {{ sv_interface }}
+        -d ens2
         -f "/tmp/latency_tests/ts_{{ inventory_hostname }}.txt"
 
 - name: Launch pcap sending
