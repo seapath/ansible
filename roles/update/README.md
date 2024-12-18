@@ -10,9 +10,9 @@ No requirement.
 
 ## Role Variables
 
-| Variable                | Required | Default   | Comments                                         |
-|-------------------------|----------|-----------|--------------------------------------------------|
-| swu_image               | yes      | swu_image | Path of the swupdate file on the Ansible machine |
+| Variable                | Required | Type   | Default   | Comments                                         |
+|-------------------------|----------|--------|-----------|--------------------------------------------------|
+| swu_image               | yes      | String | swu_image | Path of the swupdate file on the Ansible machine |
 
 ## Dependencies
 

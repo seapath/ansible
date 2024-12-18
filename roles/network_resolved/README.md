@@ -1,14 +1,16 @@
 # Network Resolved Role
 
-This role configures the DNS with resolved
+This role configures the DNS with resolved.
 
 ## Requirements
 
-no requirement.
+No requirement.
 
 ## Role Variables
 
-no variables.
+| Variable    | Requiered | Type           | Comments        |
+|-------------|-----------|----------------|-----------------|
+| dns_servers | No        | List of string | DNS server list |
 
 ## Example Playbook
 

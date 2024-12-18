@@ -19,7 +19,7 @@
         src: ptp_vsock.py
         dest: /var/lib/ptp/ptp_vsock.py
         mode: '0755'
-    
+
     - name: Copy ptp_status.service
       ansible.builtin.copy:
         src: ptpstatus/ptpstatus.service

@@ -4,11 +4,15 @@ This role configure the conntrackd feature
 
 ## Requirements
 
-no requirement.
+No requirement.
 
 ## Role Variables
 
 - conntrackd_ignore_ip_list
+
+| Variable                   | Required | Type   | Comments                                    |
+|----------------------------|----------|--------|---------------------------------------------|
+| conntrackd_ignore_ip_list  | no       | Bool   | Enable contrackd if the variable is defined |
 
 ## Example Playbook
 

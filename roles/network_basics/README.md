@@ -1,14 +1,14 @@
 # Network Basics Role
 
-This role does the basic network stuff, cleaning and setting defaults
+This role does the basic network stuff, cleaning and setting defaults.
 
 ## Requirements
 
-no requirement.
+No requirement.
 
 ## Role Variables
 
-no variables.
+No variables.
 
 ## Example Playbook
 

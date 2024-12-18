@@ -4,11 +4,11 @@ This role deploys the cukinia tests
 
 ## Requirements
 
-no requirement.
+No requirement.
 
 ## Role Variables
 
-- filter (can be "none", "hosts", "observers" or "guests")
+No variable.
 
 ## Example Playbook
 
