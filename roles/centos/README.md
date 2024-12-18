@@ -1,6 +1,6 @@
-# Centos Role
+# centos Role
 
-This role apply the basic SEAPATH prerequisites for any centos machine
+This role apply the basic SEAPATH prerequisites for any CentOS machine
 
 ## Requirements
 
@@ -8,14 +8,16 @@ no requirement.
 
 ## Role Variables
 
-- syslog_tls_ca
-- syslog_tls_key
-- syslog_tls_server_ca
-- admin_user
-- admin_passwd
-- admin_ssh_keys
-- grub_append
-- syslog_server_ip
+| Variable             | Type        | Comments                                                           |
+|----------------------|-------------|--------------------------------------------------------------------|
+| syslog_tls_ca        | String      | Syslog TLS public key                                              |
+| syslog_tls_key       | String      | Syslog TLS private key                                             |
+| syslog_tls_server_ca | String      | Syslog TLS CA                                                      |
+| admin_user           | String      | User to use for administration                                     |
+| admin_passwd         | String      | Optional user password                                             |
+| admin_ssh_keys       | String list | List of SSH public keys used to connect to the administration user |
+| grub_append          | String list | List of extra kernel parameters                                    |
+| syslog_server_ip     | String      | IP address of the Syslog server to send logs                       |
 
 ## Example Playbook
 

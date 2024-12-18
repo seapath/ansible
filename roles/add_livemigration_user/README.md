@@ -1,6 +1,7 @@
 # Add LiveMigration User Role
 
-This role sets the live migration user on the cluster, with ssh key exchanges
+This role sets the live migration user on the cluster, with ssh key exchanges.
+If the user does not already exist, they will be created.
 
 ## Requirements
 
@@ -8,7 +9,10 @@ no requirement.
 
 ## Role Variables
 
-- livemigration_user
+| Variable                | Required | Type   | Comments                                                           |
+|-------------------------|----------|--------|--------------------------------------------------------------------|
+| livemigration_user      | no       | String | The livemigration user. If not defined, the role will do nothing.  |
+
 
 ## Example Playbook
 
