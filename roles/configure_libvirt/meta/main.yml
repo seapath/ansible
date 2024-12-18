@@ -3,11 +3,17 @@
 ---
 galaxy_info:
   author: "Seapath"
-  description: configures the libvirt secret and pool for ceph to use
+  description: Create a libvirt storage pool for ceph.
   license: Apache-2.0
   min_ansible_version: 2.9.10
   platforms:
   - name: Debian
+    versions:
+    - all
+  - name: CentOS
+    versions:
+    - all
+  - name: Yocto
     versions:
     - all
 dependencies: []

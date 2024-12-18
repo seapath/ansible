@@ -72,15 +72,15 @@
   community.libvirt.virt_pool:
       command: define
       xml: '{{ lookup("template", "libvirt_pool.xml.j2") }}'
-      name: "{{ pool_name }}"
+      name: "{{ libvirt_pool_name }}"
 - name: Start libvirt pool
   community.libvirt.virt_pool:
       state: active
-      name: "{{ pool_name }}"
+      name: "{{ libvirt_pool_name }}"
 - name: Autostart pool
   community.libvirt.virt_pool:
       autostart: yes
-      name: "{{ pool_name }}"
+      name: "{{ libvirt_pool_name }}"
 - name: Refresh pool
   command: virsh pool-refresh --pool ceph
   changed_when: false

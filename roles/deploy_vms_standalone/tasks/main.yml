@@ -47,7 +47,7 @@
   vars:
     ansible_remote_tmp: "{{ qcow2tmpuploadfolder | default(omit) }}"
   when:
-    - disk_copy | default(true) | bool
+    - disk_copy | bool
     - hostvars[item].disk_extract is not defined or not hostvars[item].disk_extract | bool
     - item not in all_vms.list_vms or (item in all_vms.list_vms and hostvars[item].force is defined and hostvars[item].force)
   loop: "{{ groups['VMs'] }}"

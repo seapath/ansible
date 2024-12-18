@@ -8,15 +8,17 @@ no requirement.
 
 ## Role Variables
 
-- syslog_tls_ca
-- syslog_tls_key
-- syslog_tls_server_ca
-- admin_user
-- admin_passwd
-- admin_ssh_keys
-- grub_append
-- syslog_server_ip
-- apt_repo
+| Variable             | Required | Type        | Comments                                                           |
+|----------------------|----------|-------------|--------------------------------------------------------------------|
+| syslog_tls_ca        |  No      | String      | Syslog TLS public key                                              |
+| syslog_tls_key       |  No      | String      | Syslog TLS private key                                             |
+| syslog_tls_server_ca |  No      | String      | Syslog TLS CA                                                      |
+| admin_user           |  Yes     | String      | User to use for administration                                     |
+| admin_passwd         |  No      | String      | Optional user password                                             |
+| admin_ssh_keys       |  No      | String list | List of SSH public keys used to connect to the administration user |
+| grub_append          |  No      | String list | List of extra kernel parameters                                    |
+| syslog_server_ip     |  No      | String      | IP address of the Syslog server to send logs                       |
+| apt_repo             |  No      | String list | List of apt repositories                                           |
 
 ## Example Playbook
 
