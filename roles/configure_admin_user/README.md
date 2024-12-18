@@ -1,13 +1,16 @@
-# Configure admin_user Role
+# Configure admin user Role
 This role copy the root ssh key to admin user's. This user is used by Debian when using consolevm.
 
 ## Requirements
 
-- detect_seapath_distro
+No requirement.
 
 ## Role Variables
 
-- admin_user
+| Variable                | Required | Type   | Comments                                                           |
+|-------------------------|----------|--------|--------------------------------------------------------------------|
+| seapath_distro          | yes      | String | SEAPATH variant. *CentOS*, *Debian* or *Yocto*. The variable can be set automatically using the *detect_seapath_distro role* |
+| admin_user              | yes      | String | The admin user.                                                    |
 
 ## Example Playbook
 

@@ -27,7 +27,7 @@
           dest: "{{ vm_file_dest }}"
         vars:
           ansible_remote_tmp: "{{ qcow2tmpuploadfolder | default(omit) }}"
-        when: disk_copy | default(true) | bool
+        when: disk_copy | bool
       - name: "Create {{ item }}"
         cluster_vm:
           name: "{{ item }}"
@@ -61,8 +61,8 @@
           - hostvars[item].wait_for_connection is defined
           - hostvars[item].wait_for_connection
   vars:
-    vm_file: "{{ hostvars[item].vm_disk | default( (vms_disks_directory|default('')) ~ '/' ~ item ~ '.qcow2') }}"
-    vm_file_dest: "{{ qcow2tmpuploadfolder | default('/tmp') + '/os.qcow2' }}"
+    vm_file: "{{ hostvars[item].vm_disk | default( vms_disks_directory ~ '/' ~ item ~ '.qcow2') }}"
+    vm_file_dest: "{{ qcow2tmpuploadfolder + '/os.qcow2' }}"
 
   when: presencevm.status == "Undefined" or (hostvars[item].force is defined and hostvars[item].force)
 

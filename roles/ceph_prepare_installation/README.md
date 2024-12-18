@@ -8,8 +8,12 @@ no requirement.
 
 ## Role Variables
 
-- ceph_osd_disk
-- lvm_volumes
+| Variable      | Required | Type         | Comments                                                                                                                                      |
+|---------------|----------|--------------|-----------------------------------------------------------------------------------------------------------------------------------------------|
+| lvm_volumes   | No       | List of dict | LVM volumes used for Ceph OSD. Refer to Ceph Ansible documentation: https://docs.ceph.com/projects/ceph-ansible/en/latest/osds/scenarios.html |
+| ansible_lvm   | No       | Dict         | TODO                                                                                                                                          |
+| ceph_osd_disk | No       | String       | Node device disk to use for Ceph OSD if lvm_volumes is not used                                                                               |
+
 
 ## Example Playbook
 

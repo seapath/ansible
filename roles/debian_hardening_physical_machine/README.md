@@ -1,15 +1,16 @@
 # Debian Hardening for Physical Machine Role
 
-This role apply the hardening configurations for debian physical machines
+This role apply the hardening configurations for debian physical machines.
 
 ## Requirements
 
-no requirement.
+No requirement.
 
 ## Role Variables
 
-- hardened_services
-- ceph_osd_disk
+| Variable      | Type   | Comments                                                        |
+|---------------|--------|-----------------------------------------------------------------|
+| ceph_osd_disk | String | Node device disk to use for Ceph OSD if lvm_volumes is not used |
 
 ## Example Playbook
 

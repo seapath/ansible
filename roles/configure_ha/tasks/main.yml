@@ -145,7 +145,6 @@
     cmd: crm -d config load update -
     stdin: "{{ vmmgrapi_cmd_list }}"
   when:
-    - enable_vmmgr_http_api is defined
     - enable_vmmgr_http_api is true
     - admin_cluster_ip is defined
   run_once: true
