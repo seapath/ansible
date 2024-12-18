@@ -4,11 +4,18 @@ This role extends the ceph LV to whatever is ask in the variables
 
 ## Requirements
 
-no requirement.
+No requirement.
 
 ## Role Variables
 
-- lvm_volumes
+| Variable                | Required | Type          | Comments                                                           |
+|-------------------------|----------|---------------|--------------------------------------------------------------------|
+| lvm_volumes             | no       | Array of dict | LVM volumes                                                        |
+| -> data_vg              | no       |String         | TODO                                                               |
+| -> data                 | no       |String         | TODO                                                               |
+| -> data_size            | no       |String         | TODO                                                               |
+| ansible_lvm             | no       | Dict          | TODO                                                               |
+
 
 ## Example Playbook
 

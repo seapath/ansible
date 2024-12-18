@@ -10,5 +10,7 @@ galaxy_info:
   - name: Debian
     versions:
     - all
+  - name: CentOS
+    versions:
+    - all
 dependencies: []
-
