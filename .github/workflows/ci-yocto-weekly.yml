@@ -5,7 +5,7 @@
 # This ensure the main branch is always tested properly.
 # A badge is derived from this workflow.
 
-name: CI debian-centos weekly
+name: CI Yocto weekly
 
 on:
   schedule:
