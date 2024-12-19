@@ -6,8 +6,8 @@ Setup machines with Ansible
 :toc:
 :sectnumlevels: 1
 
-image::https://github.com/seapath/ansible/actions/workflows/ci-yocto-weekly.yml/badge.svg["CI Debian status", link=https://github.com/seapath/ansible/actions/workflows/ci-debian.yml]
-image::https://github.com/seapath/ansible/actions/workflows/ci-debian-weekly.yml/badge.svg["CI Debian status", link=https://github.com/seapath/ansible/actions/workflows/ci-debian.yml]
+image::https://github.com/seapath/ansible/actions/workflows/ci-yocto-weekly.yml/badge.svg["CI Yocto status", link=https://github.com/seapath/ansible/actions/workflows/ci-yocto-weekly.yml]
+image::https://github.com/seapath/ansible/actions/workflows/ci-debian-weekly.yml/badge.svg["CI Debian status", link=https://github.com/seapath/ansible/actions/workflows/ci-debian-weekly.yml]
 
 *Warning : The Debian and Yocto Ansible branches were recently merged.*
 *The content of this main branch has been forced push to contain the merged code.*
@@ -15,9 +15,10 @@ image::https://github.com/seapath/ansible/actions/workflows/ci-debian-weekly.yml
 
 *If you have pulled the main branch before December 19, 2024, you have to do a fresh pull.*
 *We strongly encourage you to switch to the new main branch, as the following branches will not be maintained anymore* :
-- debiancentos
-- yocto_legacy
-- debian-main
+
+* debiancentos
+* yocto_legacy
+* debian-main
 
 If you have ongoing work on the old main branch, you can proceed as follows.
 This assumes your HEAD points to this work
