@@ -8,8 +8,5 @@
 - name: Configure libvirt
   hosts: hypervisors:&cluster_machines
   become: true
-  vars:
-    rbd_pool_name: "{{ libvirt_rbd_pool | default('rbd') }}"
-    pool_name: "{{ libvirt_pool_name | default('ceph') }}"
   roles:
     - configure_libvirt

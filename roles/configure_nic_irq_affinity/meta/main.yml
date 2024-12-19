@@ -10,5 +10,10 @@ galaxy_info:
   - name: Debian
     versions:
     - all
+  - name: Yocto
+    versions:
+    - all
+  - name: CentOS
+    versions:
+    - all
 dependencies: []
-

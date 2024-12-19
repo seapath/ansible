@@ -1,14 +1,17 @@
 # Network SR-IOV pool Role
 
-This role creates a libvirt pool for an SR-IOV interface
+This role creates a libvirt pool for an SR-IOV interface.
 
 ## Requirements
 
-no requirement.
+No requirement.
 
 ## Role Variables
 
-no variables.
+| Variable                | Requiered | Type   | Comments                                  |
+|-------------------------|-----------|--------|-------------------------------------------|
+| sriov_network_pool_name | Yes       | String | Name of the libvirt SR-IOV pool           |
+| interface               | Yes       | String | Network interface to use for SR-IOV setup |
 
 ## Example Playbook
 

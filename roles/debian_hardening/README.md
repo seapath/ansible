@@ -1,19 +1,19 @@
 # Debian Hardening Role
 
-This role apply the hardening SEAPATH configurations
+This role apply the hardening SEAPATH configurations.
 
 ## Requirements
 
-no requirement.
+No requirement.
 
 ## Role Variables
 
-- sudoers_files
-- admin_user
-- hardened_services
-- grub_password
-- ip_addr
-- cluster_ip_addr
+| Variable        | Type   | Comments                        |
+|-----------------|--------|---------------------------------|
+| admin_user      | String | Administrator Unix username     |
+| grub_password   | String | Password to access grub console |
+| ip_addr         | String | IP address for administration   |
+| cluster_ip_addr | String | Cluster IP address              |
 
 ## Example Playbook
 

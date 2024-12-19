@@ -1,14 +1,16 @@
 # Network Netplan Role
 
-This role configures the network via Netplan
+This role configures the network via Netplan.
 
 ## Requirements
 
-no requirement.
+No requirement.
 
 ## Role Variables
 
-no variables.
+| Variable               | Requiered | Type           | Comments                                                                               |
+|------------------------|-----------|----------------|----------------------------------------------------------------------------------------|
+| netplan_configurations | No        | List of string | List of netplan Ansible template files on the Ansible machine to be uploaded on target |
 
 ## Example Playbook
 
