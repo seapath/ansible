@@ -74,6 +74,7 @@
         -d {{ sv_interface }}
         -f "/tmp/latency_tests/ts_{{ inventory_hostname }}.txt"
         -t
+        -l
 
 - name: Launch sv timestamp logger on VMs
   hosts: VMs
@@ -94,6 +95,7 @@
         sv_timestamp_logger
         -d {{ sv_interface }}
         -f "/tmp/latency_tests/ts_{{ inventory_hostname }}.txt"
+        -l
 
 - name: Launch pcap sending
   hosts: publisher_machine
