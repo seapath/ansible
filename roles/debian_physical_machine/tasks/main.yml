@@ -2,6 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+- name: Populate service facts
+  service_facts:
+
 - name: Copy sysctl rules
   ansible.builtin.copy:
     src: "{{ item }}"
@@ -62,6 +65,8 @@
     rsync_opts:
     - "--chmod=F755"
     - "--chown=root:root"
+  when:
+    - "'cluster_machines' in group_names"
 
 - name: Copy chrony-wait.service
   template:
@@ -80,36 +85,39 @@
     name: chrony-wait.service
     enabled: yes
 
-- name: Create pacemaker.service.d directory
-  file:
-    path: /etc/systemd/system/pacemaker.service.d/
-    state: directory
-    owner: root
-    group: root
-    mode: 0755
-- name: Copy pacemaker.service drop-in
-  template:
-    src: pacemaker_override.conf.j2
-    dest: /etc/systemd/system/pacemaker.service.d/override.conf
-    owner: root
-    group: root
-    mode: 0644
-  notify: daemon-reload
-  register: pacemaker_corosync
-- name: Get Pacemaker service Status
-  ansible.builtin.systemd:
-    name: "pacemaker.service"
-  register: pacemaker_service_status
-- name: disable pacemaker (reinstall step 1/2)
-  ansible.builtin.systemd:
-    name: pacemaker.service
-    enabled: no
-  when: pacemaker_corosync.changed and pacemaker_service_status.status.UnitFileState == "enabled"
-- name: enable pacemaker (reinstall step 2/2)
-  ansible.builtin.systemd:
-    name: pacemaker.service
-    enabled: yes
-  when: pacemaker_corosync.changed and pacemaker_service_status.status.UnitFileState == "enabled"
+- block:
+    - name: Create pacemaker.service.d directory
+      file:
+        path: /etc/systemd/system/pacemaker.service.d/
+        state: directory
+        owner: root
+        group: root
+        mode: 0755
+    - name: Copy pacemaker.service drop-in
+      template:
+        src: pacemaker_override.conf.j2
+        dest: /etc/systemd/system/pacemaker.service.d/override.conf
+        owner: root
+        group: root
+        mode: 0644
+      notify: daemon-reload
+      register: pacemaker_corosync
+    - name: Get Pacemaker service Status
+      ansible.builtin.systemd:
+        name: "pacemaker.service"
+      register: pacemaker_service_status
+    - name: disable pacemaker (reinstall step 1/2)
+      ansible.builtin.systemd:
+        name: pacemaker.service
+        enabled: no
+      when: pacemaker_corosync.changed and pacemaker_service_status.status.UnitFileState == "enabled"
+    - name: enable pacemaker (reinstall step 2/2)
+      ansible.builtin.systemd:
+        name: pacemaker.service
+        enabled: yes
+      when: pacemaker_corosync.changed and pacemaker_service_status.status.UnitFileState == "enabled"
+  when:
+    - services['pacemaker.service'] is defined
 
 - name: Add extra modules to the kernel
   lineinfile:
