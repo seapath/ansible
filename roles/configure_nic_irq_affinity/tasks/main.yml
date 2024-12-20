@@ -10,23 +10,20 @@
         src: setup_nic_irq_affinity.py
         dest: /etc/systemd/system/setup_nic_irq_affinity.py
         mode: 0755
-    
+      notify: Enable and start NIC irq affinity service
+
     - name: Copy NIC irq affinity service
       copy:
         src: setup_nic_irq_affinity.service
         dest: /etc/systemd/system/setup_nic_irq_affinity.service
         mode: 0644
-    
+      notify: Enable and start NIC irq affinity service
+
     - name: Copy NIC irq affinity environment file
       template:
         src: setup_nic_irq_affinity.j2
         dest: /etc/default/setup_nic_irq_affinity
         mode: 0644
-    
-    - name: Enable and start NIC irq affinity service
-      systemd:
-        name: setup_nic_irq_affinity.service
-        enabled: yes
-        state: started
-        daemon_reload: yes
+      notify: Enable and start NIC irq affinity service
+
   when: nics_affinity is defined

@@ -1,14 +1,17 @@
 # Network Guests br0 interfaces Role
 
-This role creates the interfaces for guests which need to be on br0
+This role creates the interfaces for guests which need to be on br0.
 
 ## Requirements
 
-no requirement.
+No requirement.
 
 ## Role Variables
 
-no variables.
+| Variable              | Requiered | Type | Comments |
+|-----------------------|-----------|------|----------|
+| interfaces_br0_netdev | No        | ???  | TODO     |
+| interfaces_on_br0     | No        | ???  | TODO     |
 
 ## Example Playbook
 

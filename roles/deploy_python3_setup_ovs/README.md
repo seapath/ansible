@@ -4,11 +4,11 @@ deploys python3-setup-ovs (seapath-config_ovs)
 
 ## Requirements
 
-no requirement.
+No requirement.
 
 ## Role Variables
 
-no variable.
+No variable.
 
 ## Example Playbook
 
