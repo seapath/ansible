@@ -16,5 +16,5 @@
         user: "{{ admin_user }}"
         state: present
         key: "{{ lookup('file','buffer/' + item + '-id_rsa.pub') }}"
-      with_items: "{{ groups['hypervisors'] }}"
+      loop: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) }}"
   when: seapath_distro in [ "CentOS", "Debian" ]
