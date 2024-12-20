@@ -38,7 +38,7 @@
       user: "{{ livemigration_user }}"
       state: present
       key: "{{ lookup('file','buffer/' + item + '-id_rsa.pub') }}"
-    with_items: "{{ groups['hypervisors'] }}"
+    loop: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) }}"
   - name: Fetch the ssh keyfile
     fetch:
       src: "/etc/ssh/ssh_host_ed25519_key.pub"
@@ -49,5 +49,5 @@
       path: "{{ root_home_dir.stdout }}/.ssh/known_hosts"
       name: "{{ item }}"
       key: "{{ item }} {{ lookup('file','buffer/' + item + '-ssh_host_ed25519_key.pub') }}"
-    with_items: "{{ groups['hypervisors'] }}"
+    loop: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) }}"
   when: livemigration_user is defined
