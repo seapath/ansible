@@ -11,6 +11,11 @@ on:
     types: [opened, reopened, synchronize]
     branches: [main]
   workflow_call:
+    inputs:
+      pcap_loop:
+        default: 60
+        required: false
+        type: number
   workflow_dispatch:
 
 permissions:
@@ -20,6 +25,8 @@ permissions:
 jobs:
   CI:
     runs-on: [self-hosted, runner-SFL]
+    env:
+      PCAP_LOOP: ${{ inputs.pcap_loop == '' && '60' || inputs.pcap_loop  }}
     steps:
 
       - name: Initialize sources
