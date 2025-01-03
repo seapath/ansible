@@ -11,10 +11,11 @@
   changed_when: false
 - debug:
     var: secret_defined
+
 - name: Check if a secret pool has to be created
   set_fact:
     create_secret_pool: "{% if hostvars[item]['secret_defined'].stdout == '' %}true{% else %}{{ create_secret_pool | default(false) }}{% endif %}"
-  loop: "{{ groups['hypervisors'] }}"
+  loop: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) }}"
 
 - block:
     - name: Check if the secret is already defined
