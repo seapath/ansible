@@ -11,6 +11,11 @@ on:
     types: [opened, reopened, synchronize]
     branches: [main]
   workflow_call:
+    inputs:
+      pcap_loop:
+        default: 60 # 1 min
+        required: false
+        type: number
   workflow_dispatch:
 
 permissions:
@@ -20,11 +25,13 @@ permissions:
 jobs:
   CI:
     runs-on: [self-hosted, runner-SFL]
+    env:
+      PCAP_LOOP: ${{ inputs.pcap_loop }}
     steps:
 
       - name: Initialize sources
         run: mkdir ${{ env.WORK_DIR }}; cd ${{ env.WORK_DIR }};
-             git clone -q --depth 1 --recurse-submodules -b main https://github.com/seapath/ci ci;
+             git clone -q --depth 1 --recurse-submodules -b improve-latency-tests https://github.com/seapath/ci ci;
              echo "CI sources downloaded successfully";
              ci/launch-yocto.sh init;
 
@@ -65,6 +72,6 @@ jobs:
         run: cd ${{ env.WORK_DIR }};
              ci/launch-yocto.sh report;
 
-      - name: Clean
-        if: always()
-        run: rm -rf $WORK_DIR;
+      # - name: Clean
+      #   if: always()
+      #   run: rm -rf $WORK_DIR;
