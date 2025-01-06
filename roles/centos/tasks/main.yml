@@ -201,3 +201,23 @@
 - name: update-grub
   command: grub2-mkconfig -o /boot/grub2/grub.cfg
   when: updategrub1.changed or updategrub2.changed
+
+- name: Stop and Disable NetworkManager
+  service:
+    name: NetworkManager
+    state: stopped
+    enabled: no
+  register: nm_stop
+
+- name: Start and Enable systemd-networkd
+  service:
+    name: systemd-networkd
+    state: started
+    enabled: yes
+  register: sd_start
+
+
+- name: Set need_reboot to true if any change was made
+  set_fact:
+    need_reboot: true
+  when: nm_stop is changed or sd_start is changed
