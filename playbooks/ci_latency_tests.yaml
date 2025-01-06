@@ -103,6 +103,7 @@
   tasks:
     - name: "Send pcap from publisher"
       command: >-
+        {% if bittwist_cpu is defined %} taskset -c {{ bittwist_cpu }} {% endif %}
           bittwist
             -i {{ sv_interface }}
             -l {{ pcap_loop }}
