@@ -25,6 +25,14 @@
 - name: Refresh LVM
   command:
     cmd:  lvchange --refresh vg1
+
+- name: wait until snapshot is cleared
+  command: lvs -a
+  register: result
+  until: result.stdout | regex_search('root-snap', ignorecase=True) is none
+  retries: 6
+  delay: 10
+
 - name: Recreate the snapshot
   lvol:
     vg: vg1
