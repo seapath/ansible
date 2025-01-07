@@ -14,5 +14,3 @@ galaxy_info:
   - name: Yocto
     versions:
     - all
-dependencies:
-  - role: detect_seapath_distro
