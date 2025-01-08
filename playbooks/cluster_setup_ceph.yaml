@@ -29,7 +29,45 @@
   roles:
     - ceph_expansion_lv
 
+- name: Ceph OSD hosts pre-configuration
+  hosts: osds
+  tasks:
+    - name: Disable private tmpfs for ceph configuration
+      when: seapath_distro == "Yocto"
+      block:
+        - name: Create /run/systemd/system/sshd@.service.d directory
+          file:
+            path: /run/systemd/system/sshd@.service.d
+            state: directory
+        - name: Temporarily disable private tmpfs for ssh sessions
+          copy:
+            dest: /run/systemd/system/sshd@.service.d/99-temp-disable-private-tmp.conf
+            content: |
+              [Service]
+              PrivateTmp=no
+        - name: Reload systemd daemon
+          systemd:
+            daemon_reload: true
+    - name: Reset Ansible SSH connection
+      meta: reset_connection
+
 - import_playbook: ../ceph-ansible/site.yml
+
+- name: Ceph OSD hosts post-configuration
+  hosts: osds
+  tasks:
+    - name: Enable again private tmpfs after ceph installation
+      when: seapath_distro == "Yocto"
+      block:
+        - name: Delete temporary sshd service override
+          file:
+            path: /run/systemd/system/sshd@.service.d/99-temp-disable-private-tmp.conf
+            state: absent
+        - name: Reload systemd daemon
+          systemd:
+            daemon_reload: true
+    - name: Reset Ansible SSH connection
+      meta: reset_connection
 
 # Ceph mgr module which is enabled by default is not supported by SEAPATH.
 - name: Disable unwanted Ceph mgr module
