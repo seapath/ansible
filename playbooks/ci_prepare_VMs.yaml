@@ -12,17 +12,6 @@
     - VMs
   become: true
   tasks:
-    - name: Stop and disable chrony
-      ansible.builtin.systemd:
-        name: "chrony"
-        state: stopped
-        enabled: false
-    - name: Stop and disable systemd-resolved
-      ansible.builtin.systemd:
-        name: systemd-resolved
-        state: stopped
-        enabled: false
-
     - name: remove tuned dynamic tuning
       lineinfile:
         path: /etc/tuned/tuned-main.conf
