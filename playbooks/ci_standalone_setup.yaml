@@ -7,8 +7,9 @@
   hosts:
     - cluster_machines
     - standalone_machine
-  gather_facts: false
+  gather_facts: true
   roles:
-    - ci_yocto/reboot_on_usb_drive
+     - role: ci_yocto/reboot_on_usb_drive
+       when: ansible_facts['architecture'] == "x86_64"
 
 - import_playbook: seapath_setup_main.yaml
