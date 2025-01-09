@@ -13,6 +13,6 @@
 - name: Fetch results
   fetch:
     src: '{{ tmp_test_dir.path }}/system_info.adoc'
-    dest: "{{ cukinia_test_prefix | default('..') }}/system_info.adoc"
+    dest: "{{ cukinia_test_prefix | default('..') }}/system_info_{{ inventory_hostname }}.adoc"
     flat: yes
 ...
