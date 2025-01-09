@@ -23,11 +23,14 @@
       }}.xml
     flat: yes
 
-- name: Execute cyclitect script
-  script: run_cyclictest.py '{{ tmp_test_dir.path }}/cyclictest.txt'
-- name: Fetch results
-  fetch:
-    src: '{{ tmp_test_dir.path }}/cyclictest.txt'
-    dest: "{{ cukinia_test_prefix | default('..') }}/cyclictest_{{ inventory_hostname }}.txt"
-    flat: yes
+- name: Cyclictest
+  block:
+    - name: Execute cyclitect script
+      script: run_cyclictest.py '{{ tmp_test_dir.path }}/cyclictest.txt'
+    - name: Fetch results
+      fetch:
+        src: '{{ tmp_test_dir.path }}/cyclictest.txt'
+        dest: "{{ cukinia_test_prefix | default('..') }}/cyclictest_{{ inventory_hostname }}.txt"
+        flat: yes
+  when: skip_cyclictest is not defined or not skip_cyclictest
 ...

@@ -8,6 +8,7 @@
     - cluster_machines
     - standalone_machine
     - VMs
+  gather_facts: false
   roles:
     - ci_yocto/run_tests
 
