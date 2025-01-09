@@ -40,7 +40,7 @@
     <currentMemory unit="MiB">{{ vm.memory | default ("2048") }}</currentMemory>
     {% endif %}
     <os firmware="efi">
-        <type arch="x86_64" machine="pc-i440fx-4.1">hvm</type>
+        <type arch="x86_64" machine="pc-q35-3.1">hvm</type>
         <boot dev="hd" />
         <bootmenu enable="no" />
         <bios useserial="yes" rebootTimeout="0" />
@@ -52,7 +52,7 @@
         <vmport state="off" />
         {% if "rt" in vm.vm_features %}
         <pmu state="off" />
-        {% endif %}
+        {%- endif %}
     </features>
     <cputune>
     {% if vm.cpuset is defined %}
@@ -67,7 +67,7 @@
     {% endif %}
     {% if vm.emulatorpin is defined %}
         <emulatorpin cpuset="{{ vm.emulatorpin }}"/>
-    {% endif %}
+    {%- endif %}
     </cputune>
     {% if "rt" in vm.vm_features %}
     <cpu mode="host-passthrough">
@@ -188,7 +188,7 @@
         </interface>
         {% endfor %}
         {% endif %}
-        <controller type="pci" index="0" model="pci-root" />
+        <controller type="pci" index="0" model="pcie-root" />
         <serial type="pty">
             <target type="isa-serial" port="0">
                 <model name="isa-serial" />
@@ -198,6 +198,6 @@
             <target type="serial" port="0" />
         </console>
         <memballoon model="none" />
-        <watchdog model="ib700" action="poweroff" />
+        <watchdog model="i6300esb" action="poweroff" />
     </devices>
 </domain>
