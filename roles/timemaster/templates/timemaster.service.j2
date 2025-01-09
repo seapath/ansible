@@ -1,12 +1,14 @@
 [Unit]
 After=network-online.target
+{% if ptp_interface is defined and ptp_vlanid is not defined %}
+After=sys-subsystem-net-devices-{{ ptp_interface }}.device
+{% endif %}
 Wants=network-online.target
 
 [Service]
 {% if ptp_interface is defined %}{% if ptp_vlanid is defined %}
 ExecStartPre=bash -c "while true; do ip addr show {{ ptp_interface + '.' + ptp_vlanid|string }} && break; sleep 1; done"
 {% else %}
-After=sys-subsystem-net-devices-{{ ptp_interface }}.device
 ExecStartPre=bash -c "while true; do ip addr show {{ ptp_interface }} && break; sleep 1; done"
 {% endif %}
 {% endif %}
