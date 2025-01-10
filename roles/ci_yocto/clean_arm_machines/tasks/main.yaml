@@ -1,0 +1,40 @@
+# Copyright (C) 2025 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+#
+# This role allows to clean the hypervisor.
+# It performs a software update and removes persistent data.
+
+---
+- name: Create /tmp/update folder
+  file:
+    path: /tmp/update
+    state: directory
+    mode: '0755'
+- name: Mount the USB key
+  mount:
+    src: "{{ usb_device }}"
+    path: /tmp/update
+    fstype: vfat
+    state: mounted
+- name: Execute Swupdate
+  command: /usr/bin/swupdate -i /tmp/update/{{ swupdate_image }}
+- name: Unmount the USB key
+  mount:
+    path: /tmp/update
+    state: unmounted
+- name: Get overlay mounts
+  command: awk '$3 == "overlay" {print $2}' /proc/mounts
+  register: overlay_mounts
+- name: Unmount overlays
+  command: umount -l {{ item }}
+  with_items: "{{ overlay_mounts.stdout_lines }}"
+- name: Remove persistent data
+  file:
+    path: '{{ item }}'
+    state: absent
+  with_items:
+    - /mnt/persistent/etc
+    - /mnt/persistent/home
+    - /mnt/persistent/var
+- name: Reboot the system
+  reboot:
