@@ -16,17 +16,17 @@
     <description>
         {{ vm.description |default("Test VM") }}
     </description>
-    {% if cpumachines is defined %}
+{% if cpumachines is defined %}
     <resource>
-    {% if "rt" in vm.vm_features %}
+{% if "rt" in vm.vm_features %}
         <partition>/machine/rt</partition>
-    {% else %}
+{% else %}
         <partition>/machine/nort</partition>
-    {% endif %}
+{% endif %}
     </resource>
-    {% endif %}
+{% endif %}
     <vcpu placement="static">{{ cpu_nb }}</vcpu>
-    {% if "dpdk" in vm.vm_features %}
+{% if "dpdk" in vm.vm_features %}
     <memory unit="GiB">1</memory>
     <currentMemory unit="GiB">1</currentMemory>
     <memoryBacking>
@@ -35,10 +35,10 @@
         </hugepages>
         <nosharepages/>
     </memoryBacking>
-    {% else %}
+{% else %}
     <memory unit="MiB">{{ vm.memory | default ("2048") }}</memory>
     <currentMemory unit="MiB">{{ vm.memory | default ("2048") }}</currentMemory>
-    {% endif %}
+{% endif %}
     <os firmware="efi">
         <type arch="x86_64" machine="pc-q35-3.1">hvm</type>
         <boot dev="hd" />
@@ -50,42 +50,42 @@
         <acpi />
         <apic />
         <vmport state="off" />
-        {% if "rt" in vm.vm_features %}
+{% if "rt" in vm.vm_features %}
         <pmu state="off" />
-        {%- endif %}
+{% endif %}
     </features>
     <cputune>
-    {% if vm.cpuset is defined %}
-        {% for cpu in vm.cpuset %}
-            {% if "isolated" in vm.vm_features %}
+{% if vm.cpuset is defined %}
+{%     for cpu in vm.cpuset %}
+{%         if "isolated" in vm.vm_features %}
             <vcpupin vcpu="{{ loop.index - 1 }}" cpuset="{{ cpu }}"/>
-            {% endif %}
-            {% if "rt" in vm.vm_features %}
+{%         endif %}
+{%         if "rt" in vm.vm_features %}
             <vcpusched vcpus="{{ loop.index - 1 }}" scheduler="fifo" priority="{{ vm.rt_priority |default('1') }}" />
-            {% endif %}
-        {% endfor %}
-    {% endif %}
-    {% if vm.emulatorpin is defined %}
+{%         endif %}
+{%     endfor %}
+{% endif %}
+{% if vm.emulatorpin is defined %}
         <emulatorpin cpuset="{{ vm.emulatorpin }}"/>
-    {%- endif %}
+{% endif %}
     </cputune>
-    {% if "rt" in vm.vm_features %}
+{% if "rt" in vm.vm_features %}
     <cpu mode="host-passthrough">
-    <topology sockets="1" dies="1" cores="{{ cpu_nb }}" threads="1" />
-    <feature policy="require" name="tsc-deadline" />
-    {% else %}
+        <topology sockets="1" dies="1" cores="{{ cpu_nb }}" threads="1" />
+        <feature policy="require" name="tsc-deadline" />
+{% else %}
     <cpu mode="host-model" check="partial">
-    <model fallback="allow" />
-    {% endif %}
-        {% if "dpdk" in vm.vm_features %}
+        <model fallback="allow" />
+{% endif %}
+{% if "dpdk" in vm.vm_features %}
         <numa>
-            {% if cpu_nb > 1 %}
+{%     if cpu_nb > 1 %}
             <cell id="0" cpus="0-{{ cpu_nb - 1 }}" memory="1" unit="GiB" memAccess="shared" />
-            {% else %}
+{%     else %}
             <cell id="0" cpus="0" memory="1" unit="GiB" memAccess="shared" />
-            {% endif %}
-        </numa>
-        {% endif %}
+{%     endif %}
+       </numa>
+{% endif %}
     </cpu>
     <clock offset="utc">
         <timer name="rtc" tickpolicy="catchup" />
@@ -101,24 +101,24 @@
     </pm>
     <devices>
         <emulator>/usr/bin/qemu-system-x86_64</emulator>
-        {% if vm.standalone_main_disk is defined %}
+{% if vm.standalone_main_disk is defined %}
         <disk type="file" device="disk">
            <driver name="qemu" type="{{ 'raw' if vm.disk_extract is defined and vm.disk_extract | bool is defined else 'qcow2' }}"/>
            <source file="/var/lib/libvirt/images/{{ vm.standalone_main_disk }}"/>
            <target dev="vda" bus="virtio"/>
         </disk>
-        {% endif %}
-        {% if vm.additionnal_disk is defined %}
-        {% for disk in vm.additionnal_disk %}
+{% endif %}
+{% if vm.additionnal_disk is defined %}
+{%     for disk in vm.additionnal_disk %}
         <disk type="file" device="disk">
            <driver name="qemu" type="{{ 'raw' if vm.disk_extract is defined and vm.disk_extract | bool is defined else 'qcow2' }}"/>
            <source file="/var/lib/libvirt/images/{{ disk.disk_file }}"/>
            <target dev="vda" bus="virtio"/>
         </disk>
-        {% endfor %}
-        {% endif %}
-        {% if "dpdk" in vm.vm_features %}
-        {% for interface in vm.dpdk %}
+{%     endfor %}
+{% endif %}
+{% if "dpdk" in vm.vm_features %}
+{%     for interface in vm.dpdk %}
         <interface type='vhostuser'>
             <source type='unix' path='/var/run/openvswitch/vm-sockets/dpdkvhostuser_{{ interface.ovs_port }}' mode='server'/>
             <mac address="{{ interface.mac_address }}" />
@@ -127,67 +127,67 @@
                 <host mrg_rxbuf='on'/>
             </driver>
         </interface>
-        {% endfor %}
-        {% endif %}
-        {% if vm.pci_passthrough is defined %}
-        {% for pci in vm.pci_passthrough %}
+{%     endfor %}
+{% endif %}
+{% if vm.pci_passthrough is defined %}
+{%     for pci in vm.pci_passthrough %}
         <hostdev mode="subsystem" type="pci" managed="yes">
             <source>
                 <!-- The source is the NIC PIC address -->
                 <address domain="{{ pci.domain }}" bus="{{ pci.bus }}" slot="{{ pci.slot }}" function="{{ pci.function }}"/>
             </source>
         </hostdev>
-        {% endfor %}
-        {% endif %}
-        {% if vm.direct_interfaces is defined %}
-        {% for interface in vm.direct_interfaces %}
+{%     endfor %}
+{% endif %}
+{% if vm.direct_interfaces is defined %}
+{%     for interface in vm.direct_interfaces %}
         <interface type="direct" {% if interface.trustGuestRxFilters is defined and interface.trustGuestRxFilters %} trustGuestRxFilters="yes" {% endif %} >
             <source dev="{{ interface.source }} {% if interface.mode  is defined %} mode="{{ interface.mode }}" {% endif %} "/>
             <mac address="{{ interface.mac_address }}"/>
             <model type="virtio"/>
         </interface>
-        {% endfor %}
-        {% endif %}
-        {% if vm.bridges is defined %}
-        {% for bridge in vm.bridges %}
+{%     endfor %}
+{% endif %}
+{% if vm.bridges is defined %}
+{%     for bridge in vm.bridges %}
         <interface type="bridge">
             <source bridge="{{ bridge.name }}"/>
             <mac address="{{ bridge.mac_address }}"/>
             <model type="virtio"/>
-            {% if bridge.type is defined %}
+{%         if bridge.type is defined %}
                 <virtualport type='{{ bridge.type }}'/>
-            {% endif %}
-            {% if bridge.vlan is defined %}
+{%         endif %}
+{%         if bridge.vlan is defined %}
                 <vlan>
                     <tag id='{{ bridge.vlan.vlan_tag }}'/>
                 </vlan>
-            {% endif %}
+{%         endif %}
         </interface>
-        {% endfor %}
-        {% endif %}
-        {% if vm.ovs is defined %}
-        {% for bridge in vm.ovs %}
+{%     endfor %}
+{% endif %}
+{% if vm.ovs is defined %}
+{%     for bridge in vm.ovs %}
         <interface type="ethernet">
             <mac address="{{ bridge.mac_address }}"/>
             <target dev="{{ bridge.ovs_port }}" managed="no"/>
             <model type="virtio"/>
         </interface>
-        {% endfor %}
-        {% endif %}
-        {% if vm.sriov is defined %}
-        {% for interface in vm.sriov %}
+{%     endfor %}
+{% endif %}
+{% if vm.sriov is defined %}
+{%     for interface in vm.sriov %}
         <interface type="network">
             <source network="{{ interface }}">
         </interface>
-        {% endfor %}
-        {% endif %}
-        {% if vm.sriov is defined %}
-        {% for interface in vm.sriov %}
+{%     endfor %}
+{% endif %}
+{% if vm.sriov is defined %}
+{%     for interface in vm.sriov %}
         <interface type="network">
             <source network="{{ interface }}">
         </interface>
-        {% endfor %}
-        {% endif %}
+{%     endfor %}
+{% endif %}
         <controller type="pci" index="0" model="pcie-root" />
         <serial type="pty">
             <target type="isa-serial" port="0">
