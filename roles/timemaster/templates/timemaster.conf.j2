@@ -2,7 +2,7 @@
 
 {% if ptp_interface is defined %}
 [ptp_domain 0]
-ntp_options poll 0
+ntp_poll 0
 {% if ptp_vlanid is defined %}
 interfaces {{ ptp_interface + '.' + ptp_vlanid|string }}
 {% else %}
