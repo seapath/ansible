@@ -2,11 +2,11 @@
 	path = ceph-ansible
 	url = https://github.com/ceph/ceph-ansible.git
 	ignore = dirty
-	branch = stable-6.0
+	branch = stable-8.0
 [submodule "roles/deploy_cukinia_tests/cukinia-tests"]
 	path = roles/deploy_cukinia_tests/cukinia-tests
 	url = https://github.com/seapath/cukinia-tests.git
-        branch = main
+        branch = trixie
 [submodule "roles/deploy_cukinia/files/cukinia"]
 	path = roles/deploy_cukinia/files/cukinia
 	url = https://github.com/savoirfairelinux/cukinia.git
