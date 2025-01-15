@@ -333,12 +333,20 @@
     group: root
     mode: 0755
   with_items: "{{ hardened_services }}"
+
 - name: Add systemd service hardening rules
   copy:
     src: "{{ item }}_hardening.conf"
     dest: "/etc/systemd/system/{{ item }}.service.d/hardening.conf"
-  register: services_to_restart
   with_items: "{{ hardened_services }}"
+  when: not revert
+
+- name: Remove systemd service hardening rules
+  file:
+    path: "/etc/systemd/system/{{ item }}.service.d/hardening.conf"
+    state: absent
+  with_items: "{{ hardened_services }}"
+  when: revert
 
 - name: Set grub password
   template:
