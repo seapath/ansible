@@ -8,4 +8,13 @@
   become: true
   roles:
     - timemaster
-    - ptp_status_vsock
+
+- name: Configure ptp_vsock
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  become: true
+  gather_facts: true
+  roles:
+    - role: ptp_status_vsock
+      when: disable_vsock is not defined or not disable_vsock

@@ -8,7 +8,9 @@ No requirement.
 
 ## Role Variables
 
-No variable.
+| Variable        | Requiered | Type           | Comments                                                           |
+|-----------------|-----------|----------------|--------------------------------------------------------------------|
+| container_only  | no        | Bool           | Set this variable to true to disable ptp_status_vsock installation |
 
 ## Example Playbook
 
