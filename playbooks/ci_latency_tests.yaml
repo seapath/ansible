@@ -6,6 +6,7 @@
   hosts:
       - publisher_machine
       - VMs
+      - yoctoCI-aaeon
   tasks:
       - name: "Create latency_tests directory if it doesn't exist"
         file:
@@ -14,8 +15,8 @@
           mode: '0777'
       - name: "Copy archive"
         copy:
-          src: "../ci_latency_tests/build/sv_timestamp_logger.tar"
-          dest: "/tmp/latency_tests/"
+          src: "../ci_latency_tests/build/{{ sv_timestamp_logger_image }}"
+          dest: "/tmp/latency_tests/sv_timestamp_logger.tar"
 
 - name: Synchronise machines with PTP
   become: true
@@ -76,8 +77,10 @@
         -t
         -s svID0000
 
-- name: Launch sv timestamp logger on VMs
-  hosts: VMs
+- name: Launch sv timestamp logger on VMs and docker hosts
+  hosts:
+    - VMs
+    - yoctoCI-aaeon
   become: true
   tasks:
     - name: Load Docker archive
@@ -115,6 +118,7 @@
   hosts:
       - VMs
       - publisher_machine
+      - yoctoCI-aaeon
   tasks:
     - name: "Stop docker container"
       command: docker stop sv_timestamp_logger
