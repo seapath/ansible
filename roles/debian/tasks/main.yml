@@ -61,24 +61,32 @@
     - syslog_tls_key is defined
     - syslog_tls_server_ca is defined
 
-- name: removing or not the virtu user created by the iso
+- name: Retrieve user information for UID 1000
+  ansible.builtin.command: getent passwd 1000
+  register: user_info
+  changed_when: false
+- name: Extract username from the result
+  ansible.builtin.set_fact:
+    old_admin_user: "{{ user_info.stdout.split(':')[0] }}"
+
+- name: removing or not the old admin user created by the iso
+  when: admin_user != old_admin_user
   block:
-    - name: remove 'virtu' from sudoers file
+    - name: remove old admin user from sudoers file
       lineinfile:
         dest: /etc/sudoers
         state: absent
-        regexp: '^virtu'
+        regexp: "^{{ old_admin_user }}"
         validate: visudo -cf %s
-    - name: Remove the virtu user 
+    - name: Remove the old admin user
       ansible.builtin.user:
-        name: virtu
+        name: "{{ old_admin_user }}"
         state: absent
         remove: yes
-    - name: Remove the virtu group 
+    - name: Remove the old admin group
       ansible.builtin.group:
-        name: virtu
+        name: "{{ old_admin_user }}"
         state: absent
-  when: admin_user != "virtu"
 
 - name: Copy journald conf file
   ansible.builtin.copy:
