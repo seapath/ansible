@@ -17,11 +17,12 @@
     create_secret_pool: "{% if hostvars[item]['secret_defined'].stdout == '' %}true{% else %}{{ create_secret_pool | default(false) }}{% endif %}"
   loop: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) }}"
 
-- block:
+- when: create_secret_pool
+  block:
     - name: Check if the secret is already defined
       set_fact:
         libvirt_uuid_rbd: "{% if hostvars[item]['secret_defined'].stdout != '' %}{{ hostvars[item]['secret_defined'].stdout }}{% else %}{{ libvirt_uuid_rbd | default('') }}{% endif %}"
-      loop: "{{ groups['hypervisors'] }}"
+      loop: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) }}"
     - debug:
         msg: "Found UUID {{ libvirt_uuid_rbd }}"
       when: libvirt_uuid_rbd | length > 0
@@ -41,9 +42,11 @@
       changed_when: false
       register: ceph_key
       run_once: true
-  when: create_secret_pool
 
-- block:
+- when:
+    - create_secret_pool
+    - secret_defined.stdout == ''
+  block:
   - name: Copy libvirt xml secret file
     template:
         src: secret.xml.j2
@@ -57,9 +60,7 @@
         state: absent
   - name: Set key in libvirt secret
     command: 'virsh secret-set-value --secret "{{ libvirt_uuid_rbd }}" --base64 "{{ ceph_key.stdout }}"'
-  when:
-    - create_secret_pool
-    - secret_defined.stdout == ''
+    changed_when: true
 
 - name: Get secret UUID
   shell:
