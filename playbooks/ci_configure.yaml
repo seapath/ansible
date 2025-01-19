@@ -18,9 +18,11 @@
     - standalone_machine
   tasks:
   - name: CI configure skip setup_debian reboots
-    set_fact:
+    ansible.builtin.set_fact:
       skip_reboot_setup: true
       skip_reboot_setup_network: true
 
-- import_playbook: ./seapath_setup_main.yaml
-- import_playbook: ./seapath_setup_hardened_debian.yaml
+- name: Import seapath_setup_main playbook
+  import_playbook: ./seapath_setup_main.yaml
+- name: Import seapath_setup_hardened_debian playbook
+  import_playbook: ./seapath_setup_hardened_debian.yaml

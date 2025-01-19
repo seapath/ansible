@@ -9,46 +9,46 @@
       - yoctoCI-aaeon
   tasks:
       - name: "Create latency_tests directory if it doesn't exist"
-        file:
+        ansible.builtin.file:
           path: "/tmp/latency_tests/"
           state: directory
           mode: '0777'
       - name: "Copy archive"
-        copy:
+        ansible.builtin.copy:
           src: "../ci_latency_tests/build/{{ sv_timestamp_logger_image }}"
           dest: "/tmp/latency_tests/sv_timestamp_logger.tar"
 
 - name: Synchronise machines with PTP
   become: true
   vars:
-      - phc_delay: -37
+    phc_delay: "-37"
   hosts:
       - publisher_machine
   tasks:
     - name: Copy ptp4l.service
-      template:
-          src: ../templates/ptp4l.service.j2
-          dest: /etc/systemd/system/ptp4l.service
+      ansible.builtin.template:
+        src: "{{ (playbook_dir | dirname) }}/templates/ptp4l.service.j2"
+        dest: /etc/systemd/system/ptp4l.service
 
     - name: Copy ptp4l.conf
-      template:
-          src: ../templates/ptp4l.conf.j2
-          dest: /etc/linuxptp/ptp4l.conf
+      ansible.builtin.template:
+        src: "{{ (playbook_dir | dirname) }}/templates/ptp4l.conf.j2"
+        dest: /etc/linuxptp/ptp4l.conf
 
     - name: Enable ptp4l.service
-      systemd:
-          name: ptp4l
-          enabled: true
-          daemon-reload: true
-          state: restarted
+      ansible.builtin.systemd:
+        name: ptp4l
+        enabled: true
+        daemon-reload: true
+        state: restarted
 
     - name: Send phc2sys.service
-      template:
-        src: ../templates/phc2sys.service.j2
+      ansible.builtin.template:
+        src: "{{ (playbook_dir | dirname) }}/templates/phc2sys.service.j2"
         dest: /etc/systemd/system/phc2sys.service
 
     - name: Enable phc2sys.service
-      systemd:
+      ansible.builtin.systemd:
         name: phc2sys
         enabled: true
         daemon-reload: true
@@ -59,10 +59,11 @@
   become: true
   tasks:
     - name: Load Docker archive
-      command: "docker image load -i /tmp/latency_tests/sv_timestamp_logger.tar"
+      ansible.builtin.command: "docker image load -i /tmp/latency_tests/sv_timestamp_logger.tar"
+      changed_when: true
 
     - name: Launch sv timestamp logger
-      command: >-
+      ansible.builtin.command: >-
         docker run
         --rm
         --name sv_timestamp_logger
@@ -76,6 +77,7 @@
         -f "/tmp/latency_tests/ts_{{ inventory_hostname }}.txt"
         -t
         -s svID0000
+      changed_when: true
 
 - name: Launch sv timestamp logger on VMs and docker hosts
   hosts:
@@ -84,10 +86,11 @@
   become: true
   tasks:
     - name: Load Docker archive
-      command: "docker image load -i /tmp/latency_tests/sv_timestamp_logger.tar"
+      ansible.builtin.command: "docker image load -i /tmp/latency_tests/sv_timestamp_logger.tar"
+      changed_when: true
 
     - name: Launch sv timestamp logger
-      command: >-
+      ansible.builtin.command: >-
         docker run
         --name sv_timestamp_logger
         -d
@@ -99,19 +102,21 @@
         -d {{ sv_interface }}
         -f "/tmp/latency_tests/ts_{{ inventory_hostname }}.txt"
         -s svID0000
+      changed_when: true
 
 - name: Launch pcap sending
   hosts: publisher_machine
   become: true
   tasks:
     - name: "Send pcap from publisher"
-      command: >-
+      ansible.builtin.command: >-
         {% if bittwist_cpu is defined %} taskset -c {{ bittwist_cpu }} {% endif %}
           bittwist
             -i {{ sv_interface }}
             -l {{ pcap_loop }}
             /seapath-ci/pcaps/{{ pcap_file }}
       register: cmd
+      changed_when: true
 
 - name: Fetch results
   become: true
@@ -121,10 +126,11 @@
       - yoctoCI-aaeon
   tasks:
     - name: "Stop docker container"
-      command: docker stop sv_timestamp_logger
+      ansible.builtin.command: docker stop sv_timestamp_logger
+      changed_when: true
 
     - name: "Copy results to ansible directory"
-      synchronize:
+      ansible.posix.synchronize:
         src: "/tmp/latency_tests/ts_{{ inventory_hostname }}.txt"
         dest: "../ci_latency_tests/results/"
         mode: pull

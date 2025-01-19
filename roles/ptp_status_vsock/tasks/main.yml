@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- name: ptp/vsock when ptp_interface is enabled
+- name: Ptp/vsock when ptp_interface is enabled
+  when: ptp_interface is defined
   block:
     - name: Create ptp directory
       ansible.builtin.file:
@@ -32,18 +33,17 @@
         dest: /etc/systemd/system/ptp_vsock.service
         mode: '0644'
       register: ptpvsock
-    - name: daemon-reload ptp status
+    - name: Daemon-reload ptp status
       ansible.builtin.service:
         daemon_reload: yes
       when: ptpstatus.changed or ptpvsock.changed
-    - name: enable ptpstatus.service
+    - name: Enable ptpstatus.service
       ansible.builtin.systemd:
         name: ptpstatus.service
         enabled: yes
         state: started
-    - name: enable ptp_vsock.service
+    - name: Enable ptp_vsock.service
       ansible.builtin.systemd:
         name: ptp_vsock.service
         enabled: yes
         state: started
-  when: ptp_interface is defined

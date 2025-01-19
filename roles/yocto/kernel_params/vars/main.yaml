@@ -3,4 +3,4 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-config_file: "/boot/EFI/BOOT/grub.cfg"
+yocto_config_file: "/boot/EFI/BOOT/grub.cfg"

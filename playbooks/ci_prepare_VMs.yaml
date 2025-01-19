@@ -12,17 +12,18 @@
     - VMs
   become: true
   tasks:
-    - name: remove tuned dynamic tuning
-      lineinfile:
+    - name: Remove tuned dynamic tuning
+      ansible.builtin.lineinfile:
         path: /etc/tuned/tuned-main.conf
         state: present
         regexp: '^#?dynamic_tuning = .*$'
         line: 'dynamic_tuning = 0'
-    - name: enable tuned.service
+    - name: Enable tuned.service
       ansible.builtin.systemd:
         name: tuned.service
         enabled: yes
         state: restarted
-    - name: load realtime-virtual-guest tuned profile
+    - name: Load realtime-virtual-guest tuned profile
       ansible.builtin.command: tuned-adm profile realtime-virtual-guest
       when: "'rt' in vm_features"
+      changed_when: true

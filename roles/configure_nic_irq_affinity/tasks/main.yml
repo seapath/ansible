@@ -4,6 +4,7 @@
 
 ---
 - name: Run the NICs IRQs affinity configuration tasks
+  when: nics_affinity is defined
   block:
     - name: Copy NIC irq affinity script
       copy:
@@ -25,5 +26,3 @@
         dest: /etc/default/setup_nic_irq_affinity
         mode: 0644
       notify: Enable and start NIC irq affinity service
-
-  when: nics_affinity is defined

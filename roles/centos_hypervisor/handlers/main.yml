@@ -1,0 +1,35 @@
+# Copyright (C) 2024 Red Hat, Inc.
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+- name: Start new slices
+  ansible.builtin.systemd:
+    name: "{{ item }}.slice"
+    state: restarted
+    daemon_reload: yes
+  with_items:
+    - "machine-rt"
+    - "machine-nort"
+    - "ovs"
+
+- name: Start new slices REVERT
+  ansible.builtin.systemd:
+    name: "{{ item }}.slice"
+    state: stopped
+    daemon_reload: yes
+  with_items:
+    - "machine-rt"
+    - "machine-nort"
+    - "ovs"
+
+- name: Restart ovs-vswitchd
+  ansible.builtin.systemd:
+    state: restarted
+    daemon_reload: yes
+    name: ovs-vswitchd
+
+- name: Restart irqbalance
+  ansible.builtin.systemd:
+    name: irqbalance.service
+    enabled: yes
+    state: restarted

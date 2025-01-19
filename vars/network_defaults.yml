@@ -37,7 +37,7 @@ br0vlan_systemd_networkd_network:
   79-wired:
     - Match:
         - Name: "{{ network_interface }}"
-    - Network: "{{ [ {'Bridge': 'br0'} ] + extra_network_config | default([]) }}"
+    - Network: "{{ [{'Bridge': 'br0'}] + extra_network_config | default([]) }}"
     - BridgeVLAN:
         - VLAN: "1-4094"
 
@@ -57,7 +57,7 @@ br0_systemd_networkd_network:
   79-wired:
     - Match:
         - Name: "{{ network_interface }}"
-    - Network: "{{ [ {'Bridge': 'br0'} ] + extra_network_config | default([]) }}"
+    - Network: "{{ [{'Bridge': 'br0'}] + extra_network_config | default([]) }}"
 
 wired_systemd_networkd_netdev: "{{ br0vlan_systemd_networkd_netdev if br0vlan is defined else br0_systemd_networkd_netdev }}"
 wired_systemd_networkd_network: "{{ br0vlan_systemd_networkd_network if br0vlan is defined else br0_systemd_networkd_network }}"
@@ -65,5 +65,6 @@ wired_systemd_networkd_network: "{{ br0vlan_systemd_networkd_network if br0vlan 
 systemd_networkd_netdev_nocluster: "{{ wired_systemd_networkd_netdev | combine(systemd_networkd_netdev_custom) }}"
 systemd_networkd_network_nocluster: "{{ wired_systemd_networkd_network | combine(systemd_networkd_network_custom) }}"
 
-systemd_networkd_network: "{{ systemd_networkd_network_nocluster|combine(team0_systemd_networkd_network) if cluster_ip_addr is defined else systemd_networkd_network_nocluster}}"
+systemd_networkd_network: "{{ systemd_networkd_network_nocluster | combine(team0_systemd_networkd_network) if
+ cluster_ip_addr is defined else systemd_networkd_network_nocluster }}"
 systemd_networkd_netdev: "{{ systemd_networkd_netdev_nocluster }}"

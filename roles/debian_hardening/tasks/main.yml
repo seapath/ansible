@@ -19,7 +19,7 @@
     state: present
     backrefs: yes
   register: updategrub
-  with_items: "{{ kernel_params }}"
+  with_items: "{{ debian_hardening_kernel_params }}"
   when: not revert
 
 - name: "Revert kernel parameters added in grub"
@@ -30,7 +30,7 @@
     state: present
     backrefs: yes
   register: updategrub
-  with_items: "{{ kernel_params }}"
+  with_items: "{{ debian_hardening_kernel_params }}"
   when: revert
 
 - name: "Disable coredumps"
@@ -40,14 +40,14 @@
     line: "kernel.core_pattern=/dev/null"
     create: yes
     state: present
-  notify: update sysfs values using sysctl
+  notify: Update sysfs values using sysctl
   when: not revert
 - name: "Revert coredump disabling"
   lineinfile:
     dest: /etc/sysctl.d/50-coredump.conf
     regexp: "^kernel.core_pattern=/dev/null$"
     state: absent
-  notify: update sysfs values using sysctl
+  notify: Update sysfs values using sysctl
   when: revert
 
 - name: "Disable kexec"
@@ -57,14 +57,14 @@
     line: "kernel.kexec_load_disabled=1"
     create: yes
     state: present
-  notify: update sysfs values using sysctl
+  notify: Update sysfs values using sysctl
   when: not revert
 - name: "Revert kexec disabling"
   lineinfile:
     dest: /etc/sysctl.d/50-kexec.conf
     regexp: "^kernel.kexec_load_disabled=1$"
     state: absent
-  notify: update sysfs values using sysctl
+  notify: Update sysfs values using sysctl
   when: revert
 
 - name: "Disable binfmt_misc"
@@ -74,40 +74,40 @@
     line: "fs.binfmt_misc.status=0"
     create: yes
     state: present
-  notify: update sysfs values using sysctl
+  notify: Update sysfs values using sysctl
   when: not revert
 - name: "Revert binfmt_misc disabling"
   lineinfile:
     dest: /etc/sysctl.d/50-binfmt_misc.conf
     regexp: "^fs.binfmt_misc.status=0$"
     state: absent
-  notify: update sysfs values using sysctl
+  notify: Update sysfs values using sysctl
   when: revert
 
 - name: "Install hardened sysfs rules"
   copy:
     src: sysctl/90-sysctl-hardening.conf
     dest: /etc/sysctl.d/zz-sysctl-hardening.conf
-  notify: update sysfs values using sysctl
+  notify: Update sysfs values using sysctl
   when: not revert
 - name: "Uninstall hardened sysfs rules"
   file:
     path: /etc/sysctl.d/zz-sysctl-hardening.conf
     state: absent
-  notify: update sysfs values using sysctl
+  notify: Update sysfs values using sysctl
   when: revert
 
 - name: "Install network hardened sysfs rules"
   copy:
     src: sysctl/99-sysctl-network.conf
     dest: /etc/sysctl.d/99-sysctl-network.conf
-  notify: update sysfs values using sysctl
+  notify: Update sysfs values using sysctl
   when: not revert
 - name: "Uninstall network hardened sysfs rules"
   file:
     path: /etc/sysctl.d/sysctl/99-sysctl-network.conf
     state: absent
-  notify: update sysfs values using sysctl
+  notify: Update sysfs values using sysctl
   when: revert
 
 - name: "Install random-root-passwd.service"
@@ -116,7 +116,7 @@
     dest: /etc/systemd/system/random-root-passwd.service
   when: not revert
   register: random_root
-- name: "enable random-root-passwd.service"
+- name: "Enable random-root-passwd.service"
   ansible.builtin.systemd:
     name: random-root-passwd.service
     enabled: yes
@@ -204,7 +204,7 @@
   with_items: "{{ sudoers_files.files }}"
   when: not revert
 
-- name: adding sudo users to group privileged
+- name: Adding sudo users to group privileged
   user:
     name: "{{ item }}"
     groups: privileged
@@ -224,6 +224,7 @@
     which cockpit-bridge
   register: cockpit_status
   ignore_errors: true
+  changed_when: false
 
 - name: Disable require tty for cockpit
   copy:
@@ -332,20 +333,20 @@
     owner: root
     group: root
     mode: 0755
-  with_items: "{{ hardened_services }}"
+  with_items: "{{ debian_hardening_hardened_services }}"
 
 - name: Add systemd service hardening rules
   copy:
     src: "{{ item }}_hardening.conf"
     dest: "/etc/systemd/system/{{ item }}.service.d/hardening.conf"
-  with_items: "{{ hardened_services }}"
+  with_items: "{{ debian_hardening_hardened_services }}"
   when: not revert
 
 - name: Remove systemd service hardening rules
   file:
     path: "/etc/systemd/system/{{ item }}.service.d/hardening.conf"
     state: absent
-  with_items: "{{ hardened_services }}"
+  with_items: "{{ debian_hardening_hardened_services }}"
   when: revert
 
 - name: Set grub password
@@ -362,14 +363,14 @@
     path: /etc/grub.d/01_password
   when: revert
 
-- name: add unrestricted in grub.cfg
+- name: Add unrestricted in grub.cfg
   lineinfile:
     #CLASS="--class gnu-linux --class gnu --class os --unrestricted"
     path: /etc/grub.d/10_linux
     regexp: '^CLASS='
     line: 'CLASS="--class gnu-linux --class gnu --class os --unrestricted"'
   when: not revert
-- name: remove unrestricted in grub.cfg
+- name: Remove unrestricted in grub.cfg
   lineinfile:
     #CLASS="--class gnu-linux --class gnu --class os"
     path: /etc/grub.d/10_linux
@@ -377,15 +378,16 @@
     line: 'CLASS="--class gnu-linux --class gnu --class os"'
   when: revert
 
-- name: copy syslog.conf
+- name: Copy syslog.conf
   copy:
     src: auditd/syslog.conf
     dest: /etc/audit/plugins.d/syslog.conf
 
-- name: copy audit.rules
+- name: Copy audit.rules
   copy:
     src: auditd/audit.rules
     dest: /etc/audit/rules.d/audit.rules
 
 - name: Update grub
   command: update-grub
+  changed_when: true

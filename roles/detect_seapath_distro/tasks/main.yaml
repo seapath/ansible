@@ -17,16 +17,17 @@
   when: ansible_distribution | regex_search("CentOS|RedHat")
 
 - name: Detect Yocto distribution
+  when: seapath_distro is not defined
   block:
     - name: Search CPE_NAME field of {{ ansible_distribution_file_path }}
       command: grep 'CPE_NAME.*cpe:/o:openembedded' {{ ansible_distribution_file_path }}
       register: ret
       failed_when: ret.rc != 0 and ret.rc != 1
+      changed_when: false
     - name: Set seapath_distro for Yocto distro
       set_fact:
         seapath_distro: Yocto
       when: ret.rc == 0
-  when: seapath_distro is not defined
 
 - name: Check distro detection
   fail:

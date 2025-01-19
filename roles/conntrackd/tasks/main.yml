@@ -23,8 +23,9 @@
     daemon_reload: yes
     name: conntrackd
   when: conntrackd.changed and conntrackd_ignore_ip_list is defined
-- block:
-    - name: copy conntrackd.conf file
+- when: conntrackd_ignore_ip_list is defined
+  block:
+    - name: Copy conntrackd.conf file
       template:
         src: conntrackd.conf.j2
         dest: /etc/conntrackd/conntrackd.conf
@@ -32,23 +33,21 @@
         owner: root
         mode: '0644'
       register: conntrackdconf
-    - name: enable conntrackd.service
+    - name: Enable conntrackd.service
       ansible.builtin.systemd:
         name: conntrackd.service
         enabled: yes
         state: started
-    - name: enable conntrackd.service
+    - name: Enable conntrackd.service # noqa: no-handler
       ansible.builtin.systemd:
         name: conntrackd.service
         enabled: yes
         state: restarted
       when: conntrackdconf.changed
-  when: conntrackd_ignore_ip_list is defined
-- block:
-    - name: stop and disable conntrackd.service
+- when: conntrackd_ignore_ip_list is not defined
+  block:
+    - name: Stop and disable conntrackd.service
       ansible.builtin.systemd:
         name: conntrackd.service
         enabled: no
         state: stopped
-  when: conntrackd_ignore_ip_list is not defined
-

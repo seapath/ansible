@@ -4,7 +4,8 @@
 # Ansible playbook that runs all Cukinia's tests.
 
 ---
-- hosts:
+- name: CI Yocto - run tests
+  hosts:
     - cluster_machines
     - standalone_machine
     - VMs
@@ -12,7 +13,8 @@
   roles:
     - ci_yocto/run_tests
 
-- hosts:
+- name: CI Yocto - get system info
+  hosts:
     - cluster_machines
     - standalone_machine
   gather_facts: false

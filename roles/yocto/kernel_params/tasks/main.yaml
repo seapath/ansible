@@ -19,19 +19,21 @@
     - extra_kernel_parameters is defined
     - extra_param_raw.rc == 1
 
-- block:
+- when: extra_param_needed is defined
+  block:
     - name: Mount the boot partition if needed
       command: /usr/share/update/mount_boot.sh
+      changed_when: true
     - name: Set extra kernel parameters
       replace:
-        path: "{{ config_file }}"
+        path: "{{ yocto_config_file }}"
         regexp: '(root=.*)'
         replace: '\1 {{ extra_kernel_parameters }}'
       when: extra_param_needed is defined
     - name: Umount the boot partition
       command: /usr/share/update/mount_boot.sh umount
+      changed_when: true
     - include_tasks: soft_restart_machine.yaml
       when:
         - kernel_parameters_restart is defined
         - kernel_parameters_restart
-  when: extra_param_needed is defined

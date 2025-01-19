@@ -39,7 +39,7 @@
   roles:
     - role: network_configovs
       vars:
-        apply_config: "{{ apply_network_config | default(false) }}"
+        network_configovs_apply_config: "{{ apply_network_config | default(false) }}"
     - network_buildhosts
     - network_resolved
     - network_networkdwait
@@ -49,23 +49,23 @@
     - hypervisors
   become: true
   tasks:
-    - name: calling sriov network pool creation (with a loop)
+    - name: Calling sriov network pool creation (with a loop)
       include_role:
         name: network_sriovpool
       vars:
-        interface: "{{ item.key }}"
-        sriov_network_pool_name: "{{ 'sr-iov-net-' + item.key }}"
+        network_sriovpool_interface: "{{ item.key }}"
+        network_sriovpool_sriov_network_pool_name: "{{ 'sr-iov-net-' + item.key }}"
       loop: "{{ sriov | dict2items }}"
       when: sriov is defined
 
-- name: push iptables rules
+- name: Push iptables rules
   hosts:
     - cluster_machines
     - standalone_machine
   roles:
     - iptables
 
-- name: configure guests br0 interfaces
+- name: Configure guests br0 interfaces
   become: true
   hosts:
     - cluster_machines
@@ -73,7 +73,7 @@
   roles:
     - network_guestsinterfaces
 
-- name: conntrackd
+- name: Conntrackd
   hosts: cluster_machines
   become: true
   roles:
@@ -86,11 +86,11 @@
     - standalone_machine
   become: true
   tasks:
-    - block:
+    - when:
+        - need_reboot is defined and need_reboot
+        - skip_reboot_setup_network is not defined or not skip_reboot_setup_network
+      block:
         - name: Restart to configure network
           reboot:
         - name: Wait for host to be online
           wait_for_connection:
-      when:
-        - need_reboot is defined and need_reboot
-        - skip_reboot_setup_network is not defined or not skip_reboot_setup_network

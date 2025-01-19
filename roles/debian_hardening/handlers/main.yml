@@ -2,5 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 ---
 
-- name: update sysfs values using sysctl
+- name: Update sysfs values using sysctl
   command: sysctl --system
+  changed_when: true

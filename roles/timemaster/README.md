@@ -8,14 +8,14 @@ No requirement.
 
 ## Role Variables
 
-| Variable              | Required | Type    | Default | Comments                                                                                                                               |
-|-----------------------|----------|---------|---------|----------------------------------------------------------------------------------------------------------------------------------------|
-| seapath_distro        | yes      | String  |         | SEAPATH variant. CentOS, Debian or Yocto. The variable can be set automatically using the detect_seapath_distro role                   |
-| ptp_interface         | no       | String  |         | Network interface to use for PTP. The interface must support PTP hardware reception. If not set the PTP configuration will be skipped. |
-| ptp_vlanid            | no       | Integer |         | Optional VLAN ID to use with PTP                                                                                                       |
-| ntp_servers           | no       | String  |         | List of NTP/SNTP servers separated by a new line. If not set NTP configuration will be skipped                                         |
-| ptp_network_transport | no       | String  | "L2"    | PTP transport configuration. "L2" or "UDP"                                                                                             |
-| ptp_delay_mechanism   | no       | String  | "P2P"   | PTP delay mechanism. "P2P" or "E2E"                                                                                                    |
+| Variable                         | Required | Type    | Default | Comments                                                                                                                               |
+|----------------------------------|----------|---------|---------|----------------------------------------------------------------------------------------------------------------------------------------|
+| seapath_distro                   | yes      | String  |         | SEAPATH variant. CentOS, Debian or Yocto. The variable can be set automatically using the detect_seapath_distro role                   |
+| ptp_interface                    | no       | String  |         | Network interface to use for PTP. The interface must support PTP hardware reception. If not set the PTP configuration will be skipped. |
+| ptp_vlanid                       | no       | Integer |         | Optional VLAN ID to use with PTP                                                                                                       |
+| ntp_servers                      | no       | String  |         | List of NTP/SNTP servers separated by a new line. If not set NTP configuration will be skipped                                         |
+| timemaster_ptp_network_transport | no       | String  | "L2"    | PTP transport configuration. "L2" or "UDP"                                                                                             |
+| timemaster_ptp_delay_mechanism   | no       | String  | "P2P"   | PTP delay mechanism. "P2P" or "E2E"                                                                                                    |
 
 
 ## Example Playbook

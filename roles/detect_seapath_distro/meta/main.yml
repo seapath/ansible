@@ -7,13 +7,10 @@ galaxy_info:
   license: Apache-2.0
   min_ansible_version: 2.9.10
   platforms:
-    - name: Yocto
-      versions:
-      - all
     - name: Debian
       versions:
       - all
-    - name: CentOS
+    - name: EL
       versions:
       - all
 dependencies: []

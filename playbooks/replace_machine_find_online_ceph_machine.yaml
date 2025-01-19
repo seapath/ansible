@@ -6,13 +6,13 @@
   gather_facts: false
   tasks:
     - name: Wait for machine to be online
-      wait_for_connection:
+      ansible.builtin.wait_for_connection:
         timeout: 1
       ignore_errors: true
       no_log: true
       register: machine_up_raw
     - name: Register result
-      set_fact:
+      ansible.builtin.set_fact:
         machine_up: "{{ not machine_up_raw.failed }}"
 
 - name: Register the machine to use to control Ceph
@@ -22,14 +22,14 @@
     unvalid_machine_filter: ":!{{ machine_to_remove | default(mon_to_kill | default('fake')) }}"
   tasks:
     - name: Register online machines
-      add_host:
+      ansible.builtin.add_host:
         name: "{{ item }}"
         groups: online_host
       loop: "{{ groups.get(mon_group_name) }}"
       when: hostvars[item].machine_up
       changed_when: false
-    - name: check if a Ceph machine is up
-      fail:
+    - name: Check if a Ceph machine is up
+      ansible.builtin.fail:
         msg: "There is no Ceph machine available"
       when: groups['online_host'] is undefined
     - name: Register offline machines
@@ -40,7 +40,7 @@
       when: not hostvars[item].machine_up
       changed_when: false
     - name: Register a machine to run Ceph commands
-      add_host:
+      ansible.builtin.add_host:
         name: "{{ query('inventory_hostnames', 'online_host' + unvalid_machine_filter)[0] }}"
         groups: mon_host
       changed_when: false

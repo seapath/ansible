@@ -1,7 +1,16 @@
 # Copyright (C) 2024 Red Hat, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-- name: daemon-reload
+- name: Trigger daemon-reload
   ansible.builtin.service:
     daemon_reload: yes
 
+- name: Restart systemd-sysctl if needed
+  ansible.builtin.systemd:
+    name: systemd-sysctl.service
+    state: restarted
+
+- name: Rebuild initramfs if necessary
+  command:
+    cmd: /usr/bin/dracut --regenerate-all --force
+  changed_when: true

@@ -9,15 +9,15 @@ team0_systemd_networkd_network:
     - Match:
         - Name: "team0"
     - Network:
-        - Address: "{{ cluster_ip_addr|default('0') }}/{{ team0subnet | default(24) }}"
+        - Address: "{{ cluster_ip_addr | default('0') }}/{{ team0subnet | default(24) }}"
   79-team0_0:
     - Match:
-        - Name: "{{ team0_0|default('0') }}"
+        - Name: "{{ team0_0 | default('0') }}"
     - Link:
         - MTUBytes: 1800
   79-team0_1:
     - Match:
-        - Name: "{{ team0_1|default('0') }}"
+        - Name: "{{ team0_1 | default('0') }}"
     - Link:
         - MTUBytes: 1800
 

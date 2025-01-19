@@ -12,7 +12,7 @@ No requirement.
 
 | Variable                | Required | Type   | Default   | Comments                                         |
 |-------------------------|----------|--------|-----------|--------------------------------------------------|
-| swu_image               | yes      | String | swu_image | Path of the swupdate file on the Ansible machine |
+| update_swu_image        | yes      | String | swu_image | Path of the swupdate file on the Ansible machine |
 
 ## Dependencies
 

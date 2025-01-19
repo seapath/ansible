@@ -11,5 +11,5 @@
   tasks:
   - name: Deploy VMs on Cluster Role
     with_items: "{{ groups['VMs'] }}"
-    include_role:
+    ansible.builtin.include_role:
       name: deploy_vms_cluster

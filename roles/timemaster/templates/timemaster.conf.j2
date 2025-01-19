@@ -22,7 +22,7 @@ delay 1e-9
 ntp_program chronyd
 
 [chrony.conf]
-include {{ path_chrony_conf }}
+include {{ timemaster_path_chrony_conf }}
 {% if ntp_servers is defined %}
 {%- for line in ntp_servers %}{% if ptp_interface is not defined and loop.index==1 %}server {{ line }} trust iburst maxsamples 10 minsamples 10 maxpoll 6 minpoll 6
 {% else %}server {{ line }} iburst maxsamples 10 minsamples 10 maxpoll 6 minpoll 6
@@ -37,8 +37,8 @@ slaveOnly             1
 
 # IEC 61850-9-3 Profile
 # (from : https://en.wikipedia.org/wiki/IEC/IEEE_61850-9-3)
-network_transport     {{ ptp_network_transport }}
-delay_mechanism       {{ ptp_delay_mechanism }}
+network_transport     {{ ptp_network_transport | default ('L2') }}
+delay_mechanism       {{ ptp_delay_mechanism | default ('P2P') }}
 domainNumber             0
 
 # Announce interval: 1s

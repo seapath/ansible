@@ -27,10 +27,10 @@
 - name: Build hosts file for Standalone machines
   lineinfile:
     dest: /etc/hosts
-    line: "{{ ip_addr | default( ansible_host ) }} {{ inventory_hostname }} {{ hostname | default('') }}"
+    line: "{{ ip_addr | default(ansible_host) }} {{ inventory_hostname }} {{ hostname | default('') }}"
     state: present
   when: inventory_hostname in groups['standalone_machine']|default([])
-- name: remove 'debian' from hosts file
+- name: Remove 'debian' from hosts file
   lineinfile:
     dest: /etc/hosts
     state: absent

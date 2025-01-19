@@ -4,7 +4,7 @@
 ---
 - include_vars: "{{ seapath_distro }}.yml"
 
-- name: "grub conf"
+- name: Grub conf
   lineinfile:
     dest: /etc/default/grub
     regexp: "^(GRUB_CMDLINE_LINUX=(?!.* {{ item }})\"[^\"]*)(\".*)"
@@ -16,25 +16,29 @@
     - efi=runtime
     - "{{ grub_append | default([]) }}"
 - name: Update grub
-  command: "{{ grub_update_command }}"
+  command: "{{ ci_restore_snapshot_grub_update_command }}"
+  changed_when: true
 - name: Merge lvm snapshot
   command:
     cmd: lvconvert --merge vg1/root-snap
+  changed_when: true
 - name: Restart for snapshot rollback
   reboot:
 - name: Refresh LVM
   command:
     cmd:  lvchange --refresh vg1
+  changed_when: true
 
-- name: wait until snapshot is cleared
+- name: Wait until snapshot is cleared
   command: lvs -a
   register: result
   until: result.stdout | regex_search('root-snap', ignorecase=True) is none
   retries: 6
   delay: 10
+  changed_when: false
 
 - name: Recreate the snapshot
-  lvol:
+  community.general.lvol:
     vg: vg1
     lv: root
     snapshot: root-snap

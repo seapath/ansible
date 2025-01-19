@@ -8,9 +8,6 @@ galaxy_info:
   - name: Debian
     versions:
     - all
-  - name: CentOS
-    versions:
-    - all
-  - name: Yocto
+  - name: EL
     versions:
     - all

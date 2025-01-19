@@ -2,5 +2,5 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-libvirt_rbd_pool: "rbd"
-libvirt_pool_name: "ceph"
+configure_libvirt_libvirt_rbd_pool: "rbd"
+configure_libvirt_libvirt_pool_name: "ceph"

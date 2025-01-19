@@ -4,25 +4,26 @@
 - name: Sanity check
   hosts: localhost
   pre_tasks:
-    - name: exit playbook, if no machine was given
+    - name: Exit playbook, if no machine was given
       fail:
         msg: "machine_to_remove must be declared"
       when: machine_to_remove is undefined
 
-- import_playbook: replace_machine_find_online_ceph_machine.yaml
+- name: Import replace_machine_find_online_ceph_machine playbook
+  import_playbook: replace_machine_find_online_ceph_machine.yaml
   when: groups['mon_host'] is undefined
 
 - name: Try to find OSD
   hosts: cluster_machines
   become: true
   tasks:
-    - name: get OSD to shrink
+    - name: Get OSD to shrink
       script: "../scripts/get_osd.py {{ hostvars[machine_to_remove].get('hostname', machine_to_remove) }}"
       register: raw_osd
       delegate_to: "{{ groups['mon_host'][0] }}"
     - debug:
         var: raw_osd
-    - name: register OSD
+    - name: Register OSD
       set_fact:
         osd_to_kill: "{{ raw_osd.stdout_lines[0] }}"
       when: raw_osd.stdout
@@ -30,13 +31,16 @@
     - debug:
         var: osd_to_kill
 
-- import_playbook: replace_machine_shrink_osd.yaml
+- name: Import replace_machine_shrink_osd playbook
+  import_playbook: replace_machine_shrink_osd.yaml
   when: osd_to_kill is defined
 
-- import_playbook: replace_machine_shrink_mon.yaml
+- name: Import replace_machine_shrink_mon playbook
+  import_playbook: replace_machine_shrink_mon.yaml
   vars:
     mon_to_kill: "{{ hostvars[machine_to_remove].get('hostname', machine_to_remove) }}"
 
-- import_playbook: replace_machine_shrink_pacemaker.yaml
+- name: Import replace_machine_shrink_pacemaker playbook
+  import_playbook: replace_machine_shrink_pacemaker.yaml
   vars:
     pacemaker_machine: mon_host

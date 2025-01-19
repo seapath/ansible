@@ -2,4 +2,4 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-crm_command_path: "/usr/local/bin/crm"
+configure_ha_crm_command_path: "/usr/local/bin/crm"

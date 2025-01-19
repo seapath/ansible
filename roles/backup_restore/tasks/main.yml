@@ -16,21 +16,21 @@
     mode: '0755'
   with_fileglob:
     - scripts/*.j2
-- name: create /etc/backup-restore.conf file
+- name: Create /etc/backup-restore.conf file
   file:
     path: "/etc/backup-restore.conf"
     state: touch
     mode: 0644
     owner: root
     group: root
-- name: check configuration of backup-restore.sh tool (remote_shell)
+- name: Check configuration of backup-restore.sh tool (remote_shell)
   shell: 'grep -c "^remote_shell=" /etc/backup-restore.conf || true'
   register: check_remote_shell
-- name: add default configuration of backup-restore.sh tool (remote_shell)
+  changed_when: true
+- name: Add default configuration of backup-restore.sh tool (remote_shell)
   lineinfile:
     dest: /etc/backup-restore.conf
     regexp: "^remote_shell="
     line: "remote_shell=\"ssh\""
     state: present
   when: check_remote_shell.stdout == "0"
-

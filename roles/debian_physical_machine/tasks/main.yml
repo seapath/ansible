@@ -12,7 +12,7 @@
     mode: '0644'
   with_items:
     - 00-bridge_nf_call.conf
-  register: sysctl1
+  notify: Restart systemd-sysctl
 
 - name: Add sysctl conf from inventory (extra_sysctl_physical_machines)
   ansible.builtin.copy:
@@ -20,29 +20,23 @@
     mode: '0644'
     content: "{{ extra_sysctl_physical_machines }}"
   when: extra_sysctl_physical_machines is defined
-  register: sysctl2
+  notify: Restart systemd-sysctl
 
-- name: restart systemd-sysctl if needed
-  ansible.builtin.systemd:
-    name: systemd-sysctl.service
-    state: restarted
-  when: sysctl1.changed or sysctl2.changed
-
-- name: create src folder on hosts
+- name: Create src folder on hosts
   file:
     path: /tmp/src
     state: directory
     mode: '0755'
 
-- name: temp fix for synchronize to force evaluate variables
+- name: Temp fix for synchronize to force evaluate variables
   set_fact:
     ansible_host: "{{ ansible_host }}"
 
-- name: deploy vm_manager
+- name: Deploy vm_manager
   include_role:
     name: deploy_vm_manager
 
-- name: deploy python3-setup-ovs
+- name: Deploy python3-setup-ovs
   include_role:
     name: deploy_python3_setup_ovs
 
@@ -52,7 +46,7 @@
     dest: /usr/local/bin/consolevm
     mode: '0755'
 
-- name: create /usr/lib/ocf/resource.d/seapath on hosts
+- name: Create /usr/lib/ocf/resource.d/seapath on hosts
   file:
     path: /usr/lib/ocf/resource.d/seapath
     state: directory
@@ -76,16 +70,15 @@
     group: root
     mode: '0644'
   register: chronywait
-- name: daemon-reload chrony-wait.service
-  ansible.builtin.service:
-    daemon_reload: yes
-  when: chronywait.changed
-- name: enable chrony-wait.service
+  notify: Trigger daemon-reload
+- name: Enable chrony-wait.service
   ansible.builtin.systemd:
     name: chrony-wait.service
     enabled: yes
 
-- block:
+- when:
+    - services['pacemaker.service'] is defined
+  block:
     - name: Create pacemaker.service.d directory
       file:
         path: /etc/systemd/system/pacemaker.service.d/
@@ -100,24 +93,22 @@
         owner: root
         group: root
         mode: 0644
-      notify: daemon-reload
+      notify: Trigger daemon-reload
       register: pacemaker_corosync
     - name: Get Pacemaker service Status
       ansible.builtin.systemd:
         name: "pacemaker.service"
       register: pacemaker_service_status
-    - name: disable pacemaker (reinstall step 1/2)
+    - name: Disable pacemaker (reinstall step 1/2)
       ansible.builtin.systemd:
         name: pacemaker.service
         enabled: no
       when: pacemaker_corosync.changed and pacemaker_service_status.status.UnitFileState == "enabled"
-    - name: enable pacemaker (reinstall step 2/2)
+    - name: Enable pacemaker (reinstall step 2/2)
       ansible.builtin.systemd:
         name: pacemaker.service
         enabled: yes
       when: pacemaker_corosync.changed and pacemaker_service_status.status.UnitFileState == "enabled"
-  when:
-    - services['pacemaker.service'] is defined
 
 - name: Add extra modules to the kernel
   lineinfile:
@@ -134,17 +125,18 @@
     append: yes
 
 - name: Creating libvirt user with libvirtd permissions
-  user: name=libvirt
-    group=libvirt
-    shell=/bin/false
+  user:
+    name: libvirt
+    group: libvirt
+    shell: /bin/false
 
-- name: add br_netfilter to /etc/modules
+- name: Add br_netfilter to /etc/modules
   lineinfile:
     dest: /etc/modules
     state: present
     regexp: '^br_netfilter$'
     line: 'br_netfilter'
-- name: add raid6_pq to /etc/modules
+- name: Add raid6_pq to /etc/modules
   lineinfile:
     dest: /etc/modules
     state: present
@@ -157,7 +149,7 @@
     dest: /etc/apparmor.d/abstractions/libvirt-qemu
     mode: '0644'
 
-- name: lineinfile in hosts file for logstash-seapath
+- name: Lineinfile in hosts file for logstash-seapath
   lineinfile:
     dest: /etc/hosts
     regexp: '.* logstash-seapath$'
@@ -171,51 +163,53 @@
     regexp: "^#?host_uuid_source ="
     line: "host_uuid_source = \"machine-id\""
     state: present
-- name: restart libvirtd
+- name: Restart libvirtd
   ansible.builtin.systemd:
     name: libvirtd.service
     state: restarted
 
-- name: enable docker.service
+- name: Enable docker.service
   ansible.builtin.systemd:
     name: docker.service
-- name: "add initramfs-tools scripts: script file (LVM rebooter and log handling)"
+- name: "Add initramfs-tools scripts: script file (LVM rebooter and log handling)"
   ansible.builtin.copy:
     src: initramfs-tools/scripts/
     dest: /etc/initramfs-tools/scripts/
     mode: '0755'
-  register: initramfs_tools_scripts
+  notify: Rebuild initramfs if necessary
 
-- name: "get the /var/log/ device"
+- name: Get the /var/log/ device
   command: "findmnt -n -o SOURCE --target /var/log"
   register: varlog_dev
+  changed_when: false
 
-- name: "set_fact /var/log/ device"
+- name: Set fact /var/log/ device
   set_fact:
     lvm_rebooter_log_device: "{{ varlog_dev.stdout }}"
 
-- name: "get the /var/log/ relative path"
+- name: Get the /var/log/ relative path
   shell: "realpath --relative-to=$(findmnt -n -o TARGET --target /var/log/) /var/log"
   register: varlog_path
+  changed_when: false
 
-- name: "set_fact /var/log/ relative path"
+- name: Set fact /var/log/ relative path
   set_fact:
     lvm_rebooter_log_path: "{{ varlog_path.stdout }}"
 
-- name: "Copy rebooter.conf"
+- name: Copy rebooter.conf
   template:
     src: initramfs-tools/conf.d/rebooter.conf.j2
     dest: /etc/initramfs-tools/conf.d/rebooter.conf
 
-- name: "configure initramfs-tools to use busybox"
+- name: Configure initramfs-tools to use busybox
   lineinfile:
     dest: /etc/initramfs-tools/initramfs.conf
     regexp: "^#?BUSYBOX="
     line: "BUSYBOX=y"
     state: present
-  register: initramfs_busybox
+  notify: Rebuild initramfs if necessary
 
-- name: "add udev rules for lvm2 limitation"
+- name: Add udev rules for lvm2 limitation
   ansible.builtin.copy:
     src: 69-lvm.rules
     dest: /etc/udev/rules.d/69-lvm.rules
@@ -223,12 +217,7 @@
   when: ansible_distribution == 'Debian' and ansible_distribution_version | int >= 12
   register: udevlvm
 
-- name: "rebuild initramfs if necessary"
-  command:
-    cmd: /usr/sbin/update-initramfs -u
-  when: udevlvm.changed or initramfs_tools_scripts.changed or initramfs_busybox.changed
-
-- name: "add rbd type to lvm.conf"
+- name: Add rbd type to lvm.conf
   ansible.builtin.lineinfile:
     path: /etc/lvm/lvm.conf
     insertafter: 'devices {'

@@ -8,24 +8,25 @@
   template:
     src: ovs_configuration.json.j2
     dest: /etc/ovs_configuration.json
-    validate: "{{ setup_ovs_command_path }} -v -c -f %s"
+    validate: "{{ network_configovs_setup_ovs_command_path }} -v -c -f %s"
   register: ovs_conf
 - name: Restart seapath-config_ovs
   ansible.builtin.systemd:
     name: seapath-config_ovs
     state: restarted
   when:
-    - apply_config
+    - network_configovs_apply_config
     - ovs_conf.changed
 - name: Register reboot
   set_fact:
     need_reboot: true
   when:
-    - not apply_config
+    - not network_configovs_apply_config
     - ovs_conf.changed
 
-- name: run extra ovs-vsctl configuration commands
+- name: Run extra ovs-vsctl configuration commands
   command: "/usr/bin/ovs-vsctl {{ item }}"
   when:
     - ovs_vsctl_cmds is defined
   loop: "{{ ovs_vsctl_cmds }}"
+  changed_when: true

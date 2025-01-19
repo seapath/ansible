@@ -5,7 +5,6 @@
 # CSV.
 
 ---
-
 - name: Get distribution variables
   hosts:
     - cluster_machines
@@ -16,11 +15,11 @@
   tasks:
   - include_vars: "../vars/{{ seapath_distro }}_paths.yml"
 
-- hosts:
+- name: Cukinia tests
+  hosts:
     - cluster_machines
     - standalone_machine
     - VMs
-  name: Cukinia tests
   gather_facts: true
   become: true
   vars:
@@ -38,29 +37,31 @@
           MACHINENAME={{ cukinia_namespace | default(inventory_hostname) }}
           {{ cukinia_command_path }} -f {{ tests_format }}
           -o {{ tmp_cukinia_dir.path }}/{{ tests_result_name }} || true
+      changed_when: true
     - name: Fetch result
       fetch:
         src: "{{ tmp_cukinia_dir.path }}/{{ tests_result_name }}"
         dest: "{{ cukinia_test_prefix }}/{{ tests_result_name }}"
         flat: yes
 
-- hosts:
+- name: Cukinia tests
+  hosts:
     - cluster_machines
-  name: Cukinia tests
   become: true
   vars:
     tests_format: junitxml
     cluster_tests_result_name: "cukinia_cluster_{{ inventory_hostname }}.xml"
     cukinia_test_prefix: ".."
   tasks:
-    - name: Run tests cluster test
+    - name: Run tests cluster test # noqa: run-once[task]
       shell:
         cmd: >-
           {{ cukinia_command_path }} -f {{ tests_format }}
           -o {{ tmp_cukinia_dir.path }}/{{ cluster_tests_result_name }}
           /etc/cukinia/cukinia-cluster.conf || true
       run_once: true
-    - name: Fetch cluster test result
+      changed_when: true
+    - name: Fetch cluster test result # noqa: run-once[task]
       fetch:
         src: "{{ tmp_cukinia_dir.path }}/{{ cluster_tests_result_name }}"
         dest: "{{ cukinia_test_prefix }}/{{ cluster_tests_result_name }}"

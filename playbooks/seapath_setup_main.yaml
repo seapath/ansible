@@ -17,25 +17,35 @@
   roles:
     - detect_seapath_distro
 
-- import_playbook: seapath_setup_prerequiscentos.yaml
+- name: Import seapath_setup_prerequiscentos playbook
+  import_playbook: seapath_setup_prerequiscentos.yaml
   when: seapath_distro == "CentOS"
 
-- import_playbook: seapath_setup_prerequisdebian.yaml
+- name: Import seapath_setup_prerequisdebian playbook
+  import_playbook: seapath_setup_prerequisdebian.yaml
   when: seapath_distro == "Debian"
 
-- import_playbook: seapath_setup_prerequisyocto.yaml
+- name: Import seapath_setup_prerequisyocto playbook
+  import_playbook: seapath_setup_prerequisyocto.yaml
   when: seapath_distro == "Yocto"
 
-- import_playbook: seapath_setup_network.yaml
+- name: Import seapath_setup_network playbook
+  import_playbook: seapath_setup_network.yaml
 
-- import_playbook: seapath_setup_timemaster.yaml
+- name: Import seapath_setup_timemaster playbook
+  import_playbook: seapath_setup_timemaster.yaml
 
-- import_playbook: seapath_setup_snmp.yaml
+- name: Import seapath_setup_snmp playbook
+  import_playbook: seapath_setup_snmp.yaml
 
-- import_playbook: cluster_setup_ceph.yaml
-- import_playbook: cluster_setup_libvirt.yaml
-- import_playbook: cluster_setup_users.yaml
-- import_playbook: cluster_setup_ha.yaml
+- name: Import cluster_setup_ceph playbook
+  import_playbook: cluster_setup_ceph.yaml
+- name: Import cluster_setup_libvirt playbook
+  import_playbook: cluster_setup_libvirt.yaml
+- name: Import cluster_setup_users playbook
+  import_playbook: cluster_setup_users.yaml
+- name: Import cluster_setup_ha playbook
+  import_playbook: cluster_setup_ha.yaml
 
 - name: Restart all hosts
   hosts:

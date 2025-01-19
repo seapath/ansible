@@ -8,7 +8,7 @@
 ---
 - name: Setup hugepages number
   copy:
-    content: "{{ hugepages | string }}"
+    content: "{{ yocto_hugepages | string }}"
     dest: /etc/hugepages_nb.conf
   notify:
     - Restart hugepages service

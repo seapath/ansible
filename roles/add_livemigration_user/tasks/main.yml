@@ -3,7 +3,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- block:
+- when: livemigration_user is defined
+  block:
   - name: Create live migration user
     user:
       name: "{{ livemigration_user }}"
@@ -16,7 +17,7 @@
         path: /etc/shadow
         regexp: '^{{ livemigration_user }}:!:'
         replace: '{{ livemigration_user }}:*:'
-  - name: generate root SSH key
+  - name: Generate root SSH key
     user:
       name: "root"
       generate_ssh_key: yes
@@ -26,28 +27,30 @@
       ssh_key_passphrase: ""
       force: false
   - name: Get root user's home directory
-    shell: getent passwd root | cut -d ':' -f6
+    shell:
+      cmd: set -o pipefail && getent passwd root | cut -d ':' -f6
+      executable: /bin/bash
     register: root_home_dir
+    changed_when: true
   - name: Fetch the root keyfile
     fetch:
       src: "{{ root_home_dir.stdout }}/.ssh/id_rsa.pub"
       dest: "buffer/{{ inventory_hostname }}-id_rsa.pub"
       flat: true
   - name: Copy the key add to authorized_keys using Ansible module
-    authorized_key:
+    ansible.posix.authorized_key:
       user: "{{ livemigration_user }}"
       state: present
-      key: "{{ lookup('file','buffer/' + item + '-id_rsa.pub') }}"
+      key: "{{ lookup('file', 'buffer/' + item + '-id_rsa.pub') }}"
     loop: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) }}"
   - name: Fetch the ssh keyfile
     fetch:
       src: "/etc/ssh/ssh_host_ed25519_key.pub"
       dest: "buffer/{{ inventory_hostname }}-ssh_host_ed25519_key.pub"
       flat: true
-  - name: populate the known_hosts files
+  - name: Populate the known_hosts files
     known_hosts:
       path: "{{ root_home_dir.stdout }}/.ssh/known_hosts"
       name: "{{ item }}"
-      key: "{{ item }} {{ lookup('file','buffer/' + item + '-ssh_host_ed25519_key.pub') }}"
+      key: "{{ item }} {{ lookup('file', 'buffer/' + item + '-ssh_host_ed25519_key.pub') }}"
     loop: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) }}"
-  when: livemigration_user is defined

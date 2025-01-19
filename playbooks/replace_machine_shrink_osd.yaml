@@ -21,23 +21,24 @@
 - name: Sanity check
   hosts: localhost
   tasks:
-    - name: exit playbook, if no osd(s) was/were given
+    - name: Exit playbook, if no osd(s) was/were given
       fail:
         msg: "osd_to_kill must be declared
           Exiting shrink-osd playbook, no OSD(s) was/were removed.
            On the command line when invoking the playbook, you can use
            -e osd_to_kill=0,1,2,3 argument."
       when: osd_to_kill is not defined
-    - name: check the osd ids passed have the correct format
+    - name: Check the osd ids passed have the correct format
       fail:
         msg: "The id {{ item }} has wrong format, please pass the number only"
       with_items: "{{ osd_to_kill.split(',') }}"
       when: not item is regex("^\d+$")
 
-- import_playbook: replace_machine_find_online_ceph_machine.yaml
+- name: Import replace_machine_find_online_ceph_machine
+  import_playbook: replace_machine_find_online_ceph_machine.yaml
   when: groups['mon_host'] is undefined
 
-- name: gather facts and check the init system
+- name: Gather facts and check the init system
   hosts:
     - "{{ mon_group_name|default('mons') }}"
     - "{{ osd_group_name|default('osds') }}"
@@ -64,16 +65,16 @@
         tasks_from: container_binary
 
   post_tasks:
-    - name: set_fact container_exec_cmd build docker exec command (containerized)
+    - name: Set_fact container_exec_cmd build docker exec command (containerized)
       set_fact:
         container_exec_cmd: "{{ container_binary }} exec ceph-mon-{{ ansible_facts['hostname'] }}"
       when: containerized_deployment | bool
 
-    - name: set_fact container_run_cmd
+    - name: Set_fact container_run_cmd
       set_fact:
         container_run_cmd: "{{ container_binary + ' run --rm --privileged=true --net=host --pid=host --ipc=host -v /dev:/dev -v /etc/ceph:/etc/ceph -v /var/lib/ceph:/var/lib/ceph -v /var/run:/var/run --entrypoint=' if containerized_deployment else '' }}ceph-volume {{ ceph_docker_registry + '/' + ceph_docker_image + ':' + ceph_docker_image_tag if containerized_deployment else '' }}"
 
-    - name: exit playbook, if can not connect to the cluster
+    - name: Exit playbook, if can not connect to the cluster
       command: "{{ container_exec_cmd }} timeout 5 ceph --cluster {{ cluster }} health"
       register: ceph_health
       changed_when: false
@@ -81,20 +82,20 @@
       retries: 5
       delay: 2
 
-    - name: find the host(s) where the osd(s) is/are running on
+    - name: Find the host(s) where the osd(s) is/are running on
       command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} osd find {{ item }}"
       changed_when: false
       with_items: "{{ osd_to_kill.split(',') }}"
       register: find_osd_hosts
       when: offline_host is undefined
 
-    - name: set_fact osd_hosts
+    - name: Set_fact osd_hosts
       set_fact:
-        osd_hosts: "{{ osd_hosts | default([]) + [ [ (item.stdout | from_json).crush_location.host, (item.stdout | from_json).osd_fsid, item.item ] ] }}"
+        osd_hosts: "{{ osd_hosts | default([]) + [[(item.stdout | from_json).crush_location.host, (item.stdout | from_json).osd_fsid, item.item]] }}"
       with_items: "{{ find_osd_hosts.results }}"
       when: offline_host is undefined
 
-    - name: set_fact _osd_hosts
+    - name: Set_fact _osd_hosts
       set_fact:
         _osd_hosts: "{{ _osd_hosts | default([]) + [ [ item.0, item.2, item.3 ] ] }}"
       with_nested:
@@ -104,7 +105,7 @@
         - offline_host is undefined
         - hostvars[item.0]['ansible_facts']['hostname'] == item.1
 
-    - name: get ceph-volume lvm list data
+    - name: Get ceph-volume lvm list data
       command: "{{ container_run_cmd }} lvm list --format json"
       changed_when: false
       register: _lvm_list_data
@@ -112,13 +113,13 @@
       loop: "{{ _osd_hosts }}"
       when: offline_host is undefined
 
-    - name: set_fact _lvm_list
+    - name: Set_fact _lvm_list
       set_fact:
         _lvm_list: "{{ _lvm_list | default({}) | combine(item.stdout | from_json) }}"
       with_items: "{{ _lvm_list_data.results }}"
       when: offline_host is undefined
 
-    - name: find /etc/ceph/osd files
+    - name: Find /etc/ceph/osd files
       find:
         paths: /etc/ceph/osd
         pattern: "{{ item.2 }}-*"
@@ -129,7 +130,7 @@
         - offline_host is undefined
         - item.2 not in _lvm_list.keys()
 
-    - name: slurp ceph osd files content
+    - name: Slurp ceph osd files content
       slurp:
         src: "{{ item['files'][0]['path'] }}"
       delegate_to: "{{ item.item.0 }}"
@@ -140,8 +141,7 @@
         - item.skipped is undefined
         - item.matched > 0
 
-
-    - name: set_fact ceph_osd_files_json
+    - name: Set_fact ceph_osd_files_json
       set_fact:
         ceph_osd_data_json: "{{ ceph_osd_data_json | default({}) | combine({ item.item.item.2: item.content | b64decode | from_json}) }}"
       with_items: "{{ ceph_osd_files_content.results }}"
@@ -149,11 +149,11 @@
         - offline_host is undefined
         - item.skipped is undefined
 
-    - name: mark osd(s) out of the cluster
+    - name: Mark osd(s) out of the cluster
       command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} osd out {{ osd_to_kill.replace(',', ' ') }}"
       changed_when: false
 
-    - name: stop osd(s) service
+    - name: Stop osd(s) service
       service:
         name: ceph-osd@{{ item.2 }}
         state: stopped
@@ -162,8 +162,8 @@
       delegate_to: "{{ item.0 }}"
       when: offline_host is undefined
 
-    - name: umount osd lockbox
-      mount:
+    - name: Umount osd lockbox
+      ansible.posix.mount:
         path: "/var/lib/ceph/osd-lockbox/{{ ceph_osd_data_json[item.2]['data']['uuid'] }}"
         state: absent
       loop: "{{ _osd_hosts }}"
@@ -175,9 +175,8 @@
         - ceph_osd_data_json[item.2]['encrypted'] | default(False) | bool
         - ceph_osd_data_json[item.2]['data']['uuid'] is defined
 
-
-    - name: umount osd data
-      mount:
+    - name: Umount osd data
+      ansible.posix.mount:
         path: "/var/lib/ceph/osd/{{ cluster }}-{{ item.2 }}"
         state: absent
       loop: "{{ _osd_hosts }}"
@@ -186,7 +185,7 @@
         - offline_host is undefined
         - not containerized_deployment | bool
 
-    - name: get parent device for data partition
+    - name: Get parent device for data partition
       command: lsblk --noheadings --output PKNAME --nodeps "{{ ceph_osd_data_json[item.2]['data']['path'] }}"
       register: parent_device_data_part
       loop: "{{ _osd_hosts }}"
@@ -195,17 +194,17 @@
         - offline_host is undefined
         - item.2 not in _lvm_list.keys()
         - ceph_osd_data_json[item.2]['data']['path'] is defined
+      changed_when: true
 
-    - name: add pkname information in ceph_osd_data_json
+    - name: Add pkname information in ceph_osd_data_json
       set_fact:
-        ceph_osd_data_json: "{{ ceph_osd_data_json | default({}) | combine({item.item[2]: {'pkname_data': '/dev/' + item.stdout }}, recursive=True) }}"
+        ceph_osd_data_json: "{{ ceph_osd_data_json | default({}) | combine({ (item.item[2]): { 'pkname_data': '/dev/' + item.stdout } }, recursive=True) }}"
       loop: "{{ parent_device_data_part.results }}"
       when:
         - offline_host is undefined
         - item.skipped is undefined
 
-
-    - name: close dmcrypt close on devices if needed
+    - name: Close dmcrypt close on devices if needed
       command: "cryptsetup close {{ ceph_osd_data_json[item.2][item.3]['uuid'] }}"
       with_nested:
         - "{{ _osd_hosts }}"
@@ -219,8 +218,9 @@
         - item.2 not in _lvm_list.keys()
         - ceph_osd_data_json[item.2]['encrypted'] | default(False) | bool
         - ceph_osd_data_json[item.2][item.3] is defined
+      changed_when: true
 
-    - name: use ceph-volume lvm zap to destroy all partitions
+    - name: Use ceph-volume lvm zap to destroy all partitions
       command: "{{ container_run_cmd }} lvm zap --destroy {{ ceph_osd_data_json[item.2]['pkname_data'] if item.3 == 'data' else ceph_osd_data_json[item.2][item.3]['path'] }}"
       with_nested:
         - "{{ _osd_hosts }}"
@@ -232,8 +232,9 @@
         - offline_host is undefined
         - item.2 not in _lvm_list.keys()
         - ceph_osd_data_json[item.2][item.3] is defined
+      changed_when: true
 
-    - name: zap osd devices
+    - name: Zap osd devices
       ceph_volume:
         action: "zap"
         osd_fsid: "{{ item.1 }}"
@@ -247,16 +248,16 @@
         - offline_host is undefined
         - item.2 in _lvm_list.keys()
 
-    - name: ensure osds are marked down
+    - name: Ensure osds are marked down
       command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} osd down {{ osd_to_kill.replace(',', ' ') }}"
       changed_when: false
 
-    - name: purge osd(s) from the cluster
+    - name: Purge osd(s) from the cluster
       command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} osd purge {{ item }} --yes-i-really-mean-it"
       changed_when: false
       with_items: "{{ osd_to_kill.split(',') }}"
 
-    - name: remove osd data dir
+    - name: Remove osd data dir
       file:
         path: "/var/lib/ceph/osd/{{ cluster }}-{{ item.2 }}"
         state: absent
@@ -264,11 +265,10 @@
       delegate_to: "{{ item.0 }}"
       when: offline_host is undefined
 
-
-    - name: show ceph health
+    - name: Show ceph health
       command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} -s"
       changed_when: false
 
-    - name: show ceph osd tree
+    - name: Show ceph osd tree
       command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} osd tree"
       changed_when: false

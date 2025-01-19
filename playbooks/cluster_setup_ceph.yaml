@@ -29,7 +29,8 @@
   roles:
     - ceph_expansion_lv
 
-- import_playbook: ../ceph-ansible/site.yml
+- name: Import ceph-ansible/site.yml playbook
+  import_playbook: ../ceph-ansible/site.yml
 
 # Ceph mgr module which is enabled by default is not supported by SEAPATH.
 - name: Disable unwanted Ceph mgr module
@@ -37,14 +38,16 @@
       mons
   become: true
   tasks:
-      - name: Disable Ceph mgr restful module
-        command: ceph mgr module disable restful
+      - name: Disable Ceph mgr restful module # noqa: run-once[task]
+        ansible.builtin.command: ceph mgr module disable restful
         run_once: true
+        changed_when: true
 - name: Configure rbd
   hosts:
       osds
   become: true
   tasks:
-      - name: Disable rbd lock
-        command: rbd config global set global rbd_default_features 'layering, deep-flatten'
+      - name: Disable rbd lock # noqa: run-once[task] # noqa command-instead-of-module
+        ansible.builtin.command: rbd config global set global rbd_default_features 'layering, deep-flatten'
         run_once: true
+        changed_when: true

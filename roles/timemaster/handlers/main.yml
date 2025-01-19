@@ -1,0 +1,10 @@
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Restart timemaster
+  service:
+    name: "timemaster"
+    state: restarted
+    enabled: true
+    daemon_reload: true
