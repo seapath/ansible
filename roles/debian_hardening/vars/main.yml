@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 ---
 
-kernel_params:
+debian_hardening_kernel_params:
  - init_on_alloc=1
  - init_on_free=1
  - slab_nomerge
@@ -16,5 +16,5 @@ kernel_params:
  - rng_core.default_quality=500
  - lsm=apparmor,lockdown,capability,landlock,yama,bpf,integrity
 
-hardened_services:
+debian_hardening_hardened_services:
   - syslog-ng

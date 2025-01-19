@@ -3,7 +3,8 @@
 
 # Ansible playbook that deploy and set-up ptp on vms for a standalone machine
 
-- import_playbook: deploy_vms_standalone.yaml
+- name: Import deploy_vms_standalone
+  import_playbook: deploy_vms_standalone.yaml
 
 - name: Synchronise VMs with PTP
   hosts: VMs

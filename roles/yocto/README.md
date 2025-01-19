@@ -12,7 +12,7 @@ No requirement.
 |---------------------------|---------------------------|----------|---------|---------|-------------------------------------------|
 | extra_kernel_parameters   | extra_kernel_parameters   | No       | String  |         | Extra kernel parameter to set             |
 | kernel_parameters_restart | kernel_parameters_restart | No       | Bool    | false   | Restart after the kernel parameter update |
-| hugepages                 | hugepages                 | No       | Integer | 0       | One GB hugepages to allocate              |
+| yocto_hugepages           | hugepages                 | No       | Integer | 0       | One GB hugepages to allocate              |
 
 ## Example Playbook
 

@@ -5,11 +5,12 @@
   hosts: "{{ pacemaker_machine | default('cluster_machines') }}"
   become: true
   pre_tasks:
-    - name: exit playbook, if no machine was given
+    - name: Exit playbook, if no machine was given
       fail:
         msg: "machine_to_remove must be declared"
       when: machine_to_remove is undefined
   tasks:
-    - name: Remove pacemaker node
+    - name: Remove pacemaker node # noqa: run-once[task]
       run_once: true
       command: "crm_node -R {{ machine_to_remove }} --force"
+      changed_when: true

@@ -21,4 +21,5 @@
       - role: ci_yocto/clean_arm_machines
         when: ansible_facts['architecture'] == "aarch64"
 
-- import_playbook: seapath_setup_main.yaml
+- name: Import seapath_setup_main playbook
+  import_playbook: seapath_setup_main.yaml

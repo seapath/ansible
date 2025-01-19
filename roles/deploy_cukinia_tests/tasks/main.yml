@@ -3,7 +3,7 @@
 
 ---
 - name: Copy Cukinia's tests
-  synchronize:
+  ansible.posix.synchronize:
     src: cukinia-tests/cukinia
     dest: /etc/
     delete: true
@@ -44,7 +44,8 @@
     group: root
     mode: 0755
 
-- name: tasks only on hosts
+- name: Tasks only on hosts
+  when: "'hypervisors' in group_names"
   block:
     - name: Copy vm.xml
       copy:
@@ -59,22 +60,21 @@
         src: /etc/cukinia/cukinia-hypervisor.conf
         dest: /etc/cukinia/cukinia.conf
         state: link
-  when: "'hypervisors' in group_names"
 
 - name: Create /etc/cukinia.conf for observers
+  when: "'observers' in group_names"
   block:
     - name: Create a symlink cukinia.conf to cukinia-observer.conf
       file:
         src: /etc/cukinia/cukinia-observer.conf
         dest: /etc/cukinia/cukinia.conf
         state: link
-  when: "'observers' in group_names"
 
 - name: Create /etc/cukinia.conf for VMs
+  when: "'VMs' in group_names"
   block:
     - name: Create a symlink cukinia.conf to cukinia-observer.conf
       file:
         src: /etc/cukinia/cukinia-observer.conf
         dest: /etc/cukinia/cukinia.conf
         state: link
-  when: "'VMs' in group_names"

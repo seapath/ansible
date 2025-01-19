@@ -2,5 +2,5 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-tmpdir: "/tmp"
-enable_vmmgr_http_api: false
+configure_ha_tmpdir: "/tmp"
+configure_ha_enable_vmmgr_http_api: false

@@ -1,6 +1,6 @@
 <network>
-<name>{{ sriov_network_pool_name }}</name>
+<name>{{ network_sriovpool_sriov_network_pool_name }}</name>
 <forward mode='hostdev' managed='yes'>
-<pf dev='{{ interface }}'/>
+<pf dev='{{ network_sriovpool_interface }}'/>
 </forward>
 </network>

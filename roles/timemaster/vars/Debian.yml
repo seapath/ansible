@@ -2,6 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-path_timemaster_conf: "/etc/linuxptp/timemaster.conf"
-path_chrony_conf: "/etc/chrony/chrony.conf"
-service_name_chrony: "chrony"
+timemaster_path_timemaster_conf: "/etc/linuxptp/timemaster.conf"
+timemaster_path_chrony_conf: "/etc/chrony/chrony.conf"
+timemaster_service_name_chrony: "chrony"

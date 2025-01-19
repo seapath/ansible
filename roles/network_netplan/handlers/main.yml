@@ -1,2 +1,3 @@
 - name: Apply Netplan configuration
   command: netplan apply
+  changed_when: true

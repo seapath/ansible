@@ -8,17 +8,18 @@
 #- name: Print service facts
 #  ansible.builtin.debug:
 #    var: ansible_facts.services
-- name: install vm-mgr http interface
+- name: Install vm-mgr http interface
   vars:
     vmmgrapi_certs_dir: "/var/local/vmmgrapi/certs"
+  when: Enable_vmmgr_http_api is defined and enable_vmmgr_http_api is true
   block:
-    - name: create vm-mgr api certs folder
+    - name: Create vm-mgr api certs folder
       file:
         path: "{{ vmmgrapi_certs_dir }}"
         state: directory
         mode: 0755
 
-    - name: upload cert/key if provided
+    - name: Upload cert/key if provided
       copy:
         src: "{{ item }}"
         dest: "{{ vmmgrapi_certs_dir }}/{{ item }}"
@@ -30,7 +31,7 @@
         - vmmgr_http_tls_crt_path is defined
         - vmmgr_http_tls_key_path is defined
 
-    - name: create certificat / key if not provided
+    - name: Create certificat / key if not provided
       command: openssl req -x509 -nodes -days 9125 -newkey rsa:4096 -subj "/C=FR/ST=seapath/L=seapath/O=seapath/OU=seapath/CN=seapath" -keyout "{{ vmmgrapi_certs_dir }}/seapath.key" -out "{{ vmmgrapi_certs_dir }}/seapath.crt"
       args:
         creates: "{{ item }}"
@@ -68,7 +69,7 @@
         mode: '0600'
       register: nginx_conf
 
-    - name: restart nginx if needed
+    - name: Restart nginx if needed
       ansible.builtin.systemd:
         name: nginx.service
         enabled: no
@@ -95,27 +96,25 @@
         - gunicorn.service
       register: vmmgrapi_systemd
 
-    - name: daemon-reload vmmgrapi
+    - name: Daemon-reload vmmgrapi # noqa: no-handler
       ansible.builtin.service:
         daemon_reload: yes
       when: vmmgrapi_systemd.changed
 
-    - name: restart gunicorn.socket if needed
+    - name: Restart gunicorn.socket if needed # noqa: no-handler
       ansible.builtin.systemd:
         name: gunicorn.socket
         enabled: yes
         state: restarted
       when: vmmgrapi_systemd.changed
 
-    - name: start and enable gunicorn.socket
+    - name: Start and enable gunicorn.socket
       ansible.builtin.systemd:
         name: gunicorn.socket
         enabled: yes
         state: started
 
-  when: enable_vmmgr_http_api is defined and enable_vmmgr_http_api is true
-
-- name: disable gunicorn.socket if http flask api is not enabled
+- name: Disable gunicorn.socket if http flask api is not enabled
   ansible.builtin.systemd:
     name: gunicorn.socket
     enabled: no
@@ -124,14 +123,14 @@
     - enable_vmmgr_http_api is not defined or enable_vmmgr_http_api is false
     - services['gunicorn.socket'] is defined
 
-- name: disable nginx.service all the time, if it exists
+- name: Disable nginx.service all the time, if it exists
   ansible.builtin.systemd:
     name: nginx.service
     enabled: no
   when:
     - services['nginx.service'] is defined
 
-- name: disable gunicorn.service all the time, if it exists
+- name: Disable gunicorn.service all the time, if it exists
   ansible.builtin.systemd:
     name: gunicorn.service
     enabled: no

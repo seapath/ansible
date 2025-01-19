@@ -1,12 +1,20 @@
 # Copyright (C) 2024 Red Hat, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-- name: daemon-reload
+- name: Daemon-reload
   ansible.builtin.service:
     daemon_reload: yes
 
-- name: restart syslog-ng
+- name: Restart syslog-ng
   ansible.builtin.systemd:
     name: syslog-ng
     state: restarted
 
+- name: Restart systemd-journald
+  ansible.builtin.systemd:
+    name: systemd-journald
+    state: restarted
+
+- name: Update Grub
+  command: grub2-mkconfig -o /boot/grub2/grub.cfg
+  changed_when: true

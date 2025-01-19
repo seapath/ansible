@@ -11,23 +11,26 @@
     state: directory
     mode: '0755'
 - name: Mount the USB key
-  mount:
+  ansible.posix.mount:
     src: "{{ usb_device }}"
     path: /tmp/update
     fstype: vfat
     state: mounted
 - name: Execute Swupdate
   command: /usr/bin/swupdate -i /tmp/update/{{ swupdate_image }}
+  changed_when: true
 - name: Unmount the USB key
-  mount:
+  ansible.posix.mount:
     path: /tmp/update
     state: unmounted
 - name: Get overlay mounts
   command: awk '$3 == "overlay" {print $2}' /proc/mounts
   register: overlay_mounts
+  changed_when: false
 - name: Unmount overlays
   command: umount -l {{ item }}
   with_items: "{{ overlay_mounts.stdout_lines }}"
+  changed_when: true
 - name: Remove persistent data
   file:
     path: '{{ item }}'

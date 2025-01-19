@@ -2,32 +2,32 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- name: enable docker.service
+- name: Enable docker.service
   ansible.builtin.systemd:
     name: docker.service
     enabled: yes
     state: started
-- name: enable docker.socket
+- name: Enable docker.socket
   ansible.builtin.systemd:
     name: docker.socket
     enabled: yes
     state: started
 
-- name: add vhost_vsock to /etc/modules
+- name: Add vhost_vsock to /etc/modules
   lineinfile:
     path: /etc/modules
     state: present
     regexp: '^vhost_vsock$'
     line: 'vhost_vsock'
 
-- name: add sriov driver to /etc/modules
+- name: Add sriov driver to /etc/modules
   lineinfile:
     path: /etc/modules
     state: present
     regexp: "^{{ sriov_driver }}$"
     line: "{{ sriov_driver }}"
   when: sriov_driver is defined
-- name: add sriov apparmor permission for libvirt
+- name: Add sriov apparmor permission for libvirt
   lineinfile:
     path: /etc/apparmor.d/local/abstractions/libvirt-qemu
     state: present
@@ -35,13 +35,13 @@
     create: yes
     mode: 0644
   when: sriov_driver is defined
-- name: load the sriov module
+- name: Load the sriov module
   community.general.modprobe:
     name: "{{ sriov_driver }}"
     state: present
   when: sriov_driver is defined
 
-- name: add sriov sysfs rules
+- name: Add sriov sysfs rules
   ansible.builtin.lineinfile:
     path: "/etc/sysfs.d/sriov.conf"
     state: present
@@ -51,28 +51,27 @@
     mode: 0644
   with_items: "{{ sriov | dict2items }}"
   when: sriov is defined
-  register: sriov_sysfs
-- name: restart sysfsutils
-  ansible.builtin.systemd:
-    name: sysfsutils.service
-    state: restarted
-  when: sriov_sysfs.changed
+  notify: Restart sysfsutils
 
-- name: "systemd conf RuntimeWatchdogSec"
+- name: Systemd conf RuntimeWatchdogSec
   lineinfile:
     path: /etc/systemd/system.conf
     regexp: '^RuntimeWatchdogSec=.*$'
     line: "RuntimeWatchdogSec=20"
     state: present
-- name: "systemd conf RebootWatchdogSec"
+- name: Systemd conf RebootWatchdogSec
   lineinfile:
     path: /etc/systemd/system.conf
     regexp: '^RebootWatchdogSec=.*$'
     line: "RebootWatchdogSec=5min"
     state: present
 
-- block:
-  - name: "Create systemd slices override (folder)"
+- when:
+    - cpusystem is defined
+    - cpuuser is defined
+    - cpumachines is defined
+  block:
+  - name: Create systemd slices override (folder)
     file:
       path: /etc/systemd/system.control/{{ item }}.slice.d
       state: directory
@@ -83,7 +82,7 @@
       - "system"
       - "user"
       - "machine"
-  - name: create systemd slices override (files)
+  - name: Create systemd slices override (files)
     template:
       src: systemd_slice_override.j2
       dest: /etc/systemd/system.control/{{ item.name }}.slice.d/50-AllowedCPUs.conf
@@ -94,10 +93,6 @@
       - { name: "system", description: "system slice", allowedcpus: "{{ cpusystem }}" }
       - { name: "user", description: "user slice", allowedcpus: "{{ cpuuser }}" }
       - { name: "machine", description: "machine slice", allowedcpus: "{{ cpumachines }}" }
-  when:
-    - cpusystem is defined
-    - cpuuser is defined
-    - cpumachines is defined
 - name: Create systemd slices override REVERT
   file:
     path: /etc/systemd/system.control/{{ item }}.slice.d
@@ -108,7 +103,7 @@
     - "machine"
   when: cpusystem is not defined or cpuuser is not defined or cpumachines is not defined
 
-- name: create systemd slices
+- name: Create systemd slices
   template:
     src: systemd_slice.j2
     dest: /etc/systemd/system/{{ item.name }}.slice
@@ -119,12 +114,12 @@
     - { name: "machine-rt", description: "VM rt slice", wants: "machine.slice", allowedcpus: "{{ cpumachinesrt }}" }
     - { name: "machine-nort", description: "VM nonrt slice", wants: "machine.slice", allowedcpus: "{{ cpumachinesnort }}" }
     - { name: "ovs", description: "ovs slice", wants: "", allowedcpus: "{{ cpuovs }}" }
-  register: newslices
+  notify: Start new slices
   when:
     - cpumachinesrt is defined
     - cpumachinesnort is defined
     - cpuovs is defined
-- name: create systemd slices REVERT
+- name: Create systemd slices REVERT
   file:
     path: /etc/systemd/system/{{ item }}.slice
     state: absent
@@ -132,41 +127,20 @@
     - "machine-rt"
     - "machine-nort"
     - "ovs"
-  register: removeslices
+  notify: Start new slices REVERT
   when: cpumachinesrt is not defined and cpumachinesnort is not defined and cpuovs is not defined
 
-- name: start new slices
-  ansible.builtin.systemd:
-    name: "{{ item }}.slice"
-    state: restarted
-    daemon_reload: yes
-  with_items:
-    - "machine-rt"
-    - "machine-nort"
-    - "ovs"
-  when: newslices.changed
-- name: start new slices REVERT
-  ansible.builtin.systemd:
-    name: "{{ item }}.slice"
-    state: stopped
-    daemon_reload: yes
-  with_items:
-    - "machine-rt"
-    - "machine-nort"
-    - "ovs"
-  when: removeslices.changed
-
-- name: create tuned seapath-rt profile folder
+- name: Create tuned seapath-rt profile folder
   file:
     path: /etc/tuned/seapath-rt-host
     state: directory
     mode: '0755'
 
-- name: tuned path
+- name: Tuned path
   set_fact:
     tuned_path: "{{ custom_tuned_profile_path if custom_tuned_profile_path is defined else 'tuned.conf.j2' }}"
 
-- name: copy seapath-rt-host tuned profile conf
+- name: Copy seapath-rt-host tuned profile conf
   template:
     src: "{{ tuned_path }}"
     dest: /etc/tuned/seapath-rt-host/tuned.conf
@@ -174,26 +148,28 @@
     owner: root
     mode: '0644'
 
-- name: remove tuned dynamic tuning
+- name: Remove tuned dynamic tuning
   lineinfile:
     path: /etc/tuned/tuned-main.conf
     state: present
     regexp: '^#?dynamic_tuning = .*$'
     line: 'dynamic_tuning = 0'
 
-- name: enable tuned.service
+- name: Enable tuned.service
   ansible.builtin.systemd:
     name: tuned.service
     enabled: yes
     state: restarted
 
-- name: load seapath-rt-host tuned profile
+- name: Load seapath-rt-host tuned profile
   ansible.builtin.command: tuned-adm profile seapath-rt-host
   when: isolcpus is defined
+  changed_when: true
 
-- name: unload tuned profile
+- name: Unload tuned profile
   ansible.builtin.command: tuned-adm off
   when: isolcpus is not defined
+  changed_when: true
 
 - name: Create ovs-vswitchd.service.d directory
   file:
@@ -202,6 +178,7 @@
     owner: root
     group: root
     mode: 0755
+  notify: Restart ovs-vswitchd
 - name: Create ovs-vswitchd.service drop-in
   template:
     src: ovs-vswitchd_override.conf.j2
@@ -209,8 +186,8 @@
     owner: root
     group: root
     mode: 0644
-  register: ovsvswitchd
   when: team0_0 is defined and team0_1 is defined
+  notify: Restart ovs-vswitchd
 - name: Copy team0_x@.service file
   ansible.builtin.copy:
     src: team0_x@.service
@@ -218,11 +195,5 @@
     owner: root
     group: root
     mode: 0644
-  register: team0_x_service
   when: team0_0 is defined and team0_1 is defined
-- name: Restart ovs-vswitchd
-  ansible.builtin.systemd:
-    state: restarted
-    daemon_reload: yes
-    name: ovs-vswitchd
-  when: ovsvswitchd.changed or team0_x_service.changed
+  notify: Restart ovs-vswitchd

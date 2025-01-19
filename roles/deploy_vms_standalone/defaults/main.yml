@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-
-disk_copy: true
-qcow2tmpuploadfolder: "/tmp"
-disk_pool: "/var/lib/libvirt/images"
+deploy_vms_standalone_disk_copy: true
+deploy_vms_standalone_qcow2tmpuploadfolder: "/tmp"
+deploy_vms_standalone_disk_pool: "/var/lib/libvirt/images"

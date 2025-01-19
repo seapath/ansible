@@ -12,6 +12,7 @@
   command:
     cmd: /usr/bin/python3 setup.py install
     chdir: /tmp/src/vm_manager
+  changed_when: true
 - name: Create a symbolic link
   ansible.builtin.file:
     src: /usr/local/bin/vm_manager_cmd.py

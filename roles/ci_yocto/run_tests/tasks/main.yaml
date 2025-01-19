@@ -15,6 +15,7 @@
       MACHINENAME={{ cukinia_namespace | default(inventory_hostname) }}
       cukinia -f junitxml -o {{ tmp_test_dir.path }}/cukinia.xml
       /etc/cukinia/cukinia.conf || true
+  changed_when: true
 - name: Fetch result
   fetch:
     src: '{{ tmp_test_dir.path }}/cukinia.xml'
@@ -24,6 +25,7 @@
     flat: yes
 
 - name: Cyclictest
+  when: skip_cyclictest is not defined or not skip_cyclictest
   block:
     - name: Execute cyclitect script
       script: run_cyclictest.py '{{ tmp_test_dir.path }}/cyclictest.txt'
@@ -32,5 +34,4 @@
         src: '{{ tmp_test_dir.path }}/cyclictest.txt'
         dest: "{{ cukinia_test_prefix | default('..') }}/cyclictest_{{ inventory_hostname }}.txt"
         flat: yes
-  when: skip_cyclictest is not defined or not skip_cyclictest
 ...

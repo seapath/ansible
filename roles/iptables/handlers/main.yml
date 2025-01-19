@@ -1,0 +1,9 @@
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Reload iptables rules if needed
+  become: true
+  ansible.builtin.shell:
+    cmd: "/usr/sbin/iptables-restore < /etc/iptables/rules.v4"
+  changed_when: true

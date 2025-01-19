@@ -2,24 +2,24 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- name: disable vim defaults
+- name: Disable vim defaults
   lineinfile:
     dest: /etc/vim/vimrc
     regexp: '^"? *let g:skip_defaults_vim = 1$'
     line: "let g:skip_defaults_vim = 1"
     state: present
-- name: vim color syntax
+- name: Vim color syntax
   lineinfile:
     dest: /etc/vim/vimrc
     regexp: '^"? *syntax on$'
     line: "syntax on"
     state: present
-- name: remove vimrc.local file
+- name: Remove vimrc.local file
   file:
     path: /etc/vim/vimrc.local
     state: absent
 
-- name: create /var/log/syslog-ng folder on hosts
+- name: Create /var/log/syslog-ng folder on hosts
   file:
     path: /var/log/syslog-ng
     state: directory
@@ -29,37 +29,42 @@
     src: syslog-ng.conf.j2
     dest: /etc/syslog-ng/syslog-ng.conf
     mode: '0644'
-  notify: restart syslog-ng
-- block:
+  notify: Restart syslog-ng
+- when:
+    - syslog_tls_ca is defined
+    - syslog_tls_key is defined
+    - syslog_tls_server_ca is defined
+  block:
   - name: Create /etc/syslog-ng/cert.d
     file:
       path: /etc/syslog-ng/cert.d
       state: directory
       mode: '0755'
+    notify: Restart syslog-ng
   - name: Create /etc/syslog-ng/ca.d
     file:
       path: /etc/syslog-ng/ca.d/
       state: directory
       mode: '0755'
-  - name: copy syslog client certificate
+    notify: Restart syslog-ng
+  - name: Copy syslog client certificate
     ansible.builtin.copy:
       src: "{{ syslog_tls_ca }}"
       dest: /etc/syslog-ng/cert.d/clientcert.pem
       mode: '0644'
-  - name: copy syslog key
+    notify: Restart syslog-ng
+  - name: Copy syslog key
     ansible.builtin.copy:
       src: "{{ syslog_tls_key }}"
       dest: /etc/syslog-ng/cert.d/clientkey.pem
       mode: '0400'
-  - name: copy syslog server ca
+    notify: Restart syslog-ng
+  - name: Copy syslog server ca
     ansible.builtin.copy:
       src: "{{ syslog_tls_server_ca }}"
       dest: /etc/syslog-ng/ca.d/serverca.pem
       mode: '0644'
-  when:
-    - syslog_tls_ca is defined
-    - syslog_tls_key is defined
-    - syslog_tls_server_ca is defined
+    notify: Restart syslog-ng
 
 - name: Retrieve user information for UID 1000
   ansible.builtin.command: getent passwd 1000
@@ -69,10 +74,10 @@
   ansible.builtin.set_fact:
     old_admin_user: "{{ user_info.stdout.split(':')[0] }}"
 
-- name: removing or not the old admin user created by the iso
+- name: Removing or not the old admin user created by the iso
   when: admin_user != old_admin_user
   block:
-    - name: remove old admin user from sudoers file
+    - name: Remove old admin user from sudoers file
       lineinfile:
         dest: /etc/sudoers
         state: absent
@@ -93,12 +98,7 @@
     src: journald.conf
     dest: /etc/systemd/journald.conf
     mode: '0644'
-  register: journaldconf
-- name: Restart systemd-journald
-  ansible.builtin.systemd:
-    state: restarted
-    name: systemd-journald
-  when: journaldconf.changed
+  notify: Restart systemd-journald
 
 - name: Ensure admin group exists
   ansible.builtin.group:
@@ -114,7 +114,7 @@
     password: "{{ admin_passwd | default(omit) }}"
     append: no
 - name: Add authorized keys to admin user
-  authorized_key:
+  ansible.posix.authorized_key:
     user: "{{ admin_user }}"
     key: "{{ item }}"
   with_items: "{{ admin_ssh_keys }}"
@@ -142,7 +142,7 @@
   with_items:
     - 00-panicreboot.conf
 
-- name: customize /etc/environment
+- name: Customize /etc/environment
   ansible.builtin.lineinfile:
     dest: "/etc/environment"
     state: present
@@ -158,7 +158,7 @@
       SYSTEMD_EDITOR: 'vim'
   with_items: "{{ env_list | dict2items }}"
 
-- name: "PATH for admin user"
+- name: PATH for admin user
   lineinfile:
     dest: "/home/{{ admin_user }}/.bash_profile"
     regexp: '^export PATH'
@@ -169,7 +169,8 @@
     group: "{{ admin_user }}"
     mode: '0644'
 
-- block:
+- when: apt_repo is defined
+  block:
     - name: Remove all file in /etc/apt/sources.list.d
       file:
         path: /etc/apt/sources.list.d
@@ -178,9 +179,8 @@
       template:
         src: sources.list.j2
         dest: /etc/apt/sources.list
-  when: apt_repo is defined
 
-- name: "remove /etc/default/grub.d/*.cfg (FAI)"
+- name: Remove /etc/default/grub.d/*.cfg (FAI)
   file:
     path: "/etc/default/grub.d/{{ item }}"
     state: absent
@@ -188,15 +188,15 @@
     - 20_efi_ipv6.cfg
     - 30_console.cfg
 
-- name: "remove quiet from GRUB_CMDLINE_LINUX_DEFAULT option in grub conf"
+- name: Remove quiet from GRUB_CMDLINE_LINUX_DEFAULT option in grub conf
   lineinfile:
     dest: /etc/default/grub
     regexp: "^(GRUB_CMDLINE_LINUX_DEFAULT=\")(.*?[ ])?quiet([ ].*)?(\")$"
     line: '\1\2\3\4'
     backrefs: yes
-  register: updategrub0
+  notify: Update-grub
 
-- name: "make sure GRUB_CMDLINE_LINUX_DEFAULT has no double space"
+- name: Make sure GRUB_CMDLINE_LINUX_DEFAULT has no double space
   lineinfile:
     dest: /etc/default/grub
     regexp: "^(GRUB_CMDLINE_LINUX_DEFAULT=\".*)[ ][ ](.*\")"
@@ -205,10 +205,10 @@
     backrefs: yes
   register: doublespace
   until: not doublespace.changed
-  delay: 0.1
+  delay: 1
   retries: 10
 
-- name: "make sure GRUB_CMDLINE_LINUX exists 1/2"
+- name: Make sure GRUB_CMDLINE_LINUX exists 1/2
   lineinfile:
     path: /etc/default/grub
     regexp: "^GRUB_CMDLINE_LINUX=\".*\""
@@ -217,14 +217,14 @@
   changed_when: false
   register: check_grub_cmdline_linux
 
-- name: "make sure GRUB_CMDLINE_LINUX exists 2/2"
+- name: Make sure GRUB_CMDLINE_LINUX exists 2/2
   lineinfile:
     path: /etc/default/grub
     state: present
     line: "GRUB_CMDLINE_LINUX=\" \""
   when: check_grub_cmdline_linux.found == 0
 
-- name: "make sure GRUB_CMDLINE_LINUX starts with a space"
+- name: Make sure GRUB_CMDLINE_LINUX starts with a space
   lineinfile:
     dest: /etc/default/grub
     regexp: "^(GRUB_CMDLINE_LINUX=)\"([ ]*)(.*)\""
@@ -232,14 +232,14 @@
     state: present
     backrefs: yes
 
-- name: "grub conf"
+- name: Make grub conf
   lineinfile:
     dest: /etc/default/grub
     regexp: "^(GRUB_CMDLINE_LINUX=(?!.* {{ item }})\"[^\"]*)(\".*)"
     line: '\1 {{ item }}\2'
     state: present
     backrefs: yes
-  register: updategrub1
+  notify: Update-grub
   with_items:
     - ipv6.disable=1
     - efi=runtime
@@ -247,13 +247,10 @@
     - fsck.repair=yes
     - "{{ grub_append | default([]) }}"
 
-- name: "grub conf osprober"
+- name: Grub conf osprober
   lineinfile:
     dest: /etc/default/grub
     regexp: '^#?GRUB_DISABLE_OS_PROBER=.*$'
     line: 'GRUB_DISABLE_OS_PROBER=true'
     state: present
-  register: updategrub2
-- name: update-grub
-  command: update-grub
-  when: updategrub0.changed or updategrub1.changed or updategrub2.changed
+  notify: Update-grub

@@ -2,19 +2,22 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- block:
+- when: seapath_distro in [ "CentOS", "Debian" ]
+  block:
     - name: Get root user's home directory
-      shell: getent passwd root | cut -d ':' -f6
+      shell:
+        cmd: set -o pipefail && getent passwd root | cut -d ':' -f6
+        executable: /usr/bin/bash
       register: root_home_dir
+      changed_when: false
     - name: Fetch the root keyfile
       fetch:
         src: "{{ root_home_dir.stdout }}/.ssh/id_rsa.pub"
         dest: "buffer/{{ inventory_hostname }}-id_rsa.pub"
         flat: true
     - name: Copy the key to admin user's authorized_keys using Ansible module
-      authorized_key:
+      ansible.posix.authorized_key:
         user: "{{ admin_user }}"
         state: present
-        key: "{{ lookup('file','buffer/' + item + '-id_rsa.pub') }}"
+        key: "{{ lookup('file', 'buffer/' + item + '-id_rsa.pub') }}"
       loop: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) }}"
-  when: seapath_distro in [ "CentOS", "Debian" ]

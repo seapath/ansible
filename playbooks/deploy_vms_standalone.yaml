@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- hosts: hypervisors
-  name: Create and start VMs
+- name: Create and start VMs
+  hosts: hypervisors
   gather_facts: false
   become: true
   vars:
@@ -12,10 +12,10 @@
   roles:
     - deploy_vms_standalone
 
-- hosts: VMs
-  name: Wait for VMs to be online
+- name: Wait for VMs to be online
+  hosts: VMs
   gather_facts: false
   tasks:
     - name: Wait for VM connections
-      wait_for_connection:
+      ansible.builtin.wait_for_connection:
       when: wait_for_connection | default(false)

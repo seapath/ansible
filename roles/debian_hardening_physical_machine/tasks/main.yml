@@ -30,14 +30,14 @@
     mode: '0440'
   when: not revert
 
-- name: adding ceph user to group privileged
+- name: Adding ceph user to group privileged
   user:
     name: "ceph"
     groups: privileged
     append: yes
   when: not revert
 
-- name: adding Debian-snmp user to group privileged
+- name: Adding Debian-snmp user to group privileged
   user:
     name: "Debian-snmp"
     groups: privileged
@@ -51,18 +51,18 @@
     owner: root
     group: root
     mode: 0755
-  with_items: "{{ hardened_services }}"
+  with_items: "{{ debian_hardening_physical_machine_hardened_services }}"
 
 - name: Add systemd service hardening rules for physical machines
   copy:
     src: "{{ item }}_hardening.conf"
     dest: "/etc/systemd/system/{{ item }}.service.d/hardening.conf"
-  with_items: "{{ hardened_services }}"
+  with_items: "{{ debian_hardening_physical_machine_hardened_services }}"
   when: not revert
 
 - name: Remove systemd service hardening rules for physical machines
   file:
     path: "/etc/systemd/system/{{ item }}.service.d/hardening.conf"
     state: absent
-  with_items: "{{ hardened_services }}"
+  with_items: "{{ debian_hardening_physical_machine_hardened_services }}"
   when: revert

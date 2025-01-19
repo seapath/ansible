@@ -1,7 +1,7 @@
 <pool type="rbd">
-  <name>{{ libvirt_pool_name }}</name>
+  <name>{{ configure_libvirt_libvirt_pool_name }}</name>
   <source>
-    <name>{{ libvirt_rbd_pool }}</name>
+    <name>{{ configure_libvirt_libvirt_rbd_pool }}</name>
     <host name='rbd' port='6789' />
     <auth username='libvirt' type='ceph'>
       <secret uuid='{{ libvirt_uuid_rbd }}'/>

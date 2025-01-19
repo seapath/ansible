@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- block:
+- when: netplan_configurations is not defined
+  block:
     - name: Create systemd-networkd-wait-online.service.d directory
       file:
         path: /etc/systemd/system/systemd-networkd-wait-online.service.d/
@@ -14,9 +15,7 @@
       template:
         src: systemd-networkd-wait-online.service.j2
         dest: /etc/systemd/system/systemd-networkd-wait-online.service.d/override.conf
-    - name: enable systemd-networkd-wait-online.service
+    - name: Enable systemd-networkd-wait-online.service
       ansible.builtin.systemd:
         name: systemd-networkd-wait-online.service
         enabled: yes
-  when: netplan_configurations is not defined
-

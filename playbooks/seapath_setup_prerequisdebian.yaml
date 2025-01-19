@@ -43,20 +43,20 @@
     - cluster_machines
   become: true
   tasks:
-    - name: disable libvirt-guests.service
+    - name: Disable libvirt-guests.service
       ansible.builtin.systemd:
         name: libvirt-guests.service
         enabled: no
         state: stopped
 
-- name: upload extra files
+- name: Upload extra files
   hosts:
     - cluster_machines
     - standalone_machine
     - VMs
   become: true
   tasks:
-    - name: upload extra files
+    - name: Upload extra files
       copy:
         src: "{{ item.src }}"
         dest: "{{ item.dest }}"
@@ -68,7 +68,7 @@
       when:
         - upload_files is defined
         - item.extract is not defined or item.extract is false
-    - name: upload extra files and extract them
+    - name: Upload extra files and extract them
       unarchive:
         src: "{{ item.src }}"
         dest: "{{ item.dest }}"

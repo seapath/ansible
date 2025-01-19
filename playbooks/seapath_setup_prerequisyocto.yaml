@@ -18,14 +18,14 @@
   roles:
     - yocto/hugepages
 
-- name: upload extra files
+- name: Upload extra files
   hosts:
     - cluster_machines
     - standalone_machine
     - VMs
   become: true
   tasks:
-    - name: upload extra files
+    - name: Upload extra files
       copy:
         src: "{{ item.src }}"
         dest: "{{ item.dest }}"
@@ -37,7 +37,7 @@
       when:
         - upload_files is defined
         - item.extract is not defined or item.extract is false
-    - name: upload extra files and extract them
+    - name: Upload extra files and extract them
       unarchive:
         src: "{{ item.src }}"
         dest: "{{ item.dest }}"
@@ -48,7 +48,7 @@
       when:
         - upload_files is defined
         - item.extract is defined and item.extract is true
-    - name: run extra commands after upload
+    - name: Run extra commands after upload
       shell: "{{ item }}"
       tags:
         - skip_ansible_lint

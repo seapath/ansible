@@ -6,8 +6,4 @@ galaxy_info:
   description: deploys Guests in cluster mode
   license: Apache-2.0
   min_ansible_version: 2.9.10
-  platforms:
-  - name: Linux
-    versions:
-    - all
 dependencies: []

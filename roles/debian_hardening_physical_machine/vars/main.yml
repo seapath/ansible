@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 ---
 
-hardened_services:
+debian_hardening_physical_machine_hardened_services:
   - ovs-vswitchd
   - ovsdb-server
   - corosync

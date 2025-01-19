@@ -1,0 +1,8 @@
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Reload systemd-networkd configuration
+  ansible.builtin.service:
+    name: systemd-networkd
+    state: reloaded

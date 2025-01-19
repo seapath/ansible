@@ -3,4 +3,4 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-hugepages: 0
+yocto_hugepages: 0

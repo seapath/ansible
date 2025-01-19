@@ -7,14 +7,15 @@
 # Using it on a fully configured cluster does not allow redeployment of a fresh cluster
 
 ---
-- import_playbook: ../ceph-ansible/infrastructure-playbooks/purge-cluster.yml
+- name: Import purge cluster playbook
+  import_playbook: ../ceph-ansible/infrastructure-playbooks/purge-cluster.yml
 
 - name: Re-create Ceph folders
   hosts: cluster_machines
   become: true
   tasks:
     - name: Re-create Ceph folders
-      file:
+      ansible.builtin.file:
         path: "{{ item }}"
         state: directory
         owner: ceph

@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- block:
+- when: netplan_configurations is defined
+  block:
     - name: Create /etc/netplan directory
       file:
         path: /etc/netplan
@@ -19,7 +20,6 @@
         mode: '0600'
       with_items: "{{ netplan_configurations }}"
       notify: Apply Netplan configuration
-    - name: avoid reboot for netplan
+    - name: Avoid reboot for netplan
       set_fact:
         need_reboot: false
-  when: netplan_configurations is defined

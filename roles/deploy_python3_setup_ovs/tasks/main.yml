@@ -12,17 +12,14 @@
   command:
     cmd: /usr/bin/pip install --root-user-action=ignore --prefix=/usr/ .
     chdir: /tmp/src/python3-setup-ovs
+  changed_when: true
 - name: Copy seapath-config_ovs.service
   ansible.builtin.copy:
     src: seapath-config_ovs.service
     dest: /etc/systemd/system/seapath-config_ovs.service
     mode: '0644'
-  register: seapathconfigovs
-- name: daemon-reload seapath-config_ovs
-  ansible.builtin.service:
-    daemon_reload: yes
-  when: seapathconfigovs.changed
-- name: enable seapath-config_ovs.service
+  notify: Trigger daemon-reload
+- name: Enable seapath-config_ovs.service
   ansible.builtin.systemd:
     name: seapath-config_ovs.service
     enabled: yes
