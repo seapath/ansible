@@ -5,8 +5,8 @@
 	branch = stable-6.0
 [submodule "roles/deploy_cukinia_tests/cukinia-tests"]
 	path = roles/deploy_cukinia_tests/cukinia-tests
-	url = https://github.com/seapath/cukinia-tests.git
-        branch = main
+	url = https://github.com/ycongal-smile/seapath-cukinia-tests.git
+        branch = yco/vm_manager
 [submodule "roles/deploy_cukinia/files/cukinia"]
 	path = roles/deploy_cukinia/files/cukinia
 	url = https://github.com/savoirfairelinux/cukinia.git
@@ -16,4 +16,5 @@
 	url = https://github.com/seapath/python3-setup-ovs.git
 [submodule "roles/deploy_vm_manager/files/vm_manager"]
 	path = roles/deploy_vm_manager/files/vm_manager
-	url = https://github.com/seapath/vm_manager.git
+	url = https://github.com/ycongal-smile/seapath-vm_manager.git
+	branch = yco/pyproject_toml
