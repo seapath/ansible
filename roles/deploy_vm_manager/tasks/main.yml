@@ -2,6 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+- name: Install pip
+  ansible.builtin.apt:
+    name: "python3-pip"
+    update_cache: yes
+    cache_valid_time: 3600
 - name: Synchronization of src vm_manager on the control machine to dest on the remote hosts
   ansible.posix.synchronize:
     src: vm_manager
