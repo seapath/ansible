@@ -18,3 +18,4 @@
 [submodule "roles/deploy_vm_manager/files/vm_manager"]
 	path = roles/deploy_vm_manager/files/vm_manager
 	url = https://github.com/seapath/vm_manager.git
+        branch = main
