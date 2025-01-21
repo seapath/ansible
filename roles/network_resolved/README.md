@@ -8,7 +8,7 @@ No requirement.
 
 ## Role Variables
 
-| Variable    | Requiered | Type           | Comments        |
+| Variable    | Required  | Type           | Comments        |
 |-------------|-----------|----------------|-----------------|
 | dns_servers | No        | List of string | DNS server list |
 

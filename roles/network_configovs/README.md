@@ -8,7 +8,7 @@ No requirement.
 
 ## Role Variables
 
-| Variable           | Requiered | Type         | Comments                                                                                                             |
+| Variable           | Required  | Type         | Comments                                                                                                             |
 |--------------------|-----------|--------------|----------------------------------------------------------------------------------------------------------------------|
 | seapath_distro     | yes       | String       | SEAPATH variant. CentOS, Debian or Yocto. The variable can be set automatically using the detect_seapath_distro role |
 | ovs_vsctl_cmds     | no        | String list  | List of custom Open vSwtich commands to run with ovs-vsctl                                                           |
