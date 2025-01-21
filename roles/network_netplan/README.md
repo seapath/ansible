@@ -8,7 +8,7 @@ No requirement.
 
 ## Role Variables
 
-| Variable               | Requiered | Type           | Comments                                                                               |
+| Variable               | Required  | Type           | Comments                                                                               |
 |------------------------|-----------|----------------|----------------------------------------------------------------------------------------|
 | netplan_configurations | No        | List of string | List of netplan Ansible template files on the Ansible machine to be uploaded on target |
 

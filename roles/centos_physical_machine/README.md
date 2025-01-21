@@ -8,7 +8,7 @@ No requirement.
 
 ## Role Variables
 
-| Variable                       | Requiered | Type        | Default | Comments                                                                                                                  |
+| Variable                       | Required  | Type        | Default | Comments                                                                                                                  |
 |--------------------------------|-----------|-------------|---------|---------------------------------------------------------------------------------------------------------------------------|
 | extra_sysctl_physical_machines | No        | String      |         | Custom systctl configuration separate by new spaces                                                                       |
 | extra_kernel_modules           | No        | String list |         | List of Kernel modules to load when booting                                                                               |

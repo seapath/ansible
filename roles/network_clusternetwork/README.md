@@ -8,7 +8,7 @@ No requirement.
 
 ## Role Variables
 
-| Variable                   | Requiered | Type        | Comments                                                         |
+| Variable                   | Required  | Type        | Comments                                                         |
 |----------------------------|-----------|-------------|------------------------------------------------------------------|
 | team0_0                    | Yes       | String      | First network interface use for the ring cluster                 |
 | team0_1                    | Yes       | String      | Second network interface use for the ring cluster                |

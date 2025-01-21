@@ -8,7 +8,7 @@ No requirement.
 
 ## Role Variables
 
-| Variable              | Requiered | Type | Comments |
+| Variable              | Required  | Type | Comments |
 |-----------------------|-----------|------|----------|
 | interfaces_br0_netdev | No        | ???  | TODO     |
 | interfaces_on_br0     | No        | ???  | TODO     |

@@ -8,7 +8,7 @@ No requirement.
 
 ## Role Variables
 
-| Variable        | Requiered | Type   | Comments                                                        |
+| Variable        | Required  | Type   | Comments                                                        |
 |-----------------|-----------|--------|-----------------------------------------------------------------|
 | hostname        | No        | String | Machine hostname. Default is Ansible inventory_hostname         |
 | ip_addr         | Yes       | String | Administration network interface IP address                     |

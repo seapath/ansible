@@ -8,7 +8,7 @@ No requirement.
 
 ## Role Variables
 
-| Variable                | Requiered | Type   | Comments                                  |
+| Variable                | Required  | Type   | Comments                                  |
 |-------------------------|-----------|--------|-------------------------------------------|
 | sriov_network_pool_name | Yes       | String | Name of the libvirt SR-IOV pool           |
 | interface               | Yes       | String | Network interface to use for SR-IOV setup |
