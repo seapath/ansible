@@ -7,6 +7,7 @@
     src: cukinia-tests/cukinia
     dest: /etc/
     delete: true
+    owner: false
     rsync_opts:
       - "--exclude=*.j2"
 - name: Copy Cukinia's tests templates
