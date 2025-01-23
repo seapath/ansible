@@ -14,6 +14,7 @@
 [submodule "roles/deploy_python3_setup_ovs/files/python3-setup-ovs"]
 	path = roles/deploy_python3_setup_ovs/files/python3-setup-ovs
 	url = https://github.com/seapath/python3-setup-ovs.git
+        branch = main
 [submodule "roles/deploy_vm_manager/files/vm_manager"]
 	path = roles/deploy_vm_manager/files/vm_manager
 	url = https://github.com/seapath/vm_manager.git
