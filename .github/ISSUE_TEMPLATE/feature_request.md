@@ -1,20 +1,24 @@
 ---
 name: Feature request
-about: Suggest an idea for this project
+about: Suggest an idea for SEAPATH
 title: ''
-labels: ''
+labels: enhancement
 assignees: ''
 
 ---
 
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+**Abstract**
+A clear and concise description of what the problem is.
 
-**Describe the solution you'd like**
-A clear and concise description of what you want to happen.
+**Current status**
+A description of the current implementation or features available in SEAPATH.
 
-**Describe alternatives you've considered**
-A clear and concise description of any alternative solutions or features you've considered.
-
-**Additional context**
+**Detailed Description**
+An explanation of the proposed solution.
 Add any other context or screenshots about the feature request here.
+
+**Benefits to SEAPATH**
+Explain how this new feature or implementation would improve SEAPATH.
+
+**Work to be done**
+If you know about it, describe the steps to get the work done on the project.
