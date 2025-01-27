@@ -12,5 +12,5 @@
 
 - name: Rebuild initramfs if necessary
   command:
-    cmd: /usr/bin/dracut --regenerate-all --force
+    cmd: /usr/sbin/update-initramfs -u
   changed_when: true
