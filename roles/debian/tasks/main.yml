@@ -2,6 +2,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+
+- name: Upgrade the OS (apt-get dist-upgrade)
+  ansible.builtin.apt:
+    update_cache: yes
+    install_recommends: no
+    autoremove: yes
+    upgrade: dist
+
 - name: Disable vim defaults
   lineinfile:
     dest: /etc/vim/vimrc
