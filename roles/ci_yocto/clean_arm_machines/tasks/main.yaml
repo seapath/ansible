@@ -39,5 +39,7 @@
     - /mnt/persistent/etc
     - /mnt/persistent/home
     - /mnt/persistent/var
+    - /var/log/journal
+    - /var/log/syslog-ng
 - name: Reboot the system
   reboot:
