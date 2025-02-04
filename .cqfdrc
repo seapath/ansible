@@ -1,7 +1,7 @@
 [project]
 org='seapath'
 name='ansible'
-flavors='prepare manual module_documentation ansible-lint'
+flavors='prepare manual module_documentation ansible-lint export'
 
 [build]
 command='check_yaml && ansible-lint -c ansible-lint.conf'
@@ -18,3 +18,12 @@ command='./generate_module_documentation.sh'
 [ansible-lint]
 docker_run_args="-v $(pwd)/inventories/examples/seapath-cluster.yaml:/etc/ansible/hosts/hosts.yaml -v $(pwd)/ceph-ansible/roles:/etc/ansible/roles"
 command='ansible-lint -c ansible-lint.conf'
+
+[export]
+command="./prepare.sh && \
+         tar czf /tmp/ansible-$(git describe --tags).tar.gz \
+            --transform 's|^.|seapath-ansible|' \
+            --exclude 'ansible*.tar.gz' \
+            --exclude .git \
+            . && \
+         mv /tmp/ansible-*.tar.gz ."
