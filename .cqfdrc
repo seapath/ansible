@@ -2,6 +2,7 @@
 org='seapath'
 name='ansible'
 flavors='prepare manual module_documentation ansible-lint export'
+custom_img_name=ghcr.io/seapath/ansible_cqfd:v1.1.0
 
 [build]
 command='check_yaml && ansible-lint -c ansible-lint.conf'
