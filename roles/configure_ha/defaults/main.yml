@@ -3,4 +3,3 @@
 
 ---
 configure_ha_tmpdir: "/tmp"
-configure_ha_enable_vmmgr_http_api: false
