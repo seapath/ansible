@@ -10,7 +10,7 @@
       - "--chown=root:root"
 - name: Install vm_manager
   command:
-    cmd: /usr/bin/pip install --root-user-action=ignore --prefix=/usr/ .
+    cmd: /usr/bin/pip install --root-user-action=ignore --no-build-isolation --prefix=/usr/ .
     chdir: /tmp/src/vm_manager
   changed_when: true
 - name: Create a symbolic link
