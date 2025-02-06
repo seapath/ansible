@@ -11,7 +11,7 @@
 - name: Install vm-mgr http interface
   vars:
     vmmgrapi_certs_dir: "/var/local/vmmgrapi/certs"
-  when: Enable_vmmgr_http_api is defined and enable_vmmgr_http_api is true
+  when: enable_vmmgr_http_api is defined and enable_vmmgr_http_api is true
   block:
     - name: Create vm-mgr api certs folder
       file:
