@@ -173,12 +173,17 @@
   block:
     - name: Remove all file in /etc/apt/sources.list.d
       file:
-        path: /etc/apt/sources.list.d
+        path: /etc/apt/sources.list
         state: absent
     - name: Configure apt repositories
-      template:
-        src: sources.list.j2
-        dest: /etc/apt/sources.list
+      deb822_repository:
+        name: "{{ item.name }}"
+        types: deb
+        uris: "{{ item.uris }}"
+        suites: "{{ item.suites }}"
+        components: "{{ item.components }}"
+        signed_by: "{{ item.signed_by }}"
+      loop: "{{ apt_repo }}"
 
 - name: Remove /etc/default/grub.d/*.cfg (FAI)
   file:
