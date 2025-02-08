@@ -171,14 +171,34 @@
 
 - when: apt_repo is defined
   block:
-    - name: Remove all file in /etc/apt/sources.list.d
-      file:
-        path: /etc/apt/sources.list.d
-        state: absent
-    - name: Configure apt repositories
-      template:
-        src: sources.list.j2
-        dest: /etc/apt/sources.list
+    - name: Detect apt_repo type
+      set_fact:
+        apt_repo_is_dict: "{{ apt_repo is not none and apt_repo | selectattr('name', 'defined') | list | length > 0 }}"
+    - when: apt_repo_is_dict
+      block:
+        - name: Remove file /etc/apt/sources.list
+          file:
+            path: /etc/apt/sources.list
+            state: absent
+        - name: Configure apt repositories
+          deb822_repository:
+            name: "{{ item.name }}"
+            types: deb
+            uris: "{{ item.uris }}"
+            suites: "{{ item.suites }}"
+            components: "{{ item.components }}"
+            signed_by: "{{ item.signed_by }}"
+          loop: "{{ apt_repo }}"
+    - when: not apt_repo_is_dict
+      block:
+        - name: Remove all files in /etc/apt/sources.list.d
+          file:
+            path: /etc/apt/sources.list.d
+            state: absent
+        - name: Configure apt repositories
+          template:
+            src: sources.list.j2
+            dest: /etc/apt/sources.list
 
 - name: Remove /etc/default/grub.d/*.cfg (FAI)
   file:
