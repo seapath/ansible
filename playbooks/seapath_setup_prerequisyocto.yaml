@@ -9,6 +9,7 @@
   hosts:
     - cluster_machines
     - standalone_machine
+  become: true
   roles:
     - yocto/kernel_params
 
