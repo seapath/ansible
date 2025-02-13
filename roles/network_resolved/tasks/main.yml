@@ -38,4 +38,6 @@
     name: systemd-resolved
     state: stopped
     enabled: false
-  when: dns_servers is not defined
+  when:
+    - dns_servers is not defined
+    - seapath_distro != "Yocto"
