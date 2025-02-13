@@ -40,7 +40,7 @@
     <currentMemory unit="MiB">{{ vm.memory | default ("2048") }}</currentMemory>
 {% endif %}
     <os firmware="efi">
-        <type arch="x86_64" machine="pc-q35-3.1">hvm</type>
+        <type arch="x86_64" machine="q35">hvm</type>
         <boot dev="hd" />
         <bootmenu enable="no" />
         <bios useserial="yes" rebootTimeout="0" />
