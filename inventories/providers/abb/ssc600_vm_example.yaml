@@ -1,32 +1,25 @@
 # Copyright (C) 2024, SFL (https://savoirfairelinux.com)
 # SPDX-License-Identifier: Apache-2.0
 
-all:
-  children:
-    VMs:
-      hosts:
-        ssc600example:
-          description: "SSC600 VM Standalone Example"
-          vm_template: "../templates/vm/ssc600.xml.j2"
-          vm_disk: "../files/ssc600_disk.img.gz"
-          disk_extract: true
-          # In cluster mode, the disk has to be in qcow2 format:
-          #vm_disk: "../files/ssc600_disk.qcow2"
-          #disk_extract: false
-          memory: 6
-          cpuset: [4, 5, 6, 7]
-          emulatorpin: 3
-          rt_priority: 50
-          bridges:
-            - name: "br0"
-              mac_address: "52:54:00:c4:ff:06"
-          sv_interfaces:
-            - name: "enp88s0" # Change to your SV interface
-              mac_address: "52:54:00:c4:ff:07"
-              mode: "vepa"
-      vars:
-        ansible_user: admin
-        ansible_become: true
-        ansible_become_method: sudo
-        apply_network_config: true
-        wait_for_connection: false
+VMs:
+  hosts:
+    ssc600example:
+      description: "SSC600 VM Standalone Example"
+      vm_template: "../templates/vm/ssc600.xml.j2"
+      vm_disk: "../files/ssc600_disk.img.gz"
+      disk_extract: true
+      # In cluster mode, the disk has to be in qcow2 format:
+      #vm_disk: "../files/ssc600_disk.qcow2"
+      #disk_extract: false
+      memory: 6
+      cpuset: [4, 5, 6, 7]
+      emulatorpin: 3
+      rt_priority: 50
+      bridges:
+        - name: "br0"
+          mac_address: "52:54:00:c4:ff:06"
+      sv_interfaces:
+        - name: "enp88s0" # Change to your SV interface
+          mac_address: "52:54:00:c4:ff:07"
+          mode: "vepa"
+      wait_for_connection: false
