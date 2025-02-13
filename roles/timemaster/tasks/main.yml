@@ -6,7 +6,9 @@
 
 - name: Populate service facts
   service_facts:
+- debug: var=services
 - name: Stop and disable systemd-timesyncd if it exists
+  when: "'systemd-timesyncd.service' in services"
   service:
     name: "systemd-timesyncd"
     state: stopped
