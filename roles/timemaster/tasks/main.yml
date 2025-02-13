@@ -11,7 +11,7 @@
     name: "systemd-timesyncd"
     state: stopped
     enabled: false
-  when: "'systemd-timesyncd.service' in services"
+  when: "'systemd-timesyncd.service' in services and (services['systemd-timesyncd.service'].status != 'not-found')"
 - name: Create timemaster configuration
   template:
     src: timemaster.conf.j2
