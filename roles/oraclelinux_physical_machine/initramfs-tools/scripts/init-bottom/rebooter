@@ -1,0 +1,44 @@
+#!/bin/sh
+
+PREREQ="lvm"
+
+prereqs()
+{
+   echo "$PREREQ"
+}
+
+case $1 in
+prereqs)
+   prereqs
+   exit 0
+   ;;
+esac
+
+. /scripts/functions
+
+# Get REBOOTER_LOG_DEVICE and REBOOTER_LOG_PATH from config
+# Default to SEAPATH default (a dedicated LV called vg1-varlog)
+REBOOTER_LOG_DEVICE=/dev/mapper/vg1-varlog
+REBOOTER_LOG_PATH=.
+if [ -e /conf/conf.d/rebooter.conf ]; then
+	. /conf/conf.d/rebooter.conf
+fi
+
+log_begin_msg "Rebooter starting"
+if [ -e /run/initramfs/do_reboot ]; then
+	_log_msg "Rebooting...\n"
+	MOUNT_POINT="/run/mnt"
+	mkdir -p $MOUNT_POINT
+	mount -o sync,rw $REBOOTER_LOG_DEVICE $MOUNT_POINT
+	LOG_PATH="$MOUNT_POINT/$REBOOTER_LOG_PATH/initramfs.log"
+	echo "== $(date) ==" >> $LOG_PATH
+	dmesg >> $LOG_PATH
+	echo >> $LOG_PATH
+	umount $MOUNT_POINT
+	reboot -f -d 1 # No init to handle reboot => -f
+else
+	_log_msg "(no reboot needed) "
+fi
+log_end_msg
+
+exit 0
