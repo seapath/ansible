@@ -2,7 +2,7 @@
 
 This directory contains the example inventory files for the SSC600 SW from ABB. It can configure a standalone yocto hypervisor and a SSC600 SW VM.
 The VM name must contain the string "ssc600" to be recognized by the qemu hook provided by ABB. (See the files needed section).
-The VM deployment has been tested on a yocto and a debian hypervisor.
+The VM deployment has been tested on a Yocto and a Debian hypervisor using the version 1.5.0 of ABB SSC600 SW.
 
 ## Structure
 
@@ -12,14 +12,18 @@ The VM deployment has been tested on a yocto and a debian hypervisor.
 ## Files needed
 
 Some files provided by ABB are needed to use these inventories:
-- ssc600_disk.img.gz
+- ssc600\_disk.img.gz
 - qemu.hook
 
 To use them, they can be copied in the `files` directory at the root of ansible.
 
-> The raw image disk can be converted to qcow2 format. The disk_extract variable has to be set to false.
+> The raw image disk ssc600\_disk.img.gz has to be converted to qcow2 format to work on SEAPATH.
 
-In a cluster, the deployment playbook wants a qcow2 file. The conversion is needed and can be done with `qemu-img convert`
+This can be done with the following commands:
+- `gunzip ssc600sw_disk.img.gz`
+- `qemu-img convert -f raw -O qcow2 ssc600_disk.img ssc600_disk.qcow2`
+
+*Warning: Both the img.gz and the qcow2 files are less than 1Gib. However, the intermediate `ssc600sw_disk.img` file is 30GiB*
 
 ## Prerequisite
 
@@ -39,3 +43,12 @@ The default br0 bridge is use.
 ## Cache L3 partitioning
 
 The L3 cache partitioning is not supported and would need to be tested with and without to see the impact.
+
+## Access to ABB HMI
+
+Once the VM has booted, the only access referenced in ABB Documentation is through a web HMI accessible on 192.168.2.10/24.
+In order for this HMI to be accessible outside of the hypervisor, the br0 bridge must have an IP on this subnet (for example 192.168.2.11).
+
+This can be done either :
+- directly in the inventory by setting the IP of your hypervisor `ansible_host: 192.168.2.11`
+- by logging into the hypervisor and typing `sudo ip addr add 192.168.2.11/24 dev br0`

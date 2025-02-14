@@ -6,11 +6,7 @@ VMs:
     ssc600example:
       description: "SSC600 VM Standalone Example"
       vm_template: "../templates/vm/ssc600.xml.j2"
-      vm_disk: "../files/ssc600_disk.img.gz"
-      disk_extract: true
-      # In cluster mode, the disk has to be in qcow2 format:
-      #vm_disk: "../files/ssc600_disk.qcow2"
-      #disk_extract: false
+      vm_disk: "../files/ssc600_disk.qcow2"
       memory: 6
       cpuset: [4, 5, 6, 7]
       emulatorpin: 3
