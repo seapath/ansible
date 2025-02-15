@@ -12,4 +12,5 @@
     tmpdir: "/tmp"
     corosync_node_list: "{{ groups['cluster_machines'] | list }}"
   roles:
+    - detect_seapath_distro
     - configure_ha
