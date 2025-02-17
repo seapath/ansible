@@ -2,6 +2,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+
+- name: Upgrade the OS (apt-get dist-upgrade)
+  ansible.builtin.apt:
+    update_cache: yes
+    install_recommends: no
+    autoremove: yes
+    upgrade: dist
+
 - name: Disable vim defaults
   lineinfile:
     dest: /etc/vim/vimrc
@@ -173,12 +181,17 @@
   block:
     - name: Remove all file in /etc/apt/sources.list.d
       file:
-        path: /etc/apt/sources.list.d
+        path: /etc/apt/sources.list
         state: absent
     - name: Configure apt repositories
-      template:
-        src: sources.list.j2
-        dest: /etc/apt/sources.list
+      deb822_repository:
+        name: "{{ item.name }}"
+        types: deb
+        uris: "{{ item.uris }}"
+        suites: "{{ item.suites }}"
+        components: "{{ item.components }}"
+        signed_by: "{{ item.signed_by }}"
+      loop: "{{ apt_repo }}"
 
 - name: Remove /etc/default/grub.d/*.cfg (FAI)
   file:
@@ -254,3 +267,11 @@
     line: 'GRUB_DISABLE_OS_PROBER=true'
     state: present
   notify: Update-grub
+
+- name: Disable PerSourcePenalties
+  lineinfile:
+    dest: /etc/ssh/sshd_config
+    regexp: '^#?PerSourcePenalties.*$'
+    line: 'PerSourcePenalties no'
+    state: present
+  notify: Restart sshd

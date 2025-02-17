@@ -87,6 +87,22 @@
       when: commands_to_run_after_upload is defined
 
 
+- name: Remove what is not needed after installation on guests
+  hosts:
+    - VMs
+  become: true
+  tasks:
+    - name: Uninstall apt packages not required after installation (all debian version)
+      apt:
+        name:
+          - gcc-12-base
+          - libargon2-1
+          - libfdisk1
+          - libunistring2
+        state: absent
+        purge: yes
+        autoremove: yes
+
 - name: Remove what is not needed after installation
   hosts:
     - cluster_machines
@@ -99,17 +115,10 @@
         name:
           - fdisk
           - ifupdown
+          - dhcpcd-base
         state: absent
         purge: yes
         autoremove: yes
-    - name: Uninstall apt packages not required after installation (only debian11)
-      apt:
-        name:
-          - libfdisk1
-        state: absent
-        purge: yes
-        autoremove: yes
-      when: ansible_distribution == 'Debian' and ansible_distribution_version | int < 12
     - name: Disable unused systemd services
       systemd:
         unit: "{{ item }}"

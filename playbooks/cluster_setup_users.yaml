@@ -7,18 +7,11 @@
 # The second is used by consolevm on Debian/CentOS
 
 ---
-- name: Create livemigration user
+- name: Create livemigration user and admin user
   hosts: hypervisors:&cluster_machines
   gather_facts: true
   become: true
   roles:
     - detect_seapath_distro
     - add_livemigration_user
-
-- name: Configure admin user
-  hosts: hypervisors:&cluster_machines
-  gather_facts: true
-  become: true
-  roles:
     - configure_admin_user
-
