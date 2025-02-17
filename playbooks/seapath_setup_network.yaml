@@ -18,6 +18,7 @@
       include_vars:
         file: "../vars/network_{{ 'empty' if netplan_configurations is defined or (network_simple is defined and network_simple) else 'defaults' }}.yml"
   roles:
+    - detect_seapath_distro
     - role: network_basics
     - role: systemd_networkd
       vars:
