@@ -291,13 +291,11 @@ cluster_machines Ansible group.
 
 To launch the playbook _seapath_setup_main.yaml_ use the following command:
 
- $ ansible-playbook -i inventories/cluster_inventory.yaml -i inventories/networktopology_inventory.yaml --skip-tags "package-install" playbooks/seapath_setup_main.yaml
+ $ ansible-playbook -i inventories/cluster_inventory.yaml -i inventories/networktopology_inventory.yaml playbooks/seapath_setup_main.yaml
 
 Or if you use `cqfd`:
 
- $ cqfd run ansible-playbook -i inventories/cluster_inventory.yaml -i inventories/networktopology_inventory.yaml --skip-tags "package-install"playbooks/seapath_setup_main.yaml
-
-The --skip-tags "package-install" is there for ceph-ansible no to try to install packages (they are already installed and if your host has no internet connection, it will make the playbook fail).
+ $ cqfd run ansible-playbook -i inventories/cluster_inventory.yaml -i inventories/networktopology_inventory.yaml playbooks/seapath_setup_main.yaml
 
 If your inventory contains different types of machines, you can add `--limit cluster_machines` or `--limit standalone_machine` to only apply this playbook to a group. It is useful for example, to avoid targetting the VMs when applying a change on the cluster machines.
 
