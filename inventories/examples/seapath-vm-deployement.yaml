@@ -16,7 +16,7 @@ VMs:
   hosts:
     rtvm:
       vm_template: "../templates/vm/guest.xml.j2" # TODO: Replace with your template
-      vm_disk: "../vm_images/guest.qcow2" # TODO : Replace with your image name
+      vm_disk: "../files/guest.qcow2" # TODO : Replace with your image name
 
       # Connection test part. Remove if your vm has no ssh connection
       ansible_host: 10.132.170.8 # TODO : Put the IP of your VM
@@ -32,7 +32,7 @@ VMs:
 
     vm:
       vm_template: "../templates/vm/guest.xml.j2" # TODO: Replace with your template
-      vm_disk: "../vm_images/guest.qcow2" # TODO : Replace with your image name
+      vm_disk: "../files/guest.qcow2" # TODO : Replace with your image name
 
       # Connection test part. Remove if your vm has no ssh connection
       ansible_host: 10.132.170.9 # TODO : Put the IP of your VM

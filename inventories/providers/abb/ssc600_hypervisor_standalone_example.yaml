@@ -1,45 +1,42 @@
-# Copyright (C) 2024, SFL (https://savoirfairelinux.com)
+# Copyright (C) 2024-2025, SFL (https://savoirfairelinux.com)
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-all:
+standalone_machine:
   children:
-    standalone_machine:
-      children:
-        hypervisors:
-          hosts:
-            abb-demoHyp:
-              ansible_host: "192.168.216.78" # Change to your hypervisor IP
-              gateway_addr: "192.168.216.1" # Change to your gateway IP
-              network_interface: "enp0s20f0u7" # Change to your management interface
-              ptp_interface: "{{ network_interface }}" # Change to your PTP interface
-              ip_addr: "{{ ansible_host }}"
-              cluster_interface: "{{ network_interface }}"
-              ntp_servers: "{{ gateway_addr }}"
-              syslog_server_ip: "{{ gateway_addr }}"
-              apply_network_config: false
-              kernel_parameters_restart: false
-              ignored_bridges: []
-              nics_affinity:
-              - enp88s0: 3  # Change to your NICs
-              upload_files: # This file is given with the ssc600 sw package
-                - src: '../files/qemu.hook'
-                  dest: '/etc/libvirt/hooks/'
-                  mode: "0744"
+    hypervisors:
+      hosts:
+        abb-demoHyp:
+          ansible_host: "192.168.216.78" # Change to your hypervisor IP
+          network_interface: "enp0s20f0u7" # Change to your management interface
+
+          ptp_interface: "enp7s0" # Change to your PTP interface
+
+          nics_affinity:
+          - enp88s0: 3  # Change to your NICs
+          upload_files: # This file is given with the ssc600 sw package
+            - src: '../files/qemu.hook'
+              dest: '/etc/libvirt/hooks/'
+              mode: "0744"
 
   vars:
-    ansible_user: admin # Change to `ansible` if using seapath debian
-    grub_append: "default_hugepagesz=1G hugepagesz=1G hugepages=6" # Set hugepages for debian only
-    hugepages: 6 # Set hugepages for Yocto only
-    isolcpus: "4-N" # isolate CPUs for debian only
     ansible_connection: ssh
     ansible_python_interpreter: /usr/bin/python3
-    admin_user: admin
-    ansible_become: true
-    ansible_become_method: sudo
-    ansible_become_flags: "-n -E"
-    ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
     ansible_remote_tmp: /tmp/.ansible/tmp
-    bootloader_config_file: /boot/EFI/BOOT/grub.cfg
-    ansible_ssh_private_key_file: ~/.ssh/sfl-seapath
+    ansible_user: admin # Change to `ansible` if using seapath debian
 
+    gateway_addr: "192.168.216.1" # Change to your gateway IP
+    dns_serverts: "192.168.216.1" # Change to your DNS IP. Remove if not needed.
+    ip_addr: "{{ ansible_host }}"
+    apply_network_config: true
+
+    ntp_servers: "192.168.216.1" # Change to your ntp server. Remove if not needed.
+
+    # Debian required variables
+    admin_user: admin
+    isolcpus: "4-N"
+    grub_append: "default_hugepagesz=1G hugepagesz=1G hugepages=6"
+
+    # Yocto required variables
+    yocto_hugepages: 6
+    bootloader_config_file: /boot/EFI/BOOT/grub.cfg
