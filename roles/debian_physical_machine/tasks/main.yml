@@ -40,12 +40,6 @@
   include_role:
     name: deploy_python3_setup_ovs
 
-- name: Copy consolevm.sh
-  template:
-    src: consolevm.sh.j2
-    dest: /usr/local/bin/consolevm
-    mode: '0755'
-
 - name: Create /usr/lib/ocf/resource.d/seapath on hosts
   file:
     path: /usr/lib/ocf/resource.d/seapath
