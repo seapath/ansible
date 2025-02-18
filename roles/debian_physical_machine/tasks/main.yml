@@ -143,12 +143,6 @@
     regexp: '^raid6_pq$'
     line: 'raid6_pq'
 
-- name: Copy apparmor libvirt-qemu rules
-  ansible.builtin.copy:
-    src: etc_apparmor.d_abstractions_libvirt-qemu.conf
-    dest: /etc/apparmor.d/abstractions/libvirt-qemu
-    mode: '0644'
-
 - name: Lineinfile in hosts file for logstash-seapath
   lineinfile:
     dest: /etc/hosts
