@@ -276,6 +276,12 @@ options:
       - Timeout (in seconds) of the remote to add
       - This parameter is optional if I(command) is C(add_pacemaker_remote)
     type: int
+  nostart:
+    description:
+      - Whether the VM is started after creation/enabling
+      - This parameter is optional if I(command) is C(create) or C(clone) or C(enable)
+    type: bool
+    default: false
 requirements:
     - python >= 3.7
     - librbd
@@ -569,6 +575,7 @@ def run_module():
         migrate_to_timeout=dict(type="str", require=False),
         migration_downtime=dict(type="str", require=False),
         priority=dict(type="str", required=False),
+        nostart=dict(type="bool", required=False),
         clear_constraint=dict(type="bool", required=False, default=False),
         strong=dict(type="bool", required=False, default=False),
         colocated_vms=dict(type="list", required=False),
@@ -629,6 +636,7 @@ def run_module():
     system_image = args.get("system_image", None)
     force = args.get("force", False)
     enable = args.get("enable", True)
+    nostart = args.get("nostart", False)
     src_name = args.get("src_name", None)
     metadata_name = args.get("metadata_name", None)
     metadata = args.get("metadata", {})
@@ -697,6 +705,7 @@ def run_module():
                 "migration_downtime": migration_downtime,
                 "crm_config_cmd": crm_config_cmd,
                 "priority": priority,
+                "nostart": nostart,
                 "pacemaker_meta": pacemaker_meta,
                 "pacemaker_params": pacemaker_params,
                 "pacemaker_utilization": pacemaker_utilization,
@@ -716,6 +725,7 @@ def run_module():
                 "live_migration": live_migration,
                 "migration_user": migration_user,
                 "stop_timeout": stop_timeout,
+                "nostart": nostart,
                 "migrate_to_timeout": migrate_to_timeout,
                 "migration_downtime": migration_downtime,
                 "clear_constraint": clear_constraint,
@@ -739,7 +749,7 @@ def run_module():
         elif command == "status":
             result["status"] = vm_manager.status(vm_name)
         elif command == "enable":
-            vm_manager.enable_vm(vm_name)
+            vm_manager.enable_vm(vm_name, nostart)
         elif command == "create_snapshot":
             vm_manager.create_snapshot(vm_name, snapshot_name)
         elif command == "purge_image":

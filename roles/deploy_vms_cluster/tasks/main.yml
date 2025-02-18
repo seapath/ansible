@@ -46,6 +46,7 @@
         migration_downtime: "{{ hostvars[item].migration_downtime | default(omit) }}"
         priority: "{{ hostvars[item].priority | default(omit) }}"
         enable: "{{ hostvars[item].enable | default(true) }}"
+        nostart: "{{ hostvars[item].nostart | default(false) }}"
         pinned_host: "{{ hostvars[item].pinned_host | default(omit) }}"
         preferred_host: "{{ hostvars[item].preferred_host | default(omit) }}"
         crm_config_cmd: "{{ hostvars[item].crm_config_cmd | default(omit) }}"
