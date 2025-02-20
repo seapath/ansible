@@ -1,0 +1,49 @@
+# This inventory describes a virtual machine that will be deployed on a SEAPATH
+# cluster or standalone machine.
+# It gives two examples, the first on a critical (real-time) VM and the second
+# on a standard VM.
+#
+# Be careful that SEAPATH only handles how to deploy and run the virtual machine.
+# It does not handle any virtual machine inner configuration.
+#
+# Replace all the TODOs to fit your physical machines.
+# More informations on SEAPATH Wiki:
+# - General inventory : https://lf-energy.atlassian.net/wiki/x/lIblAQ
+# - guest.xml.j2 templated xml file : https://lf-energy.atlassian.net/wiki/x/ao3lAQ
+
+---
+VMs:
+  hosts:
+    rtvm:
+      vm_template: "../templates/vm/guest.xml.j2"
+      vm_disk: "../files/seapath-vm-yocto.qcow2"
+
+      ansible_host: 192.168.2.41
+      wait_for_connection: true
+
+      vm_features: ["rt", "isolated"]
+      cpuset: [2, 3]
+      emulatorpin: 4
+      bridges:
+        - name: "br0"
+          mac_address: "52:54:00:e4:ff:02"
+      force: true
+
+    vm:
+      vm_template: "../templates/vm/guest.xml.j2"
+      vm_disk: "../files/seapath-vm-yocto.qcow2"
+
+      ansible_host: 192.168.2.42
+      wait_for_connection: true
+
+      vm_features: [""]
+      nb_cpu: 1
+      bridges:
+        - name: "br0"
+          mac_address: "52:54:00:e4:ff:03"
+      force: true
+
+  vars:
+    ansible_user: ansible # Only for connection test
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+    ansible_ssh_private_key_file: /home/seapath/seapath/labs/seapath-training-key

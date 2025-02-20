@@ -1,0 +1,62 @@
+# This inventory describes a standalone SEAPATH machine (no cluster)
+# More informations on SEAPATH Wiki: https://lf-energy.atlassian.net/wiki/x/lIblAQ
+
+---
+standalone_machine:
+  children:
+    hypervisors:
+      hosts:
+        hypervisor:
+          # Admin network settings
+          ansible_host: 192.168.2.31
+          network_interface: enp3s0
+
+          # PTP configuration.
+          ptp_interface: enp3s0
+
+  vars:
+    # Ansible vars
+    ansible_remote_tmp: /tmp/.ansible/tmp
+    ansible_user: ansible
+
+    # Debian specific, remove if you use Yocto
+    admin_user: admin
+    isolcpus: "4-N"
+      # This variable is only used on Debian.
+      # On Yocto, it is configured in yocto-bsp
+
+    # Main network configuration
+    gateway_addr:
+    ip_addr: "{{ ansible_host }}"
+    apply_network_config: true
+    interfaces_to_wait_for:
+      - "br0"
+
+    # Hardening
+    grub_password: grub.pbkdf2.sha512.10000.666FF16D5587509B2B3340B2388CB798BEF9553A9666CECA6282E0D822C1529F94AF693CC6738C1F757B868D8090F24FD48D8F56486C70C545D559CB4BAAAA3E.9718E767036BDB71CC1B82BCFC906610F8772DD4757F6F075D82A23E70DA46FBED372A3E5143E5C2D40AA888C6B884E4AA437488D82008383C54ED79D68A42CF
+
+    timemaster_ptp_delay_mechanism: "E2E"
+
+# ------------------------------------------------------------------------------
+# ----------------------- Empty groups, prevent warnings -----------------------
+# ------------------------------------------------------------------------------
+grafana-server:
+iscsigws:
+iscsi-gws:
+mdss:
+mgrs:
+nfss:
+rbdmirrors:
+rgwloadbalancers:
+rgws:
+cluster_machines:
+
+all:
+  vars:
+    ansible_ssh_private_key_file: ~/.ssh/seapath-training-key
+    ansible_connection: ssh
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+    ansible_ssh_private_key_file: /home/seapath/seapath/labs/seapath-training-key
+
+...
