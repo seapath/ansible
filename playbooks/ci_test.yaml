@@ -6,15 +6,6 @@
 
 ---
 
-- name: Deploy cukinia
-  hosts:
-    - cluster_machines
-    - standalone_machine
-    - VMs
-  become: true
-  roles:
-    - deploy_cukinia
-
 - name: Import test_deploy_cukinia_tests playbook
   import_playbook: ./test_deploy_cukinia_tests.yaml
 - name: Import test_run_cukinia playbook
