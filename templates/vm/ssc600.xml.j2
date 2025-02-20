@@ -32,6 +32,9 @@
     <os>
         <type arch="x86_64" machine="q35">hvm</type>
         <boot dev="hd"/>
+        <firmware>
+            <feature enabled="{{ 'yes' if 'secure-boot' is in vm.vm_features else 'no' }}" name="secure-boot"/>
+        </firmware>
     </os>
     <features>
         <acpi/>

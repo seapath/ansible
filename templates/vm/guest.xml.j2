@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Copyright (C) 2023, RTE (http://www.rte-france.com) -->
+<!--  Copyright (C) 2025 Savoir-faire Linux, Inc-->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 
 <!--
@@ -45,6 +46,9 @@
         <bootmenu enable="no" />
         <bios useserial="yes" rebootTimeout="0" />
         <smbios mode="emulate" />
+        <firmware>
+            <feature enabled="{{ 'yes' if 'secure-boot' is in vm.vm_features else 'no' }}" name="secure-boot"/>
+        </firmware>
     </os>
     <features>
         <acpi />
