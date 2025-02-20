@@ -5,7 +5,7 @@
   ansible.builtin.service:
     daemon_reload: yes
 
-- name: Restart systemd-sysctl if needed
+- name: Restart systemd-sysctl
   ansible.builtin.systemd:
     name: systemd-sysctl.service
     state: restarted
