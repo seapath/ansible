@@ -15,6 +15,9 @@
       <boot dev="hd" />
       <bios useserial="yes" rebootTimeout="0" />
       <smbios mode="emulate" />
+      <firmware>
+          <feature enabled="{{ 'yes' if 'secure-boot' is in vm.vm_features else 'no' }}" name="secure-boot"/>
+      </firmware>
     </os>
     <features>
         <acpi/>
