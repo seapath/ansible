@@ -2,6 +2,7 @@
 # Copyright (C) 2024 Red Hat, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
+---
 - name: Disable vim defaults
   lineinfile:
     dest: /etc/vimrc
@@ -61,23 +62,31 @@
       dest: /etc/syslog-ng/ca.d/serverca.pem
       mode: '0644'
 
-- name: Removing or not the admin user created by the iso
-  when: admin_user != "admin"
+- name: Retrieve user information for UID 1000
+  ansible.builtin.command: getent passwd 1000
+  register: user_info
+  changed_when: false
+- name: Extract username from the result
+  ansible.builtin.set_fact:
+    old_admin_user: "{{ user_info.stdout.split(':')[0] }}"
+
+- name: Removing or not the old admin user created by the iso
+  when: admin_user != old_admin_user
   block:
-    - name: Remove 'admin' from sudoers file
+    - name: Remove old admin user from sudoers file
       lineinfile:
         dest: /etc/sudoers
         state: absent
-        regexp: '^admin'
+        regexp: "^{{ old_admin_user }}"
         validate: visudo -cf %s
-    - name: Remove the admin user
+    - name: Remove the old admin user
       ansible.builtin.user:
-        name: admin
+        name: "{{ old_admin_user }}"
         state: absent
         remove: yes
-    - name: Remove the admin group
+    - name: Remove the old admin group
       ansible.builtin.group:
-        name: admin
+        name: "{{ old_admin_user }}"
         state: absent
 
 - name: Copy journald conf file
