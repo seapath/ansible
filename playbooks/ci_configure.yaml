@@ -13,6 +13,7 @@
   roles:
     - ci_cleanup_varlog
     - ci_restore_snapshot
+    - detect_seapath_distro
 
 - name: CI configure skip reboot
   hosts:
@@ -26,5 +27,7 @@
 
 - name: Import seapath_setup_main playbook
   import_playbook: ./seapath_setup_main.yaml
+
 - name: Import seapath_setup_hardened_debian playbook
   import_playbook: ./seapath_setup_hardened_debian.yaml
+  when: seapath_distro == "Debian"
