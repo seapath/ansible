@@ -41,7 +41,8 @@ standalone_machine:
     apply_network_config: true
     # List of interfaces to wait for before considering the network as up.
     # With the default network configuration, it should be "br0"
-    interfaces_to_wait_for: "br0"
+    interfaces_to_wait_for:
+      - "br0"
     # systemd-networkd is used by default to configure the network
     # netplan can also be used to sum up complex network in one yaml file
     # See the wiki for more informations : TODO put link
