@@ -1,0 +1,34 @@
+# Copyright (C) 2024 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Wipe the /var/log/ directory content
+  shell: rm -rf /var/log/*
+  changed_when: true
+  args:
+    warn: false
+
+- name: Recreate useful folders (1)
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: 0755
+  loop:
+    - /var/log/audit
+    - /var/log/openvswitch
+    - /var/log/nginx
+
+- name: Check if hacluster user exists
+  command: getent passwd hacluster
+  register: hacluster_check
+  changed_when: false
+  failed_when: hacluster_check.rc not in [0, 2]
+
+- name: Recreate useful folders /var/log/crmsh/ (2)
+  file:
+    path: /var/log/crmsh/
+    state: directory
+    mode: 0755
+    owner: hacluster
+    group: haclient
+  when: hacluster_check.rc == 0
