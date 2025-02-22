@@ -4,14 +4,14 @@
 # This playbook call all necessary playbooks to configure the CI and the SEAPATH
 # cluster
 ---
-- name: Cleanup syslog-ng files and restore snapshot
+- name: Cleanup /var/log folders and restore snapshot
   hosts:
     - cluster_machines
     - standalone_machine
   become: true
   gather_facts: true
   roles:
-    - ci_cleanup_syslog
+    - ci_cleanup_varlog
     - ci_restore_snapshot
 
 - name: CI configure skip reboot
