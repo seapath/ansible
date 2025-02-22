@@ -14,11 +14,11 @@ team0_systemd_networkd_network:
     - Match:
         - Name: "{{ team0_0 | default('0') }}"
     - Link:
-        - MTUBytes: 1800
+        - MTUBytes: 9000
   79-team0_1:
     - Match:
         - Name: "{{ team0_1 | default('0') }}"
     - Link:
-        - MTUBytes: 1800
+        - MTUBytes: 9000
 
 ...
