@@ -5,7 +5,9 @@
 # cluster
 ---
 - name: Cleanup syslog-ng files and restore snapshot
-  hosts: cluster_machines
+  hosts:
+    - cluster_machines
+    - standalone_machine
   become: true
   gather_facts: true
   roles:
