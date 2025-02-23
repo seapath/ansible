@@ -201,7 +201,13 @@
         <console type="pty">
             <target type="serial" port="0" />
         </console>
+{% if "memballoon" in vm.vm_features %}
+        <memballoon model="virtio">
+          <stats period="5" />
+        </memballoon>
+{% else %}
         <memballoon model="none" />
+{% endif %}
         <watchdog model="i6300esb" action="poweroff" />
     </devices>
 </domain>
