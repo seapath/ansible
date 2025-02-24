@@ -3,7 +3,7 @@
 
 ---
 - name: Create and start VMs
-  hosts: hypervisors
+  hosts: standalone_machine
   gather_facts: false
   become: true
   vars:
