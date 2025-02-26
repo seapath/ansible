@@ -72,23 +72,22 @@ def exist_and_is_character(filepath):
 
 if exist_and_is_character("/dev/ipmi0") or exist_and_is_character("/dev/ipmi/0") or exist_and_is_character("/dev/ipmidev/0"):
     for i in range(1,5):
-        match i:
-            case 1:
-                command = f""" {ipmitool} sensor | {sed} -e "s/ *| */;/g" """
-                title = "ipmitool sensor"
-                data = run_command(command)
-            case 2:
-                command = f""" {ipmitool} sensor -v """
-                title = "ipmitool sensor verbose"
-                data = run_command(command)
-            case 3:
-                command = f""" {ipmitool} sdr list | {sed} -e "s/ *| */;/g" """
-                title = "ipmitool sdr"
-                data = run_command(command)
-            case 4:
-                command = f""" {ipmitool} sdr list -v"""
-                title = "ipmitool sdr verbose"
-                data = run_command(command)
+        if i == 1:
+            command = f""" {ipmitool} sensor | {sed} -e "s/ *| */;/g" """
+            title = "ipmitool sensor"
+            data = run_command(command)
+        elif i == 2:
+            command = f""" {ipmitool} sensor -v """
+            title = "ipmitool sensor verbose"
+            data = run_command(command)
+        elif i == 3:
+            command = f""" {ipmitool} sdr list | {sed} -e "s/ *| */;/g" """
+            title = "ipmitool sdr"
+            data = run_command(command)
+        elif i == 4:
+            command = f""" {ipmitool} sdr list -v"""
+            title = "ipmitool sdr verbose"
+            data = run_command(command)
         multilinetooid(base_oid + ".4." + str(i), title, data)
 
 # RAID
@@ -170,50 +169,48 @@ data = json.loads(data)
 dictarrayoid(base_oid + ".2.5", title, data)
 
 for i in range(6,11):
-    match i:
-        case 6:
-            command = f"""
+    if i == 6:
+        command = f"""
 /usr/sbin/smartctl --scan | {grep} -E "^/dev/(sd|nvme)" | {awk} '{{ print $1 }}' | while read i; do /usr/sbin/smartctl -H $i | {grep} "SMART overall-health self-assessment test result: " | {grep} -v "SMART overall-health self-assessment test result: PASSED"; done | /usr/bin/wc -l """
-            title = "disk smartctl status"
-            data = run_command(command)
-            data = data.lstrip().rstrip()
-            if data == "0":
-                data = "SMARTOK"
-            else:
-                data = "SMARTPROBLEM"
-                globalreplacedisk = "SMART tests not passed"
-        case 7:
-            command = f""" /usr/sbin/lvs -a -o +devices,lv_health_status --reportformat json | {jq} -c . """
-            title = "lvs full status json"
-            data = run_command(command)
-        case 8:
-            command = f""" /usr/sbin/lvs -o name,lv_health_status --reportformat json | {jq} -c . """
-            title = "lvs basic status json"
-            data = run_command(command)
-        case 9:
-            command = f""" /usr/sbin/lvs -o name,lv_health_status --reportformat json | {jq} -c '.report[].lv[] | select( .lv_health_status != "" )' """
-            title = "lvs sumup status"
-            data = run_command(command)
-            if data == "":
-                data = "NO LVS PROBLEM"
-            else:
-                data = "LVS PROBLEM: " + data
-                globalreplacedisk = "LVS health not OK"
-        case 10:
-            command = f""" ceph status --format json-pretty | {jq} -c -r .health.status """
-            title = "ceph health status"
-            data = run_command(command)
+        title = "disk smartctl status"
+        data = run_command(command)
+        data = data.lstrip().rstrip()
+        if data == "0":
+            data = "SMARTOK"
+        else:
+            data = "SMARTPROBLEM"
+            globalreplacedisk = "SMART tests not passed"
+    elif i == 7:
+        command = f""" /usr/sbin/lvs -a -o +devices,lv_health_status --reportformat json | {jq} -c . """
+        title = "lvs full status json"
+        data = run_command(command)
+    elif i == 8:
+        command = f""" /usr/sbin/lvs -o name,lv_health_status --reportformat json | {jq} -c . """
+        title = "lvs basic status json"
+        data = run_command(command)
+    elif i == 9:
+        command = f""" /usr/sbin/lvs -o name,lv_health_status --reportformat json | {jq} -c '.report[].lv[] | select( .lv_health_status != "" )' """
+        title = "lvs sumup status"
+        data = run_command(command)
+        if data == "":
+            data = "NO LVS PROBLEM"
+        else:
+            data = "LVS PROBLEM: " + data
+            globalreplacedisk = "LVS health not OK"
+    elif i == 10:
+        command = f""" ceph status --format json-pretty | {jq} -c -r .health.status """
+        title = "ceph health status"
+        data = run_command(command)
     singlelinetooid(base_oid + ".2." + str(i), title, data)
 
 # OTHER MULTILINES VALUES
 for i in range(1,12):
-    match i:
-        case 1:
-            command = f""" /usr/sbin/crm status"""
-            title = command
-            data = run_command(command)
-        case 2:
-            command = f"""
+    if i == 1:
+        command = f""" /usr/sbin/crm status"""
+        title = command
+        data = run_command(command)
+    elif i == 2:
+        command = f"""
 FILE=/tmp/domstats.txt
 if [ -f $FILE ]
 then
@@ -229,10 +226,10 @@ else
 fi
 cat $FILE
 """
-            title = "virsh domstats"
-            data = run_command(command)
-        case 3:
-            command = f"""
+        title = "virsh domstats"
+        data = run_command(command)
+    elif i == 3:
+        command = f"""
 FILE=/tmp/dommemstat.txt
 function create_or_rewrite {{
   /usr/bin/virsh --connect qemu:///system list --name | sed -s "/^$/d" | while read i
@@ -256,14 +253,14 @@ else
 fi
 cat $FILE
 """
-            title = "virsh dommemstat"
-            data = run_command(command)
-        case 4:
-            command = f""" /usr/bin/ceph status """
-            title = "ceph status"
-            data = run_command(command)
-        case 5:
-            command = f"""
+        title = "virsh dommemstat"
+        data = run_command(command)
+    elif i == 4:
+        command = f""" /usr/bin/ceph status """
+        title = "ceph status"
+        data = run_command(command)
+    elif i == 5:
+        command = f"""
 FILE=/tmp/virt-df.txt
 if [ -f $FILE ]
 then
@@ -279,18 +276,18 @@ else
 fi
 cat $FILE
 """
-            title = "virt-df"
-            data = run_command(command)
-        case 6:
-            command = f""" /usr/bin/virsh -c qemu:///system list --all """
-            title = "virsh list"
-            data = run_command(command)
-        case 7:
-            command = f""" /usr/bin/ceph status --format=json | {jq} -c .pgmap """
-            title = "ceph usage"
-            data = run_command(command)
-        case 8:
-            command = f"""
+        title = "virt-df"
+        data = run_command(command)
+    elif i == 6:
+        command = f""" /usr/bin/virsh -c qemu:///system list --all """
+        title = "virsh list"
+        data = run_command(command)
+    elif i == 7:
+        command = f""" /usr/bin/ceph status --format=json | {jq} -c .pgmap """
+        title = "ceph usage"
+        data = run_command(command)
+    elif i == 8:
+        command = f"""
 /usr/sbin/smartctl --scan | {awk} '{{ print $1 }}' | while read i; do
   temp=$(/usr/sbin/smartctl -a $i | {grep} Temperature_Celsius | {awk} '{{ print $10 }}')
   if [ ! -z "$temp" ]
@@ -299,10 +296,10 @@ cat $FILE
   fi
 done
 """
-            title = "temperature disks"
-            data = run_command(command)
-        case 9:
-            command = f"""
+        title = "temperature disks"
+        data = run_command(command)
+    elif i == 9:
+        command = f"""
 /usr/sbin/smartctl --scan | {grep} -E "^/dev/(sd|nvme)" | {awk} '{{ print $1 }}' | while read i; do
   {echo} $i
   j=$({echo} $i | {sed} "s/\/dev\///")
@@ -312,26 +309,27 @@ done
   {echo} ------------------------------------------
 done
 """
-            title = "smartctl"
-            data = run_command(command)
-        case 10:
-            command = f""" /usr/sbin/lvs -a -o +devices,lv_health_status """
-            title = "lvs status"
-            data = run_command(command)
-        case 11:
-            command = f""" /usr/sbin/crm status --as-xml """
-            title = "crm status json"
-            xml_status = run_command(command)
-            try:
-                dict_status = xmltodict.parse(xml_status, attr_prefix='')
-                data = json.dumps(dict_status)
-                data1 = json.dumps(dict_status["crm_mon"]["summary"])
-                multilinetooid(base_oid + ".1.11.0.1", title + " summary", data1)
-                data2 = json.dumps(dict_status["crm_mon"]["nodes"])
-                multilinetooid(base_oid + ".1.11.0.2", title + " nodes", data2)
-                continue
-            except ExpatError:
-                pass
+        title = "smartctl"
+        data = run_command(command)
+    elif i == 10:
+        command = f""" /usr/sbin/lvs -a -o +devices,lv_health_status """
+        title = "lvs status"
+        data = run_command(command)
+    elif i == 11:
+        command = f""" /usr/sbin/crm status --as-xml """
+        title = "crm status json"
+        xml_status = run_command(command)
+        try:
+            dict_status = xmltodict.parse(xml_status, attr_prefix='')
+            data = json.dumps(dict_status)
+            data1 = json.dumps(dict_status["crm_mon"]["summary"])
+            multilinetooid(base_oid + ".1.11.0.1", title + " summary", data1)
+            data2 = json.dumps(dict_status["crm_mon"]["nodes"])
+            multilinetooid(base_oid + ".1.11.0.2", title + " nodes", data2)
+            continue
+        except ExpatError:
+            pass
+
 
     multilinetooid(base_oid + ".1." + str(i), title, data)
 
