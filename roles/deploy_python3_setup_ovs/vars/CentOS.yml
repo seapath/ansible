@@ -1,0 +1,4 @@
+# Copyright (C) 2024 Red Hat, Inc.
+# SPDX-License-Identifier: Apache-2.0
+---
+pip_extra_params: " --prefix=/usr/local/ "
