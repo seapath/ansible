@@ -5,8 +5,8 @@
 - name: Wipe the /var/log/ directory content
   shell: rm -rf /var/log/*
   changed_when: true
-  args:
-    warn: false
+  vars:
+    disable_warnings: true
 
 - name: Recreate useful folders (1)
   file:
