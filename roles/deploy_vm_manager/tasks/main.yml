@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+- include_vars: "{{ seapath_distro }}.yml"
+
 - name: Synchronization of src vm_manager on the control machine to dest on the remote hosts
   ansible.posix.synchronize:
     src: vm_manager
@@ -10,9 +12,7 @@
       - "--chown=root:root"
 - name: Install vm_manager
   command:
-    cmd: /usr/bin/pip install --root-user-action=ignore --no-build-isolation --prefix=/usr/ .
-    chdir: /tmp/src/vm_manager
-  changed_when: true
+    cmd: /usr/bin/pip install  {{ pip_extra_params }}  /tmp/src/vm_manager
 - name: Create a symbolic link
   ansible.builtin.file:
     src: /usr/local/bin/vm_manager_cmd
