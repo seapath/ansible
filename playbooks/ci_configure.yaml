@@ -24,10 +24,10 @@
     ansible.builtin.set_fact:
       skip_reboot_setup: true
       skip_reboot_setup_network: true
+    when: seapath_distro != "CentOS"
 
 - name: Import seapath_setup_main playbook
   import_playbook: ./seapath_setup_main.yaml
-
 - name: Import seapath_setup_hardened_debian playbook
   import_playbook: ./seapath_setup_hardened_debian.yaml
   when: seapath_distro == "Debian"
