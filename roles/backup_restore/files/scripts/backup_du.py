@@ -11,15 +11,15 @@ import sys
 FMT_LIG = "%-20s %10d"
 
 def convert_size(nb, unit):
-    match unit.upper():
-        case "GIB":
-            size = float(nb)*1024*1024*1024
-        case "MIB":
-            size = float(nb)*1024*1024
-        case "KIB":
-            size = float(nb)*1024
-        case _:
-            size = 0
+    unit = unit.upper()
+    if unit == "GIB":
+        size = float(nb) * 1024 * 1024 * 1024
+    elif unit == "MIB":
+        size = float(nb) * 1024 * 1024
+    elif unit == "KIB":
+        size = float(nb) * 1024
+    else:
+        size = 0
 
     return int(size+0.5)
 
