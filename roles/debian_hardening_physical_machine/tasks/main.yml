@@ -28,14 +28,18 @@
     owner: root
     group: root
     mode: '0440'
-  when: not revert
+  when:
+    - not revert
+    - cluster_ip_addr is defined
 
 - name: Adding ceph user to group privileged
   user:
     name: "ceph"
     groups: privileged
     append: yes
-  when: not revert
+  when:
+    - not revert
+    - cluster_ip_addr is defined
 
 - name: Adding Debian-snmp user to group privileged
   user:
