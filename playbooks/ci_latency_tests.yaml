@@ -2,6 +2,16 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+- name: Gather facts
+  hosts:
+    - publisher_machine
+    - VMs
+    - yoctoCI-aaeon
+  tasks:
+    - name: Gather ansible_user_dir fact
+      setup:
+        filter: ansible_user_dir
+
 - name: Copy docker tar image
   hosts:
       - publisher_machine
@@ -10,13 +20,13 @@
   tasks:
       - name: "Create latency_tests directory if it doesn't exist"
         ansible.builtin.file:
-          path: "/tmp/latency_tests/"
+          path: "{{ ansible_user_dir }}/latency_tests/"
           state: directory
           mode: '0777'
       - name: "Copy archive"
         ansible.builtin.copy:
           src: "../ci_latency_tests/build/{{ sv_timestamp_logger_image }}"
-          dest: "/tmp/latency_tests/sv_timestamp_logger.tar"
+          dest: "{{ ansible_user_dir }}/latency_tests/sv_timestamp_logger.tar"
 
 - name: Synchronise machines with PTP
   become: true
@@ -59,7 +69,7 @@
   become: true
   tasks:
     - name: Load Docker archive
-      ansible.builtin.command: "docker image load -i /tmp/latency_tests/sv_timestamp_logger.tar"
+      ansible.builtin.command: "docker image load -i {{ ansible_user_dir }}/latency_tests/sv_timestamp_logger.tar"
       changed_when: true
 
     - name: Launch sv timestamp logger
@@ -69,7 +79,7 @@
         --name sv_timestamp_logger
         -d
         --network host
-        -v /tmp:/tmp
+        -v {{ ansible_user_dir }}/latency_tests:/tmp/latency_tests
         --cap-add=NET_ADMIN
         --cap-add=SYS_NICE
         sv_timestamp_logger
@@ -86,7 +96,7 @@
   become: true
   tasks:
     - name: Load Docker archive
-      ansible.builtin.command: "docker image load -i /tmp/latency_tests/sv_timestamp_logger.tar"
+      ansible.builtin.command: "docker image load -i {{ ansible_user_dir }}/latency_tests/sv_timestamp_logger.tar"
       changed_when: true
 
     - name: Launch sv timestamp logger
@@ -96,7 +106,7 @@
         -d
         --rm
         --network host
-        -v /tmp:/tmp
+        -v {{ ansible_user_dir }}/latency_tests:/tmp/latency_tests
         --cap-add=SYS_NICE
         sv_timestamp_logger
         -d {{ sv_interface }}
@@ -131,7 +141,7 @@
 
     - name: "Copy results to ansible directory"
       ansible.posix.synchronize:
-        src: "/tmp/latency_tests/ts_{{ inventory_hostname }}.txt"
+        src: "{{ ansible_user_dir }}/latency_tests/ts_{{ inventory_hostname }}.txt"
         dest: "../ci_latency_tests/results/"
         mode: pull
         rsync_path: rsync
