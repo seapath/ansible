@@ -59,12 +59,12 @@ All the configuration (network, clustering, ...) is done with ansible playbooks 
 
 Machines that need to be configured by Ansible simply need to provide SSH access
 and have a Unix Shell and a Python interpreter. Both Yocto and Debian SEAPATH images already fit with
-this requirements.
+this requirement.
 
 === Use Ansible with cqfd
 
 `cqfd` is a quick and convenient way to run commands in the current directory,
-but within a pre-defined Docker container. Using `cqfd` allows you to avoids
+but within a pre-defined Docker container. Using `cqfd` allows you to avoid
 installing anything else than Docker on your development machine.
 
 NOTE: We recommend using this method as it greatly simplifies the build
@@ -128,7 +128,7 @@ an Inventory file and playbook files to play. To install Ansible 2.10 on this
 machine please refer to the Ansible documentation at
 https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html.
 
-*Warning:* Curently only the Ansible version 2.10 is supported. Other versions
+*Warning:* Currently only the Ansible version 2.10 is supported. Other versions
 will not work.
 
 Also you must also install the `netaddr` and `six` python3 module as well as the `rsync` package.
@@ -158,7 +158,7 @@ Ansible Inventory documentation is available at
 https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html.
 
 In the _inventories/examples_ directory you can find various examples for a seapath
-cluster, a standalone machine and a virtual machine. See the https://github.com/seapath/ansible/tree/main/inventories#readme[associated README] for more informations.
+cluster, a standalone machine and a virtual machine. See the https://github.com/seapath/ansible/tree/main/inventories#readme[associated README] for more information.
 
 Other formats are valid for inventory file but in this document we will only
 cover the YAML format. This file also contains some commented examples of common
@@ -203,7 +203,7 @@ all:
                     my_host_variable: variable_content
 ----
 
-Once you have an Ansible inventory you can test host connexion with the ping
+Once you have an Ansible inventory you can test host connection with the ping
 module:
 
  $ ansible -i cluster.yaml all -m ping
@@ -299,7 +299,7 @@ If your inventory contains different types of machines, you can add `--limit clu
 
 === Debian Hardening ===
 
-If your are using SEAPATH Debian, the security features are applied with the hardening playbook
+When using SEAPATH Debian, the security features are applied with the hardening playbook
 _playbooks/seapath_setup_hardened_debian.yaml_.
 If you are using SEAPATH Yocto, the security features are already applied in meta-seapath.
 
@@ -341,11 +341,11 @@ Or if you use `cqfd`:
  $ cqfd run ansible-playbook -i inventories/standalone_inventory.yaml -i inventories/vm_inventory.yaml playbooks/deploy_vms_standalone.yaml
 
 
-=== Update an hypervisor
+=== Update a hypervisor
 
 ==== Debian
 
-On Debian, hypervisors are updated using `apt update` commands. More informations on the https://lf-energy.atlassian.net/wiki/spaces/SEAP/pages/31820194/Update+and+Rollback:"wiki".
+On Debian, hypervisors are updated using `apt update` commands. More information on the https://lf-energy.atlassian.net/wiki/spaces/SEAP/pages/31820194/Update+and+Rollback:"wiki".
 
 ==== Yocto
 
