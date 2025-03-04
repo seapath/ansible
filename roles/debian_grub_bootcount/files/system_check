@@ -1,0 +1,19 @@
+#!/bin/bash
+
+while [ "$(systemctl is-system-running)" = starting ] ; do
+	sleep 1
+done
+
+if [ "$(systemctl is-system-running)" = running ] ; then
+	logger -t system_check 'System OK'
+	grub-editenv /boot/efi/bootcountenv set bootcount=disabled
+else
+	# Only reboot if the bootcounting process is running
+	if grub-editenv /boot/efi/bootcountenv list | grep -qE '^bootcount=[0-9]+$'; then
+		logger -t system_check 'System KO! Rebooting...'
+		reboot
+	else
+		logger -t system_check 'System KO! (NOT rebooting, bootcounting is not enabled)'
+	fi
+fi
+
