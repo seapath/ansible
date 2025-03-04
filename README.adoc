@@ -259,14 +259,13 @@ For more information about roles see:
 https://docs.ansible.com/ansible/2.9/user_guide/playbooks_reuse_roles.html
 
 == Using Ansible with SEAPATH in practice
-First, make sure you are using the git branch corresponding to your
-version of Seapath.
 
-On Seapath Debian:
+First, make sure you are using the right release of SEAPATH.
+For example, if you are working with SEAPATH v1.1.0:
 
-  $ git checkout debian-main
+  $ git checkout v1.1.0
 
-On Seapath Yocto:
+If you want to work with the latest commits:
 
   $ git checkout main
 
@@ -274,7 +273,7 @@ On Seapath Yocto:
 
 Before you can start using playbooks to configure and manage your SEAPATH
 cluster or standalone version, You need to write the inventory file describing your cluster. To do
-this you can rely on the example files in the link:inventories/examples[inventories] folder (see  link:inventories/examples/README.md[inventories README.md] for more details).
+this you can rely on the example files in the link:inventories/examples[inventories] folder (see link:inventories/examples/README.md[inventories README.md] for more details).
 
 You can place your own inventory file in the link:inventories[inventories] folder provided for this
 purpose.
