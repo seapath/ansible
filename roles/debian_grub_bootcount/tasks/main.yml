@@ -1,0 +1,86 @@
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# add grub-editenv to initramfs
+- name: "Add initramfs-tools SEAPATH hooks"
+  ansible.builtin.copy:
+    src: initramfs-tools/hooks/seapath
+    dest: /etc/initramfs-tools/hooks/seapath
+    mode: '0755'
+  notify: Rebuild initramfs if necessary
+
+# Needed to open ESP (usually in /boot/efi/) from initramfs.
+- name: "Add FAT modules into initramfs"
+  ansible.builtin.blockinfile:
+    path: /etc/initramfs-tools/modules
+    block: |
+      fat
+      vfat
+      nls_ascii
+      nls_cp437
+    state: present
+  notify: Rebuild initramfs if necessary
+
+# The rest of the tasks needed to set up the boot count feature
+- name: "Add initramfs-tools script: script file"
+  ansible.builtin.copy:
+    src: initramfs-tools/scripts/
+    dest: /etc/initramfs-tools/scripts/
+    mode: '0755'
+  notify: Rebuild initramfs if necessary
+
+- name: Add seapath_boot_count_params to grub default cmdline
+  ansible.builtin.lineinfile:
+    insertafter: EOF
+    path: /etc/default/grub
+    line: "GRUB_CMDLINE_LINUX_DEFAULT=\
+           \"${GRUB_CMDLINE_LINUX_DEFAULT:+$GRUB_CMDLINE_LINUX_DEFAULT }\
+           \\$seapath_boot_count_params\""
+    state: present
+  notify: Update-grub
+
+- name: Add hooks to /etc/grub.d/10_linux
+  ansible.posix.patch:
+    dest: /etc/grub.d/10_linux
+    src: 10_linux.patch
+  notify: Update-grub
+
+- name: Add SEAPATH bootcount to grub
+  ansible.builtin.copy:
+    src: 11_seapath_boot_count
+    dest: /etc/grub.d/11_seapath_boot_count
+    mode: "0755"
+  notify: Update-grub
+
+- name: Ensure /usr/lib/seapath_bootcount/ exists
+  ansible.builtin.file:
+    path: /usr/lib/seapath_bootcount/
+    state: directory
+    mode: "0755"
+
+- name: Install system_check
+  ansible.builtin.copy:
+    src: system_check
+    dest: /usr/lib/seapath_bootcount/system_check
+    mode: "0755"
+
+- name: Add system_check service
+  ansible.builtin.copy:
+    src: system_check.service
+    dest: /etc/systemd/system/system_check.service
+    mode: "0644"
+
+- name: Enable system_check.service
+  ansible.builtin.systemd:
+    name: system_check
+    enabled: true
+    daemon-reload: true
+    state: restarted
+
+- name: Create /boot/efi/bootcountenv
+  ansible.builtin.shell:
+    cmd: |
+      /usr/bin/grub-editenv /boot/efi/bootcountenv create
+      /usr/bin/grub-editenv /boot/efi/bootcountenv set bootcount=disabled
+  changed_when: true
