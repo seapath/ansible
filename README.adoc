@@ -220,10 +220,6 @@ To check only *host3*:
 
  $ ansible -i cluster.yaml host3 -m ping
 
-In the _inventories_ folder there is also another inventory example:
-_seapath_cluster_definitio_example.yaml_. This example adds the variables with their
-descriptions used by the SEAPATH playbooks. This inventory file should be used
-as a starting point for writing your inventory file.
 
 == Playbooks
 
