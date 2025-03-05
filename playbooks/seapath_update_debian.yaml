@@ -1,0 +1,65 @@
+- name: Make sure the debian_grub_bootcount is deployed
+  hosts: all
+  become: true
+  roles:
+    - debian_grub_bootcount
+
+- name: Update Debian Systems
+  hosts: all
+  become: true
+  tasks:
+    - name: Make an LVM snapshot of the root lvm
+      community.general.lvol:
+        vg: "{{ vg_name | default('vg1') }}"
+        lv: root
+        snapshot: root-snap
+        size: "{{ snapshot_size | default('21G') }}"
+
+    - name: Check if grub is password protected
+      stat:
+        path: /etc/grub.d/01_password
+      register: grub_password
+
+    - name: Disable password protection and update-grub
+      shell:
+        cmd: mv /etc/grub.d/01_password /etc/grub.d_01_password && update-grub
+      changed_when: true
+      when: grub_password.stat.exists
+
+    - name: Enable Grub Boot Count
+      command: /usr/bin/grub-editenv /boot/efi/bootcountenv set bootcount=0
+      changed_when: true
+
+    - name: Upgrade the OS (apt-get dist-upgrade)
+      ansible.builtin.apt:
+        update_cache: yes
+        install_recommends: no
+        autoremove: yes
+        upgrade: dist
+
+    - name: Reboot and hope for the best
+      reboot:
+    - name: Wait for Connection
+      wait_for_connection:
+
+    - name: Check if snapshot is there
+      command: "lvs --noheadings -o lv_name {{ vg_name | default('vg1') }}"
+      register: lvm_snapshot
+      changed_when: false
+
+    - name: Remove snapshot if success
+      command: "lvremove -y /dev/{{ vg_name | default('vg1') }}/root-snap"
+      when: "'root-snap' in lvm_snapshot.stdout"
+
+    - name: Do something if not success
+      debug:
+        msg: "Upgrade has failed, and the system has been rolled back."
+      when: "'root-snap' not in lvm_snapshot.stdout"
+
+    - name: Enable grub password protection if it was enabled before
+      shell:
+        cmd: mv /etc/grub.d_01_password /etc/grub.d/01_password && update-grub
+      changed_when: true
+      when:
+        - grub_password.stat.exists
+        - "'root-snap' in lvm_snapshot.stdout"
