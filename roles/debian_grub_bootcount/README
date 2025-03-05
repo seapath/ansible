@@ -15,12 +15,16 @@ Known limitations:
 * This implementation is tied to the default configuration (disk partitioning, LV naming, ...)
 * The recovery won't work if the "safe" kernel refuses to boot.
 
-
 ## Requirements
 
 no requirement.
 
 ## Role Variables
+
+| Variable              | Type    | Comments                                                                       |
+|-----------------------|---------|--------------------------------------------------------------------------------|
+| debian_grub_bootcount | Boolean | When set to false, the role will the setup of the grub bootcount mechanism     |
+|                       |         | When set to true, this will rollback the setup of the grub bootcount mechanism |
 
 ## Example Playbook
 
