@@ -1,0 +1,53 @@
+# Copyright (C) 2025 Red Hat, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+# This role launches cukinia tests and cyclictest on machine
+
+---
+- name: Create temporary test directory
+  tempfile:
+    state: directory
+  register: tmp_test_dir
+
+- name: Remove /usr/share/testdata/cukinia.conf
+  become: yes
+  file:
+    path: /usr/share/testdata/cukinia.conf
+    state: absent
+- name: Copy Cukinia test configuration
+  copy:
+    src: files/cukinia.conf
+    dest: /usr/share/testdata/cukinia.conf
+
+- name: Create symbolic link for cukinia
+  become: yes
+  ansible.builtin.file:
+    src: /usr/local/bin/cukinia
+    dest: /usr/bin/cukinia
+    state: link
+
+- name: copy test vm domainxmls to the hypervisors
+  block:
+    - name: Copy vm.xml
+      copy:
+        src: files/vm.xml
+        dest: /usr/share/testdata/
+    - name: Copy wrong_vm_config.xml
+      copy:
+        src: files/wrong_vm_config.xml
+        dest: /usr/share/testdata/
+  when: "'hypervisors' in group_names"
+
+- name: Launch cukinia tests
+  become: yes
+  throttle: 1
+  shell:
+    cmd: >-
+      MACHINENAME={{ cukinia_namespace | default(inventory_hostname) }}
+      cukinia -f junitxml -o {{ tmp_test_dir.path }}/cukinia.xml
+      /usr/share/testdata/cukinia.conf || true
+- name: Fetch result
+  fetch:
+    src: '{{ tmp_test_dir.path }}/cukinia.xml'
+    dest: ../cukinia_{{ inventory_hostname }}.xml
+    flat: yes
