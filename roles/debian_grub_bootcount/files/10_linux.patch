@@ -1,0 +1,33 @@
+--- a/10_linux	2025-01-27 17:39:39.376814526 +0100
++++ b/10_linux	2025-01-27 17:39:39.376814526 +0100
+@@ -131,7 +131,13 @@
+	  init-*)
+	      title="$(gettext_printf "%s, with Linux %s (%s)" "${os}" "${version}" "${type#init-}")" ;;
+	  *)
+-	      title="$(gettext_printf "%s, with Linux %s" "${os}" "${version}")" ;;
++	      title="$(gettext_printf "%s, with Linux %s" "${os}" "${version}")" ;
++	      if [ -z "$new_entry_id" ]; then
++	          new_entry_id="gnulinux-advanced-$boot_device_id>gnulinux-$version-$type-$boot_device_id"
++	      elif [ -z "$safe_entry_id" ]; then
++	          safe_entry_id="gnulinux-advanced-$boot_device_id>gnulinux-$version-$type-$boot_device_id"
++	      fi
++	      ;;
+       esac
+       if [ x"$title" = x"$GRUB_ACTUAL_DEFAULT" ] || [ x"Previous Linux versions>$title" = x"$GRUB_ACTUAL_DEFAULT" ]; then
+	  replacement_title="$(echo "Advanced options for ${OS}" | sed 's,>,>>,g')>$(echo "$title" | sed 's,>,>>,g')"
+@@ -240,6 +246,8 @@
+ prepare_root_cache=
+ boot_device_id=
+ title_correction_code=
++safe_entry_id=
++new_entry_id=
+
+ cat << 'EOF'
+ function gfxmode {
+@@ -414,3 +422,6 @@
+ fi
+
+ echo "$title_correction_code"
++echo
++echo "set new_entry_id=\"$new_entry_id\""
++echo "set safe_entry_id=\"$safe_entry_id\""

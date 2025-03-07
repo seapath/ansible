@@ -1,0 +1,65 @@
+#!/bin/sh
+# Boot count recovery: do the recovery in case of an unsuccessful boot series.
+
+PREREQ="lvm"
+prereqs()
+{
+   echo "$PREREQ"
+}
+
+case $1 in
+prereqs)
+   prereqs
+   exit 0
+   ;;
+esac
+
+. /scripts/functions
+
+if [ ! -x "/sbin/lvm" ]; then
+   panic "lvm executable not found"
+fi
+
+# Get LV_TO_RECOVER from config
+# Default to SEAPATH default (vg1/root)
+# TODO: Handle LV with same name in different VGs
+LV_TO_RECOVER="root"
+if [ -e /conf/conf.d/recovery.conf ]; then
+	. /conf/conf.d/recovery.conf
+fi
+
+if grep -q "\bseapath.bootcount_action=recovery\b" /proc/cmdline; then
+	log_begin_msg "Starting Boot count recovery"
+	for lv in $LV_TO_RECOVER; do
+		lvsnap=$(/sbin/lvm lvs -S origin=$lv -o lv_full_name --noheadings | sed 's/^\s\+\|\s\+$//g')
+		if [ -n "$lvsnap" ] && [ -e /dev/$lvsnap ]; then
+			log_begin_msg "Recovery of $lv..."
+			/sbin/lvm lvconvert --mergesnapshot /dev/$lvsnap
+			log_end_msg
+		fi
+	done
+
+	# Look for the first ESP device
+	ESP_DEVICE=""
+	for d in $(blkid -o device | sort); do
+		if [ "$(blkid -p $d -s PART_ENTRY_TYPE -o value)" = "c12a7328-f81f-11d2-ba4b-00a0c93ec93b" ]; then
+			ESP_DEVICE="$d"
+			break
+		fi;
+	done
+
+	if [ -n "$ESP_DEVICE" ] && [ -e "$ESP_DEVICE" ]; then
+		log_begin_msg "Disabling boot counting..."
+		mkdir /boot_efi
+		mount "$ESP_DEVICE" /boot_efi
+		grub-editenv /boot_efi/bootcountenv set bootcount=disabled
+		log_end_msg
+	else
+		log_failure_msg "Could not find the boot counting env device to disable the boot counting (could not find a ESP partition)"
+	fi
+
+	touch /run/initramfs/do_reboot
+	log_success_msg "Recovery complete, will reboot..."
+fi
+
+exit 0

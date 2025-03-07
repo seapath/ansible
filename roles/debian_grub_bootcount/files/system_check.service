@@ -1,0 +1,6 @@
+# Seapath system check (used within the boot counting recovery process)
+[Service]
+ExecStart=/usr/lib/seapath_bootcount/system_check
+
+[Install]
+WantedBy=multi-user.target

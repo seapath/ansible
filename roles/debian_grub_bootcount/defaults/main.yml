@@ -1,0 +1,5 @@
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+debian_grub_bootcount_revert: false
