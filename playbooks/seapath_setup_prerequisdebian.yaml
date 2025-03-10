@@ -17,8 +17,13 @@
   become: true
   roles:
     - debian_physical_machine
-    - backup_restore
     - vmmgrapi
+- name: Backup_restore on cluster machines
+  hosts:
+    - cluster_machines
+  become: true
+  roles:
+    - backup_restore
 - name: Prerequis hypervisor debian
   hosts:
     - hypervisors
