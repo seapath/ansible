@@ -14,3 +14,9 @@
   command:
     cmd: /usr/bin/dracut --regenerate-all --force
   changed_when: true
+
+- name: Restart ovs-vswitchd
+  ansible.builtin.systemd:
+    state: restarted
+    daemon_reload: yes
+    name: ovs-vswitchd
