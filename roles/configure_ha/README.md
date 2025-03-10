@@ -14,7 +14,6 @@ No requirement.
 | corosync_node_list                   | yes      | String list |         | List of all corosync nodes. Usually `{{ groups['cluster_machines'] \| list }}` |
 | configure_ha_tmpdir                  | no       | String      | /tmp    | Temporary directory path to use                                                |
 | enable_vmmgr_http_api   | no       | Bool        | false   | Set to true to enable SEAPATH vm-manager REST API                              |
-| admin_cluster_ip                     | no       | String      |         | IP of the REST API. If not set the m-manager REST API will be disabled even if `enable_vmmgr_http_api is set to true` |
 | extra_crm_cmd_to_run                 | no       | String      |         | List of `crm configure` commands to run separate by a new line.                |
 
 ## Example Playbook
