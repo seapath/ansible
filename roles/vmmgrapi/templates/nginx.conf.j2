@@ -11,7 +11,7 @@ http {
     server unix:/run/gunicorn.sock fail_timeout=0;
   }
   server {
-    listen {{ admin_cluster_ip }}:{{ vmmgr_http_port }} ssl;
+    listen {{ vmmgrapi_ipaddress }}:{{ vmmgr_http_port }} ssl;
     ssl_certificate {{ vmmgrapi_certs_dir }}/seapath.crt;
     ssl_certificate_key {{ vmmgrapi_certs_dir }}/seapath.key;
 

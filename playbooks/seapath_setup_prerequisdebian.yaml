@@ -17,7 +17,6 @@
   become: true
   roles:
     - debian_physical_machine
-    - vmmgrapi
 - name: Backup_restore on cluster machines
   hosts:
     - cluster_machines
