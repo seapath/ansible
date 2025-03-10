@@ -229,3 +229,30 @@
     service: high-availability
     permanent: true
     state: enabled
+
+- name: Create ovs-vswitchd.service.d directory
+  file:
+    path: /etc/systemd/system/ovs-vswitchd.service.d/
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+  notify: Restart ovs-vswitchd
+- name: Create ovs-vswitchd.service drop-in
+  template:
+    src: ovs-vswitchd_override.conf.j2
+    dest: /etc/systemd/system/ovs-vswitchd.service.d/override.conf
+    owner: root
+    group: root
+    mode: 0644
+  when: team0_0 is defined and team0_1 is defined
+  notify: Restart ovs-vswitchd
+- name: Copy team0_x@.service file
+  ansible.builtin.copy:
+    src: team0_x@.service
+    dest: /etc/systemd/system/team0_x@.service
+    owner: root
+    group: root
+    mode: 0644
+  when: team0_0 is defined and team0_1 is defined
+  notify: Restart ovs-vswitchd
