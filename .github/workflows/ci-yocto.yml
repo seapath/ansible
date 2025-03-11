@@ -62,7 +62,7 @@ jobs:
             ci/launch-yocto.sh deploy_vms;
 
       - name: Run seapath-benchmark
-        if: ${{ inputs.weekly == 'true' && steps.conf.conclusion == 'success' }}
+        if: ${{ inputs.weekly && steps.conf.conclusion == 'success' }}
         run: cd ${{ env.WORK_DIR }};
             ci/launch-yocto.sh run_benchmark_weekly;
 
