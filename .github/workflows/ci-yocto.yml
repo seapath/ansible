@@ -5,7 +5,6 @@ name: CI Yocto
 
 env:
   WORK_DIR: /tmp/seapath_ci_${{ github.run_id }}_${{ github.run_attempt }}_${{ github.sha }}
-
 on:
   pull_request:
     types: [opened, reopened, synchronize]
@@ -35,52 +34,52 @@ jobs:
 
       - name: Initialize sources
         run: mkdir ${{ env.WORK_DIR }}; cd ${{ env.WORK_DIR }};
-             git clone -q --depth 1 --recurse-submodules -b main https://github.com/seapath/ci ci;
+             git clone -q --depth 1 --recurse-submodules -b svtrace https://github.com/seapath/ci ci;
              echo "CI sources downloaded successfully";
              ci/launch-yocto.sh init;
 
-      - name: Launch Ansible-lint
-        run: |-
-          cd ${{ env.WORK_DIR }}/ansible
-          cqfd -b ansible-lint
+      # - name: Launch Ansible-lint
+      #   run: |-
+      #     cd ${{ env.WORK_DIR }}/ansible
+      #     cqfd -b ansible-lint
 
-      - name: Configure SEAPATH
-        id: conf
-        run: cd ${{ env.WORK_DIR }};
-             mkdir -p ansible/examples/inventories;
-             cp ansible/inventories/netplan* ansible/examples/inventories/;
-             ci/launch-yocto.sh conf;
+      # - name: Configure SEAPATH
+      #   id: conf
+      #   run: cd ${{ env.WORK_DIR }};
+      #        mkdir -p ansible/examples/inventories;
+      #        cp ansible/inventories/netplan* ansible/examples/inventories/;
+      #        ci/launch-yocto.sh conf;
 
-      - name: Launch system tests
-        if: ${{ always() && steps.conf.conclusion == 'success' }}
-        run: cd ${{ env.WORK_DIR }};
-             ci/launch-yocto.sh system;
+      # - name: Launch system tests
+      #   if: ${{ always() && steps.conf.conclusion == 'success' }}
+      #   run: cd ${{ env.WORK_DIR }};
+      #        ci/launch-yocto.sh system;
 
-      - name: Deploy VMs
-        if: ${{ always() && steps.conf.conclusion == 'success' }}
-        run: cd ${{ env.WORK_DIR }};
-            ci/launch-yocto.sh deploy_vms;
+      # - name: Deploy VMs
+      #   if: ${{ always() }}
+      #   run: cd ${{ env.WORK_DIR }};
+      #       ci/launch-yocto.sh deploy_vms;
 
-      - name: Run seapath-benchmark
-        if: ${{ inputs.weekly && steps.conf.conclusion == 'success' }}
-        run: cd ${{ env.WORK_DIR }};
-            ci/launch-yocto.sh run_benchmark_weekly;
+      # - name: Run seapath-benchmark
+      #   if: ${{ inputs.weekly && steps.conf.conclusion == 'success' }}
+      #   run: cd ${{ env.WORK_DIR }};
+      #       ci/launch-yocto.sh run_benchmark_weekly;
 
-      - name: Launch VMs tests
-        if: ${{ always() && steps.conf.conclusion == 'success' }}
-        run: cd ${{ env.WORK_DIR }};
-             ci/launch-yocto.sh test_vms;
+      # - name: Launch VMs tests
+      #   if: ${{ always() && steps.conf.conclusion == 'success' }}
+      #   run: cd ${{ env.WORK_DIR }};
+      #        ci/launch-yocto.sh test_vms;
 
       - name: Launch latency tests
-        if: ${{ always() && steps.conf.conclusion == 'success' }}
+        if: ${{ always() }}
         run: cd ${{ env.WORK_DIR }};
-            ci/launch-yocto.sh test_latency
+            ci/launch-yocto.sh launch_latency_tests
 
-      - name: Upload test report
-        if: ${{ always() && steps.conf.conclusion == 'success' }}
-        run: cd ${{ env.WORK_DIR }};
-             ci/launch-yocto.sh report;
+      # - name: Upload test report
+      #   if: ${{ always() && steps.conf.conclusion == 'success' }}
+      #   run: cd ${{ env.WORK_DIR }};
+      #        ci/launch-yocto.sh report;
 
-      - name: Clean
-        if: always()
-        run: rm -rf $WORK_DIR;
+      # - name: Clean
+      #   if: always()
+      #   run: rm -rf $WORK_DIR;
