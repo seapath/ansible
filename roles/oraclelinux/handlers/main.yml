@@ -1,0 +1,18 @@
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Restart systemd-journald
+  ansible.builtin.systemd:
+    name: systemd-journald
+    state: restarted
+
+- name: Restart syslog-ng
+  ansible.builtin.systemd:
+    name: syslog-ng
+    state: restarted
+    enabled: yes
+
+- name: Update-grub
+  command: grub2-mkconfig -o /boot/grub2/grub.cfg
+  changed_when: true
