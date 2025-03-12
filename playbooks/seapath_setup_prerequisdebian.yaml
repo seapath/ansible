@@ -83,7 +83,7 @@
       when:
         - upload_files is defined
         - item.extract is defined and item.extract is true
-    - name: run extra commands after upload
+    - name: Run extra commands after upload
       shell: "{{ item }}"
       tags:
         - skip_ansible_lint
