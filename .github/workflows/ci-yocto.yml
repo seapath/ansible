@@ -5,7 +5,6 @@ name: CI Yocto
 
 env:
   WORK_DIR: /tmp/seapath_ci_${{ github.run_id }}_${{ github.run_attempt }}_${{ github.sha }}
-
 on:
   pull_request:
     types: [opened, reopened, synchronize]
@@ -72,7 +71,7 @@ jobs:
              ci/launch-yocto.sh test_vms;
 
       - name: Launch latency tests
-        if: ${{ always() && steps.conf.conclusion == 'success' }}
+        if: ${{ always() && steps.conf.conclusion == 'success'}}
         run: cd ${{ env.WORK_DIR }};
             ci/launch-yocto.sh test_latency
 

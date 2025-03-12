@@ -5,6 +5,7 @@
 
 ---
 - name: CI Yocto - run tests
+  become: true
   hosts:
     - cluster_machines
     - standalone_machine

@@ -6,10 +6,12 @@
 
 ---
 - name: Configure the EFI to boot on USB drive
+  become: true
   script: "configure_boot_next_usb_drive.sh"
   register: result
   changed_when: result.rc == 0
   failed_when: result.rc == 1 or result.rc > 2
 
 - name: Reboot the system
+  become: true
   reboot:
