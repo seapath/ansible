@@ -2,6 +2,4 @@
 # SPDX-License-Identifier: Apache-2.0
 
 - name: Restart libvirtd
-  ansible.builtin.systemd:
-    name: libvirtd
-    state: restarted
+  include_tasks: restart_libvirtd.yaml
