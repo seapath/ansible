@@ -1,0 +1,59 @@
+# Copyright (C) 2023, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+name: CI OracleLinux
+
+env:
+  WORK_DIR: /tmp/seapath_ci_${{ github.run_id }}_${{ github.run_attempt }}_${{ github.sha }}
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  checks: write
+
+jobs:
+  CI:
+    runs-on: [self-hosted, runner-RTE-OL9]
+    steps:
+
+      - name: Initialize sources
+        run: mkdir ${{ env.WORK_DIR }}; cd ${{ env.WORK_DIR }};
+             git clone -q --depth 1 --recurse-submodules -b ol https://github.com/seapath/ci ci;
+             echo "CI sources downloaded successfully";
+             ci/launch-oraclelinux.sh init;
+
+      - name: Launch Ansible-lint
+        run: |-
+          cd ${{ env.WORK_DIR }}/ansible
+          cqfd -b ansible-lint
+
+      - name: Configure OracleLinux
+        id: conf
+        run: cd ${{ env.WORK_DIR }};
+             ci/launch-oraclelinux.sh conf;
+
+      - name: Launch system tests
+        if: ${{ always() && steps.conf.conclusion == 'success' }}
+        run: cd ${{ env.WORK_DIR }};
+             ci/launch-oraclelinux.sh system;
+
+      - name: Launch VM tests
+        if: ${{ always() && steps.conf.conclusion == 'success' }}
+        run: cd ${{ env.WORK_DIR }};
+             ci/launch-oraclelinux.sh vm;
+
+      - name: Upload test report
+        if: ${{ always() && steps.conf.conclusion == 'success' }}
+        run: cd ${{ env.WORK_DIR }};
+             git -C ci/test-report-pdf checkout 0156f2d35ba7d5983f22b6054aa83f92a42f0f2d;
+             ci/launch-oraclelinux.sh report;
+
+      - name: Clean
+        if: always()
+        run: rm -rf $WORK_DIR;

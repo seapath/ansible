@@ -33,7 +33,7 @@
   command: lvs -a
   register: result
   until: result.stdout | regex_search('root-snap', ignorecase=True) is none
-  retries: 24
+  retries: 40
   delay: 10
   changed_when: false
 

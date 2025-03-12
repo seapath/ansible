@@ -11,4 +11,17 @@
   gather_facts: True
   roles:
     - deploy_cukinia
-    - debian_tests
+    - detect_seapath_distro
+
+- name: Deploy Cukinia's tests
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  become: true
+  gather_facts: True
+  roles:
+    - role: debian_tests
+      when: seapath_distro == "Debian"
+    - role: oraclelinux_tests
+      when: seapath_distro == "OracleLinux"
