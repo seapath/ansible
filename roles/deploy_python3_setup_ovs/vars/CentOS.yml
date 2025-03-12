@@ -1,0 +1,5 @@
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+deploy_python3_setup_ovs_pip_options: "--prefix=/usr/local/"
