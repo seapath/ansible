@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- when: seapath_distro in [ "CentOS", "Debian" ]
+- when: seapath_distro in [ "CentOS", "Debian", "OracleLinux" ]
   block:
     - name: Get root user's home directory
       shell:
