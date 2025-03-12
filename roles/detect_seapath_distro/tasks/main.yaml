@@ -16,6 +16,11 @@
     seapath_distro: CentOS
   when: ansible_distribution | regex_search("CentOS|RedHat")
 
+- name: Detect OracleLinux distribution
+  set_fact:
+    seapath_distro: OracleLinux
+  when: ansible_distribution | regex_search("Oracle")
+
 - name: Detect Yocto distribution
   when: seapath_distro is not defined
   block:
