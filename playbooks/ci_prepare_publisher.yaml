@@ -1,0 +1,47 @@
+# Copyright (C) 2024 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Gather facts
+  hosts:
+    - publisher_machine
+  tasks:
+    - name: Gather ansible_user_dir fact
+      setup:
+        filter: ansible_user_dir
+
+- name: Synchronize publisher machine with PTP
+  become: true
+  vars:
+    phc_delay: "-37"
+  hosts:
+      - publisher_machine
+  tasks:
+    - name: Copy ptp4l.service
+      ansible.builtin.template:
+        src: "{{ (playbook_dir | dirname) }}/templates/ptp4l.service.j2"
+        dest: /etc/systemd/system/ptp4l.service
+      notify: Enable ptp4l.service
+    - name: Copy ptp4l.conf
+      ansible.builtin.template:
+        src: "{{ (playbook_dir | dirname) }}/templates/ptp4l.conf.j2"
+        dest: /etc/linuxptp/ptp4l.conf
+    - name: Send phc2sys.service
+      ansible.builtin.template:
+        src: "{{ (playbook_dir | dirname) }}/templates/phc2sys.service.j2"
+        dest: /etc/systemd/system/phc2sys.service
+      notify: Enable phc2sys.service
+
+  handlers:
+    - name: Enable ptp4l.service
+      ansible.builtin.systemd:
+        name: ptp4l
+        enabled: true
+        daemon-reload: true
+        state: restarted
+    - name: Enable phc2sys.service
+      ansible.builtin.systemd:
+        name: phc2sys
+        enabled: true
+        daemon-reload: true
+        state: restarted
