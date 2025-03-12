@@ -12,9 +12,10 @@
       - "--chown=root:root"
 - name: Install vm_manager
   command:
-    cmd: /usr/bin/pip install  {{ pip_extra_params }}  /tmp/src/vm_manager
+    cmd: "/usr/bin/pip install {{ deploy_vm_manager_pip_options }} /tmp/src/vm_manager"
+  changed_when: true
 - name: Create a symbolic link
   ansible.builtin.file:
     src: /usr/local/bin/vm_manager_cmd
-    dest: /usr/local/bin/vm-mgr
+    dest: /usr/bin/vm-mgr
     state: link
