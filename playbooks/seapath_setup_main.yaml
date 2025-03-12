@@ -21,6 +21,10 @@
   import_playbook: seapath_setup_prerequiscentos.yaml
   when: seapath_distro == "CentOS"
 
+- name: Import seapath_setup_prerequisoraclelinux playbook
+  import_playbook: seapath_setup_prerequisoraclelinux.yaml
+  when: seapath_distro == "OracleLinux"
+
 - name: Import seapath_setup_prerequisdebian playbook
   import_playbook: seapath_setup_prerequisdebian.yaml
   when: seapath_distro == "Debian"
