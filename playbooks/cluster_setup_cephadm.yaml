@@ -1,0 +1,12 @@
+# Copyright (C) 2025, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# This playbook configures and sets up Ceph with cephadm.
+
+---
+- name: Cephadm
+  hosts:
+      cluster_machines
+  become: true
+  roles:
+    - cephadm
