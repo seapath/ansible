@@ -1,0 +1,207 @@
+cukinia_log "$(_colorize yellow "--- check apt configuration ---")"
+
+
+{% if apt_repo is defined %}
+id "SEAPATH-00197" as "Only wanted apt repositories configured: only use sources.list" \
+    cukinia_test -z "$(ls /etc/apt/sources.list.d/)"
+
+id "SEAPATH-00197" as "Only wanted apt repositories configured: do not add other repositories" \
+    cukinia_test $(cat /etc/apt/sources.list |wc -l) -eq {{ apt_repo | length }}
+
+{% for repo in apt_repo %}
+id "SEAPATH-00197" as "Only official apt repositories configured: {{ repo }}" \
+    cukinia_cmd  grep -Eq "^deb {{ repo }}$" /etc/apt/sources.list
+{% endfor %}
+{% endif %}
+
+# These packages are essential to seapath
+ESSENTIAL_PACKAGES_SEAPATH="amd64-microcode|\
+at|\
+audispd-plugins|\
+auditd|\
+bridge-utils|\
+ca-certificates|\
+ceph-base|\
+ceph-common|\
+ceph-mgr-diskprediction-local|\
+ceph-mgr|\
+ceph-mon|\
+ceph-osd|\
+ceph|\
+chrony|\
+conntrackd|\
+corosync|\
+cpuset|\
+crmsh|\
+curl|\
+dbus|\
+docker-compose|\
+docker.io|\
+dstat|\
+firmware-linux-nonfree|\
+gnupg|\
+gunicorn|\
+hddtemp|\
+intel-cmt-cat|\
+intel-microcode|\
+ipmitool|\
+iptables-persistent|\
+irqbalance|\
+iucode-tool|\
+jq|\
+lbzip2|\
+libcephfs2|\
+libsnmp-extension-passpersist-perl|\
+libnetplan0|\
+libvirt-clients|\
+libvirt-daemon-driver-storage-rbd|\
+libvirt-daemon-system|\
+libvirt-daemon|\
+libxml2-utils|\
+linux-image-rt-amd64|\
+linux-perf|\
+linuxptp|\
+lm-sensors|\
+lsb-release|\
+msr-tools|\
+net-tools|\
+netplan.io|\
+nginx|\
+ntfs-3g|\
+openssh-server|\
+openvswitch-switch|\
+ovmf|\
+pacemaker|\
+patch|\
+python3-apt|\
+python3-ceph-argparse|\
+python3-cephfs|\
+python3-cffi-backend|\
+python3-flaskext.wtf|\
+python3-markdown-it|\
+python3-mdurl|\
+python3-pip|\
+python3-pygments|\
+python3-rich|\
+python3-setuptools|\
+python3-xmltodict|\
+qemu-block-extra|\
+qemu-utils|\
+snmpd|\
+sudo|\
+sysfsutils|\
+syslog-ng|\
+sysstat|\
+tuned|\
+virtinst|\
+wget"
+# These packages are part of a minimal FAI installation
+ESSENTIAL_PACKAGES_FAI="apt-transport-https|\
+console-setup|\
+debconf-utils|\
+eject|\
+file|\
+grub-efi|\
+kbd|\
+less|\
+linuxlogo|\
+locales|\
+lvm2|\
+memtest86.|\
+openssh-client|\
+openssh-server|\
+pciutils|\
+procinfo|\
+rsync|\
+time|\
+usbutils"
+# These packages are part of a minimal debootstrap installation.
+# gcc-*-base do not contain a compiler, it's the license and release files for libgcc.
+ESSENTIAL_PACKAGES_DEBOOTSTRAP="adduser|\
+apt-utils|\
+apt|\
+base-files|\
+base-passwd|\
+bash|\
+bsdutils|\
+coreutils|\
+cpio|\
+cron|\
+dash|\
+debconf-i18n|\
+debconf|\
+debian-archive-keyring|\
+debianutils|\
+diffutils|\
+dmidecode|\
+dpkg|\
+e2fsprogs|\
+findutils|\
+gcc-9-base|\
+gcc-10-base|\
+gpgv|\
+grep|\
+gzip|\
+hostname|\
+init-system-helpers|\
+init|\
+iproute2|\
+iputils-ping|\
+isc-dhcp-client|\
+isc-dhcp-common|\
+kmod|\
+less|\
+libc-bin|\
+libpam-modules-bin|\
+libpam-modules|\
+libpam-runtime|\
+libreadline8|\
+login|\
+logrotate|\
+mawk|\
+mount|\
+nano|\
+ncurses-base|\
+ncurses-bin|\
+netbase|\
+nftables|\
+passwd|\
+perl-base|\
+procps|\
+readline-common|\
+rsyslog|\
+sed|\
+sensible-utils|\
+systemd-sysv|\
+systemd|\
+sysvinit-utils|\
+tar|\
+tasksel-data|\
+tzdata|\
+udev|\
+util-linux|\
+vim-common|\
+vim-tiny|\
+whiptail|\
+zstd"
+
+ESSENTIAL_PACKAGES="(\
+$ESSENTIAL_PACKAGES_SEAPATH|\
+$ESSENTIAL_PACKAGES_FAI|\
+$ESSENTIAL_PACKAGES_DEBOOTSTRAP\
+)"
+
+UNRECOGNIZED_PACKAGES=""
+
+for package in $(apt list --installed 2>/dev/null | awk -F '/' 'NR>1 {print $1}'); do
+    if ! apt-cache rdepends --installed --recurse "$package" | grep -Eq "^(  )?${ESSENTIAL_PACKAGES}$"; then
+        UNRECOGNIZED_PACKAGES="$UNRECOGNIZED_PACKAGES $package"
+    fi
+done
+
+if [ "$UNRECOGNIZED_PACKAGES" != "" ]; then
+    cukinia_log "$(_colorize red Unrecognized packages: $UNRECOGNIZED_PACKAGES)"
+fi
+
+id "SEAPATH-00198" as "No unrecognized packages installed" \
+    cukinia_test "$UNRECOGNIZED_PACKAGES" = ""

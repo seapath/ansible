@@ -1,0 +1,31 @@
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+function get_string_from_option() {
+    case $1 in
+        y)
+            echo "enabled"
+            ;;
+        n)
+            echo "disabled"
+            ;;
+        m)
+            echo "enabled as module"
+            ;;
+    esac
+}
+
+function check_kernel_configuration() {
+    local -n kernel_options=$@ 2>/dev/null
+    local category option
+    for category in "${!kernel_options[@]}"; do
+        for testcase in ${kernel_options["${category}"]}; do
+            state=${testcase#*:}
+            option=${testcase%:*}
+            id "SEAPATH-00050" as "Linux kernel '${category}' : \
+                ${option} is $(get_string_from_option ${state})" \
+                cukinia_kconf "${option}" "${state}"
+        done
+    done
+}
+
