@@ -40,6 +40,12 @@
 
 - name: Import cluster_setup_ceph playbook
   import_playbook: cluster_setup_ceph.yaml
+  when: seapath_distro != "Debian" and seapath_distro != "OracleLinux"
+
+- name: Import cluster_setup_cephdm playbook
+  import_playbook: cluster_setup_cephadm.yaml
+  when: seapath_distro == "OracleLinux" or seapath_distro == "Debian"
+
 - name: Import cluster_setup_libvirt playbook
   import_playbook: cluster_setup_libvirt.yaml
 - name: Import cluster_setup_users playbook
