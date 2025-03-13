@@ -1,6 +1,6 @@
 # Deploy cukinia tests Role
 
-This role deploys the cukinia tests
+This role deploys the cukinia tests for Debian
 
 ## Requirements
 
@@ -20,5 +20,5 @@ No variable.
     - VMs
   become: true
   roles:
-    - { role: seapath_ansible.deploy_cukinia_tests, filter: "none" }
+    - { role: seapath_ansible.debian_tests, filter: "none" }
 ```
