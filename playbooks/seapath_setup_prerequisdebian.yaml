@@ -121,6 +121,7 @@
           - ifupdown
           - dhcpcd-base
           - libapt-pkg6.0
+          - usr-is-merged
         state: absent
         purge: yes
         autoremove: yes
