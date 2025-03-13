@@ -1,0 +1,57 @@
+# Copyright (C) 2023, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+passwd=" \
+    root \
+    daemon \
+    bin \
+    sys \
+    sync \
+    games \
+    man \
+    lp \
+    mail \
+    news \
+    uucp \
+    proxy \
+    www-data \
+    backup \
+    list \
+    irc \
+    nobody \
+    _apt \
+    systemd-network \
+    systemd-resolve \
+{% if inventory_hostname in groups.get('cluster_machines', []) %}
+    ceph \
+    hacluster \
+{% endif %}
+    messagebus \
+    uuidd \
+    sshd \
+    Debian-snmp \
+    libvirt-qemu \
+    ansible \
+    _chrony \
+    {{ admin_user }} \
+{% if livemigration_user is defined %}
+    {{ livemigration_user }} \
+{% endif %}
+    libvirt \
+{% if ansible_distribution == 'Debian' and ansible_distribution_version | int < 12 %}
+    gnats \
+    systemd-timesync \
+    systemd-coredump \
+{% else %}
+    polkitd \
+{% endif %}
+"
+args="-v"
+for g in ${passwd}; do
+    args="$args -e $g"
+done
+
+cukinia_log "$(_colorize yellow "--- check /etc/passwd ---")"
+nb_passwd=$(echo $passwd | wc -w)
+id "SEAPATH-00047" as "/etc/passwd is consistent" cukinia_test $(grep $args /etc/passwd | wc -l) -eq 0
+id "SEAPATH-00048" as "/etc/passwd does not include extra user" cukinia_test $(cat /etc/passwd | wc -l) -eq $nb_passwd
