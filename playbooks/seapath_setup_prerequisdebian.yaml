@@ -98,6 +98,10 @@
     - VMs
   become: true
   tasks:
+    - name: Create /etc/apt/sources.list.d/
+      file:
+        state: directory
+        path: /etc/apt/sources.list.d/
     - name: Uninstall ceph packages
       apt:
         name:
