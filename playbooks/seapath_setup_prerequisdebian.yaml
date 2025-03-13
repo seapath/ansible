@@ -98,6 +98,22 @@
     - VMs
   become: true
   tasks:
+    - name: Uninstall ceph packages
+      apt:
+        name:
+          - ceph
+          - ceph-base
+          - ceph-common
+          - ceph-mgr
+          - ceph-mon
+          - ceph-osd
+          - libcephfs2
+          - python3-ceph-argparse
+          - python3-cephfs
+        state: absent
+        purge: yes
+        autoremove: yes
+      when: force_cephadm is defined and force_cephadm is true
     - name: Uninstall apt packages not required after installation (all debian version)
       apt:
         name:
