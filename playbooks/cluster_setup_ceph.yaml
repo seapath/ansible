@@ -10,7 +10,18 @@
   become: true
   gather_facts: yes
   roles:
+    - detect_seapath_distro
     - ceph_prepare_installation
+  tasks:
+    - name: Set ceph UID/GID fact
+      when: seapath_distro == "Yocto"
+      block:
+        - name: Get GID of ceph group
+          register: ceoh_gid_result
+          shell: grep '^ceph' /etc/passwd | cut -d':' -f3
+        - name: Set ceph_uid
+          set_fact:
+            ceph_uid: "{{ ceoh_gid_result.stdout }}"
 
 - name: Ceph Expansion VG
   hosts:
