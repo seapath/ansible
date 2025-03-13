@@ -1,0 +1,75 @@
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+cukinia_log "$(_colorize yellow "--- check sudo configuration ---")"
+SUDO_BIN="/usr/bin/sudo"
+id "SEAPATH-00103" as "$SUDO_BIN exists" cukinia_test -f "$SUDO_BIN"
+id "SEAPATH-00104" as "$SUDO_BIN belongs to group privileged" cukinia_test $(stat -c %G $SUDO_BIN) == "privileged"
+id "SEAPATH-00105" as "$SUDO_BIN has permissions 4750" cukinia_test $(stat -c %A $SUDO_BIN) == "-rwsr-x---"
+
+SUDOERS_FILES="$(find /etc/sudoers /etc/sudoers.d -type f -not -name README)"
+
+id "SEAPATH-00148" as "sudoers files include directive noexec " \
+    cukinia_cmd grep -q "^Defaults.*noexec" $SUDOERS_FILES
+id "SEAPATH-00148" as "sudoers files include directive requiretty " \
+    cukinia_cmd grep -q "^Defaults.*requiretty" $SUDOERS_FILES
+id "SEAPATH-00148" as "sudoers files include directive use_pty " \
+    cukinia_cmd grep -q "^Defaults.*use_pty" $SUDOERS_FILES
+id "SEAPATH-00148" as "sudoers files include directive umask=0027 " \
+    cukinia_cmd grep -q "^Defaults.*umask=0027" $SUDOERS_FILES
+id "SEAPATH-00148" as "sudoers files include directive ignore_dot " \
+    cukinia_cmd grep -q "^Defaults.*ignore_dot" $SUDOERS_FILES
+id "SEAPATH-00148" as "sudoers files include directive env_reset " \
+    cukinia_cmd grep -q "^Defaults.*env_reset" $SUDOERS_FILES
+
+id "SEAPATH-00149" as "sudo commands don't target privileged user " \
+    not cukinia_cmd grep -q -E '.*\(root\).*' $SUDOERS_FILES
+id "SEAPATH-00150" as "all commands require authentication" \
+    not cukinia_cmd grep -q '^(?!#|%privileged).*NOPASSWD' $SUDOERS_FILES
+
+CMD_WITH_EXEC=$(
+    grep EXEC $SUDOERS_FILES |
+    grep -Ev '{{ ansible_user }}|{{ admin_user }}'
+)
+# EXEC is mandatory for ansible. Currently admin user has all rigths
+id "SEAPATH-00152" as "EXEC option is not used" \
+    cukinia_test -n $CMD_WITH_EXEC
+
+id "SEAPATH-00153" as "rules are not defined by negation" \
+    not cukinia_cmd grep -q "^[^#].*!\/" "$f" $SUDOERS_FILES
+
+CMD_WITHOUT_ARGS=$(
+  grep -h "ALL.*=.*/" $SUDOERS_FILES |
+  grep -v '/[^[:space:]]*\>[[:space:]]\+.*' |
+  grep -v '^{{ ansible_user }}'
+)
+# The first line matches all lines where specific commands are defined.
+# The second line match the absolute path of the command (it begin with /)
+# and look for a space at the end of it (which means it has an argument).
+# The third line is an exception for ansible.
+id "SEAPATH-00154" as "sudo commands always specify arguments" \
+    cukinia_test -n $CMD_WITHOUT_ARGS
+
+USER_ACCESS_ALL=$(
+    grep -h "ALL.*=.*ALL" $SUDOERS_FILES |
+    grep -Ev 'root|sudo' |
+    grep -v '{{ admin_user }}'
+)
+# The first line matches all the sudoers lines who let a user run ALL.
+# The second line remove sudo and root who must be able to target ALL.
+# The third line is an exception. Currently, admin user can run ALL.
+id "SEAPATH-00154" as "no user can run all commands as root" \
+    cukinia_test -n $USER_ACCESS_ALL
+
+CMD_WILDCARD=$(
+  grep -h -v '^#' $SUDOERS_FILES |
+  grep '.*\*$'
+)
+# The first grep get all lines that are not comments
+id "SEAPATH-00155" as "sudo commands don't use wildcard * argument " \
+    cukinia_test -n $CMD_WILDCARD
+
+for file in $SUDOERS_FILES; do
+    id "SEAPATH-00156" as "${file} - $file is owned by root:root with 0440 permissions" \
+        cukinia_test "$(stat -c "%a %U %G" $file)" == "440 root root"
+done
