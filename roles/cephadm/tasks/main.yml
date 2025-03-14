@@ -28,6 +28,20 @@
     enabled: false
     state: stopped
 
+- name: Ensure group "containerized-ceph" exists
+  group:
+    name: containerized-ceph
+    gid: 167
+    state: present
+
+- name: Ensure user "containerized-ceph" exists with nologin
+  user:
+    name: containerized-ceph
+    uid: 167
+    group: containerized-ceph
+    create_home: no
+    shell: /sbin/nologin
+
 - name: Define first_node
   set_fact:
     first_node: "{{ groups['cluster_machines'][0] }}"
