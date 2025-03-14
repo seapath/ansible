@@ -22,6 +22,12 @@
   command: /usr/local/bin/cephadm install ceph-common ceph-volume
   changed_when: true
 
+- name: Disable ceph-crash non-containerized service
+  ansible.builtin.systemd:
+    name: ceph-crash.service
+    enabled: false
+    state: stopped
+
 - name: Define first_node
   set_fact:
     first_node: "{{ groups['cluster_machines'][0] }}"
