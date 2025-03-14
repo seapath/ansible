@@ -9,4 +9,5 @@
       cluster_machines
   become: true
   roles:
+    - detect_seapath_distro
     - cephadm
