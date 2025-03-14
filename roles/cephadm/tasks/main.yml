@@ -27,8 +27,15 @@
     first_node: "{{ groups['cluster_machines'][0] }}"
   run_once: true
 
+- name: Upload file ceph.conf needed for boostrapping
+  template:
+    src: ceph.conf.j2
+    dest: /tmp/ceph.conf
+  run_once: true
+  delegate_to: "{{ first_node }}"
+
 - name: Bootstrap Ceph cluster
-  command: "/usr/local/bin/cephadm bootstrap --skip-monitoring-stack --skip-dashboard --mon-ip {{ hostvars[first_node]['cluster_ip_addr'] }}"
+  command: "/usr/local/bin/cephadm bootstrap --skip-monitoring-stack --skip-dashboard --config /tmp/ceph.conf --mon-ip {{ hostvars[first_node]['cluster_ip_addr'] }}"
   changed_when: true
   failed_when: false
   run_once: true
