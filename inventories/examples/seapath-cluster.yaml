@@ -107,6 +107,7 @@ cluster_machines:
 # This part contains SEAPATH default ceph configuration
 # Change only the TODOs, Do not change the other variables, unless you know
 # exactly what you are doing.
+    force_cephadm: false # by default seapath uses ceph-ansible, but we can use cephadm instead
     ceph_origin: distro
     cluster_network: "192.168.55.0/24" # TODO : Replace by the IP range of your cluster
     public_network: "{{ cluster_network }}"
