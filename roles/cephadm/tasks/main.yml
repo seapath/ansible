@@ -169,3 +169,9 @@
     mon 'profile rbd, allow command "osd blacklist"'
     osd 'allow class-read object_prefix rbd_children, profile rbd pool=rbd'
   when: cephx_user_check.rc == 0
+
+- name: Update logrotate configuration for Ceph
+  replace:
+    path: /etc/logrotate.d/ceph-common
+    regexp: '^/var/log/ceph/\*.log'
+    replace: '/var/log/ceph/!(cephadm).log'
