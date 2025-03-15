@@ -1,10 +1,9 @@
 cukinia_log "$(_colorize yellow "--- check apt configuration ---")"
 
+id "SEAPATH-00197" as "Only wanted apt repositories configured: only one repo in sources.list.d (ceph)" \
+    cukinia_cmd [ -d /etc/apt/sources.list.d/ ] && [ $(ls /etc/apt/sources.list.d/ 2>/dev/null | wc -l) -eq 1 ] && [ -f /etc/apt/sources.list.d/ceph.list ]
 
 {% if apt_repo is defined %}
-id "SEAPATH-00197" as "Only wanted apt repositories configured: only use sources.list" \
-    cukinia_test -z "$(ls /etc/apt/sources.list.d/)"
-
 id "SEAPATH-00197" as "Only wanted apt repositories configured: do not add other repositories" \
     cukinia_test $(cat /etc/apt/sources.list |wc -l) -eq {{ apt_repo | length }}
 
