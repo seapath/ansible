@@ -29,7 +29,7 @@ id "SEAPATH-00150" as "all commands require authentication" \
 
 CMD_WITH_EXEC=$(
     grep EXEC $SUDOERS_FILES |
-    grep -Ev '{{ ansible_user }}|{{ admin_user }}'
+    grep -Ev '{{ ansible_user }}|{{ admin_user }}|cephadm'
 )
 # EXEC is mandatory for ansible. Currently admin user has all rigths
 id "SEAPATH-00152" as "EXEC option is not used" \
@@ -53,7 +53,8 @@ id "SEAPATH-00154" as "sudo commands always specify arguments" \
 USER_ACCESS_ALL=$(
     grep -h "ALL.*=.*ALL" $SUDOERS_FILES |
     grep -Ev 'root|sudo' |
-    grep -v '{{ admin_user }}'
+    grep -v '{{ admin_user }}' |
+    grep -v 'cephadm'
 )
 # The first line matches all the sudoers lines who let a user run ALL.
 # The second line remove sudo and root who must be able to target ALL.
