@@ -28,6 +28,19 @@
     enabled: false
     state: stopped
 
+- name: Ensure group "cephadm" exists
+  group:
+    name: cephadm
+    gid: 1001
+    state: present
+
+- name: Ensure user "cephadm" exists
+  user:
+    name: cephadm
+    uid: 1001
+    group: cephadm
+    create_home: yes
+
 - name: Ensure group "containerized-ceph" exists
   group:
     name: containerized-ceph
@@ -44,6 +57,11 @@
     shell: /sbin/nologin
   when: seapath_distro == "Debian"
 
+- name: Set cephadm user sudo permissions
+  copy:
+    src: cephadm_sudoers
+    dest: /etc/sudoers.d/cephadm
+
 - name: Define first_node
   set_fact:
     first_node: "{{ groups['cluster_machines'][0] }}"
@@ -57,7 +75,7 @@
   delegate_to: "{{ first_node }}"
 
 - name: Bootstrap Ceph cluster
-  command: "/usr/local/bin/cephadm bootstrap --skip-monitoring-stack --skip-dashboard --config /tmp/ceph.conf --mon-ip {{ hostvars[first_node]['cluster_ip_addr'] }}"
+  command: "/usr/local/bin/cephadm bootstrap --skip-monitoring-stack --skip-dashboard --config /tmp/ceph.conf --ssh-user cephadm --mon-ip {{ hostvars[first_node]['cluster_ip_addr'] }}"
   changed_when: true
   failed_when: false
   run_once: true
@@ -78,7 +96,7 @@
   delegate_to: "{{ first_node }}"
 - name: Copy the key to the other nodes
   ansible.posix.authorized_key:
-    user: root
+    user: cephadm
     state: present
     key: "{{ lookup('file', '/tmp/ceph.pub') }}"
   loop: "{{ groups['cluster_machines'] | difference([first_node]) }}"
