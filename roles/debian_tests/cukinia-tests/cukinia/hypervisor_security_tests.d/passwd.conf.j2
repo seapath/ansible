@@ -25,6 +25,7 @@ passwd=" \
 {% if inventory_hostname in groups.get('cluster_machines', []) %}
     ceph \
     hacluster \
+    containerized-ceph \
 {% endif %}
     messagebus \
     uuidd \
