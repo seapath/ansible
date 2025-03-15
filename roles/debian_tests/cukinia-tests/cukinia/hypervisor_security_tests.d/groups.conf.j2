@@ -52,6 +52,8 @@ groups=" \
 {% if inventory_hostname in groups.get('cluster_machines', []) %}
     ceph \
     haclient \
+{% endif %}
+{% if force_cephadm is defined and force_cephadm is true %}
     containerized-ceph \
     cephadm \
 {% endif %}
