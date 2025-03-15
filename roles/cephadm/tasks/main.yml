@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-#- include_vars: "{{ seapath_distro }}.yml"
+- include_vars: "{{ seapath_distro }}.yml"
 
 #- name: Define CEPH_RELEASE variable
 #  set_fact:
@@ -171,3 +171,9 @@
     mon 'profile rbd, allow command "osd blacklist"'
     osd 'allow class-read object_prefix rbd_children, profile rbd pool=rbd'
   when: cephx_user_check.rc == 0
+
+- name: Update logrotate configuration for Ceph
+  replace:
+    path: "{{ cephadm_logrorateceph_path }}"
+    regexp: '^/var/log/ceph/\*.log'
+    replace: '/var/log/ceph/!(cephadm).log'
