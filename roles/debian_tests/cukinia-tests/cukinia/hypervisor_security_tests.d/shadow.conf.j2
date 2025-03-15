@@ -31,8 +31,10 @@ locked_users=" \
     systemd-network \
     systemd-resolve \
     ceph \
+{% if force_cephadm is defined and force_cephadm is true %}
     containerized-ceph \
     cephadm \
+{% endif %}
     hacluster \
     messagebus \
     systemd-timesync \
