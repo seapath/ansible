@@ -52,6 +52,7 @@ groups=" \
 {% if inventory_hostname in groups.get('cluster_machines', []) %}
     ceph \
     haclient \
+    containerized-ceph \
 {% endif %}
     messagebus \
     uuidd \
