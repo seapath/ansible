@@ -1,0 +1,144 @@
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+#- include_vars: "{{ seapath_distro }}.yml"
+
+#- name: Define CEPH_RELEASE variable
+#  set_fact:
+#    CEPH_RELEASE: "19.2.1"
+#
+#- name: Download cephadm
+#  get_url:
+#    url: "https://download.ceph.com/rpm-{{ CEPH_RELEASE }}/el9/noarch/cephadm"
+#    dest: "/usr/local/bin/cephadm"
+#    mode: '0755'
+#
+#- name: Add Ceph repository
+#  command: /usr/local/bin/cephadm add-repo --release squid
+#  changed_when: true
+#
+#- name: Install ceph-common package
+#  command: /usr/local/bin/cephadm install ceph-common ceph-volume
+#  changed_when: true
+
+- name: Define first_node
+  set_fact:
+    first_node: "{{ groups['cluster_machines'][0] }}"
+  run_once: true
+
+- name: Bootstrap Ceph cluster
+  command: "/usr/local/bin/cephadm bootstrap --skip-monitoring-stack --skip-dashboard --mon-ip {{ hostvars[first_node]['cluster_ip_addr'] }}"
+  changed_when: true
+  failed_when: false
+  run_once: true
+  delegate_to: "{{ first_node }}"
+  register: ceph_bootstrap_result
+
+- name: Set ceph_already_installed fact if bootstrap failed
+  set_fact:
+    ceph_already_installed: true
+  when: ceph_bootstrap_result.rc != 0
+
+- name: Fetch the ceph keyfile
+  fetch:
+    src: "/etc/ceph/ceph.pub"
+    dest: "/tmp/ceph.pub"
+    flat: true
+  run_once: true
+  delegate_to: "{{ first_node }}"
+- name: Copy the key to the other nodes
+  ansible.posix.authorized_key:
+    user: root
+    state: present
+    key: "{{ lookup('file', '/tmp/ceph.pub') }}"
+  loop: "{{ groups['cluster_machines'] | difference([first_node]) }}"
+
+- name: "RUN ceph orch host add nodeX --labels _admin"
+  command: "ceph orch host add {{ hostvars[item]['hostname'] }} --labels _admin"
+  changed_when: true
+  failed_when: false
+  run_once: true
+  delegate_to: "{{ first_node }}"
+  loop: "{{ groups['cluster_machines'] | difference([first_node]) }}"
+
+- name: Confirm monitors are in monmap
+  command: ceph mon dump
+  register: mon_dump
+  retries: 30
+  delay: 5
+  changed_when: false
+  run_once: true
+  delegate_to: "{{ first_node }}"
+  until: "hostvars[item]['hostname'] in mon_dump.stdout"
+  loop: "{{ groups['cluster_machines'] | difference([first_node]) }}"
+
+- name: Get current number of MGR daemons
+  shell:
+    cmd: set -o pipefail && ceph orch ls --service-name=mgr | grep -o "count:.*" | cut -d":" -f2
+    executable: /bin/bash
+  register: mgr_count_raw
+  changed_when: false
+  run_once: true
+  delegate_to: "{{ first_node }}"
+
+- name: Set fact with MGR count
+  set_fact:
+    mgr_count: "{{ mgr_count_raw.stdout | trim }}"
+  run_once: true
+  delegate_to: "{{ first_node }}"
+
+- name: "RUN ceph orch apply mgr {{ groups['cluster_machines'] | length }}"
+  command: "ceph orch apply mgr {{ groups['cluster_machines'] | length }}"
+  run_once: true
+  delegate_to: "{{ first_node }}"
+  when: mgr_count | int != groups['cluster_machines'] | length
+
+- name: "Run ZAP: ceph-volume lvm zap vg_ceph/lv_ceph"
+  command: "ceph-volume lvm zap vg_ceph/lv_ceph"
+  changed_when: true
+  when: ceph_already_installed is not defined or ceph_already_installed is false
+
+- name: "RUN ceph orch daemon add osd hostname:/dev/vg_ceph/lv_ceph"
+  command: "ceph orch daemon add osd {{ hostvars[item]['hostname'] }}:/dev/vg_ceph/lv_ceph"
+  changed_when: true
+  failed_when: false
+  run_once: true
+  delegate_to: "{{ first_node }}"
+  loop: "{{ groups['cluster_machines'] }}"
+
+- name: Check if RBD pool exists
+  shell:
+    cmd: set -o pipefail && ceph osd lspools | grep -w rbd
+    executable: /bin/bash
+  register: rbd_pool_check
+  changed_when: false
+  failed_when: false
+
+- name: Create RBD pool if it doesn't exist
+  command: ceph osd pool create rbd
+  when: rbd_pool_check.rc != 0
+
+- name: Enable RBD application on the pool
+  command: ceph osd pool application enable rbd rbd
+  when: rbd_pool_check.rc != 0
+
+- name: Check if CephX user client.libvirt exists
+  command: ceph auth get client.libvirt
+  register: cephx_user_check
+  changed_when: false
+  failed_when: false
+
+- name: Create CephX user client.libvirt if it does not exist
+  command:
+    ceph auth add client.libvirt
+    mon 'profile rbd, allow command "osd blacklist"'
+    osd 'allow class-read object_prefix rbd_children, profile rbd pool=rbd'
+  when: cephx_user_check.rc != 0
+
+- name: Update CephX user client.libvirt permissions if it exists
+  shell: >
+    ceph auth caps client.libvirt
+    mon 'profile rbd, allow command "osd blacklist"'
+    osd 'allow class-read object_prefix rbd_children, profile rbd pool=rbd'
+  when: cephx_user_check.rc == 0
