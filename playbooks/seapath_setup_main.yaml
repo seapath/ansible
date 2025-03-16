@@ -21,6 +21,10 @@
   import_playbook: seapath_setup_prerequiscentos.yaml
   when: seapath_distro == "CentOS"
 
+- name: Import seapath_setup_prerequisoraclelinux playbook
+  import_playbook: seapath_setup_prerequisoraclelinux.yaml
+  when: seapath_distro == "OracleLinux"
+
 - name: Import seapath_setup_prerequisdebian playbook
   import_playbook: seapath_setup_prerequisdebian.yaml
   when: seapath_distro == "Debian"
@@ -40,6 +44,12 @@
 
 - name: Import cluster_setup_ceph playbook
   import_playbook: cluster_setup_ceph.yaml
+  when: seapath_distro != "OracleLinux" and (force_cephadm is not defined or force_cephadm is false)
+
+- name: Import cluster_setup_cephdm playbook
+  import_playbook: cluster_setup_cephadm.yaml
+  when: seapath_distro == "OracleLinux" or (force_cephadm is defined and force_cephadm is true)
+
 - name: Import cluster_setup_libvirt playbook
   import_playbook: cluster_setup_libvirt.yaml
 - name: Import cluster_setup_users playbook

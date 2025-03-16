@@ -260,7 +260,6 @@
     line: "{{ item }}"
     state: present
   with_items:
-    - FAIL_DELAY 3
     - PASS_MAX_DAYS 90
     - SHA_CRYPT_MAX_ROUNDS 65536
     - SHA_CRYPT_MIN_ROUNDS 65536
@@ -271,7 +270,6 @@
     regexp: "^{{ item }}$"
     state: absent
   with_items:
-    - FAIL_DELAY 3
     - PASS_MAX_DAYS 90
     - SHA_CRYPT_MAX_ROUNDS 65536
     - SHA_CRYPT_MIN_ROUNDS 65536
