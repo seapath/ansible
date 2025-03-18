@@ -132,7 +132,7 @@
 
 - name: Create tuned seapath-rt profile folder
   file:
-    path: /etc/tuned/seapath-rt-host
+    path: /etc/tuned/profiles/seapath-rt-host
     state: directory
     mode: '0755'
 
@@ -143,7 +143,7 @@
 - name: Copy seapath-rt-host tuned profile conf
   template:
     src: "{{ tuned_path }}"
-    dest: /etc/tuned/seapath-rt-host/tuned.conf
+    dest: /etc/tuned/profiles/seapath-rt-host/tuned.conf
     group: root
     owner: root
     mode: '0644'

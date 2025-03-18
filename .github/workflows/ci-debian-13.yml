@@ -1,7 +1,7 @@
 # Copyright (C) 2023, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
-name: CI Debian
+name: CI Debian 13
 
 env:
   WORK_DIR: /tmp/seapath_ci_${{ github.run_id }}_${{ github.run_attempt }}_${{ github.sha }}
@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   CI:
-    runs-on: [self-hosted, runner-RTE-12]
+    runs-on: [self-hosted, runner-RTE-13]
     steps:
 
       - name: Initialize sources
@@ -47,6 +47,11 @@ jobs:
         if: ${{ always() && steps.conf.conclusion == 'success' }}
         run: cd ${{ env.WORK_DIR }};
              ci/launch.sh vm;
+
+#      - name: Launch latency tests
+#        if: ${{ always() && steps.conf.conclusion == 'success' }}
+#        run: cd ${{ env.WORK_DIR }};
+#             ci/launch.sh latency;
 
       - name: Upload test report
         if: ${{ always() && steps.conf.conclusion == 'success' }}
