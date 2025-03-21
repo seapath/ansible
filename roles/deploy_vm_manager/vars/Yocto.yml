@@ -1,4 +1,6 @@
 # Copyright (C) 2024 Red Hat, Inc.
+# Copyright (C) 2025 RTE
 # SPDX-License-Identifier: Apache-2.0
+
 ---
-pip_extra_params: "--root-user-action=ignore --no-build-isolation --prefix=/usr/"
+deploy_vm_manager_pip_options: "--root-user-action=ignore --no-build-isolation --prefix=/usr/"
