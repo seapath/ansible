@@ -7,4 +7,5 @@
     - standalone_machine
   become: true
   roles:
+    - detect_seapath_distro
     - snmp
