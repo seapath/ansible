@@ -50,6 +50,7 @@
     - name: Remove snapshot if success
       command: "lvremove -y /dev/{{ vg_name | default('vg1') }}/root-snap"
       when: "'root-snap' in lvm_snapshot.stdout"
+      changed_when: true
 
     - name: Do something if not success
       debug:

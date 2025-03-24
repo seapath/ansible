@@ -26,7 +26,8 @@
     dest: /usr/bin/cukinia
     state: link
 
-- name: copy test vm domainxmls to the hypervisors
+- name: Copy test vm domainxmls to the hypervisors
+  when: "'hypervisors' in group_names"
   block:
     - name: Copy vm.xml
       copy:
@@ -36,7 +37,6 @@
       copy:
         src: files/wrong_vm_config.xml
         dest: /usr/share/testdata/
-  when: "'hypervisors' in group_names"
 
 - name: Launch cukinia tests
   become: yes
@@ -46,6 +46,7 @@
       MACHINENAME={{ cukinia_namespace | default(inventory_hostname) }}
       cukinia -f junitxml -o {{ tmp_test_dir.path }}/cukinia.xml
       /usr/share/testdata/cukinia.conf || true
+  changed_when: true
 - name: Fetch result
   fetch:
     src: '{{ tmp_test_dir.path }}/cukinia.xml'
