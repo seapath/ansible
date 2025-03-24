@@ -140,6 +140,7 @@
   run_once: true
   delegate_to: "{{ first_node }}"
   when: mgr_count | int != groups['cluster_machines'] | length
+  changed_when: true
 
 - name: "Run ZAP: ceph-volume lvm zap vg_ceph/lv_ceph"
   command: "ceph-volume lvm zap vg_ceph/lv_ceph"
@@ -165,10 +166,12 @@
 - name: Create RBD pool if it doesn't exist
   command: ceph osd pool create rbd
   when: rbd_pool_check.rc != 0
+  changed_when: true
 
 - name: Enable RBD application on the pool
   command: ceph osd pool application enable rbd rbd
   when: rbd_pool_check.rc != 0
+  changed_when: true
 
 - name: Check if CephX user client.libvirt exists
   command: ceph auth get client.libvirt
@@ -182,6 +185,7 @@
     mon 'profile rbd, allow command "osd blacklist"'
     osd 'allow class-read object_prefix rbd_children, profile rbd pool=rbd'
   when: cephx_user_check.rc != 0
+  changed_when: true
 
 - name: Update CephX user client.libvirt permissions if it exists
   shell: >
@@ -189,6 +193,7 @@
     mon 'profile rbd, allow command "osd blacklist"'
     osd 'allow class-read object_prefix rbd_children, profile rbd pool=rbd'
   when: cephx_user_check.rc == 0
+  changed_when: true
 
 - name: Update logrotate configuration for Ceph
   replace:

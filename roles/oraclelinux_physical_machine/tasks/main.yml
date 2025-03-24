@@ -164,7 +164,7 @@
     insertafter: 'devices {'
     line: "        types = [ \"rbd\", 1024 ]"
     state: present
-- name: disable lvm use_devicesfile
+- name: Disable lvm use_devicesfile
   ansible.builtin.lineinfile:
     path: /etc/lvm/lvm.conf
     regexp: "^\\s*#?\\s*use_devicesfile\\s*=\\s*"

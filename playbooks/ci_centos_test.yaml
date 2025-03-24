@@ -4,7 +4,8 @@
 # Ansible playbook that runs all Cukinia's tests.
 
 ---
-- hosts:
+- name: Apply ci_centos role
+  hosts:
     - cluster_machines
     - standalone_machine
     - VMs
