@@ -41,26 +41,31 @@
       path: /etc/syslog-ng/cert.d
       state: directory
       mode: '0755'
+    notify: Restart syslog-ng
   - name: Create /etc/syslog-ng/ca.d
     file:
       path: /etc/syslog-ng/ca.d/
       state: directory
       mode: '0755'
+    notify: Restart syslog-ng
   - name: Copy syslog client certificate
     ansible.builtin.copy:
       src: "{{ syslog_tls_ca }}"
       dest: /etc/syslog-ng/cert.d/clientcert.pem
       mode: '0644'
+    notify: Restart syslog-ng
   - name: Copy syslog key
     ansible.builtin.copy:
       src: "{{ syslog_tls_key }}"
       dest: /etc/syslog-ng/cert.d/clientkey.pem
       mode: '0400'
+    notify: Restart syslog-ng
   - name: Copy syslog server ca
     ansible.builtin.copy:
       src: "{{ syslog_tls_server_ca }}"
       dest: /etc/syslog-ng/ca.d/serverca.pem
       mode: '0644'
+    notify: Restart syslog-ng
 
 - name: Retrieve user information for UID 1000
   ansible.builtin.command: getent passwd 1000
