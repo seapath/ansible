@@ -12,6 +12,7 @@
     - VMs
   become: true
   roles:
+    - detect_seapath_distro
     - network_resolved
   tasks:
     - name: Remove tuned dynamic tuning
