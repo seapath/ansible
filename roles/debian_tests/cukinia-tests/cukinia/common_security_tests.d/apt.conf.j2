@@ -1,5 +1,7 @@
 cukinia_log "$(_colorize yellow "--- check apt configuration ---")"
 
+{% if ansible_distribution == 'Debian' and ansible_distribution_version | int == 12 %}
+
 id "SEAPATH-00197" as "Only wanted apt repositories configured: only one repo in sources.list.d (ceph)" \
     cukinia_cmd [ -d /etc/apt/sources.list.d/ ] && [ $(ls /etc/apt/sources.list.d/ 2>/dev/null | wc -l) -eq 1 ] && [ -f /etc/apt/sources.list.d/ceph.list ]
 
@@ -11,6 +13,25 @@ id "SEAPATH-00197" as "Only wanted apt repositories configured: do not add other
 id "SEAPATH-00197" as "Only official apt repositories configured: {{ repo }}" \
     cukinia_cmd  grep -Eq "^deb {{ repo }}$" /etc/apt/sources.list
 {% endfor %}
+{% endif %}
+
+{% endif %}
+
+{% if ansible_distribution == 'Debian' and ansible_distribution_release == 'trixie' %}
+
+{% if apt_repo is defined %}
+id "SEAPATH-00197" as "Only wanted apt repositories configured: only use sources.list.d" \
+    cukinia_test ! -e /etc/apt/sources.list
+
+id "SEAPATH-00197" as "Only wanted apt repositories configured: do not add other repositories" \
+    cukinia_test $(ls /etc/apt/sources.list.d | wc -l) -eq {{ apt_repo | length }}
+
+{% for repo in apt_repo %}
+id "SEAPATH-00197" as "Only official apt repositories configured: {{ repo.name }}" \
+    cukinia_cmd  grep -Eq "^URIs: {{ repo.uris }}$" /etc/apt/sources.list.d/{{ repo.name }}.sources
+{% endfor %}
+{% endif %}
+
 {% endif %}
 
 # These packages are essential to seapath
@@ -48,10 +69,11 @@ iptables-persistent|\
 irqbalance|\
 iucode-tool|\
 jq|\
+lastlog2|\
 lbzip2|\
 libcephfs2|\
-libsnmp-extension-passpersist-perl|\
 libnetplan0|\
+libsnmp-extension-passpersist-perl|\
 libvirt-clients|\
 libvirt-daemon-driver-storage-rbd|\
 libvirt-daemon-system|\
@@ -76,6 +98,11 @@ python3-apt|\
 python3-ceph-argparse|\
 python3-cephfs|\
 python3-cffi-backend|\
+{% if ansible_distribution == 'Debian' and ansible_distribution_release == 'trixie' %}
+python3-debian|\
+python3-libvirt|\
+python3-libxml2|\
+{% endif %}
 python3-flaskext.wtf|\
 python3-markdown-it|\
 python3-mdurl|\

@@ -2,53 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 groups=" \
-    root \
-    daemon \
-    bin \
-    sys \
-    adm \
-    tty \
-    disk \
-    lp \
-    mail \
-    news \
-    uucp \
-    man \
-    proxy \
-    kmem \
-    dialout \
-    fax \
-    voice \
-    cdrom \
-    floppy \
-    tape \
-    sudo \
-    audio \
-    dip \
-    www-data \
-    backup \
-    operator \
-    list \
-    irc \
-    src \
-    shadow \
-    utmp \
-    video \
-    sasl \
-    plugdev \
-    staff \
-    games \
-    users \
-    nogroup \
-    systemd-journal \
-    systemd-network \
-    systemd-resolve \
-    input \
-    kvm \
-    render \
-    crontab \
-    netdev \
-    rdma \
+    {{ admin_user }} \
 {% if inventory_hostname in groups.get('cluster_machines', []) %}
     ceph \
     haclient \
@@ -57,26 +11,65 @@ groups=" \
     containerized-ceph \
     cephadm \
 {% endif %}
-    messagebus \
-    uuidd \
-    docker \
+    adm \
+    ansible \
+    audio \
+    backup \
+    bin \
+    cdrom \
+    _chrony \
+    crontab \
+    daemon \
     Debian-snmp \
+    dialout \
+    dip \
+    disk \
+    docker \
+    fax \
+    floppy \
+    games \
+    input \
+    irc \
+    kmem \
+    kvm \
     libvirt \
     libvirt-qemu \
-    privileged \
-    ansible \
-    _chrony \
-    {{ admin_user }} \
-{% if ansible_distribution == 'Debian' and ansible_distribution_version | int < 12 %}
-    gnats \
-    systemd-timesync \
-    systemd-coredump \
-    ssh \
-{% else %}
-    _ssh \
-    sgx \
+    list \
+    lp \
+    mail \
+    man \
+    messagebus \
+    netdev \
+    news \
+    nogroup \
+    operator \
+    plugdev \
     polkitd \
-{% endif %}
+    privileged \
+    proxy \
+    rdma \
+    render \
+    root \
+    sasl \
+    sgx \
+    shadow \
+    src \
+    _ssh \
+    staff \
+    sudo \
+    sys \
+    systemd-journal \
+    systemd-network \
+    systemd-resolve \
+    tape \
+    tty \
+    users \
+    utmp \
+    uucp \
+    uuidd \
+    video \
+    voice \
+    www-data \
 "
 args="-v"
 for g in ${groups}; do

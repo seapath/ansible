@@ -41,13 +41,12 @@ locked_users=" \
     uuidd \
     sshd \
     Debian-snmp \
-{% if ansible_distribution == 'Debian' and ansible_distribution_version | int >= 12 %}
     polkitd \
-{% endif %}
     libvirt \
     libvirt-qemu \
     systemd-coredump \
     _chrony \
+    dnsmasq \
 {% if livemigration_user is defined %}
     {{ livemigration_user }} \
 {% endif %}
