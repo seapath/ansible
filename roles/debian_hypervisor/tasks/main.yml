@@ -130,9 +130,23 @@
   notify: Start new slices REVERT
   when: cpumachinesrt is not defined and cpumachinesnort is not defined and cpuovs is not defined
 
+- name: Get tuned version
+  command: tuned --version
+  register: tuned_version_output
+  changed_when: false
+  failed_when: tuned_version_output.rc != 0
+
+- name: Extract tuned version number
+  set_fact:
+    tuned_version: "{{ tuned_version_output.stdout | regex_search('\\d+\\.\\d+', '\\0') | first }}"
+
+- name: Determine tuned profile path
+  set_fact:
+    tuned_profile_path: "{{ '/etc/tuned/profiles/seapath-rt-host' if tuned_version is version('2.22', '>=') else '/etc/tuned/seapath-rt-host' }}"
+
 - name: Create tuned seapath-rt profile folder
   file:
-    path: /etc/tuned/seapath-rt-host
+    path: "{{ tuned_profile_path }}"
     state: directory
     mode: '0755'
 
@@ -143,7 +157,7 @@
 - name: Copy seapath-rt-host tuned profile conf
   template:
     src: "{{ tuned_path }}"
-    dest: /etc/tuned/seapath-rt-host/tuned.conf
+    dest: "{{ tuned_profile_path }}/tuned.conf"
     group: root
     owner: root
     mode: '0644'
