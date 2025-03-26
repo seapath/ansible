@@ -11,6 +11,8 @@
   hosts:
     - VMs
   become: true
+  roles:
+    - network_resolved
   tasks:
     - name: Remove tuned dynamic tuning
       ansible.builtin.lineinfile:
