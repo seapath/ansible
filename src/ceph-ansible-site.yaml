@@ -10,9 +10,7 @@
   - rbdmirrors
   - clients
   - mgrs
-  - iscsigws
-  - iscsi-gws # for backward compatibility only!
-  - grafana-server
+  - monitoring
   - rgwloadbalancers
 
   gather_facts: false
@@ -25,6 +23,8 @@
     delegate_facts_host: True
 
   pre_tasks:
+    - import_role:
+        name: ceph-defaults
     # If we can't get python2 installed before any module is used we will fail
     # so just try what we can to get it installed
 
@@ -47,13 +47,11 @@
           - '!ohai'
       delegate_to: "{{ item }}"
       delegate_facts: True
-      with_items: "{{ groups['cluster_machines'] | difference(groups.get('clients', [])) }}"
+      with_items: "{{ groups['all'] | difference(groups.get('clients', [])) }}"
       run_once: true
       when: delegate_facts_host | bool
 
   tasks:
-    - import_role:
-        name: ceph-defaults
 
     # dummy container setup is only supported on x86_64
     # when running with containerized_deployment: true this task
@@ -108,7 +106,7 @@
         name: ceph-mon
     - import_role:
         name: ceph-mgr
-      when: groups.get(mgr_group_name, []) | length == 0
+      when: groups.get(mgr_group_name, []) | length == 0 or mgr_group_name in group_names
 
   post_tasks:
     - name: set ceph monitor install 'Complete'
@@ -387,46 +385,6 @@
             end: "{{ lookup('pipe', 'date +%Y%m%d%H%M%SZ') }}"
 
 - hosts:
-    - iscsigws
-    - iscsi-gws # for backward compatibility only!
-  gather_facts: false
-  become: True
-  any_errors_fatal: true
-  pre_tasks:
-    - name: set ceph iscsi gateway install 'In Progress'
-      run_once: true
-      set_stats:
-        data:
-          installer_phase_ceph_iscsi_gw:
-            status: "In Progress"
-            start: "{{ lookup('pipe', 'date +%Y%m%d%H%M%SZ') }}"
-
-  tasks:
-    - import_role:
-        name: ceph-defaults
-      tags: ['ceph_update_config']
-    - import_role:
-        name: ceph-facts
-      tags: ['ceph_update_config']
-    - import_role:
-        name: ceph-handler
-      tags: ['ceph_update_config']
-    - import_role:
-        name: ceph-config
-      tags: ['ceph_update_config']
-    - import_role:
-        name: ceph-iscsi-gw
-
-  post_tasks:
-    - name: set ceph iscsi gw install 'Complete'
-      run_once: true
-      set_stats:
-        data:
-          installer_phase_ceph_iscsi_gw:
-            status: "Complete"
-            end: "{{ lookup('pipe', 'date +%Y%m%d%H%M%SZ') }}"
-
-- hosts:
     - rgwloadbalancers
   gather_facts: false
   become: True
@@ -462,7 +420,7 @@
 - import_playbook: dashboard.yml
   when:
     - dashboard_enabled | bool
-    - groups.get(grafana_server_group_name, []) | length > 0
+    - groups.get(monitoring_group_name, []) | length > 0
 
 - hosts:
   - mons
@@ -504,6 +462,34 @@
             status: "Complete"
             end: "{{ lookup('pipe', 'date +%Y%m%d%H%M%SZ') }}"
 
+- hosts:
+  - mons
+  - osds
+  - mdss
+  - rgws
+  - rbdmirrors
+  - clients
+  - mgrs
+  - monitoring
+  gather_facts: false
+  become: True
+  any_errors_fatal: true
+  tasks:
+    - name: Remove tempdir for scripts
+      ansible.builtin.file:
+        path: "{{ tmpdirpath.path }}"
+        state: absent
+      when:
+        - tmpdirpath.path is defined
+        - not _exporter_handler_called | default(false) | bool
+        - not _crash_handler_called | default(false) | bool
+        - not _mds_handler_called | default(false) | bool
+        - not _mgr_handler_called | default(false) | bool
+        - not _mon_handler_called | default(false) | bool
+        - not _osd_handler_called | default(false) | bool
+        - not _rbdmirror_handler_called | default(false) | bool
+        - not _rgw_handler_called | default(false) | bool
+
 - hosts: mons
   gather_facts: false
   become: True
@@ -526,4 +512,3 @@
       when:
         - ceph_status is not skipped
         - ceph_status is successful
-
