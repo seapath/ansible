@@ -11,8 +11,10 @@ roles:
 
 collections:
     - name: "community.libvirt"
-      version: "1.0.2"
     - name: "community.general"
-      version: "4.5.0"
     - name: "ansible.posix"
     - name: "ansible.utils"
+    - name: openstack.config_template
+      source: https://opendev.org/openstack/ansible-config_template
+      type: git
+      version: 2.1.1

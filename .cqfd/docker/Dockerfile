@@ -24,16 +24,17 @@ RUN set -x \
     && sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen \
     && python3 -m venv --system-site-packages /env \
     && /env/bin/pip install \
-        ansible==2.10.7 \
-        ansible-lint==5.4.0 \
+        ansible-core==2.16 \
+        ansible-lint \
         yamllint \
         six \
         netaddr \
         jmespath \
-    && cp /env/lib/python3.11/site-packages/pip/_vendor/six.py \
-        /env/lib/python3.11/site-packages/ansible/module_utils/six/__init__.py \
     && rm -rf /var/lib/{apt,dpkg,cache,log}/*
 
 ENV PATH="/env/bin:/env/usr/bin:/env/sbin:/env/usr/sbin:$PATH"
+
+COPY user.py.patch /tmp/user.py.patch
+RUN patch /env/lib/python3.11/site-packages/ansible/modules/user.py < /tmp/user.py.patch
 
 COPY check_yaml.sh /usr/bin/check_yaml
