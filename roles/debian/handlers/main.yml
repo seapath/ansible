@@ -13,6 +13,12 @@
     state: restarted
     enabled: yes
 
+- name: Restart sshd
+  ansible.builtin.systemd:
+    name: sshd
+    state: restarted
+    enabled: yes
+
 - name: Update-grub
   command: update-grub
   changed_when: true
