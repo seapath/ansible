@@ -8,6 +8,7 @@
   see examples/inventories/vms_inventory_example.yaml
 -->
 
+{% set vm_features = vm.vm_features if "vm_features" in vm else [] %}
 {% set cpu_nb = (vm.cpuset | length) if vm.cpuset is defined else vm.nb_cpu | default(1) %}
 
 <domain type="kvm">
@@ -18,7 +19,7 @@
     </description>
 {% if cpumachines is defined %}
     <resource>
-{% if "rt" in vm.vm_features %}
+{% if "rt" in vm_features %}
         <partition>/machine/rt</partition>
 {% else %}
         <partition>/machine/nort</partition>
@@ -26,7 +27,7 @@
     </resource>
 {% endif %}
     <vcpu placement="static">{{ cpu_nb }}</vcpu>
-{% if "dpdk" in vm.vm_features %}
+{% if "dpdk" in vm_features %}
     <memory unit="GiB">1</memory>
     <currentMemory unit="GiB">1</currentMemory>
     <memoryBacking>
@@ -46,24 +47,24 @@
         <bios useserial="yes" rebootTimeout="0" />
         <smbios mode="emulate" />
         <firmware>
-            <feature enabled="{{ 'yes' if 'secure-boot' is in vm.vm_features else 'no' }}" name="secure-boot"/>
+            <feature enabled="{{ 'yes' if 'secure-boot' is in vm_features else 'no' }}" name="secure-boot"/>
         </firmware>
     </os>
     <features>
         <acpi />
         <apic />
         <vmport state="off" />
-{% if "rt" in vm.vm_features %}
+{% if "rt" in vm_features %}
         <pmu state="off" />
 {% endif %}
     </features>
     <cputune>
 {% if vm.cpuset is defined %}
 {%     for cpu in vm.cpuset %}
-{%         if "isolated" in vm.vm_features %}
+{%         if "isolated" in vm_features %}
             <vcpupin vcpu="{{ loop.index - 1 }}" cpuset="{{ cpu }}"/>
 {%         endif %}
-{%         if "rt" in vm.vm_features %}
+{%         if "rt" in vm_features %}
             <vcpusched vcpus="{{ loop.index - 1 }}" scheduler="fifo" priority="{{ vm.rt_priority |default('1') }}" />
 {%         endif %}
 {%     endfor %}
@@ -72,7 +73,7 @@
         <emulatorpin cpuset="{{ vm.emulatorpin }}"/>
 {% endif %}
     </cputune>
-{% if "rt" in vm.vm_features %}
+{% if "rt" in vm_features %}
     <cpu mode="host-passthrough">
         <topology sockets="1" dies="1" cores="{{ cpu_nb }}" threads="1" />
         <feature policy="require" name="tsc-deadline" />
@@ -80,7 +81,7 @@
     <cpu mode="host-model" check="partial">
         <model fallback="allow" />
 {% endif %}
-{% if "dpdk" in vm.vm_features %}
+{% if "dpdk" in vm_features %}
         <numa>
 {%     if cpu_nb > 1 %}
             <cell id="0" cpus="0-{{ cpu_nb - 1 }}" memory="1" unit="GiB" memAccess="shared" />
@@ -120,7 +121,7 @@
         </disk>
 {%     endfor %}
 {% endif %}
-{% if "dpdk" in vm.vm_features %}
+{% if "dpdk" in vm_features %}
 {%     for interface in vm.dpdk %}
         <interface type='vhostuser'>
             <source type='unix' path='/var/run/openvswitch/vm-sockets/dpdkvhostuser_{{ interface.ovs_port }}' mode='server'/>
@@ -200,7 +201,7 @@
         <console type="pty">
             <target type="serial" port="0" />
         </console>
-{% if "memballoon" in vm.vm_features %}
+{% if "memballoon" in vm_features %}
         <memballoon model="virtio">
           <stats period="5" />
         </memballoon>
