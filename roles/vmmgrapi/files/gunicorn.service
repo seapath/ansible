@@ -13,7 +13,7 @@ Group=root
 # see http://0pointer.net/blog/dynamic-users-with-systemd.html
 RuntimeDirectory=gunicorn
 WorkingDirectory=/var/local/vmmgrapi
-ExecStart=/usr/bin/gunicorn wsgi:app
+ExecStart=/usr/bin/gunicorn --max-requests=10 wsgi:app
 ExecReload=/bin/kill -s HUP $MAINPID
 KillMode=mixed
 TimeoutStopSec=5
