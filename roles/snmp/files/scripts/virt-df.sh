@@ -17,7 +17,7 @@ process_unit () {
   else
     return
   fi
-  if [ "$fstype" != "swap" -a "$fstype" != "LVM2_member" -a "$fstype" != "partition" ]
+  if [ "$fstype" != "swap" -a "$fstype" != "LVM2_member" -a "$fstype" != "partition" -a "$fstype" != "ceph_bluestore" ]
   then
     if [ "$fstype" == "ext4" ];then
       /usr/bin/mount -o ro,noload $unitname /t
@@ -44,7 +44,7 @@ process_unit () {
   fi
 }
 
-/usr/sbin/pvs -o pv_name,vg_uuid | /usr/bin/grep /dev/rbd | awk '{ print $2 }' | while read vg_uuid; do
+/usr/sbin/pvs -o pv_name,vg_uuid | /usr/bin/grep /dev/rbd | /usr/bin/awk '{ print $2 }' | while read vg_uuid; do
   /usr/sbin/vgchange -an --select vg_uuid=$vg_uuid
 done
 for devname in /dev/rbd*
@@ -55,9 +55,9 @@ for guest in `virsh --connect qemu:///system list --all | /usr/bin/awk 'NR>2 { p
 do
   mkdir -p /t
   /usr/bin/umount /t 2>/dev/null
-  /usr/sbin/lvs > /tmp/lvs1
+  /usr/sbin/lvs --noheadings -o lv_name,vg_name,attr | /usr/bin/awk '!/s/' 2>/dev/null > /tmp/lvs1
   devname=`/usr/bin/rbd map --read-only system_"$guest"`
-  /usr/sbin/lvs 2>/dev/null > /tmp/lvs2
+  /usr/sbin/lvs --noheadings -o lv_name,vg_name,attr | /usr/bin/awk '!/s/' 2>/dev/null > /tmp/lvs2
   /usr/bin/sort < /tmp/lvs1 | /usr/bin/awk '{ print $1 " " $2 " " $4 }' > /tmp/lvs1.sorted
   /usr/bin/sort < /tmp/lvs2 | /usr/bin/awk '{ print $1 " " $2 " " $4 }' > /tmp/lvs2.sorted
   declare -A lvsdiff
