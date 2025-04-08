@@ -4,6 +4,10 @@ This directory contains the example inventory files for the SSC600 SW from ABB. 
 The VM name must contain the string "ssc600" to be recognized by the qemu hook provided by ABB. (See the files needed section).
 The VM deployment has been tested on a Yocto and a Debian hypervisor using the version 1.5.0 of ABB SSC600 SW.
 
+Note: This example it to deploy the VM using an Ansible VM Jinja2 template when all the variable are defined in the Ansible inventory.
+It is also possible to deploy the VM using a libvirt XML file directly. If you choose this option you can refer to the ABB documentation:
+https://techdoc.relays.protection-control.abb/r/SSC600-and-SSC600-SW-Engineering-Manual/1.5/en-US/VM-configuration.
+
 ## Structure
 
 - `ssc600_hypervisor_standalone_example.yaml`: The inventory for a standalone hypervisor
@@ -22,27 +26,62 @@ To use them, they can be copied in the `files` directory at the root of ansible.
 
 This can be done with the following commands:
 
-- `gunzip ssc600sw_disk.img.gz`
+- `pigz -d ssc600sw_disk.img.gz`
 - `qemu-img convert -f raw -O qcow2 ssc600_disk.img ssc600_disk.qcow2`
 
 *Warning: Both the img.gz and the qcow2 files are less than 1Gib. However, the intermediate `ssc600sw_disk.img` file is 30GiB*
 
 ## Prerequisite
 
-The VM need at least 30GB of free space. Ansible deploy it in the /var/lib/libvirt/images directory.
+The VM need at least 30GB of free space.
+
+* On standalone Ansible deploy it in the /var/lib/libvirt/images directory.
 
 > Make sure to have free 30GB on /var/lib directory
 
+* If you deploy the VM on a SEAPATH cluster the Ceph pool should a have at least 30GB of free spaces.
+
 ## Example architecture
 
-The example inventories have been created to run the SSC600 VM using 2 interfaces (on the figure):
+The example inventories have been created to run the SSC600 VM using 3 interfaces (on the figure):
 
-- enp0s20f0u7: Ansible management, VM HMI, PTP
-- enp88s0: SVs
-
-The default br0 bridge is use.
+- enps0s1: "Rear" interface
+- enps0s2: "Process bus" interface
+- enps0s3: "Protection communication" interface
 
 ![architecture](ssc600-example-architecture.png)
+
+## Hypervisor setup
+
+* To fullfill RT requirement the VM must be deployed dedicated on isolated cores.
+
+> isolcpus must be set on the hypervisor inventory.
+
+* The hypervisor must be time synchronyze with PTP.
+
+> `ptp_interface` must be defined in the host inventory
+
+* 6 1GB hugepages must be available per VM.
+
+> On Debian add `grub_append: "default_hugepagesz=1G hugepagesz=1G hugepages=6"` on Yocto it can be configured at build time or
+with the Ansible variable `yocto_hugepages: 6`.
+
+* process bus interfaces priority must be configured.
+
+> `nics_affinity` must be configured and the following config must be add in the hypervisor configuration:
+
+```yml
+          upload_files: # This file is given with the ssc600 sw package
+            - src: '../files/qemu.hook'
+              dest: '/etc/libvirt/hooks/'
+              mode: "0744"
+```
+
+The file `inventories/providers/abb/ssc600_hypervisor_standalone_example.yaml` can be used as hypervisor Ansible inventory example.
+
+## SSC600 SW Ansible inventory
+
+You can use the `inventories/providers/abb/ssc600_vm_example.yaml` file as an example to create your custom VM inventory.
 
 ## Cache L3 partitioning
 
