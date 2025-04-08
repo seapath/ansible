@@ -39,4 +39,3 @@ standalone_machine:
 
     # Yocto required variables
     yocto_hugepages: 6
-    bootloader_config_file: /boot/EFI/BOOT/grub.cfg
