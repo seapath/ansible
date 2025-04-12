@@ -4,14 +4,12 @@ use SNMP::Extension::PassPersist;
 
 my $extsnmp = SNMP::Extension::PassPersist->new(
     backend_collect => \&update_tree,
-    refresh         => 300
+    refresh         => 240
 );
 $extsnmp->run;
 
 sub update_tree {
     my ($self) = @_;
-    system('/usr/bin/sudo /usr/bin/systemd-cat -t seapathsnmp-expose /usr/local/sbin/snmp_getdata.py') == 0
-        or die "Failed to execute command: $!";
     my $file_path = "/tmp/snmpdata.txt";
     open(my $file, '<', $file_path) or die "Could not open file '$file_path' $!";
     while (my $line = <$file>) {

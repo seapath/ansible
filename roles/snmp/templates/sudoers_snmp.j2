@@ -1,5 +1,4 @@
 Defaults:{{ snmp_user_name }} !requiretty
-{{ snmp_user_name }}     ALL = (root) NOPASSWD:EXEC: /usr/bin/systemd-cat -t seapathsnmp-expose /usr/local/sbin/snmp_getdata.py
 {% if extra_usersnmp_sudoers is defined %}
 {{ extra_usersnmp_sudoers -}}
 {% endif %}
