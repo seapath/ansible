@@ -1,0 +1,2 @@
+# generate data to be exposed by snmp
+*/5 * * * * root /usr/bin/systemd-cat -t "seapathsnmp-cron" /usr/local/sbin/snmp_getdata.py
