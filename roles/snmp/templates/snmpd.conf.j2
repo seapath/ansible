@@ -18,5 +18,5 @@ syscontact Root <root@localhost> (configure /etc/snmp/snmpd.local.conf)
 {% if extra_snmpd_directives is defined %}
 {{ extra_snmpd_directives -}}
 {% endif %}
-pass_persist .2.25.1936023920.1635018752 /usr/bin/timeout 3610s /usr/local/bin/exposeseapathsnmp.pl
+pass_persist    .2.25.1936023920.1635018752     timeout 3600s /usr/local/bin/exposeseapathsnmp.pl
 agentAddress udp:{{ snmp_admin_ip_addr }}:161

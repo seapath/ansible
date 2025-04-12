@@ -68,10 +68,11 @@
       src: snmp_getdata.py
       dest: "/usr/local/sbin/snmp_getdata.py"
       mode: '0755'
-  - name: Remove old cron job to generate data
-    file:
-      path: "/etc/cron.d/seapathsnmp"
-      state: absent
+  - name: Cron job to generate snmp data
+    copy:
+      src: seapathsnmp.cron
+      dest: "/etc/cron.d/seapathsnmp"
+      mode: '0644'
   - name: Wait for DHCP for SNMP
     lineinfile:
       dest: /lib/systemd/system/snmpd.service
