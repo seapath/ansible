@@ -4,7 +4,7 @@ use SNMP::Extension::PassPersist;
 
 my $extsnmp = SNMP::Extension::PassPersist->new(
     backend_collect => \&update_tree,
-    refresh         => 240
+    refresh         => 300
 );
 $extsnmp->run;
 

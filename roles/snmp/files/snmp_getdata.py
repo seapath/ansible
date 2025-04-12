@@ -37,7 +37,9 @@ def dictarrayoid(oid,title,a):
             writeline(oid + "." + str(a.index(d)) + "." + str(k), d[keys[k]])
 
 base_oid = ""
-f = open("/tmp/snmpdata.txt", "w")
+snmpdata_tmp = "/tmp/snmpdata_tmp.txt"
+snmpdata = "/tmp/snmpdata.txt"
+f = open(snmpdata_tmp, "w")
 
 grep = "/usr/bin/grep"
 sort = "/usr/bin/sort"
@@ -305,7 +307,7 @@ done
             command = f"""
 /usr/sbin/smartctl --scan | {grep} -E "^/dev/(sd|nvme)" | {awk} '{{ print $1 }}' | while read i; do
   {echo} $i
-  j=$({echo} $i | {sed} "s/\/dev\///")
+  j=$({echo} $i | {sed} "s|/dev/||")
   k=$(/usr/bin/udevadm info -q symlink --path=/sys/block/$j | {tr} " " "\n" | {sort} | {grep} 'disk/by-path' | {head} -n 1 | {awk} '{{ print "/dev/" $1 }}')
   {echo} $k
   /usr/sbin/smartctl --attributes -H $i | {sed} '0,/^=== START OF READ SMART DATA SECTION ===$/d'
@@ -342,3 +344,5 @@ for i in range(1,5):
 singlelinetooid(base_oid + ".5.5", "replace disk global",globalreplacedisk)
 
 f.close()
+
+os.rename(snmpdata_tmp, snmpdata)
