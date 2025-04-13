@@ -81,7 +81,7 @@
       state: present
 
   - name: SNMP V3
-    when: snmp_accounts is defined and snmp_accounts | length > 0
+    when: snmp_accounts is defined and snmp_accounts | length > 0 and seapath_distro == "Debian"
     block:
       # restart is needed for /var/lib/snmp/snmpd.conf to exist
       - name: Restart snmpd
