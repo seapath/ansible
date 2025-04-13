@@ -100,6 +100,7 @@ python3-setuptools
 python3.11
 python3.11-lxml
 python3.11-pip
+python3.11-xmltodict
 net-snmp
 net-snmp-utils
 sudo
@@ -214,11 +215,12 @@ PYTHON=/usr/bin/python3.11 ./configure
 make
 make install
 ln -s /usr/local/bin/crm /usr/bin/crm
+ln -s /usr/local/bin/crm /usr/sbin/crm
 mkdir -p  /var/log/crmsh/
 
 dnf -y remove @development
 
-CEPH_RELEASE=19.2.1
+CEPH_RELEASE=19.2.2
 curl -o /tmp/cephadm --silent --remote-name --location https://download.ceph.com/rpm-${CEPH_RELEASE}/el9/noarch/cephadm
 chmod +x /tmp/cephadm
 mv /tmp/cephadm /usr/local/bin/cephadm
