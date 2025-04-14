@@ -224,10 +224,12 @@ then
   FILETIME=$(stat $FILE -c %Y)
   TIMEDIFF=$(expr $CURTIME - $FILETIME)
   if [ $TIMEDIFF -gt $OLDTIME ]; then
-    /usr/bin/virsh --connect qemu:///system domstats > $FILE
+    /usr/bin/date +%s > $FILE
+    /usr/bin/virsh --connect qemu:///system domstats >> $FILE
   fi
 else
-  /usr/bin/virsh --connect qemu:///system domstats > $FILE
+  /usr/bin/date +%s > $FILE
+  /usr/bin/virsh --connect qemu:///system domstats >> $FILE
 fi
 cat $FILE
 """
