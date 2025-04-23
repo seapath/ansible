@@ -99,6 +99,8 @@
     user: cephadm
     state: present
     key: "{{ lookup('file', '/tmp/ceph.pub') }}"
+  run_once: true
+  delegate_to: "{{ item }}"
   loop: "{{ groups['cluster_machines'] | difference([first_node]) }}"
 
 - name: "RUN ceph orch host add nodeX --labels _admin"
@@ -142,18 +144,45 @@
   when: mgr_count | int != groups['cluster_machines'] | length
   changed_when: true
 
-- name: "Run ZAP: ceph-volume lvm zap vg_ceph/lv_ceph"
-  command: "ceph-volume lvm zap vg_ceph/lv_ceph"
-  changed_when: true
-  when: ceph_already_installed is not defined or ceph_already_installed is false
+- name: Get list of current OSD daemons and their hosts
+  command: ceph orch ps --service-name=osd --format json
+  register: osd_ps
+  delegate_to: "{{ first_node }}"
+  run_once: true
+  changed_when: false
+- name: Set fact for existing OSD hosts
+  set_fact:
+    existing_osd_hosts: "{{ osd_ps.stdout | from_json | map(attribute='hostname') | list | unique }}"
+  run_once: true
+- name: Debug existing_osd_hosts
+  debug:
+    msg: "Nodes with existing OSDs: {{ existing_osd_hosts }}"
+  run_once: true
+- name: Set list of nodes that need OSDs
+  set_fact:
+    nodes_needing_osds: "{{ groups['cluster_machines'] | map('extract', hostvars, 'hostname') | difference(existing_osd_hosts) }}"
+  run_once: true
+- name: Debug nodes needing OSDs
+  debug:
+    msg: "Nodes that need OSDs: {{ nodes_needing_osds }}"
+  run_once: true
 
-- name: "RUN ceph orch daemon add osd hostname:/dev/vg_ceph/lv_ceph"
+- name: Zap the volume on nodes that need OSDs
+  command: "ceph-volume lvm zap vg_ceph/lv_ceph"
+  delegate_to: "{{ item }}"
+  run_once: true
+  when: hostvars[item]['hostname'] in nodes_needing_osds
+  loop: "{{ groups['cluster_machines'] }}"
+  changed_when: true
+
+- name: Add OSD daemon on nodes that need OSDs
   command: "ceph orch daemon add osd {{ hostvars[item]['hostname'] }}:/dev/vg_ceph/lv_ceph"
+  delegate_to: "{{ first_node }}"
+  run_once: true
+  when: hostvars[item]['hostname'] in nodes_needing_osds
+  loop: "{{ groups['cluster_machines'] }}"
   changed_when: true
   failed_when: false
-  run_once: true
-  delegate_to: "{{ first_node }}"
-  loop: "{{ groups['cluster_machines'] }}"
 
 - name: Check if RBD pool exists
   shell:
@@ -167,11 +196,15 @@
   command: ceph osd pool create rbd
   when: rbd_pool_check.rc != 0
   changed_when: true
+  run_once: true
+  delegate_to: "{{ first_node }}"
 
 - name: Enable RBD application on the pool
   command: ceph osd pool application enable rbd rbd
   when: rbd_pool_check.rc != 0
   changed_when: true
+  run_once: true
+  delegate_to: "{{ first_node }}"
 
 - name: Check if CephX user client.libvirt exists
   command: ceph auth get client.libvirt
