@@ -1,0 +1,35 @@
+# Copyright (C) 2025, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+---
+- name: Sanity check
+  hosts: localhost
+  pre_tasks:
+    - name: Exit playbook, if no machine was given
+      fail:
+        msg: "machine_to_remove must be declared"
+      when: machine_to_remove is undefined
+
+- name: Remove node from pacemaker and ceph
+  hosts: cluster_machines
+  become: true
+  tasks:
+    - name: Set fact with hostname of machine_to_remove
+      set_fact:
+        machine_to_remove_hostname: "{{ hostvars[machine_to_remove]['hostname'] }}"
+      run_once: true
+    - name: Define first_node excluding machine_to_remove
+      set_fact:
+        first_node: "{{ (groups['cluster_machines'] | difference([machine_to_remove]))[0] }}"
+
+    - name: Remove machine from pacemaker-corosync cluster
+      command: "crm_node -R {{ machine_to_remove }} --force"
+      delegate_to: "{{ first_node }}"
+      run_once: true
+      changed_when: true
+      run_once: true
+
+    - name: Remove machine from ceph cluster
+      command: "ceph orch host rm {{ machine_to_remove_hostname }} --force --offline"
+      delegate_to: "{{ first_node }}"
+      run_once: true
+      changed_when: true
