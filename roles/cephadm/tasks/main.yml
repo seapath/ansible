@@ -62,54 +62,125 @@
     src: cephadm_sudoers
     dest: /etc/sudoers.d/cephadm
 
-- name: Define first_node
+
+- name: Check if host is part of a Ceph cluster
+  command: "ceph -s"
+  register: ceph_status
+  ignore_errors: true
+  changed_when: false
+
+- name: Mark host as ceph or nonceph
   set_fact:
-    first_node: "{{ groups['cluster_machines'][0] }}"
+    is_ceph_node: "{{ ceph_status.rc == 0 }}"
+
+- name: Add host to ceph_nodes group
+  add_host:
+    name: "{{ item }}"
+    groups: ceph_nodes
+  run_once: true
+  loop: "{{ groups['cluster_machines'] }}"
+  when: hostvars[item].is_ceph_node
+
+- name: Add host to nonceph_nodes group
+  add_host:
+    name: "{{ item }}"
+    groups: nonceph_nodes
+  run_once: true
+  loop: "{{ groups['cluster_machines'] }}"
+  when: not hostvars[item].is_ceph_node
+
+- name: Set first_node and bootstrap condition
+  set_fact:
+    first_node: >-
+      {{ (groups['ceph_nodes'][0] if (groups['ceph_nodes'] is defined and groups['ceph_nodes'] | length > 0)
+         else groups['cluster_machines'][0]) | trim }}
+    do_bootstrap: "{{ (groups['ceph_nodes'] | default([])) | length == 0 }}"
   run_once: true
 
-- name: Upload file ceph.conf needed for boostrapping
+- name: Compute list of nodes to add as monitors
+  set_fact:
+    mon_nodes_to_add: "{{ (groups['nonceph_nodes'] | default([]) | difference([first_node])) if do_bootstrap else groups['nonceph_nodes'] | default([]) }}"
+  run_once: true
+
+- name: Debug situation
+  debug:
+    msg: |
+      first_node = {{ first_node }}
+      do_bootstrap = {{ do_bootstrap }}
+      mon_nodes_to_add = {{ mon_nodes_to_add | default([]) }}
+      ceph_nodes = {{ groups['ceph_nodes'] | default([]) }}
+      nonceph_nodes = {{ groups['nonceph_nodes'] | default([]) }}
+  run_once: true
+
+# === Bootstrap if currently no ceph nodes ===
+- name: Upload file ceph.conf needed for bootstrapping
   template:
-    src: ceph.conf.j2
-    dest: /tmp/ceph.conf
+      src: ceph.conf.j2
+      dest: /tmp/ceph.conf
   run_once: true
   delegate_to: "{{ first_node }}"
+  when: do_bootstrap | bool
 
 - name: Bootstrap Ceph cluster
-  command: "/usr/local/bin/cephadm bootstrap --skip-monitoring-stack --skip-dashboard --config /tmp/ceph.conf --ssh-user cephadm --mon-ip {{ hostvars[first_node]['cluster_ip_addr'] }}"
+  command: >
+      /usr/local/bin/cephadm bootstrap
+      --skip-monitoring-stack
+      --skip-dashboard
+      --config /tmp/ceph.conf
+      --ssh-user cephadm
+      --mon-ip {{ hostvars[first_node]['cluster_ip_addr'] }}
   changed_when: true
   failed_when: false
   run_once: true
   delegate_to: "{{ first_node }}"
   register: ceph_bootstrap_result
+  when: do_bootstrap | bool
 
-- name: Set ceph_already_installed fact if bootstrap failed
-  set_fact:
-    ceph_already_installed: true
-  when: ceph_bootstrap_result.rc != 0
-
-- name: Fetch the ceph keyfile
-  fetch:
-    src: "/etc/ceph/ceph.pub"
-    dest: "/tmp/ceph.pub"
-    flat: true
+# === adding monitor on other nodes ===
+- name: Check if /etc/ceph/ceph.pub exists on first_node
+  stat:
+    path: /etc/ceph/ceph.pub
+  register: ceph_pub_stat
   run_once: true
   delegate_to: "{{ first_node }}"
-- name: Copy the key to the other nodes
+  when: mon_nodes_to_add | length > 0
+
+- name: Fetch the ceph keyfile if it exists, otherwise fetch authorized_keys
+  fetch:
+    src: "{{ ceph_pub_stat.stat.exists | ternary('/etc/ceph/ceph.pub', '/home/cephadm/.ssh/authorized_keys') }}"
+    dest: "/tmp/ceph.pub"
+    flat: true
+  delegate_to: "{{ first_node }}"
+  run_once: true
+  when: mon_nodes_to_add | length > 0
+
+- name: Read the key from the local file
+  set_fact:
+    ceph_pubkey: "{{ lookup('file', '/tmp/ceph.pub') }}"
+  delegate_to: localhost
+  run_once: true
+  when: mon_nodes_to_add | length > 0
+
+- name: Add the ceph pubkey to each target node
   ansible.posix.authorized_key:
     user: cephadm
     state: present
-    key: "{{ lookup('file', '/tmp/ceph.pub') }}"
+    key: "{{ ceph_pubkey }}"
+  with_items: "{{ mon_nodes_to_add }}"
+  loop_control:
+    loop_var: target_node
+  delegate_to: "{{ target_node }}"
   run_once: true
-  delegate_to: "{{ item }}"
-  loop: "{{ groups['cluster_machines'] | difference([first_node]) }}"
+  when: mon_nodes_to_add | length > 0
 
-- name: "RUN ceph orch host add nodeX --labels _admin"
+- name: Add hosts to Ceph orchestrator with _admin label
   command: "ceph orch host add {{ hostvars[item]['hostname'] }} --labels _admin"
+  loop: "{{ mon_nodes_to_add }}"
   changed_when: true
   failed_when: false
   run_once: true
   delegate_to: "{{ first_node }}"
-  loop: "{{ groups['cluster_machines'] | difference([first_node]) }}"
+  when: mon_nodes_to_add | length > 0
 
 - name: Confirm monitors are in monmap
   command: ceph mon dump
@@ -120,8 +191,10 @@
   run_once: true
   delegate_to: "{{ first_node }}"
   until: "hostvars[item]['hostname'] in mon_dump.stdout"
-  loop: "{{ groups['cluster_machines'] | difference([first_node]) }}"
+  loop: "{{ mon_nodes_to_add }}"
+  when: mon_nodes_to_add | length > 0
 
+# === Managers now ===
 - name: Get current number of MGR daemons
   shell:
     cmd: set -o pipefail && ceph orch ls --service-name=mgr | grep -o "count:.*" | cut -d":" -f2
@@ -144,6 +217,7 @@
   when: mgr_count | int != groups['cluster_machines'] | length
   changed_when: true
 
+# === OSDs now ===
 - name: Get list of current OSD daemons and their hosts
   command: ceph orch ps --service-name=osd --format json
   register: osd_ps
