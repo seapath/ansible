@@ -16,19 +16,18 @@
     - name: Set fact with hostname of machine_to_remove
       set_fact:
         machine_to_remove_hostname: "{{ hostvars[machine_to_remove]['hostname'] }}"
-      run_once: true
     - name: Define first_node excluding machine_to_remove
       set_fact:
         first_node: "{{ (groups['cluster_machines'] | difference([machine_to_remove]))[0] }}"
 
-    - name: Remove machine from pacemaker-corosync cluster
+    - name: Remove machine from pacemaker-corosync cluster # noqa: run-once[task]
       command: "crm_node -R {{ machine_to_remove }} --force"
       delegate_to: "{{ first_node }}"
       run_once: true
       changed_when: true
       run_once: true
 
-    - name: Remove machine from ceph cluster
+    - name: Remove machine from ceph cluster # noqa: run-once[task]
       command: "ceph orch host rm {{ machine_to_remove_hostname }} --force --offline"
       delegate_to: "{{ first_node }}"
       run_once: true
