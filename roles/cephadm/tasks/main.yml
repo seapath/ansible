@@ -4,23 +4,20 @@
 ---
 - include_vars: "{{ seapath_distro }}.yml"
 
-#- name: Define CEPH_RELEASE variable
-#  set_fact:
-#    CEPH_RELEASE: "19.2.1"
-#
-#- name: Download cephadm
-#  get_url:
-#    url: "https://download.ceph.com/rpm-{{ CEPH_RELEASE }}/el9/noarch/cephadm"
-#    dest: "/usr/local/bin/cephadm"
-#    mode: '0755'
-#
-#- name: Add Ceph repository
-#  command: /usr/local/bin/cephadm add-repo --release squid
-#  changed_when: true
-#
-#- name: Install ceph-common package
-#  command: /usr/local/bin/cephadm install ceph-common ceph-volume
-#  changed_when: true
+- name: Install cephadm binaries
+  when: cephadm_install is true
+  block:
+    - name: Download cephadm
+      get_url:
+        url: "https://download.ceph.com/rpm-{{ cephadm_release }}/el9/noarch/cephadm"
+        dest: "/usr/local/bin/cephadm"
+        mode: '0755'
+    - name: Add Ceph repository
+      command: /usr/local/bin/cephadm add-repo --release squid
+      changed_when: true
+    - name: Install ceph-common package
+      command: /usr/local/bin/cephadm install ceph-common ceph-volume
+      changed_when: true
 
 - name: Disable ceph-crash non-containerized service
   ansible.builtin.systemd:
