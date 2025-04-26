@@ -12,18 +12,28 @@
         url: "https://download.ceph.com/rpm-{{ cephadm_release }}/el9/noarch/cephadm"
         dest: "/usr/local/bin/cephadm"
         mode: '0755'
-    - name: Add Ceph repository
-      command: /usr/local/bin/cephadm add-repo --release squid
-      changed_when: true
-    - name: Install ceph-common package
-      command: /usr/local/bin/cephadm install ceph-common ceph-volume
-      changed_when: true
+#    - name: Add Ceph repository
+#      command: /usr/local/bin/cephadm add-repo --release squid
+#      changed_when: true
+#    - name: Install ceph-common package
+#      command: /usr/local/bin/cephadm install ceph-common ceph-volume
+#      changed_when: true
 
-- name: Disable ceph-crash non-containerized service
-  ansible.builtin.systemd:
-    name: ceph-crash.service
-    enabled: false
-    state: stopped
+#- name: Disable ceph-crash non-containerized service
+#  ansible.builtin.systemd:
+#    name: ceph-crash.service
+#    enabled: false
+#    state: stopped
+
+- name: Create /usr/local/bin/ceph with 755 permissions
+  copy:
+    dest: /usr/local/bin/ceph
+    content: |
+      #!/bin/bash
+      exec /usr/local/bin/cephadm shell -- ceph "$@"
+    mode: '0755'
+    owner: root
+    group: root
 
 - name: Ensure group "cephadm" exists
   group:
@@ -61,7 +71,7 @@
 
 
 - name: Check if host is part of a Ceph cluster
-  command: "ceph -s"
+  command: "/usr/local/bin/ceph -s"
   register: ceph_status
   ignore_errors: true
   changed_when: false
@@ -171,7 +181,7 @@
   when: mon_nodes_to_add | length > 0
 
 - name: Add hosts to Ceph orchestrator with _admin label
-  command: "ceph orch host add {{ hostvars[item]['hostname'] }} --labels _admin"
+  command: "/usr/local/bin/ceph orch host add {{ hostvars[item]['hostname'] }} --labels _admin"
   loop: "{{ mon_nodes_to_add }}"
   changed_when: true
   failed_when: false
@@ -180,7 +190,7 @@
   when: mon_nodes_to_add | length > 0
 
 - name: Confirm monitors are in monmap
-  command: ceph mon dump
+  command: /usr/local/bin/ceph mon dump
   register: mon_dump
   retries: 30
   delay: 5
@@ -194,7 +204,7 @@
 # === Managers now ===
 - name: Get current number of MGR daemons
   shell:
-    cmd: set -o pipefail && ceph orch ls --service-name=mgr | grep -o "count:.*" | cut -d":" -f2
+    cmd: set -o pipefail && /usr/local/bin/ceph orch ls --service-name=mgr | grep -o "count:.*" | cut -d":" -f2
     executable: /bin/bash
   register: mgr_count_raw
   changed_when: false
@@ -207,8 +217,8 @@
   run_once: true
   delegate_to: "{{ first_node }}"
 
-- name: "RUN ceph orch apply mgr {{ groups['cluster_machines'] | length }}"
-  command: "ceph orch apply mgr {{ groups['cluster_machines'] | length }}"
+- name: "RUN /usr/local/bin/ceph orch apply mgr {{ groups['cluster_machines'] | length }}"
+  command: "/usr/local/bin/ceph orch apply mgr {{ groups['cluster_machines'] | length }}"
   run_once: true
   delegate_to: "{{ first_node }}"
   when: mgr_count | int != groups['cluster_machines'] | length
@@ -216,7 +226,7 @@
 
 # === OSDs now ===
 - name: Get list of current OSD daemons and their hosts
-  command: ceph orch ps --service-name=osd --format json
+  command: /usr/local/bin/ceph orch ps --service-name=osd --format json
   register: osd_ps
   delegate_to: "{{ first_node }}"
   run_once: true
@@ -239,7 +249,7 @@
   run_once: true
 
 - name: Zap the volume on nodes that need OSDs
-  command: "ceph-volume lvm zap vg_ceph/lv_ceph"
+  command: "/usr/local/bin/cephadm ceph-volume lvm zap vg_ceph/lv_ceph"
   delegate_to: "{{ item }}"
   run_once: true
   when: hostvars[item]['hostname'] in nodes_needing_osds
@@ -247,7 +257,7 @@
   changed_when: true
 
 - name: Add OSD daemon on nodes that need OSDs
-  command: "ceph orch daemon add osd {{ hostvars[item]['hostname'] }}:/dev/vg_ceph/lv_ceph"
+  command: "/usr/local/bin/ceph orch daemon add osd {{ hostvars[item]['hostname'] }}:/dev/vg_ceph/lv_ceph"
   delegate_to: "{{ first_node }}"
   run_once: true
   when: hostvars[item]['hostname'] in nodes_needing_osds
@@ -257,35 +267,35 @@
 
 - name: Check if RBD pool exists
   shell:
-    cmd: set -o pipefail && ceph osd lspools | grep -w rbd
+    cmd: set -o pipefail && /usr/local/bin/ceph osd lspools | grep -w rbd
     executable: /bin/bash
   register: rbd_pool_check
   changed_when: false
   failed_when: false
 
 - name: Create RBD pool if it doesn't exist
-  command: ceph osd pool create rbd
+  command: /usr/local/bin/ceph osd pool create rbd
   when: rbd_pool_check.rc != 0
   changed_when: true
   run_once: true
   delegate_to: "{{ first_node }}"
 
 - name: Enable RBD application on the pool
-  command: ceph osd pool application enable rbd rbd
+  command: /usr/local/bin/ceph osd pool application enable rbd rbd
   when: rbd_pool_check.rc != 0
   changed_when: true
   run_once: true
   delegate_to: "{{ first_node }}"
 
 - name: Check if CephX user client.libvirt exists
-  command: ceph auth get client.libvirt
+  command: /usr/local/bin/ceph auth get client.libvirt
   register: cephx_user_check
   changed_when: false
   failed_when: false
 
 - name: Create CephX user client.libvirt if it does not exist
   command:
-    ceph auth add client.libvirt
+    /usr/local/bin/ceph auth add client.libvirt
     mon 'profile rbd, allow command "osd blacklist"'
     osd 'allow class-read object_prefix rbd_children, profile rbd pool=rbd'
   when: cephx_user_check.rc != 0
@@ -293,14 +303,14 @@
 
 - name: Update CephX user client.libvirt permissions if it exists
   shell: >
-    ceph auth caps client.libvirt
+    /usr/local/bin/ceph auth caps client.libvirt
     mon 'profile rbd, allow command "osd blacklist"'
     osd 'allow class-read object_prefix rbd_children, profile rbd pool=rbd'
   when: cephx_user_check.rc == 0
   changed_when: true
 
-- name: Update logrotate configuration for Ceph
-  replace:
-    path: "{{ cephadm_logrorateceph_path }}"
-    regexp: '^/var/log/ceph/\*.log'
-    replace: '/var/log/ceph/!(cephadm).log'
+#- name: Update logrotate configuration for Ceph
+#  replace:
+#    path: "{{ cephadm_logrorateceph_path }}"
+#    regexp: '^/var/log/ceph/\*.log'
+#    replace: '/var/log/ceph/!(cephadm).log'
