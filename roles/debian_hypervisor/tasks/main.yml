@@ -2,17 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- name: Enable docker.service
-  ansible.builtin.systemd:
-    name: docker.service
-    enabled: yes
-    state: started
-- name: Enable docker.socket
-  ansible.builtin.systemd:
-    name: docker.socket
-    enabled: yes
-    state: started
-
 - name: Add vhost_vsock to /etc/modules
   lineinfile:
     path: /etc/modules
