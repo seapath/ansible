@@ -30,7 +30,11 @@
     dest: /usr/local/bin/ceph
     content: |
       #!/bin/bash
-      exec /usr/local/bin/cephadm shell -- ceph "$@"
+      if [ $# -eq 0 ]; then
+        exec /usr/local/bin/cephadm shell
+      else
+        exec /usr/local/bin/cephadm shell -- ceph "$@"
+      fi
     mode: '0755'
     owner: root
     group: root
