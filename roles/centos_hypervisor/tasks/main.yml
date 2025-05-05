@@ -2,16 +2,7 @@
 # Copyright (C) 2024 Red Hat, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-- name: Enable docker.service
-  ansible.builtin.systemd:
-    name: docker.service
-    enabled: yes
-    state: started
-- name: Enable docker.socket
-  ansible.builtin.systemd:
-    name: docker.socket
-    enabled: yes
-    state: started
+---
 
 - name: Add vhost_vsock to /etc/modules-load.d
   ansible.builtin.copy:
