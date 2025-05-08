@@ -34,12 +34,23 @@
 
 - name: Adding ceph user to group privileged
   user:
-    name: "ceph"
+    name: ceph
     groups: privileged
     append: yes
   when:
     - not revert
     - cluster_ip_addr is defined
+
+- name: Adding cephadm user to group privileged
+  user:
+    name: cephadm
+    groups: privileged
+    append: yes
+  when:
+    - not revert
+    - cluster_ip_addr is defined
+    - force_cephadm is defined
+    - force_cephadm is true
 
 - name: Adding Debian-snmp user to group privileged
   user:
