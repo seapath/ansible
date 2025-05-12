@@ -127,6 +127,7 @@
           - ceph-mgr
           - ceph-mon
           - ceph-osd
+          - ceph-volume
         state: absent
         purge: yes
         autoremove: yes
