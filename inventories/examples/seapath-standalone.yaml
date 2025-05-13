@@ -43,6 +43,8 @@ hypervisors:
     seapath-machine:
   vars:
     isolcpus: "4-N" # List of CPUs to isolate (Debian only). TODO
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+    timemaster_ptp_delay_mechanism: "E2E"
 
 # Empty groups to prevent warnings, mostly ceph-ansible
 grafana-server:

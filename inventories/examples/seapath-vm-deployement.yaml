@@ -31,22 +31,7 @@ VMs:
         - name: "br0"
           mac_address: "52:54:00:e4:ff:02" # TODO
             # Replace by the mac address you want for your VM
-
-    vm:
-      vm_template: "../templates/vm/guest.xml.j2" # TODO: Replace with your template
-      vm_disk: "../files/guest.qcow2" # TODO : Replace with your image name
-
-      # Connection test part. Remove if your vm has no ssh connection
-      ansible_host: 10.132.170.9 # TODO : Put the IP of your VM
-      wait_for_connection: true
-
-      # Configuration part. These variables only work with the guest.xml.j2 template
-      vm_features: ["secure-boot"] # features for non real-time VM with secure boot enabled
-      nb_cpu: 1 # TODO : Number of vCPU of your VM
-      bridges:
-        - name: "br0"
-          mac_address: "52:54:00:e4:ff:03" # TODO
-            # Replace by the mac address you want for your VM
-
+      timemaster_ptp_delay_mechanism: "E2E"
   vars:
     ansible_user: ansible # Only for connection test
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
