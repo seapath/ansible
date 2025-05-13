@@ -26,6 +26,7 @@ standalone_machine:
     ansible_python_interpreter: /usr/bin/python3
     ansible_remote_tmp: /tmp/.ansible/tmp
     ansible_user: ansible # TODO: Put the name of your ansible user
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
     # By default, this user is "ansible" on Debian and "admin" on Yocto
 
     # Debian specific, remove if you use Yocto
@@ -41,7 +42,7 @@ standalone_machine:
     apply_network_config: true
     # List of interfaces to wait for before considering the network as up.
     # With the default network configuration, it should be "br0"
-    interfaces_to_wait_for: "br0"
+    interfaces_to_wait_for: ["br0"]
     # systemd-networkd is used by default to configure the network
     # netplan can also be used to sum up complex network in one yaml file
     # See the wiki for more informations : TODO put link
@@ -50,7 +51,7 @@ standalone_machine:
     ntp_servers:
       - "185.254.101.25" # public ntp server
       - "51.145.123.29"  # public ntp server
-
+    timemaster_ptp_delay_mechanism: "E2E"
     # Hardening (Debian only)
     # TODO : Put the password hash for the grub password
     # It can be generated with the following command: grub-mkpasswd-pbkdf2
