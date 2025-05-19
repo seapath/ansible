@@ -30,7 +30,8 @@
   hosts: cluster_machines
   become: true
   roles:
-    - network_clusternetwork
+    - role: network_clusternetwork
+      when: no_cluster_network is not defined
 
 - name: Configure OVS, hosts and hostname, then DNS with resolved, then systemd-networkd-wait-online.service
   hosts:

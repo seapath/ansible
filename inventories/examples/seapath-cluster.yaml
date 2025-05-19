@@ -110,6 +110,7 @@ cluster_machines:
     force_cephadm: false # by default seapath uses ceph-ansible, but we can use cephadm instead
     ceph_origin: distro
     cluster_network: "192.168.55.0/24" # TODO : Replace by the IP range of your cluster
+    #no_cluster_network: true # if this variable is defined, whatever its value, seapath won't configure the cluster network (neither with RSTP nor HSR)
     public_network: "{{ cluster_network }}"
     monitor_address: "{{ cluster_ip_addr }}"
     configure_firewall: false
