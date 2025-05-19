@@ -7,7 +7,6 @@
   block:
     - name: Set fact unit, new_pv_size, list_pvs
       set_fact:
-        unit: "{{ lvm_volumes[0].device_size | regex_replace('[0-9.]*', '') }}"
         new_pv_size: "{{ (lvm_volumes[0].device_size | regex_replace('[A-Za-z]*', '') | int) }}"
         list_pvs: "{{ ansible_lvm['pvs'] | dict2items | community.general.json_query(query) }}"
       vars:
@@ -16,7 +15,6 @@
       community.general.parted:
         # Get the name of the device by escaping the partition number
         device: "{{ item | regex_replace('(p?\\d+)$', '') }}"
-        unit: "{{ unit }}"
       loop: "{{ list_pvs }}"
       register: parted_info
     - name: Set fact part_info

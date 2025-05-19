@@ -4,6 +4,33 @@
 # This playbook configures and sets up Ceph with cephadm.
 
 ---
+
+- name: Prepare Ceph installation
+  hosts:
+      osds
+  become: true
+  gather_facts: yes
+  roles:
+    - detect_seapath_distro
+    - ceph_prepare_installation
+
+- name: Ceph Expansion VG
+  hosts:
+      osds
+  become: true
+  gather_facts: yes
+  roles:
+    - ceph_expansion_vg
+
+- name: Ceph Expansion LV
+  hosts:
+      osds
+  become: true
+  gather_facts: yes
+  serial: 1
+  roles:
+    - ceph_expansion_lv
+
 - name: Cephadm
   hosts:
       cluster_machines

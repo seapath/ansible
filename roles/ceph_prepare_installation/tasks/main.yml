@@ -30,6 +30,7 @@
       when:
         - lvm_volumes is defined
         - ansible_lvm['lvs'][lvm_volumes[0].data] is defined
+        - force_cephadm is not defined or force_cephadm is false
       block:
         - name: Cleanup Ceph LV with ceph-volume
           command: "ceph-volume lvm zap /dev/{{ lvm_volumes[0].data_vg }}/{{ lvm_volumes[0].data }}"
@@ -54,14 +55,63 @@
           when:
             - lvm_volumes is defined
           block:
-            - name: Create partition on OSD disks with parted
+            - name: Get partition info
+              community.general.parted:
+                device: "{{ ceph_osd_realdisk.stdout }}"
+                unit: MiB
+                state: info
+              register: parted_info
+        
+            - name: Check if current partition exists
+              set_fact:
+                current_exists: >-
+                  {{ parted_info.partitions
+                     | selectattr('num', 'equalto', lvm_volumes[0].device_number)
+                     | list | length > 0 }}
+        
+            - name: Check if previous partition exists
+              set_fact:
+                previous_exists: >-
+                  {{ parted_info.partitions
+                     | selectattr('num', 'equalto', lvm_volumes[0].device_number - 1)
+                     | list | length > 0 }}
+        
+            - name: Get end of previous partition
+              set_fact:
+                prev_end: >-
+                  {{ (parted_info.partitions
+                       | selectattr('num', 'equalto', lvm_volumes[0].device_number - 1)
+                       | map(attribute='end')
+                       | first) | float }}
+              when: previous_exists
+        
+            - debug:
+                var: prev_end
+            - debug:
+                var: lvm_volumes[0].device_size
+            - debug:
+                msg: "{{ ((prev_end | float) + (lvm_volumes[0].device_size | float)) | round(2) }}"
+
+            - name: Calculate partition boundaries
+              set_fact:
+                part_start: "{{ (prev_end | float) | round(2) }}MiB"
+                part_end: "{{ ((prev_end | float) + (lvm_volumes[0].device_size | float) | float) | round(2) }}MiB"
+              when: previous_exists
+        
+            - name: Create partition using parted module
               community.general.parted:
                 device: "{{ ceph_osd_realdisk.stdout }}"
                 number: "{{ lvm_volumes[0].device_number }}"
-                label: gpt # Must be the same type as the partition table of the disk used
+                label: gpt
+                name: ""
+                part_start: "{{ part_start }}"
+                part_end: "{{ part_end }}"
+                flags:
+                  - lvm
                 state: present
-                unit: MB
-                part_start: "-{{ lvm_volumes[0].device_size }}" # Negative numbers specifie the distance from the end of the disk
+              when:
+                - not current_exists
+                - previous_exists
               register: ceph_osd_result
             - name: Get disk/by-path of OSD disk
               command: "/usr/bin/find -L /dev/disk/by-path -samefile {{ ceph_osd_result.disk.dev }} -print -quit"
