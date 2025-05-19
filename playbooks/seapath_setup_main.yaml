@@ -44,11 +44,11 @@
 
 - name: Import cluster_setup_ceph playbook
   import_playbook: cluster_setup_ceph.yaml
-  when: seapath_distro != "OracleLinux" and (force_cephadm is not defined or force_cephadm is false)
+  when: not is_using_cephadm | bool
 
 - name: Import cluster_setup_cephdm playbook
   import_playbook: cluster_setup_cephadm.yaml
-  when: seapath_distro == "OracleLinux" or (force_cephadm is defined and force_cephadm is true)
+  when: is_using_cephadm | bool
 
 - name: Import cluster_setup_libvirt playbook
   import_playbook: cluster_setup_libvirt.yaml

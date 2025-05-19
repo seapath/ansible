@@ -30,7 +30,7 @@
       when:
         - lvm_volumes is defined
         - ansible_lvm['lvs'][lvm_volumes[0].data] is defined
-        - force_cephadm is not defined or force_cephadm is false
+        - not (is_using_cephadm | default(false))
       block:
         - name: Cleanup Ceph LV with ceph-volume
           command: "ceph-volume lvm zap /dev/{{ lvm_volumes[0].data_vg }}/{{ lvm_volumes[0].data }}"

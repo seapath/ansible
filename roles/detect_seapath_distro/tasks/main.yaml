@@ -38,4 +38,9 @@
   fail:
     msg: "The Seapath distribution could not be determined"
   when: seapath_distro is not defined
+
+- name: Set is_using_cephadm depending on distro and option
+  set_fact:
+    is_using_cephadm: "{{ seapath_distro == 'OracleLinux' or (force_cephadm | default(false)) }}"
+
 ...
