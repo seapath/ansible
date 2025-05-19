@@ -113,7 +113,7 @@
         state: absent
         purge: yes
         autoremove: yes
-      when: force_cephadm is defined and force_cephadm is true
+      when: force_cephadm | default(false)
     - name: Uninstall apt packages not required after installation (all debian version)
       apt:
         name:
