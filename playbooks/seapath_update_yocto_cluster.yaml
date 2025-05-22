@@ -1,0 +1,46 @@
+# Copyright (C) 2023 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+# This playbook demonstrate how to update an hypervisor.
+
+---
+
+- name: Prepare machine for update
+  hosts: "{{ machine_to_update }}"
+  tasks:
+    - name: Set hypervisor in maintenance mode
+      command: crm node standby "{{ machine_to_update }}"
+    - name: Wait for all VMs to be migrated
+      shell:
+        cmd: crm status|grep "Migrating"|wc -l
+      register: check_migration
+      until: check_migration.stdout == '0'
+      retries: 10
+    - name: Copy SWU file on machine
+      copy:
+        src: "../swu_images/{{ swu_image }}"
+        dest: "/tmp/update.swu"
+    - name: Apply update
+      command: swupdate -i /tmp/update.swu
+    - name: Reboot host
+      reboot:
+        msg: "Reboot initiated by Ansible"
+        connect_timeout: 5
+        reboot_timeout: 600
+        pre_reboot_delay: 0
+        post_reboot_delay: 30
+        test_command: whoami
+    - name: Wait systemd has finished to boot
+      command: systemctl is-system-running --wait
+      register: system_status
+      failed_when: system_status.rc != 0 and system_status.rc != 1
+      tags:
+        - skip_ansible_lint
+    - name: unset maintenance mode for hypervisor
+      command: crm node online "{{ machine_to_update }}"
+      when: {{ machine_to_update }} in group['cluster_machines']
+    - name: Check if update has succeed
+      shell:
+        cmd: journalctl -u swupdate_check.service -b |grep "Update have failed"|wc -l
+      register: update_status
+      failed_when: update_status.stdout != '0'
