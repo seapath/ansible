@@ -147,7 +147,7 @@
   register: ceph_bootstrap_result
   when: do_bootstrap | bool
 
-# === adding monitor on other nodes ===
+# === adding cephadm key on other nodes ===
 - name: Check if /etc/ceph/ceph.pub exists on first_node
   stat:
     path: /etc/ceph/ceph.pub
@@ -184,6 +184,7 @@
   run_once: true
   when: mon_nodes_to_add | length > 0
 
+# === adding monitor on other nodes ===
 - name: Add hosts to Ceph orchestrator with _admin label
   command: "/usr/local/bin/ceph orch host add {{ hostvars[item]['hostname'] }} --labels _admin"
   loop: "{{ mon_nodes_to_add }}"
@@ -204,29 +205,6 @@
   until: "hostvars[item]['hostname'] in mon_dump.stdout"
   loop: "{{ mon_nodes_to_add }}"
   when: mon_nodes_to_add | length > 0
-
-# === Managers now ===
-- name: Get current number of MGR daemons
-  shell:
-    cmd: set -o pipefail && /usr/local/bin/ceph orch ls --service-name=mgr | grep -o "count:.*" | cut -d":" -f2
-    executable: /bin/bash
-  register: mgr_count_raw
-  changed_when: false
-  run_once: true
-  delegate_to: "{{ first_node }}"
-
-- name: Set fact with MGR count
-  set_fact:
-    mgr_count: "{{ mgr_count_raw.stdout | trim }}"
-  run_once: true
-  delegate_to: "{{ first_node }}"
-
-- name: "RUN /usr/local/bin/ceph orch apply mgr {{ groups['cluster_machines'] | length }}"
-  command: "/usr/local/bin/ceph orch apply mgr {{ groups['cluster_machines'] | length }}"
-  run_once: true
-  delegate_to: "{{ first_node }}"
-  when: mgr_count | int != groups['cluster_machines'] | length
-  changed_when: true
 
 # === OSDs now ===
 - name: Get list of current OSD daemons and their hosts
@@ -260,14 +238,32 @@
   loop: "{{ groups['cluster_machines'] }}"
   changed_when: true
 
+- name: Copy ceph orch spec file
+  template:
+    src: "{{ ceph_spec_path | default('spec.yaml.j2') }}"
+    dest: /tmp/t.yaml
+    mode: 0644
+  run_once: true
+  delegate_to: "{{ first_node }}"
+
 - name: Add OSD daemon on nodes that need OSDs
-  command: "/usr/local/bin/ceph orch daemon add osd {{ hostvars[item]['hostname'] }}:/dev/vg_ceph/lv_ceph"
+  command: /usr/local/bin/cephadm shell -v /tmp/t.yaml:/tmp/t.yaml:ro -- ceph orch apply -i /tmp/t.yaml
   delegate_to: "{{ first_node }}"
   run_once: true
   when: hostvars[item]['hostname'] in nodes_needing_osds
   loop: "{{ groups['cluster_machines'] }}"
   changed_when: true
   failed_when: false
+
+- name: Confirm cluster is ok
+  command: /usr/local/bin/ceph status --format=json
+  register: cephs
+  retries: 30
+  delay: 5
+  changed_when: false
+  run_once: true
+  delegate_to: "{{ first_node }}"
+  until: cephs.stdout | from_json | community.general.json_query('health.status') == "HEALTH_OK"
 
 - name: Check if RBD pool exists
   shell:
