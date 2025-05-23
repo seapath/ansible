@@ -147,7 +147,7 @@
   register: ceph_bootstrap_result
   when: do_bootstrap | bool
 
-# === adding monitor on other nodes ===
+# === adding cephadm key on other nodes ===
 - name: Check if /etc/ceph/ceph.pub exists on first_node
   stat:
     path: /etc/ceph/ceph.pub
@@ -184,6 +184,7 @@
   run_once: true
   when: mon_nodes_to_add | length > 0
 
+# === adding monitor on other nodes ===
 - name: Add hosts to Ceph orchestrator with _admin label
   command: "/usr/local/bin/ceph orch host add {{ hostvars[item]['hostname'] }} --labels _admin"
   loop: "{{ mon_nodes_to_add }}"
@@ -261,7 +262,14 @@
   changed_when: true
 
 - name: Add OSD daemon on nodes that need OSDs
-  command: "/usr/local/bin/ceph orch daemon add osd {{ hostvars[item]['hostname'] }}:/dev/vg_ceph/lv_ceph"
+  command: >
+    /usr/local/bin/ceph ceph orch apply osd --spec
+    "{{ {
+      'service_type': 'osd',
+      'service_id': 'osd' ~ (groups['cluster_machines'].index(item) + 1),
+      'placement': { 'host_pattern': hostvars[item]['hostname'] },
+      'data_devices': { 'paths': ['/dev/vg_ceph/lv_ceph'] }
+    } | to_json }}"
   delegate_to: "{{ first_node }}"
   run_once: true
   when: hostvars[item]['hostname'] in nodes_needing_osds
