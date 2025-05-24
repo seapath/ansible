@@ -15,9 +15,9 @@
 #    - name: Add Ceph repository
 #      command: /usr/local/bin/cephadm add-repo --release squid
 #      changed_when: true
-#    - name: Install ceph-common package
-#      command: /usr/local/bin/cephadm install ceph-common ceph-volume
-#      changed_when: true
+- name: Install ceph-common package
+  command: /usr/local/bin/cephadm install ceph-common
+  changed_when: true
 
 #- name: Disable ceph-crash non-containerized service
 #  ansible.builtin.systemd:
