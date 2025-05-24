@@ -18,6 +18,11 @@
 #    - name: Add Ceph repository
 #      command: /usr/local/bin/cephadm add-repo --release squid
 #      changed_when: true
+    - name: Recursively change group to cephadm
+      ansible.builtin.file:
+        path: /var/lib/cephadm
+        recurse: yes
+        group: cephadm
 - name: Install ceph-common package
   command: cephadm install ceph-common
   changed_when: true
