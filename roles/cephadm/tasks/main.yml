@@ -4,6 +4,40 @@
 ---
 - include_vars: "{{ seapath_distro }}.yml"
 
+- name: Ensure group "cephadm" exists
+  group:
+    name: cephadm
+    gid: 1001
+    state: present
+
+- name: Ensure user "cephadm" exists
+  user:
+    name: cephadm
+    uid: 1001
+    group: cephadm
+    create_home: yes
+
+- name: Ensure group "containerized-ceph" exists
+  group:
+    name: containerized-ceph
+    gid: 167
+    state: present
+  when: seapath_distro == "Debian"
+
+- name: Ensure user "containerized-ceph" exists with nologin (already exists on centos/oraclelinux)
+  user:
+    name: containerized-ceph
+    uid: 167
+    group: containerized-ceph
+    create_home: no
+    shell: /sbin/nologin
+  when: seapath_distro == "Debian"
+
+- name: Set cephadm user sudo permissions
+  copy:
+    src: cephadm_sudoers
+    dest: /etc/sudoers.d/cephadm
+
 - name: Install cephadm binaries
   when: cephadm_install is true
   block:
@@ -41,41 +75,6 @@
 #    mode: '0755'
 #    owner: root
 #    group: root
-
-- name: Ensure group "cephadm" exists
-  group:
-    name: cephadm
-    gid: 1001
-    state: present
-
-- name: Ensure user "cephadm" exists
-  user:
-    name: cephadm
-    uid: 1001
-    group: cephadm
-    create_home: yes
-
-- name: Ensure group "containerized-ceph" exists
-  group:
-    name: containerized-ceph
-    gid: 167
-    state: present
-  when: seapath_distro == "Debian"
-
-- name: Ensure user "containerized-ceph" exists with nologin (already exists on centos/oraclelinux)
-  user:
-    name: containerized-ceph
-    uid: 167
-    group: containerized-ceph
-    create_home: no
-    shell: /sbin/nologin
-  when: seapath_distro == "Debian"
-
-- name: Set cephadm user sudo permissions
-  copy:
-    src: cephadm_sudoers
-    dest: /etc/sudoers.d/cephadm
-
 
 - name: Check if host is part of a Ceph cluster
   command: "/usr/local/bin/ceph -s"
