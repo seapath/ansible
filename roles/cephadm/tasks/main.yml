@@ -10,14 +10,22 @@
     - name: Download cephadm
       get_url:
         url: "https://download.ceph.com/rpm-{{ cephadm_release }}/el9/noarch/cephadm"
-        dest: "/usr/local/bin/cephadm"
+        dest: "/tmp/cephadm"
         mode: '0755'
+    - name: Install cephadm
+      command: /tmp/cephadm install
+      changed_when: true
 #    - name: Add Ceph repository
 #      command: /usr/local/bin/cephadm add-repo --release squid
 #      changed_when: true
-#    - name: Install ceph-common package
-#      command: /usr/local/bin/cephadm install ceph-common ceph-volume
-#      changed_when: true
+    - name: Recursively change group to cephadm
+      ansible.builtin.file:
+        path: /var/lib/cephadm
+        recurse: yes
+        group: cephadm
+- name: Install ceph-common package
+  command: cephadm install ceph-common
+  changed_when: true
 
 #- name: Disable ceph-crash non-containerized service
 #  ansible.builtin.systemd:
@@ -25,19 +33,19 @@
 #    enabled: false
 #    state: stopped
 
-- name: Create /usr/local/bin/ceph with 755 permissions
-  copy:
-    dest: /usr/local/bin/ceph
-    content: |
-      #!/bin/bash
-      if [ $# -eq 0 ]; then
-        exec /usr/local/bin/cephadm shell
-      else
-        exec /usr/local/bin/cephadm shell -- ceph "$@"
-      fi
-    mode: '0755'
-    owner: root
-    group: root
+#- name: Create /usr/local/bin/ceph with 755 permissions
+#  copy:
+#    dest: /usr/local/bin/ceph
+#    content: |
+#      #!/bin/bash
+#      if [ $# -eq 0 ]; then
+#        exec cephadm shell
+#      else
+#        exec cephadm shell -- ceph "$@"
+#      fi
+#    mode: '0755'
+#    owner: root
+#    group: root
 
 - name: Ensure group "cephadm" exists
   group:
@@ -134,7 +142,7 @@
 
 - name: Bootstrap Ceph cluster
   command: >
-      /usr/local/bin/cephadm bootstrap
+      cephadm bootstrap
       --skip-monitoring-stack
       --skip-dashboard
       --config /tmp/ceph.conf
@@ -147,7 +155,7 @@
   register: ceph_bootstrap_result
   when: do_bootstrap | bool
 
-# === adding monitor on other nodes ===
+# === adding cephadm key on other nodes ===
 - name: Check if /etc/ceph/ceph.pub exists on first_node
   stat:
     path: /etc/ceph/ceph.pub
@@ -184,8 +192,9 @@
   run_once: true
   when: mon_nodes_to_add | length > 0
 
+# === adding monitor on other nodes ===
 - name: Add hosts to Ceph orchestrator with _admin label
-  command: "/usr/local/bin/ceph orch host add {{ hostvars[item]['hostname'] }} --labels _admin"
+  command: "ceph orch host add {{ hostvars[item]['hostname'] }} --labels _admin"
   loop: "{{ mon_nodes_to_add }}"
   changed_when: true
   failed_when: false
@@ -194,7 +203,7 @@
   when: mon_nodes_to_add | length > 0
 
 - name: Confirm monitors are in monmap
-  command: /usr/local/bin/ceph mon dump
+  command: ceph mon dump
   register: mon_dump
   retries: 30
   delay: 5
@@ -205,32 +214,9 @@
   loop: "{{ mon_nodes_to_add }}"
   when: mon_nodes_to_add | length > 0
 
-# === Managers now ===
-- name: Get current number of MGR daemons
-  shell:
-    cmd: set -o pipefail && /usr/local/bin/ceph orch ls --service-name=mgr | grep -o "count:.*" | cut -d":" -f2
-    executable: /bin/bash
-  register: mgr_count_raw
-  changed_when: false
-  run_once: true
-  delegate_to: "{{ first_node }}"
-
-- name: Set fact with MGR count
-  set_fact:
-    mgr_count: "{{ mgr_count_raw.stdout | trim }}"
-  run_once: true
-  delegate_to: "{{ first_node }}"
-
-- name: "RUN /usr/local/bin/ceph orch apply mgr {{ groups['cluster_machines'] | length }}"
-  command: "/usr/local/bin/ceph orch apply mgr {{ groups['cluster_machines'] | length }}"
-  run_once: true
-  delegate_to: "{{ first_node }}"
-  when: mgr_count | int != groups['cluster_machines'] | length
-  changed_when: true
-
 # === OSDs now ===
 - name: Get list of current OSD daemons and their hosts
-  command: /usr/local/bin/ceph orch ps --service-name=osd --format json
+  command: ceph orch ps --service-name=osd --format json
   register: osd_ps
   delegate_to: "{{ first_node }}"
   run_once: true
@@ -253,15 +239,23 @@
   run_once: true
 
 - name: Zap the volume on nodes that need OSDs
-  command: "/usr/local/bin/cephadm ceph-volume lvm zap vg_ceph/lv_ceph"
+  command: "cephadm ceph-volume lvm zap vg_ceph/lv_ceph"
   delegate_to: "{{ item }}"
   run_once: true
   when: hostvars[item]['hostname'] in nodes_needing_osds
   loop: "{{ groups['cluster_machines'] }}"
   changed_when: true
 
+- name: Copy ceph orch spec file
+  template:
+    src: "{{ ceph_spec_path | default('spec.yaml.j2') }}"
+    dest: /tmp/t.yaml
+    mode: 0644
+  run_once: true
+  delegate_to: "{{ first_node }}"
+
 - name: Add OSD daemon on nodes that need OSDs
-  command: "/usr/local/bin/ceph orch daemon add osd {{ hostvars[item]['hostname'] }}:/dev/vg_ceph/lv_ceph"
+  command: cephadm shell -v /tmp/t.yaml:/tmp/t.yaml:ro -- ceph orch apply -i /tmp/t.yaml
   delegate_to: "{{ first_node }}"
   run_once: true
   when: hostvars[item]['hostname'] in nodes_needing_osds
@@ -269,37 +263,47 @@
   changed_when: true
   failed_when: false
 
+- name: Confirm cluster is ok
+  command: ceph status --format=json
+  register: cephs
+  retries: 30
+  delay: 5
+  changed_when: false
+  run_once: true
+  delegate_to: "{{ first_node }}"
+  until: cephs.stdout | from_json | community.general.json_query('health.status') == "HEALTH_OK"
+
 - name: Check if RBD pool exists
   shell:
-    cmd: set -o pipefail && /usr/local/bin/ceph osd lspools | grep -w rbd
+    cmd: set -o pipefail && ceph osd lspools | grep -w rbd
     executable: /bin/bash
   register: rbd_pool_check
   changed_when: false
   failed_when: false
 
 - name: Create RBD pool if it doesn't exist
-  command: /usr/local/bin/ceph osd pool create rbd
+  command: ceph osd pool create rbd
   when: rbd_pool_check.rc != 0
   changed_when: true
   run_once: true
   delegate_to: "{{ first_node }}"
 
 - name: Enable RBD application on the pool
-  command: /usr/local/bin/ceph osd pool application enable rbd rbd
+  command: ceph osd pool application enable rbd rbd
   when: rbd_pool_check.rc != 0
   changed_when: true
   run_once: true
   delegate_to: "{{ first_node }}"
 
 - name: Check if CephX user client.libvirt exists
-  command: /usr/local/bin/ceph auth get client.libvirt
+  command: ceph auth get client.libvirt
   register: cephx_user_check
   changed_when: false
   failed_when: false
 
 - name: Create CephX user client.libvirt if it does not exist
   command:
-    /usr/local/bin/ceph auth add client.libvirt
+    ceph auth add client.libvirt
     mon 'profile rbd, allow command "osd blacklist"'
     osd 'allow class-read object_prefix rbd_children, profile rbd pool=rbd'
   when: cephx_user_check.rc != 0
@@ -307,7 +311,7 @@
 
 - name: Update CephX user client.libvirt permissions if it exists
   shell: >
-    /usr/local/bin/ceph auth caps client.libvirt
+    ceph auth caps client.libvirt
     mon 'profile rbd, allow command "osd blacklist"'
     osd 'allow class-read object_prefix rbd_children, profile rbd pool=rbd'
   when: cephx_user_check.rc == 0
