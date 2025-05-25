@@ -38,7 +38,7 @@
     src: cephadm_sudoers
     dest: /etc/sudoers.d/cephadm
 
-- name: Install cephadm binaries
+- name: Install cephadm binary
   when: cephadm_install is true
   block:
     - name: Download cephadm
@@ -49,12 +49,16 @@
     - name: Install cephadm
       command: /tmp/cephadm install
       changed_when: true
-#    - name: Add Ceph repository
-#      command: /usr/local/bin/cephadm add-repo --release squid
-#      changed_when: true
+
+- name: Install cephadm repository
+  command: cephadm add-repo --release squid
+  changed_when: true
+  when: cephadm_installrepo is true
+
 - name: Install ceph-common package
   command: cephadm install ceph-common
   changed_when: true
+  when: cephadm_installcommon is true
 
 #- name: Disable ceph-crash non-containerized service
 #  ansible.builtin.systemd:
@@ -77,7 +81,7 @@
 #    group: root
 
 - name: Check if host is part of a Ceph cluster
-  command: "/usr/local/bin/ceph -s"
+  command: "ceph -s"
   register: ceph_status
   ignore_errors: true
   changed_when: false
@@ -294,7 +298,7 @@
   failed_when: false
 
 - name: Create CephX user client.libvirt if it does not exist
-  command:
+  command: >
     ceph auth add client.libvirt
     mon 'profile rbd, allow command "osd blacklist"'
     osd 'allow class-read object_prefix rbd_children, profile rbd pool=rbd'
@@ -302,7 +306,7 @@
   changed_when: true
 
 - name: Update CephX user client.libvirt permissions if it exists
-  shell: >
+  command: >
     ceph auth caps client.libvirt
     mon 'profile rbd, allow command "osd blacklist"'
     osd 'allow class-read object_prefix rbd_children, profile rbd pool=rbd'
