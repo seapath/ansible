@@ -263,7 +263,7 @@
   command: ceph status --format=json
   register: cephs
   retries: 30
-  delay: 5
+  delay: 10
   changed_when: false
   run_once: true
   delegate_to: "{{ first_node }}"
