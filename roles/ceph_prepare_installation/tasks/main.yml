@@ -97,32 +97,34 @@
                 part_start: "{{ (prev_end | float) | round(2) }}MiB"
                 part_end: "{{ ((prev_end | float) + (lvm_volumes[0].device_size | float) | float) | round(2) }}MiB"
               when: previous_exists
-        
-            - name: Create partition using parted module
-              community.general.parted:
-                device: "{{ ceph_osd_realdisk.stdout }}"
-                number: "{{ lvm_volumes[0].device_number }}"
-                label: gpt
-                name: ""
-                part_start: "{{ part_start }}"
-                part_end: "{{ part_end }}"
-                flags:
-                  - lvm
-                state: present
+
+            - name: Create partition, VG and LV
               when:
                 - not current_exists
                 - previous_exists
-              register: ceph_osd_result
-            - name: Get disk/by-path of OSD disk
-              command: "/usr/bin/find -L /dev/disk/by-path -samefile {{ ceph_osd_result.disk.dev }} -print -quit"
-              register: ceph_osd_finddisk
-              changed_when: false
-            - name: Create volume group on the partition
-              community.general.lvg:
-                vg: "{{ lvm_volumes[0].data_vg }}"
-                pvs: "{{ ceph_osd_finddisk.stdout }}-part{{ lvm_volumes[0].device_number }}"
-            - name: Create logical volume in the VG
-              community.general.lvol:
-                vg: "{{ lvm_volumes[0].data_vg }}"
-                lv: "{{ lvm_volumes[0].data }}"
-                size: "{{ lvm_volumes[0].data_size }}"
+              block:
+                - name: Create partition using parted module
+                  community.general.parted:
+                    device: "{{ ceph_osd_realdisk.stdout }}"
+                    number: "{{ lvm_volumes[0].device_number }}"
+                    label: gpt
+                    name: ""
+                    part_start: "{{ part_start }}"
+                    part_end: "{{ part_end }}"
+                    flags:
+                      - lvm
+                    state: present
+                  register: ceph_osd_result
+                - name: Get disk/by-path of OSD disk
+                  command: "/usr/bin/find -L /dev/disk/by-path -samefile {{ ceph_osd_result.disk.dev }} -print -quit"
+                  register: ceph_osd_finddisk
+                  changed_when: false
+                - name: Create volume group on the partition
+                  community.general.lvg:
+                    vg: "{{ lvm_volumes[0].data_vg }}"
+                    pvs: "{{ ceph_osd_finddisk.stdout }}-part{{ lvm_volumes[0].device_number }}"
+                - name: Create logical volume in the VG
+                  community.general.lvol:
+                    vg: "{{ lvm_volumes[0].data_vg }}"
+                    lv: "{{ lvm_volumes[0].data }}"
+                    size: "{{ lvm_volumes[0].data_size }}"
