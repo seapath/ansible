@@ -2,25 +2,28 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- name: Create Ceph log directory
-  file:
-      path: /var/log/ceph
-      owner: ceph
-      group: ceph
-      mode: "0770"
-      state: directory
-- name: Create Ceph crash directory
-  file:
-      path: /var/lib/ceph/crash/posted
-      owner: ceph
-      group: ceph
-      mode: "0770"
-      state: directory
-  register: new_ceph_installation
+- name: Check for existing installation (ceph-ansible only)
+  when: not (is_using_cephadm | default(false))
+  block:
+  - name: Create Ceph log directory
+    file:
+        path: /var/log/ceph
+        owner: ceph
+        group: ceph
+        mode: "0770"
+        state: directory
+  - name: Create Ceph crash directory
+    file:
+        path: /var/lib/ceph/crash/posted
+        owner: ceph
+        group: ceph
+        mode: "0770"
+        state: directory
+    register: new_ceph_installation
 
 - name: Prepare OSD disk # noqa: no-handler
   when:
-    - new_ceph_installation.changed
+    - new_ceph_installation.changed | default(false) or is_using_cephadm | default(false)
   block:
     - name: Refresh LVM VG
       command:
@@ -45,11 +48,15 @@
           changed_when: false
         - name: Cleanup Ceph OSD disks with ceph-volume
           command: "ceph-volume lvm zap {{ ceph_osd_realdisk.stdout }} --destroy" # Zapping the disk and destroying any vgs or lvs present
-          when: lvm_volumes is not defined or lvm_volumes[0].device_number == 1 # The disk must not be zapped in the case of a single disk for linux and ceph
+          when:
+            - lvm_volumes is not defined or lvm_volumes[0].device_number == 1 # The disk must not be zapped in the case of a single disk for linux and ceph
+            - not (is_using_cephadm | default(false))
           changed_when: true
         - name: Cleanup Ceph lvm's partition with ceph-volume
           command: "ceph-volume lvm zap /dev/{{ lvm_volumes[0].data_vg }}" # In the case of a single-disk installation, only the Ceph partition is zapped
-          when: lvm_volumes is defined and ansible_lvm['lvs'][lvm_volumes[0].data] is defined
+          when:
+            - lvm_volumes is defined and ansible_lvm['lvs'][lvm_volumes[0].data] is defined
+            - not (is_using_cephadm | default(false))
           changed_when: true
         - name: Create volumes for OSD disk
           when:
