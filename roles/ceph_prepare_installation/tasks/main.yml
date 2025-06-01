@@ -72,18 +72,20 @@
             - name: Check if previous partition exists
               set_fact:
                 previous_exists: >-
-                  {{ parted_info.partitions
-                     | selectattr('num', 'equalto', lvm_volumes[0].device_number - 1)
-                     | list | length > 0 }}
-        
-            - name: Get end of previous partition
+                  {{ lvm_volumes[0].device_number > 1 and (
+                       parted_info.partitions
+                       | selectattr('num', 'equalto', lvm_volumes[0].device_number - 1)
+                       | list | length > 0 ) }}
+
+            - name: Set prev_end based on previous partition or zero
               set_fact:
                 prev_end: >-
-                  {{ (parted_info.partitions
-                       | selectattr('num', 'equalto', lvm_volumes[0].device_number - 1)
-                       | map(attribute='end')
-                       | first) | float }}
-              when: previous_exists
+                  {{ (
+                        parted_info.partitions
+                        | selectattr('num', 'equalto', lvm_volumes[0].device_number - 1)
+                        | map(attribute='end')
+                        | first
+                      ) | float if previous_exists else 0.0 }}
         
             - debug:
                 var: prev_end
@@ -94,14 +96,14 @@
 
             - name: Calculate partition boundaries
               set_fact:
-                part_start: "{{ (prev_end | float) | round(2) }}MiB"
+                part_start: "{{ '0%' if (prev_end | float) == 0 else (prev_end | float | round(2)) ~ 'MiB' }}"
                 part_end: "{{ ((prev_end | float) + (lvm_volumes[0].device_size | float) | float) | round(2) }}MiB"
-              when: previous_exists
+              when: previous_exists or lvm_volumes[0].device_number == 1
 
             - name: Create partition, VG and LV
               when:
                 - not current_exists
-                - previous_exists
+                - previous_exists or lvm_volumes[0].device_number == 1
               block:
                 - name: Create partition using parted module
                   community.general.parted:
