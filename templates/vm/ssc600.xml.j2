@@ -101,11 +101,19 @@
     </interface>
     {% endfor %}
     {% endif %}
-    {% if vm.sv_interfaces is defined %}
-    {% for interface in vm.sv_interfaces %}
+    {% if vm.protection_port is defined %}
+    <hostdev mode="subsystem" type="pci" managed="yes">
+        <source>
+            <!-- The source is the NIC PIC address -->
+            <address domain="{{ vm.protection_portci.domain }}" bus="{{ vm.protection_port.bus }}" slot="{{ vm.protection_port.slot }}" function="{{ vm.protection_port.function }}"/>
+        </source>
+    </hostdev>
+    {% endif %}
+    {% if vm.process_bus_interfaces is defined %}
+    {% for process_bus_interface in vm.process_bus_interfaces %}
     <interface type="direct" trustGuestRxFilters="yes">
-        <mac address="{{ interface.mac_address }}"/>
-        <source dev="{{ interface.name }}" mode="{{ interface.mode }}"/>
+        <mac address="{{ process_bus_interface.mac_address }}"/>
+        <source dev="{{ process_bus_interface.name }}" mode="{{ process_bus_interface.mode }}"/>
         <model type="virtio"/>
     </interface>
     {% endfor %}
