@@ -91,6 +91,9 @@ cluster_machines:
     # netplan can also be used to sum up complex network in one yaml file
     # See the wiki for more informations : TODO put link
 
+    ignored_bridges:
+      - "team0"
+
     # NTP time synchronisation
     ntp_servers:
       - "185.254.101.25" # public ntp server
