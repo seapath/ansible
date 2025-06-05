@@ -38,5 +38,5 @@ standalone_machine:
     grub_append: "default_hugepagesz=1G hugepagesz=1G hugepages=6"
 
     # Yocto required variables
-    yocto_hugepages: 6
+    extra_kernel_parameters : "hugepages=6"
     bootloader_config_file: /boot/EFI/BOOT/grub.cfg
