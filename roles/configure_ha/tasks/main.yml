@@ -144,6 +144,7 @@
   until: "'stonith-enabled=false' in stonith_check.stdout"
   retries: 5
   delay: 3
+  changed_when: false
 
 - name: Making sure that Corosync service is started
   ansible.builtin.systemd:
