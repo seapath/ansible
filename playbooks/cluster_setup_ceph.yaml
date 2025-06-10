@@ -30,7 +30,9 @@
   become: true
   gather_facts: yes
   roles:
-    - ceph_expansion_vg
+    - role: ceph_expansion_vg
+      when: lvm_volumes is defined
+
 
 - name: Ceph Expansion LV
   hosts:
@@ -39,7 +41,8 @@
   gather_facts: yes
   serial: 1
   roles:
-    - ceph_expansion_lv
+    - role: ceph_expansion_lv
+      when: lvm_volumes is defined
 
 - name: Import ceph-ansible/site.yml playbook
   import_playbook: ../ceph-ansible/site.yml
