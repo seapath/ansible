@@ -14,8 +14,16 @@ VMs:
       bridges:
         - name: "br0"
           mac_address: "52:54:00:c4:ff:06"
-      sv_interfaces:
-        - name: "enp88s0" # Change to your SV interface
+      process_bus_interfaces: # Process bus interfaces use MacVTap
+        - name: "enp88s0" # Change to your process bus interface
           mac_address: "52:54:00:c4:ff:07"
           mode: "vepa"
+      protection_ports:  #  Protection communication port
+        # It is PCI passthrough interfaces
+        # We need to pass the PCI device address
+        # You can find the PCI address using the command lspci -nn or dpdk-devbind -s
+        domain: 0 # Change the Domain ID
+        bus: 7 # Change the Bus ID
+        slot: 0 # Change the Slot ID
+        function: 0 # Change the Function ID
       wait_for_connection: false
