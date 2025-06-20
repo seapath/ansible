@@ -12,6 +12,7 @@ roles:
 collections:
     - name: "community.libvirt"
     - name: "community.general"
+    - name: "containers.podman"
     - name: "ansible.posix"
     - name: "ansible.utils"
     - name: openstack.config_template

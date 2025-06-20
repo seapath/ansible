@@ -129,6 +129,45 @@
       nonceph_nodes = {{ groups['nonceph_nodes'] | default([]) }}
   run_once: true
 
+- name: Ensure insecure registry localhost:5000 is in /etc/containers/registries.conf
+  ansible.builtin.blockinfile:
+    path: /etc/containers/registries.conf
+    marker: "# {mark} ANSIBLE MANAGED BLOCK for insecure registries"
+    block: |
+      [registries.insecure]
+      registries = ['localhost:5000']
+
+- name: Ensure /var/lib/registry exists
+  ansible.builtin.file:
+    path: /var/lib/registry
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Run local container registry using Podman
+  containers.podman.podman_container:
+    name: registry
+    image: localhost/registry:2
+    state: started
+    detach: true
+    privileged: true
+    ports:
+      - "5000:5000"
+    volume:
+      - /var/lib/registry:/var/lib/registry
+    restart_policy: always
+
+- name: Tag ceph image for local registry
+  command: >
+    podman tag quay.io/ceph/ceph:v19 localhost:5000/ceph:v19
+  changed_when: true
+
+- name: Push ceph image to local registry
+  command: >
+    podman push localhost:5000/ceph:v19
+  changed_when: true
+
 # === Bootstrap if currently no ceph nodes ===
 - name: Upload file ceph.conf needed for bootstrapping
   template:
@@ -140,9 +179,12 @@
 
 - name: Bootstrap Ceph cluster
   command: >
-      cephadm bootstrap
+      cephadm
+      --image localhost:5000/ceph:v19
+      bootstrap
       --skip-monitoring-stack
       --skip-dashboard
+      --skip-firewalld
       --config /tmp/ceph.conf
       --ssh-user cephadm
       --mon-ip {{ hostvars[first_node]['cluster_ip_addr'] }}
@@ -318,3 +360,8 @@
 #    path: "{{ cephadm_logrorateceph_path }}"
 #    regexp: '^/var/log/ceph/\*.log'
 #    replace: '/var/log/ceph/!(cephadm).log'
+
+- name: Stop and remove Podman registry container
+  containers.podman.podman_container:
+    name: registry
+    state: absent
