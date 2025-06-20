@@ -34,7 +34,7 @@
   register: result
   until: result.stdout | regex_search('root-snap', ignorecase=True) is none
   retries: 60
-  delay: 10
+  delay: 20
   changed_when: false
 
 - name: Recreate the snapshot
