@@ -6,3 +6,4 @@ cephadm_install: false
 cephadm_release: "19.2.2"
 cephadm_installcommon: false
 cephadm_installrepo: false
+cephadm_pullimages: false

@@ -14,5 +14,6 @@ collections:
       version: "1.0.2"
     - name: "community.general"
       version: "4.5.0"
+    - name: "containers.podman"
     - name: "ansible.posix"
     - name: "ansible.utils"
