@@ -69,13 +69,13 @@
         force: yes
 
     - name: Apply patch1 to ethmonitor
-      ansible.builtin.patch:
+      ansible.posix.patch:
         src: ethmonitor_patch1
         dest: /usr/lib/ocf/resource.d/seapath/ethmonitor
         strip: 0
 
     - name: Apply patch2 to ethmonitor
-      ansible.builtin.patch:
+      ansible.posix.patch:
         src: ethmonitor_patch2
         dest: /usr/lib/ocf/resource.d/seapath/ethmonitor
         strip: 0
