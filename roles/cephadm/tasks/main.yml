@@ -145,10 +145,17 @@
     group: root
     mode: '0755'
 
+- name: Pull an image for a specific CPU architecture
+  containers.podman.podman_image:
+    name: registry:2
+- name: Pull an image for a specific CPU architecture
+  containers.podman.podman_image:
+    name: quay.io/ceph/ceph:v19
+
 - name: Run local container registry using Podman
   containers.podman.podman_container:
     name: registry
-    image: localhost/registry:2
+    image: registry:2
     state: started
     detach: true
     privileged: true
