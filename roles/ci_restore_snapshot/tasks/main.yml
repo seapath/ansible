@@ -24,6 +24,7 @@
   changed_when: true
 - name: Restart for snapshot rollback
   reboot:
+    reboot_timeout: 1500
 - name: Refresh LVM
   command:
     cmd:  lvchange --refresh vg1
