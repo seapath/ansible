@@ -1,3 +1,6 @@
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
 Sync {
         Mode NOTRACK {
                 DisableInternalCache on
@@ -8,7 +11,7 @@ Sync {
                 IPv4_address 225.0.0.50
                 Group 3780
 		IPv4_interface {{ cluster_ip_addr }}
-                Interface team0
+                Interface {{ conntrackd_interface }}
                 SndSocketBuffer 1249280
                 RcvSocketBuffer 1249280
                 Checksum on
