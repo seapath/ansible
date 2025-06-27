@@ -131,20 +131,19 @@
       delay: 1
       changed_when: false
     - name: Disable stonith
-      command: "{{ configure_ha_crm_command_path }} configure property stonith-enabled=false"
-      run_once: true
-      when: groups['valid_machine'] is undefined
+      shell: >
+        {{ configure_ha_crm_command_path }} configure property stonith-enabled=false;
+        sleep 1;
+        {{ configure_ha_crm_command_path }} configure show;
+      register: stonith_check
       changed_when: true
-
-
-- name: Verify stonith is disabled
-  command: "{{ configure_ha_crm_command_path }} configure show"
-  register: stonith_check
-  run_once: true
-  until: "'stonith-enabled=false' in stonith_check.stdout"
-  retries: 5
-  delay: 3
-  changed_when: false
+      when:
+        - groups['valid_machine'] is undefined
+        - configure_ha_disable_stonith
+      until: "'stonith-enabled=false' in stonith_check.stdout"
+      retries: 5
+      delay: 1
+      run_once: true
 
 - name: Making sure that Corosync service is started
   ansible.builtin.systemd:

@@ -3,3 +3,4 @@
 
 ---
 configure_ha_tmpdir: "/tmp"
+configure_ha_disable_stonith: true

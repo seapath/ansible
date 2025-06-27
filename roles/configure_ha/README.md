@@ -13,7 +13,8 @@ No requirement.
 | seapath_distro                       | yes      | String      |         | SEAPATH variant. *CentOS*, *Debian* or *Yocto*. The variable can be set automatically using the *detect_seapath_distro role* |
 | corosync_node_list                   | yes      | String list |         | List of all corosync nodes. Usually `{{ groups['cluster_machines'] \| list }}` |
 | configure_ha_tmpdir                  | no       | String      | /tmp    | Temporary directory path to use                                                |
-| enable_vmmgr_http_api   | no       | Bool        | false   | Set to true to enable SEAPATH vm-manager REST API                              |
+| configure_ha_disable_stonith         | no       | Bool        | true    | Disable Fencing - STONITH                                                      |
+| enable_vmmgr_http_api                | no       | Bool        | false   | Set to true to enable SEAPATH vm-manager REST API                              |
 | extra_crm_cmd_to_run                 | no       | String      |         | List of `crm configure` commands to run separate by a new line.                |
 
 ## Example Playbook
