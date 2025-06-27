@@ -58,6 +58,22 @@
           - "--chmod=F755"
           - "--chown=root:root"
 
+    - name: Copy VirtualDomain from heartbeat to seapath
+      copy:
+        remote_src: yes
+        src: /usr/lib/ocf/resource.d/heartbeat/VirtualDomain
+        dest: /usr/lib/ocf/resource.d/seapath/VirtualDomain
+        owner: root
+        group: root
+        mode: '0755'
+        force: yes
+
+    - name: Apply patch to VirtualDomain
+      ansible.posix.patch:
+        src: VirtualDomain_patch
+        dest: /usr/lib/ocf/resource.d/seapath/VirtualDomain
+        strip: 0
+
     - name: Copy ethmonitor from heartbeat to seapath
       copy:
         remote_src: yes
@@ -69,13 +85,13 @@
         force: yes
 
     - name: Apply patch1 to ethmonitor
-      ansible.builtin.patch:
+      ansible.posix.patch:
         src: ethmonitor_patch1
         dest: /usr/lib/ocf/resource.d/seapath/ethmonitor
         strip: 0
 
     - name: Apply patch2 to ethmonitor
-      ansible.builtin.patch:
+      ansible.posix.patch:
         src: ethmonitor_patch2
         dest: /usr/lib/ocf/resource.d/seapath/ethmonitor
         strip: 0

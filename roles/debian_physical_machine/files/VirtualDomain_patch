@@ -1,0 +1,211 @@
+--- VirtualDomain_debian12	2025-06-27 09:24:14.610689977 +0200
++++ VirtualDomain_seapath	2025-06-27 09:24:59.454332354 +0200
+@@ -38,10 +38,11 @@
+ OCF_RESKEY_backingfile_default=""
+ OCF_RESKEY_stateless_default="false"
+ OCF_RESKEY_copyindirs_default=""
+ OCF_RESKEY_shutdown_mode_default=""
+ OCF_RESKEY_start_resources_default="false"
++OCF_RESKEY_seapath_default="false"
+ 
+ : ${OCF_RESKEY_config=${OCF_RESKEY_config_default}}
+ : ${OCF_RESKEY_migration_transport=${OCF_RESKEY_migration_transport_default}}
+ : ${OCF_RESKEY_migration_downtime=${OCF_RESKEY_migration_downtime_default}}
+ : ${OCF_RESKEY_migration_speed=${OCF_RESKEY_migration_speed_default}}
+@@ -62,10 +63,11 @@
+ : ${OCF_RESKEY_backingfile=${OCF_RESKEY_backingfile_default}}
+ : ${OCF_RESKEY_stateless=${OCF_RESKEY_stateless_default}}
+ : ${OCF_RESKEY_copyindirs=${OCF_RESKEY_copyindirs_default}}
+ : ${OCF_RESKEY_shutdown_mode=${OCF_RESKEY_shutdown_mode_default}}
+ : ${OCF_RESKEY_start_resources=${OCF_RESKEY_start_resources_default}}
++: ${OCF_RESKEY_seapath=${OCF_RESKEY_seapath_default}}
+ 
+ if ocf_is_true ${OCF_RESKEY_sync_config_on_stop}; then
+ 	OCF_RESKEY_save_config_on_stop="true"
+ fi
+ #######################################################################
+@@ -385,10 +387,18 @@
+ Ensure the needed virtual storage pools and networks are started
+ </shortdesc>
+ <content type="boolean" default="${OCF_RESKEY_start_resources_default}"/>
+ </parameter>
+ 
++<parameter name="seapath" unique="0" required="0">
++<longdesc lang="en">
++Work on Seapath cluster.
++</longdesc>
++<shortdesc lang="en">Enable seapath cluster support</shortdesc>
++<content type="boolean" default="${OCF_RESKEY_seapath_default}"/>
++</parameter>
++
+ </parameters>
+ 
+ <actions>
+ <action name="start" timeout="90s" />
+ <action name="stop" timeout="90s" />
+@@ -621,14 +631,14 @@
+ 	then
+ 		tmpf=$(mktemp -t vmcfgsave.XXXXXX)
+ 		if [ ! -r "$tmpf" ]; then
+ 			ocf_log warn "unable to create temp file, disk full?"
+ 			# we must undefine the domain
+-			virsh $VIRSH_OPTIONS undefine $DOMAIN_NAME > /dev/null 2>&1
++			virsh $VIRSH_OPTIONS undefine --nvram $DOMAIN_NAME > /dev/null 2>&1
+ 		else
+ 			cp -p $OCF_RESKEY_config $tmpf
+-			virsh $VIRSH_OPTIONS undefine $DOMAIN_NAME > /dev/null 2>&1
++			virsh $VIRSH_OPTIONS undefine --nvram $DOMAIN_NAME > /dev/null 2>&1
+ 			[ -f $OCF_RESKEY_config ] || cp -f $tmpf $OCF_RESKEY_config
+ 			rm -f $tmpf
+ 		fi
+ 	fi
+ }
+@@ -661,10 +671,19 @@
+ 	done
+ 
+ 	return $OCF_SUCCESS
+ }
+ 
++restore_config() {
++	if ocf_is_true $OCF_RESKEY_seapath  ; then
++		local disk_name=system_$DOMAIN_NAME
++		if rbd info $disk_name > /dev/null 2>&1 ; then
++			rbd image-meta get $disk_name xml > $OCF_RESKEY_config
++		fi
++	fi
++}
++
+ VirtualDomain_start() {
+ 	local snapshotimage
+ 
+ 	if VirtualDomain_status; then
+ 		ocf_log info "Virtual domain $DOMAIN_NAME already running."
+@@ -688,10 +707,11 @@
+ 		fi
+ 		ocf_exit_reason "Failed to restore ${DOMAIN_NAME} from state file in ${OCF_RESKEY_snapshot} directory."
+ 		return $OCF_ERR_GENERIC
+ 	fi
+ 
++	restore_config
+ 	# Make sure domain is undefined before creating.
+ 	# The 'create' command guarantees that the domain will be
+ 	# undefined on shutdown, but requires the domain to be undefined.
+ 	# if a user defines the domain
+ 	# outside of this agent, we have to ensure that the domain
+@@ -797,11 +817,19 @@
+ 	if [ -s ${CFGTMP} ]; then
+ 		if ! cmp -s ${CFGTMP} ${OCF_RESKEY_config}; then
+ 			if virt-xml-validate ${CFGTMP} domain 2>/dev/null ;	then
+ 				ocf_log info "Saving domain $DOMAIN_NAME to ${OCF_RESKEY_config}. Please make sure it's present on all nodes or sync_config_on_stop is on."
+ 				if cat ${CFGTMP} > ${OCF_RESKEY_config} ; then
+-					ocf_log info "Saved $DOMAIN_NAME domain's configuration to ${OCF_RESKEY_config}."
++					if ocf_is_true "$OCF_RESKEY_seapath" ; then
++						if rbd image-meta set system_${DOMAIN_NAME} xml "$(cat ${CFGTMP})" ; then
++							ocf_log info "Saved $DOMAIN_NAME domain's configuration to ${OCF_RESKEY_config} and rbd system_${DOMAIN_NAME} metadata"
++						else
++							ocf_log warn "Saving $DOMAIN_NAME domain's configuration to rbd system_${DOMAIN_NAME} metadata failed."
++						fi
++					else
++						ocf_log info "Saved $DOMAIN_NAME domain's configuration to ${OCF_RESKEY_config}."
++					fi
+ 					if ocf_is_true "$OCF_RESKEY_sync_config_on_stop"; then
+ 						sync_config
+ 					fi
+ 				else
+ 					ocf_log warn "Moving ${CFGTMP} to ${OCF_RESKEY_config} failed."
+@@ -853,29 +881,43 @@
+ 			if [ $needshutdown -eq 1 ]; then
+ 				# Issue a graceful shutdown request
+ 				if [ -n "${OCF_RESKEY_CRM_shutdown_mode}" ]; then
+ 					shutdown_opts="--mode ${OCF_RESKEY_CRM_shutdown_mode}"
+ 				fi
+-				virsh $VIRSH_OPTIONS shutdown ${DOMAIN_NAME} $shutdown_opts
++				ocf_log info "virsh $VIRSH_OPTIONS shutdown ${DOMAIN_NAME} $shutdown_opts"
++				timeout 1s virsh $VIRSH_OPTIONS shutdown ${DOMAIN_NAME} $shutdown_opts
++				virsh_timeout_status=$?
++				if [ $virsh_timeout_status -eq 124 ] #timeout, there's something wrong with the guest
++				then
++					# Something went wrong, break from switch case, and resort to forced stop (destroy).
++					ocf_log info "${DOMAIN_NAME} shutdown problem, force_stop"
++					force=1
++				else
++					force=0
++				fi
+ 			fi
+ 
+ 			# The "shutdown_timeout" we use here is the operation
+-			# timeout specified in the CIB, minus 5 seconds
+-			shutdown_timeout=$(( $NOW + ($OCF_RESKEY_CRM_meta_timeout/1000) -5 ))
++			# timeout specified in the CIB, minus 17 seconds (because it has been seen cases where the destroy operation takes more than 15s)
++			shutdown_timeout=$(( $NOW + ($OCF_RESKEY_CRM_meta_timeout/1000) -17 ))
+ 			# Loop on status until we reach $shutdown_timeout
+-			while [ $NOW -lt $shutdown_timeout ]; do
++                        ocf_log info "${DOMAIN_NAME} shutdown_timeout=$shutdown_timeout, NOW=$NOW"
++			while [ $NOW -lt $shutdown_timeout -a $force -ne 1 ]; do
+ 				VirtualDomain_status
+ 				status=$?
++                                ocf_log info "${DOMAIN_NAME} VirtualDomain_status $status"
+ 				case $status in
+ 					$OCF_NOT_RUNNING)
+ 						# This was a graceful shutdown.
++                                                ocf_log info "${DOMAIN_NAME} This was a graceful shutdown."
+ 						return $OCF_SUCCESS
+ 						;;
+ 					$OCF_SUCCESS)
+ 						# Domain is still running, keep
+ 						# waiting (until shutdown_timeout
+ 						# expires)
++                                                ocf_log info "${DOMAIN_NAME} sleep 1."
+ 						sleep 1
+ 						;;
+ 					*)
+ 						# Something went wrong. Bail out and
+ 						# resort to forced stop (destroy).
+@@ -890,10 +932,11 @@
+ 	esac
+ 
+ 	# OK. Now if the above graceful shutdown hasn't worked, kill
+ 	# off the domain with destroy. If that too does not work,
+ 	# have the LRM time us out.
++        ocf_log info "${DOMAIN_NAME} force_stop"
+ 	force_stop
+ }
+ 
+ mk_migrateuri() {
+ 	local target_node
+@@ -1097,10 +1140,14 @@
+ 	if ocf_is_true $OCF_RESKEY_force_stop && [ -n "$OCF_RESKEY_snapshot" ]; then
+ 		ocf_exit_reason "The 'force_stop' and 'snapshot' options can not be used together."
+ 		return $OCF_ERR_CONFIGURED
+ 	fi
+ 
++	if [ ! -r $OCF_RESKEY_config ] ; then
++		restore_config
++	fi
++
+ 	# check if we can read the config file (otherwise we're unable to
+ 	# deduce $DOMAIN_NAME from it, see below)
+ 	if [ ! -r $OCF_RESKEY_config ]; then
+ 		if ocf_is_probe; then
+ 			ocf_log info "Configuration file $OCF_RESKEY_config not readable during probe."
+@@ -1144,13 +1191,17 @@
+ 	# Grab the virsh uri default, but only if hypervisor isn't set
+ 	: ${OCF_RESKEY_hypervisor=$(virsh --quiet uri 2>/dev/null)}
+ 
+ 	# Set options to be passed to virsh:
+ 	VIRSH_OPTIONS="--connect=${OCF_RESKEY_hypervisor} --quiet"
+-
+-	# Retrieve the domain name from the xml file.
+-	DOMAIN_NAME=`egrep '[[:space:]]*<name>.*</name>[[:space:]]*$' ${OCF_RESKEY_config} 2>/dev/null | sed -e 's/[[:space:]]*<name>\(.*\)<\/name>[[:space:]]*$/\1/'`
++	if ocf_is_true $OCF_RESKEY_seapath ; then
++		# Retrieve the domain name from xml filename
++		DOMAIN_NAME=`basename ${OCF_RESKEY_config} | cut -d '.' -f 1`
++	else
++		# Retrieve the domain name from the xml file.
++		DOMAIN_NAME=`egrep '[[:space:]]*<name>.*</name>[[:space:]]*$' ${OCF_RESKEY_config} 2>/dev/null | sed -e 's/[[:space:]]*<name>\(.*\)<\/name>[[:space:]]*$/\1/'`
++	fi
+ 
+ 	EMULATOR_STATE="${HA_RSCTMP}/VirtualDomain-${DOMAIN_NAME}-emu.state"
+ }
+ 
+ OCF_REQUIRED_PARAMS="config"
