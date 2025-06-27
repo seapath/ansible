@@ -10,9 +10,10 @@ No requirement.
 
 - conntrackd_ignore_ip_list
 
-| Variable                   | Required | Type   | Comments                                    |
-|----------------------------|----------|--------|---------------------------------------------|
-| conntrackd_ignore_ip_list  | no       | Bool   | Enable contrackd if the variable is defined |
+| Variable                   | Required | Type   | Default | Comments                                                |
+|----------------------------|----------|--------|---------|---------------------------------------------------------|
+| conntrackd_ignore_ip_list  | no       | Bool   | none    | Enable contrackd if the variable is defined             |
+| conntrackd_interface       | no       | String | team0   | Set the network interface on which conntrackd will work |
 
 ## Example Playbook
 
