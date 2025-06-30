@@ -1,0 +1,25 @@
+---
+
+
+- name: Detect Seapath distribution
+  include_role:
+    name: detect_seapath_distro
+  when: seapath_distro is not defined
+
+- import_tasks: profiles.yml
+
+- name: enable systemd-networkd   
+  service:
+    name: systemd-networkd
+    enabled: yes
+  when: systemd_networkd_network or systemd_networkd_link or systemd_networkd_netdev
+
+- name: start and enable systemd-resolved
+  service:
+    name: systemd-resolved
+    enabled: yes
+    state: started
+  when: systemd_networkd_enable_resolved
+
+# vim: set ts=2 sw=2:
+ 
