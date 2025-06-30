@@ -75,4 +75,3 @@
 - name: Continue if system is recent
   ansible.builtin.debug:
     msg: "System was installed less than 15 minutes ago. Proceeding..."
-
