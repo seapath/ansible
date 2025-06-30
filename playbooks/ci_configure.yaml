@@ -11,8 +11,12 @@
   become: true
   gather_facts: true
   roles:
-    - ci_cleanup_varlog
-    - ci_restore_snapshot
+    - role: ci_reinstalliso
+      when: ansible_distribution_release == 'trixie'
+    - role: ci_cleanup_varlog
+      when: ansible_distribution_release != 'trixie'
+    - role: ci_restore_snapshot
+      when: ansible_distribution_release != 'trixie'
     - detect_seapath_distro
 
 - name: CI configure skip reboot
