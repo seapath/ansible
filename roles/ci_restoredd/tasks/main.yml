@@ -10,5 +10,5 @@
 
 - name: Reboot the machine
   ansible.builtin.reboot:
-    #reboot_command: systemctl reboot --force
+    reboot_command: systemctl reboot --force
     reboot_timeout: 1500
