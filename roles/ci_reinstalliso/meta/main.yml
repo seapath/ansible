@@ -1,0 +1,14 @@
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+galaxy_info:
+  author: "Seapath"
+  description: Reinstall the VMs from the SEAPATH debian ISO
+  license: Apache-2.0
+  min_ansible_version: 2.9.10
+  platforms:
+  - name: Debian
+    versions:
+    - all
+dependencies:
+  - role: detect_seapath_distro
