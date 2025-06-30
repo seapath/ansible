@@ -7,7 +7,7 @@ roles:
     - name: "systemd_networkd"
       src: "https://github.com/seapath/ansible-role-systemd-networkd"
       scm: git
-      version: "cc5c19c5f7c3cbd187612bdb15f593b7779bc8e4"
+      version: "c8f87c6d9a7e01ba86b4ec6bb22466de1f95d3bf"
 
 collections:
     - name: "community.libvirt"
