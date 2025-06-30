@@ -1,0 +1,16 @@
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+galaxy_info:
+  author: "Seapath"
+  description: Reinstall the snapshot with ss in the initramfs
+  license: Apache-2.0
+  min_ansible_version: 2.9.10
+  platforms:
+  - name: Debian
+    versions:
+    - all
+  - name: EL
+    versions:
+    - all
+dependencies: []
