@@ -1,0 +1,42 @@
+# Copyright (C) 2025, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# This playbook configures and sets up Ceph with cephadm.
+
+---
+
+- name: Prepare Ceph installation
+  hosts:
+      osds
+  become: true
+  gather_facts: yes
+  roles:
+    - detect_seapath_distro
+    - ceph_prepare_installation
+
+- name: Ceph Expansion VG
+  hosts:
+      osds
+  become: true
+  gather_facts: yes
+  roles:
+    - role: ceph_expansion_vg
+      when: lvm_volumes is defined
+
+- name: Ceph Expansion LV
+  hosts:
+      osds
+  become: true
+  gather_facts: yes
+  serial: 1
+  roles:
+    - role: ceph_expansion_lv
+      when: lvm_volumes is defined
+
+- name: Cephadm
+  hosts:
+      cluster_machines
+  become: true
+  roles:
+    - detect_seapath_distro
+    - cephadm

@@ -131,10 +131,19 @@
       delay: 1
       changed_when: false
     - name: Disable stonith
-      command: "{{ configure_ha_crm_command_path }} configure property stonith-enabled=false"
-      run_once: true
-      when: groups['valid_machine'] is undefined
+      shell: >
+        {{ configure_ha_crm_command_path }} configure property stonith-enabled=false;
+        sleep 1;
+        {{ configure_ha_crm_command_path }} configure show;
+      register: stonith_check
       changed_when: true
+      when:
+        - groups['valid_machine'] is undefined
+        - configure_ha_disable_stonith
+      until: "'stonith-enabled=false' in stonith_check.stdout"
+      retries: 5
+      delay: 1
+      run_once: true
 
 - name: Making sure that Corosync service is started
   ansible.builtin.systemd:
@@ -143,23 +152,6 @@
     enabled: yes
 
 # run extra CRM commands
-- name: Run extra CRM configuration commands for vm-mgr http api
-  command:
-    cmd: crm -d config load update -
-    stdin: "{{ vmmgrapi_cmd_list }}"
-  when:
-    - enable_vmmgr_http_api is defined
-    - enable_vmmgr_http_api is true
-    - admin_cluster_ip is defined
-  run_once: true
-  register: vmmgrapi_cmd_list_task
-  changed_when: "'CIB commit successful' in vmmgrapi_cmd_list_task.stdout"
-  vars:
-    vmmgrapi_cmd_list: |
-      primitive ClusterIP IPaddr2 params ip={{ admin_cluster_ip }} cidr_netmask=32 op monitor interval=30s meta target-role=Started
-      primitive vmmgrapi systemd:nginx.service  op monitor interval=30s
-      colocation vmmgrapi_colocation inf: ClusterIP vmmgrapi
-      order order_ClusterIP_vmmgrapi ClusterIP vmmgrapi
 - name: Run extra CRM configuration commands
   command:
     cmd: crm -d config load update -

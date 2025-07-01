@@ -2,9 +2,22 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+- name: Refresh LVM facts
+  ansible.builtin.setup:
+    filter: "ansible_lvm"
+- debug:
+    msg: "{{ lvm_volumes[0].data_size }}"
+- debug:
+    msg: "{{ ansible_lvm }}"
+- debug:
+    msg: "{{ ansible_lvm['lvs'][lvm_volumes[0].data] }}"
+- debug:
+    msg: "{{ ansible_lvm['lvs'][lvm_volumes[0].data]['size_g'] }}"
+- debug:
+    msg: "{{ (ansible_lvm['lvs'][lvm_volumes[0].data]['size_g'] | float * 1024) | round(2) }}"
 - name: Check if lv_ceph has to be expanded
   set_fact:
-    expand_lv: "{{ (lvm_volumes[0].data_size | regex_replace('[A-Za-z]*', '') | int) > ansible_lvm['lvs'][lvm_volumes[0].data]['size_g'] | int }}"
+    expand_lv: "{{ (lvm_volumes[0].data_size | int) > ((ansible_lvm['lvs'][lvm_volumes[0].data]['size_g'] | float * 1024) | round(2)) }}"
   when: ansible_lvm is defined and lvm_volumes is defined
 - name: Increase ceph LV and OSD
   when: expand_lv is defined and expand_lv

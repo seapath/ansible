@@ -5,7 +5,7 @@
 
 ---
 - name: Deploy VMs on cluster
-  hosts: "{{ groups.hypervisors[0] }}"
+  hosts: "{{ groups.cluster_machines[0] }}"
   gather_facts: false
   become: true
   tasks:

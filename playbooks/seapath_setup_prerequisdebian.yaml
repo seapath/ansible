@@ -17,12 +17,6 @@
   become: true
   roles:
     - debian_physical_machine
-    - vmmgrapi
-- name: Backup_restore on cluster machines
-  hosts:
-    - cluster_machines
-  become: true
-  roles:
     - backup_restore
 - name: Prerequis hypervisor debian
   hosts:
@@ -84,7 +78,7 @@
       when:
         - upload_files is defined
         - item.extract is defined and item.extract is true
-    - name: run extra commands after upload
+    - name: Run extra commands after upload
       shell: "{{ item }}"
       tags:
         - skip_ansible_lint
@@ -99,6 +93,23 @@
     - VMs
   become: true
   tasks:
+    - name: Create /etc/apt/sources.list.d/
+      file:
+        state: directory
+        path: /etc/apt/sources.list.d/
+    - name: Uninstall ceph packages
+      apt:
+        name:
+          - ceph
+          - ceph-base
+          - ceph-mgr
+          - ceph-mon
+          - ceph-osd
+          - ceph-volume
+        state: absent
+        purge: yes
+        autoremove: yes
+      when: force_cephadm | default(false)
     - name: Uninstall apt packages not required after installation (all debian version)
       apt:
         name:

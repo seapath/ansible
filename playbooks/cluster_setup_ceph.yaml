@@ -10,7 +10,19 @@
   become: true
   gather_facts: yes
   roles:
+    - detect_seapath_distro
     - ceph_prepare_installation
+  tasks:
+    - name: Set ceph UID/GID fact
+      when: seapath_distro == "Yocto"
+      block:
+        - name: Get GID of ceph group
+          register: ceph_gid_result
+          command: id -g ceph
+          changed_when: false
+        - name: Set ceph_uid
+          set_fact:
+            ceph_uid: "{{ ceph_gid_result.stdout }}"
 
 - name: Ceph Expansion VG
   hosts:
@@ -18,7 +30,9 @@
   become: true
   gather_facts: yes
   roles:
-    - ceph_expansion_vg
+    - role: ceph_expansion_vg
+      when: lvm_volumes is defined
+
 
 - name: Ceph Expansion LV
   hosts:
@@ -27,7 +41,8 @@
   gather_facts: yes
   serial: 1
   roles:
-    - ceph_expansion_lv
+    - role: ceph_expansion_lv
+      when: lvm_volumes is defined
 
 - name: Import ceph-ansible/site.yml playbook
   import_playbook: ../ceph-ansible/site.yml

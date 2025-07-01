@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <!-- Copyright (C) 2023, RTE (http://www.rte-france.com) -->
 <!--  Copyright (C) 2025 Savoir-faire Linux, Inc-->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
@@ -202,7 +201,13 @@
         <console type="pty">
             <target type="serial" port="0" />
         </console>
+{% if "memballoon" in vm_features %}
+        <memballoon model="virtio">
+          <stats period="5" />
+        </memballoon>
+{% else %}
         <memballoon model="none" />
+{% endif %}
         <watchdog model="i6300esb" action="poweroff" />
     </devices>
 </domain>

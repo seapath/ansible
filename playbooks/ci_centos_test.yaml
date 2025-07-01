@@ -1,0 +1,15 @@
+# Copyright (C) 2025 Red Hat, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+# Ansible playbook that runs all Cukinia's tests.
+
+---
+- name: Apply ci_centos role
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  gather_facts: false
+  roles:
+    - ci_centos
+

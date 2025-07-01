@@ -1,0 +1,42 @@
+# This inventory describes a virtual machine using advanced features for VM deployment.
+# Basic configuration explained in "seapath-vm-deployement.yaml" are not re-explained here.
+#
+# Be careful that SEAPATH only handles how to deploy and run the virtual machine.
+# It does not handle any virtual machine inner configuration.
+#
+# Replace all the TODOs to fit your physical machines, and see "seapath-vm-deployement.yaml" for
+# basic configuration variables.
+# More informations on SEAPATH Wiki:
+# - General inventory : https://lf-energy.atlassian.net/wiki/x/lIblAQ
+# - guest.xml.j2 templated xml file : https://lf-energy.atlassian.net/wiki/x/ao3lAQ
+
+---
+VMs:
+  hosts:
+    rtvm:
+      vm_template: "../templates/vm/guest.xml.j2"
+      vm_disk: "../files/guest.qcow2"
+
+      ansible_host: 10.132.170.8
+      wait_for_connection: true
+
+      # Configuration part. These variables only work with the guest.xml.j2 template
+      vm_features: ["rt", "isolated"]
+      cpuset: [4, 5]
+      bridges:
+        - name: "br0"
+          mac_address: "52:54:00:e4:ff:04"
+
+      # List of interfaces used in PCI passthrough.
+      # TODO:
+      #   * Configure one list element per interface using PCI passthrough
+      #   * Replace the domain, bus, slot and function value for each PCI devices
+      pci_passthrough:
+        - domain: 0
+          bus: 7
+          slot: 0
+          function: 0
+        - domain: 0
+          bus: 0xb3   # Values can be decimal or hexadecimal
+          slot: 0x10
+          function: 6

@@ -1,15 +1,5 @@
 #!/bin/sh
-#
 # ocf:seapath:ptpstatus resource agent
-#
-# Original copyright 2004 SUSE LINUX AG, Lars Marowsky-Br<E9>e
-# Later changes copyright 2008-2019 the Pacemaker project contributors
-#
-# The version control history for this file may have further details.
-#
-# This source code is licensed under the GNU General Public License version 2
-# (GPLv2) WITHOUT ANY WARRANTY.
-#
 # crm config example:
 #primitive ptpstatus_test ocf:seapath:ptpstatus \
 #        op monitor timeout=10 interval=10
@@ -18,14 +8,11 @@
 #location ptp_test_debian debian \
 #        rule ptpstatus: defined ptpstatus
 #
-#######################################################################
-# Initialization:
+# init
 
 : ${OCF_FUNCTIONS:="${OCF_ROOT}/resource.d/heartbeat/.ocf-shellfuncs"}
 . "${OCF_FUNCTIONS}"
 : ${__OCF_ACTION:="$1"}
-
-#######################################################################
 
 meta_data() {
     cat <<END
@@ -75,14 +62,6 @@ running). This can be used to test on-fail=ignore.
 <content type="string" default="" />
 </parameter>
 
-<parameter name="envfile" unique="1">
-<longdesc lang="en">
-If this is set, the environment will be dumped to this file for every call.
-</longdesc>
-<shortdesc lang="en">Environment dump file</shortdesc>
-<content type="string" default="" />
-</parameter>
-
 <parameter name="multiplier" unique="0">
 <longdesc lang="en">
 The number by which to multiply the connectivity (0 or 1) by
@@ -98,8 +77,6 @@ The number by which to multiply the connectivity (0 or 1) by
 <action name="stop"         timeout="20s" />
 <action name="monitor"      timeout="20s" interval="10s" depth="0"/>
 <action name="reload"       timeout="20s" />
-<action name="migrate_to"   timeout="20s" />
-<action name="migrate_from" timeout="20s" />
 <action name="validate-all" timeout="20s" />
 <action name="meta-data"    timeout="5s" />
 </actions>
@@ -107,33 +84,12 @@ The number by which to multiply the connectivity (0 or 1) by
 END
 }
 
-#######################################################################
-
-# don't exit on TERM, to test that pacemaker-execd makes sure that we do exit
-trap sigterm_handler TERM
-sigterm_handler() {
-    ocf_log info "They use TERM to bring us down. No such luck."
-
-    # Since we're likely going to get KILLed, clean up any monitor
-    # serialization in progress, so the next probe doesn't return an error.
-    rm -f "${VERIFY_SERIALIZED_FILE}"
-    return
-}
-
 ptpstatus_usage() {
     cat <<END
-usage: $0 {start|stop|monitor|migrate_to|migrate_from|validate-all|meta-data}
+usage: $0 {start|stop|monitor|validate-all|meta-data}
 
 Expects to have a fully populated OCF RA-compliant environment set.
 END
-}
-
-dump_env() {
-    if [ "${OCF_RESKEY_envfile}" != "" ]; then
-            echo "### ${__OCF_ACTION} @ $(date) ###
-$(env | sort)
-###" >> "${OCF_RESKEY_envfile}"
-    fi
 }
 
 ptpstatus_update() {
@@ -270,8 +226,6 @@ if [ -z "$OCF_RESKEY_state" ]; then
 fi
 VERIFY_SERIALIZED_FILE="${OCF_RESKEY_state}.serialized"
 
-dump_env
-
 case "$__OCF_ACTION" in
 meta-data)      meta_data
                 exit $OCF_SUCCESS
@@ -279,12 +233,6 @@ meta-data)      meta_data
 start)          ptpstatus_start;;
 stop)           ptpstatus_stop;;
 monitor)        ptpstatus_monitor;;
-migrate_to)     ocf_log info "Migrating ${OCF_RESOURCE_INSTANCE} to ${OCF_RESKEY_CRM_meta_migrate_target}."
-                ptpstatus_stop
-                ;;
-migrate_from)   ocf_log info "Migrating ${OCF_RESOURCE_INSTANCE} from ${OCF_RESKEY_CRM_meta_migrate_source}."
-                ptpstatus_start
-                ;;
 reload)         ocf_log err "Reloading..."
                 ptpstatus_start
                 ;;

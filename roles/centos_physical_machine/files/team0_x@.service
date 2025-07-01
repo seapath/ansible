@@ -1,0 +1,15 @@
+# Systemd unit wrapping around team0_* ports.
+# This can be used to synchronize ports link state with the service that use
+# them.
+
+[Unit]
+After=ovs-vswitchd.service
+Before=network.target
+DefaultDependencies=false
+StopWhenUnneeded=true
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=networkctl up %i
+ExecStop=networkctl down %i

@@ -136,3 +136,21 @@
     enabled: no
   when:
     - services['gunicorn.service'] is defined
+
+- name: Run extra CRM configuration commands for vm-mgr http api
+  command:
+    cmd: crm -d config load update -
+    stdin: "{{ vmmgrapi_cmd_list }}"
+  when:
+    - enable_vmmgr_http_api is defined
+    - enable_vmmgr_http_api is true
+    - "'cluster_machines' in group_names"
+  run_once: true
+  register: vmmgrapi_cmd_list_task
+  changed_when: "'CIB commit successful' in vmmgrapi_cmd_list_task.stdout"
+  vars:
+    vmmgrapi_cmd_list: |
+      primitive ClusterIP IPaddr2 params ip={{ vmmgrapi_ipaddress }} cidr_netmask=32 op monitor interval=30s meta target-role=Started
+      primitive vmmgrapi systemd:nginx.service  op monitor interval=30s
+      colocation vmmgrapi_colocation inf: ClusterIP vmmgrapi
+      order order_ClusterIP_vmmgrapi ClusterIP vmmgrapi

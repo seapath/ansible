@@ -254,3 +254,12 @@
     line: 'GRUB_DISABLE_OS_PROBER=true'
     state: present
   notify: Update-grub
+
+- name: Disable PerSourcePenalties
+  lineinfile:
+    dest: /etc/ssh/sshd_config
+    regexp: '^#?PerSourcePenalties.*$'
+    line: 'PerSourcePenalties no'
+    state: present
+  notify: Restart sshd
+  when: ansible_distribution_release == 'trixie'

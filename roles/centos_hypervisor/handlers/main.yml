@@ -22,12 +22,6 @@
     - "machine-nort"
     - "ovs"
 
-- name: Restart ovs-vswitchd
-  ansible.builtin.systemd:
-    state: restarted
-    daemon_reload: yes
-    name: ovs-vswitchd
-
 - name: Restart irqbalance
   ansible.builtin.systemd:
     name: irqbalance.service

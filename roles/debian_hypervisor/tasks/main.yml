@@ -2,17 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- name: Enable docker.service
-  ansible.builtin.systemd:
-    name: docker.service
-    enabled: yes
-    state: started
-- name: Enable docker.socket
-  ansible.builtin.systemd:
-    name: docker.socket
-    enabled: yes
-    state: started
-
 - name: Add vhost_vsock to /etc/modules
   lineinfile:
     path: /etc/modules
@@ -130,9 +119,23 @@
   notify: Start new slices REVERT
   when: cpumachinesrt is not defined and cpumachinesnort is not defined and cpuovs is not defined
 
+- name: Get tuned version
+  command: tuned --version
+  register: tuned_version_output
+  changed_when: false
+  failed_when: tuned_version_output.rc != 0
+
+- name: Extract tuned version number
+  set_fact:
+    tuned_version: "{{ tuned_version_output.stdout | regex_search('\\d+\\.\\d+', '\\0') | first }}"
+
+- name: Determine tuned profile path
+  set_fact:
+    tuned_profile_path: "{{ '/etc/tuned/profiles/seapath-rt-host' if tuned_version is version('2.22', '>=') else '/etc/tuned/seapath-rt-host' }}"
+
 - name: Create tuned seapath-rt profile folder
   file:
-    path: /etc/tuned/seapath-rt-host
+    path: "{{ tuned_profile_path }}"
     state: directory
     mode: '0755'
 
@@ -143,7 +146,7 @@
 - name: Copy seapath-rt-host tuned profile conf
   template:
     src: "{{ tuned_path }}"
-    dest: /etc/tuned/seapath-rt-host/tuned.conf
+    dest: "{{ tuned_profile_path }}/tuned.conf"
     group: root
     owner: root
     mode: '0644'
@@ -170,3 +173,30 @@
   ansible.builtin.command: tuned-adm off
   when: isolcpus is not defined
   changed_when: true
+
+- name: Create ovs-vswitchd.service.d directory
+  file:
+    path: /etc/systemd/system/ovs-vswitchd.service.d/
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+  notify: Restart ovs-vswitchd
+- name: Create ovs-vswitchd.service drop-in
+  template:
+    src: ovs-vswitchd_override.conf.j2
+    dest: /etc/systemd/system/ovs-vswitchd.service.d/override.conf
+    owner: root
+    group: root
+    mode: 0644
+  when: team0_0 is defined and team0_1 is defined
+  notify: Restart ovs-vswitchd
+- name: Copy team0_x@.service file
+  ansible.builtin.copy:
+    src: team0_x@.service
+    dest: /etc/systemd/system/team0_x@.service
+    owner: root
+    group: root
+    mode: 0644
+  when: team0_0 is defined and team0_1 is defined
+  notify: Restart ovs-vswitchd

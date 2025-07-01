@@ -2,25 +2,28 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- name: Create Ceph log directory
-  file:
-      path: /var/log/ceph
-      owner: ceph
-      group: ceph
-      mode: "0770"
-      state: directory
-- name: Create Ceph crash directory
-  file:
-      path: /var/lib/ceph/crash/posted
-      owner: ceph
-      group: ceph
-      mode: "0770"
-      state: directory
-  register: new_ceph_installation
+- name: Check for existing installation (ceph-ansible only)
+  when: not (is_using_cephadm | default(false))
+  block:
+  - name: Create Ceph log directory
+    file:
+        path: /var/log/ceph
+        owner: ceph
+        group: ceph
+        mode: "0770"
+        state: directory
+  - name: Create Ceph crash directory
+    file:
+        path: /var/lib/ceph/crash/posted
+        owner: ceph
+        group: ceph
+        mode: "0770"
+        state: directory
+    register: new_ceph_installation
 
 - name: Prepare OSD disk # noqa: no-handler
   when:
-    - new_ceph_installation.changed
+    - new_ceph_installation.changed | default(false) or is_using_cephadm | default(false)
   block:
     - name: Refresh LVM VG
       command:
@@ -30,6 +33,7 @@
       when:
         - lvm_volumes is defined
         - ansible_lvm['lvs'][lvm_volumes[0].data] is defined
+        - not (is_using_cephadm | default(false))
       block:
         - name: Cleanup Ceph LV with ceph-volume
           command: "ceph-volume lvm zap /dev/{{ lvm_volumes[0].data_vg }}/{{ lvm_volumes[0].data }}"
@@ -44,35 +48,92 @@
           changed_when: false
         - name: Cleanup Ceph OSD disks with ceph-volume
           command: "ceph-volume lvm zap {{ ceph_osd_realdisk.stdout }} --destroy" # Zapping the disk and destroying any vgs or lvs present
-          when: lvm_volumes is not defined or lvm_volumes[0].device_number == 1 # The disk must not be zapped in the case of a single disk for linux and ceph
+          when:
+            - lvm_volumes is not defined or lvm_volumes[0].device_number == 1 # The disk must not be zapped in the case of a single disk for linux and ceph
+            - not (is_using_cephadm | default(false))
           changed_when: true
         - name: Cleanup Ceph lvm's partition with ceph-volume
           command: "ceph-volume lvm zap /dev/{{ lvm_volumes[0].data_vg }}" # In the case of a single-disk installation, only the Ceph partition is zapped
-          when: lvm_volumes is defined and ansible_lvm['lvs'][lvm_volumes[0].data] is defined
+          when:
+            - lvm_volumes is defined and ansible_lvm['lvs'][lvm_volumes[0].data] is defined
+            - not (is_using_cephadm | default(false))
           changed_when: true
         - name: Create volumes for OSD disk
           when:
             - lvm_volumes is defined
           block:
-            - name: Create partition on OSD disks with parted
+            - name: Get partition info
               community.general.parted:
                 device: "{{ ceph_osd_realdisk.stdout }}"
-                number: "{{ lvm_volumes[0].device_number }}"
-                label: gpt # Must be the same type as the partition table of the disk used
-                state: present
-                unit: MB
-                part_start: "-{{ lvm_volumes[0].device_size }}" # Negative numbers specifie the distance from the end of the disk
-              register: ceph_osd_result
-            - name: Get disk/by-path of OSD disk
-              command: "/usr/bin/find -L /dev/disk/by-path -samefile {{ ceph_osd_result.disk.dev }} -print -quit"
-              register: ceph_osd_finddisk
-              changed_when: false
-            - name: Create volume group on the partition
-              community.general.lvg:
-                vg: "{{ lvm_volumes[0].data_vg }}"
-                pvs: "{{ ceph_osd_finddisk.stdout }}-part{{ lvm_volumes[0].device_number }}"
-            - name: Create logical volume in the VG
-              community.general.lvol:
-                vg: "{{ lvm_volumes[0].data_vg }}"
-                lv: "{{ lvm_volumes[0].data }}"
-                size: "{{ lvm_volumes[0].data_size }}"
+                unit: MiB
+                state: info
+              register: parted_info
+        
+            - name: Check if current partition exists
+              set_fact:
+                current_exists: >-
+                  {{ parted_info.partitions
+                     | selectattr('num', 'equalto', lvm_volumes[0].device_number)
+                     | list | length > 0 }}
+        
+            - name: Check if previous partition exists
+              set_fact:
+                previous_exists: >-
+                  {{ lvm_volumes[0].device_number > 1 and (
+                       parted_info.partitions
+                       | selectattr('num', 'equalto', lvm_volumes[0].device_number - 1)
+                       | list | length > 0 ) }}
+
+            - name: Set prev_end based on previous partition or zero
+              set_fact:
+                prev_end: >-
+                  {{ (
+                        parted_info.partitions
+                        | selectattr('num', 'equalto', lvm_volumes[0].device_number - 1)
+                        | map(attribute='end')
+                        | first
+                      ) | float if previous_exists else 0.0 }}
+        
+            - debug:
+                var: prev_end
+            - debug:
+                var: lvm_volumes[0].device_size
+            - debug:
+                msg: "{{ ((prev_end | float) + (lvm_volumes[0].device_size | float)) | round(2) }}"
+
+            - name: Calculate partition boundaries
+              set_fact:
+                part_start: "{{ '0%' if (prev_end | float) == 0 else (prev_end | float | round(2)) ~ 'MiB' }}"
+                part_end: "{{ ((prev_end | float) + (lvm_volumes[0].device_size | float) | float) | round(2) }}MiB"
+              when: previous_exists or lvm_volumes[0].device_number == 1
+
+            - name: Create partition, VG and LV
+              when:
+                - not current_exists
+                - previous_exists or lvm_volumes[0].device_number == 1
+              block:
+                - name: Create partition using parted module
+                  community.general.parted:
+                    device: "{{ ceph_osd_realdisk.stdout }}"
+                    number: "{{ lvm_volumes[0].device_number }}"
+                    label: gpt
+                    name: ""
+                    part_start: "{{ part_start }}"
+                    part_end: "{{ part_end }}"
+                    flags:
+                      - lvm
+                    state: present
+                  register: ceph_osd_result
+                - name: Get disk/by-path of OSD disk
+                  command: "/usr/bin/find -L /dev/disk/by-path -samefile {{ ceph_osd_result.disk.dev }} -print -quit"
+                  register: ceph_osd_finddisk
+                  changed_when: false
+                - name: Create volume group on the partition
+                  community.general.lvg:
+                    vg: "{{ lvm_volumes[0].data_vg }}"
+                    pvs: "{{ ceph_osd_finddisk.stdout }}-part{{ lvm_volumes[0].device_number }}"
+                - name: Create logical volume in the VG
+                  community.general.lvol:
+                    vg: "{{ lvm_volumes[0].data_vg }}"
+                    lv: "{{ lvm_volumes[0].data }}"
+                    size: "{{ lvm_volumes[0].data_size }}"

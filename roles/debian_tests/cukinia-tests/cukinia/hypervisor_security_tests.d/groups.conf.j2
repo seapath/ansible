@@ -1,0 +1,84 @@
+# Copyright (C) 2023, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+groups=" \
+    {{ admin_user }} \
+{% if inventory_hostname in groups.get('cluster_machines', []) %}
+    ceph \
+    haclient \
+{% endif %}
+{% if inventory_hostname in groups.get('cluster_machines', []) and force_cephadm is defined and force_cephadm is true %}
+    containerized-ceph \
+    cephadm \
+{% endif %}
+    adm \
+    ansible \
+    audio \
+    backup \
+    bin \
+    cdrom \
+    _chrony \
+    crontab \
+    daemon \
+    Debian-snmp \
+    dialout \
+    dip \
+    disk \
+    docker \
+    fax \
+    floppy \
+    games \
+    input \
+    irc \
+    kmem \
+    kvm \
+    libvirt \
+    libvirt-qemu \
+    list \
+    lp \
+    mail \
+    man \
+    messagebus \
+    netdev \
+    news \
+    nogroup \
+    operator \
+    plugdev \
+    polkitd \
+    privileged \
+    proxy \
+    rdma \
+    render \
+    root \
+    sasl \
+    sgx \
+    shadow \
+    src \
+    _ssh \
+    staff \
+    sudo \
+    sys \
+    systemd-journal \
+    systemd-network \
+    systemd-resolve \
+    tape \
+    tty \
+    users \
+    utmp \
+    uucp \
+    uuidd \
+    video \
+    voice \
+    www-data \
+"
+args="-v"
+for g in ${groups}; do
+    args="$args -e $g"
+done
+
+cukinia_log "$(_colorize yellow "--- check /etc/group ---")"
+nb_group=$(echo $groups | wc -w)
+id "SEAPATH-00033" as "/etc/group is consistent" cukinia_test $(grep $args /etc/group | wc -l)
+id "SEAPATH-00033" as "/etc/gshadow is consistent" cukinia_test $(grep $args /etc/gshadow | wc -l)
+id "SEAPATH-00034" as "/etc/group does not include extra group" cukinia_test $(cat /etc/group | wc -l) -eq $nb_group
+id "SEAPATH-00034" as "/etc/gshadow does not include extra group" cukinia_test $(cat /etc/gshadow | wc -l) -eq $nb_group

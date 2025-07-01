@@ -7,12 +7,13 @@ roles:
     - name: "systemd_networkd"
       src: "https://github.com/seapath/ansible-role-systemd-networkd"
       scm: git
-      version: "50d575d8f9abbbf1517a604a1c36ccf1d51eab78"
+      version: "003589d4ce3957a28cf3084032b199cb30372a3c"
 
 collections:
     - name: "community.libvirt"
       version: "1.0.2"
     - name: "community.general"
       version: "4.5.0"
+    - name: "containers.podman"
     - name: "ansible.posix"
     - name: "ansible.utils"

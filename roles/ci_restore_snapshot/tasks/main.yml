@@ -33,8 +33,8 @@
   command: lvs -a
   register: result
   until: result.stdout | regex_search('root-snap', ignorecase=True) is none
-  retries: 6
-  delay: 10
+  retries: 60
+  delay: 20
   changed_when: false
 
 - name: Recreate the snapshot

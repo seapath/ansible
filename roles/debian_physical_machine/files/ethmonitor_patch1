@@ -1,0 +1,14 @@
+@@ -269,10 +269,13 @@
+ 	else
+ 		case $__OCF_ACTION in
+ 			validate-all)
+ 				ocf_exit_reason "Interface $NIC does not exist"
+ 				exit $OCF_ERR_CONFIGURED;;
++			monitor)
++				ocf_log debug "Interface $NIC does not exist"
++				;;
+ 			*)	
+ 				## It might be a bond interface which is temporarily not available, therefore we want to continue here
+ 				ocf_log warn "Interface $NIC does not exist"
+ 				;;
+ 		esac

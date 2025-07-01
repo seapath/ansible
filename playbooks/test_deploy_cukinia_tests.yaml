@@ -10,5 +10,4 @@
   become: true
   gather_facts: True
   roles:
-    - deploy_cukinia
     - deploy_cukinia_tests

@@ -15,6 +15,7 @@ playbooks/*
 !playbooks/deploy_*.yaml
 !playbooks/seapath_setup_*.yaml
 !playbooks/purge_ceph.yaml
+!playbooks/seapath_update_debian.yaml
 inventories/*
 !inventories/README.adoc
 !inventories/examples

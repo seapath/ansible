@@ -21,6 +21,10 @@
   import_playbook: seapath_setup_prerequiscentos.yaml
   when: seapath_distro == "CentOS"
 
+- name: Import seapath_setup_prerequisoraclelinux playbook
+  import_playbook: seapath_setup_prerequisoraclelinux.yaml
+  when: seapath_distro == "OracleLinux"
+
 - name: Import seapath_setup_prerequisdebian playbook
   import_playbook: seapath_setup_prerequisdebian.yaml
   when: seapath_distro == "Debian"
@@ -40,12 +44,20 @@
 
 - name: Import cluster_setup_ceph playbook
   import_playbook: cluster_setup_ceph.yaml
+  when: not is_using_cephadm | bool
+
+- name: Import cluster_setup_cephdm playbook
+  import_playbook: cluster_setup_cephadm.yaml
+  when: is_using_cephadm | bool
+
 - name: Import cluster_setup_libvirt playbook
   import_playbook: cluster_setup_libvirt.yaml
 - name: Import cluster_setup_users playbook
   import_playbook: cluster_setup_users.yaml
 - name: Import cluster_setup_ha playbook
   import_playbook: cluster_setup_ha.yaml
+- name: Import seapath_setup_vmmgrapi playbook
+  import_playbook: seapath_setup_vmmgrapi.yaml
 
 - name: Restart all hosts
   hosts:

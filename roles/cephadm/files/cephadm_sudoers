@@ -1,0 +1,2 @@
+Defaults:cephadm !requiretty
+cephadm ALL=NOPASSWD:EXEC: ALL

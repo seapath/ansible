@@ -20,6 +20,13 @@
       line: "DNS={{ dns_servers | join(' ') if dns_servers is not string else dns_servers }}"
       state: present
     notify: Restart systemd-resolved
+  - name: Configure MulticastDNS /etc/systemd/resolved.conf
+    lineinfile:
+      dest: /etc/systemd/resolved.conf
+      regexp: "^#?MulticastDNS="
+      line: "MulticastDNS=no"
+      state: present
+    notify: Restart systemd-resolved
   - name: Create resolv.conf stub link
     ansible.builtin.file:
       src: /run/systemd/resolve/resolv.conf

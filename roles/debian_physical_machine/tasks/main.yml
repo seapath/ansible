@@ -46,15 +46,55 @@
     state: directory
     mode: '0755'
 
-- name: Copy Pacemaker Seapath Resource-Agent files
-  ansible.posix.synchronize:
-    src: pacemaker_ra/
-    dest: /usr/lib/ocf/resource.d/seapath/
-    rsync_opts:
-    - "--chmod=F755"
-    - "--chown=root:root"
-  when:
-    - "'cluster_machines' in group_names"
+- name: Configure Pacemaker Seapath resources
+  when: "'cluster_machines' in group_names"
+  block:
+
+    - name: Copy Pacemaker Seapath Resource-Agent files
+      ansible.posix.synchronize:
+        src: pacemaker_ra/
+        dest: /usr/lib/ocf/resource.d/seapath/
+        rsync_opts:
+          - "--chmod=F755"
+          - "--chown=root:root"
+
+    - name: Copy VirtualDomain from heartbeat to seapath
+      copy:
+        remote_src: yes
+        src: /usr/lib/ocf/resource.d/heartbeat/VirtualDomain
+        dest: /usr/lib/ocf/resource.d/seapath/VirtualDomain
+        owner: root
+        group: root
+        mode: '0755'
+        force: yes
+
+    - name: Apply patch to VirtualDomain
+      ansible.posix.patch:
+        src: VirtualDomain_patch
+        dest: /usr/lib/ocf/resource.d/seapath/VirtualDomain
+        strip: 0
+
+    - name: Copy ethmonitor from heartbeat to seapath
+      copy:
+        remote_src: yes
+        src: /usr/lib/ocf/resource.d/heartbeat/ethmonitor
+        dest: /usr/lib/ocf/resource.d/seapath/ethmonitor
+        owner: root
+        group: root
+        mode: '0755'
+        force: yes
+
+    - name: Apply patch1 to ethmonitor
+      ansible.posix.patch:
+        src: ethmonitor_patch1
+        dest: /usr/lib/ocf/resource.d/seapath/ethmonitor
+        strip: 0
+
+    - name: Apply patch2 to ethmonitor
+      ansible.posix.patch:
+        src: ethmonitor_patch2
+        dest: /usr/lib/ocf/resource.d/seapath/ethmonitor
+        strip: 0
 
 - name: Copy chrony-wait.service
   template:
@@ -136,12 +176,6 @@
     state: present
     regexp: '^raid6_pq$'
     line: 'raid6_pq'
-
-- name: Copy apparmor libvirt-qemu rules
-  ansible.builtin.copy:
-    src: etc_apparmor.d_abstractions_libvirt-qemu.conf
-    dest: /etc/apparmor.d/abstractions/libvirt-qemu
-    mode: '0644'
 
 - name: Lineinfile in hosts file for logstash-seapath
   lineinfile:

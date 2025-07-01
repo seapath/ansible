@@ -2,16 +2,7 @@
 # Copyright (C) 2024 Red Hat, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-- name: Enable docker.service
-  ansible.builtin.systemd:
-    name: docker.service
-    enabled: yes
-    state: started
-- name: Enable docker.socket
-  ansible.builtin.systemd:
-    name: docker.socket
-    enabled: yes
-    state: started
+---
 
 - name: Add vhost_vsock to /etc/modules-load.d
   ansible.builtin.copy:
@@ -202,22 +193,6 @@
   ansible.builtin.command: tuned-adm off
   when: isolcpus is not defined
   changed_when: true
-
-- name: Create ovs-vswitchd.service.d directory
-  file:
-    path: /etc/systemd/system/ovs-vswitchd.service.d/
-    state: directory
-    owner: root
-    group: root
-    mode: 0755
-- name: Copy ovs-vswitchd.service drop-in
-  ansible.builtin.copy:
-    src: ovs-vswitchd_override.conf
-    dest: /etc/systemd/system/ovs-vswitchd.service.d/override.conf
-    owner: root
-    group: root
-    mode: 0644
-  notify: Restart ovs-vswitchd
 
 - name: Enable libvirtd.service
   ansible.builtin.systemd:

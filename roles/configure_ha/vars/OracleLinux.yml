@@ -1,0 +1,5 @@
+# Copyright (C) 2025, RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+configure_ha_crm_command_path: "/usr/local/bin/crm"
