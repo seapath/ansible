@@ -11,13 +11,15 @@
   become: true
   gather_facts: true
   roles:
-    - role: ci_reinstalliso
-      when: ansible_distribution_release == 'trixie'
-    - role: ci_cleanup_varlog
-      when: ansible_distribution_release != 'trixie'
-    - role: ci_restore_snapshot
-      when: ansible_distribution_release != 'trixie'
     - detect_seapath_distro
+    - role: ci_reinstalliso
+      when: seapath_distro == "Debian"
+    - role: ci_restoredd
+      when: seapath_distro == "OracleLinux"
+    - role: ci_cleanup_varlog
+      when: seapath_distro != "Debian" and seapath_distro != "OracleLinux"
+    - role: ci_restore_snapshot
+      when: seapath_distro != "Debian" and seapath_distro != "OracleLinux"
 
 - name: CI configure skip reboot
   hosts:

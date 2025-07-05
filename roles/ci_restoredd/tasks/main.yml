@@ -1,0 +1,14 @@
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Create /boot/efi/RESTORE_PLZ
+  ansible.builtin.file:
+    path: /boot/efi/RESTORE_PLZ
+    state: touch
+    mode: '0644'
+
+- name: Reboot the machine
+  ansible.builtin.reboot:
+    reboot_command: systemctl reboot --force
+    reboot_timeout: 1500
