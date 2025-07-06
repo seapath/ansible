@@ -20,6 +20,7 @@
       register: parted_info
     - debug:
         var: parted_info
+      when: ansible_verbosity >= 3
     - name: Set fact part_info
       set_fact:
         part_info: "{{ parted_info.results | community.general.json_query(query) | first | first }}"
@@ -30,12 +31,15 @@
       loop: "{{ list_pvs }}"
     - debug:
         var: lvm_volumes[0].device_size
+      when: ansible_verbosity >= 3
     - debug:
         msg: item.ansible_facts.part_info.newsize|int
       loop: "{{ parts.results }}"
+      when: ansible_verbosity >= 3
     - debug:
         msg: item.ansible_facts.part_info.oldsize|int
       loop: "{{ parts.results }}"
+      when: ansible_verbosity >= 3
 
     - name: Extend partitions
       command:
