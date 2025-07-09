@@ -13,13 +13,13 @@ No requirement.
 ## Role Variables
 
 
-| Variable             | Required | Type   | Default | Comments                                                                                                                                |
-|----------------------|----------|--------|---------|-----------------------------------------------------------------------------------------------------------------------------------------|
-| qcow2tmpuploadfolder | no       | String | "/tmp"  | Path to a directory where the VM disk will be upload before being create. The VM disk file will be removed after being import into Ceph |
-| item                 | yes      | String |         | Ansible inventory name of the VM. It will be the name of the VM. Only numbers and letters are allowed                                   |
-| vms_disks_directory  | no       | String |         | Path in the Ansible machine to be prepend to the disk image path                                                                        |
-| disk_copy            | no       | Bool   | true    | Set true to copy the VM disk from the Ansible machine before creating the VM.                                                           |
-| livemigration        | no       | String |         | Linux user to use for VM livemigration.                                                                                                 |
+| Variable                                | Required | Type   | Default | Comments                                                                                                                                |
+|-----------------------------------------|----------|--------|---------|-----------------------------------------------------------------------------------------------------------------------------------------|
+| deploy_vms_cluster_qcow2tmpuploadfolder | no       | String | "/tmp"  | Path to a directory where the VM disk will be upload before being create. The VM disk file will be removed after being import into Ceph |
+| item                                    | yes      | String |         | Ansible inventory name of the VM. It will be the name of the VM. Only numbers and letters are allowed                                   |
+| vdeploy_vms_cluster_ms_disks_directory  | no       | String |         | Path in the Ansible machine to be prepend to the disk image path                                                                        |
+| deploy_vms_cluster_disk_copy            | no       | Bool   | true    | Set true to copy the VM disk from the Ansible machine before creating the VM.                                                           |
+| livemigration                           | no       | String |         | Linux user to use for VM livemigration.                                                                                                 |
 
 Note the *item* variable must match an machine inside the inventory. This
 machine can defined the following variable to change the role behavior:
