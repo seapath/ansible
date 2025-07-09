@@ -8,9 +8,6 @@ cluster_machines:
   children:
     hypervisors:
       vars:
-        ignored_bridges:
-          - "team0" # Do not modify. This bridge is created in a separate
-                    # playbook and should be left untouched.
         ovs_bridges:
           - name: brBRIDGE1
             rstp_enable: true
