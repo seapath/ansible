@@ -1,0 +1,87 @@
+# Copyright (C) 2025 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+---
+systemd_networkd_link:
+  20_lan1:
+    - Match:
+        - Name: "lan1"
+        - Driver: "igc"
+        - PermanentMACAddress: "{{ mac_address_map['lan1'] }}"
+    - Link:
+        - NamePolicy:
+        - AlternativeNamesPolicy:
+        - Name: "lan1"
+        - AlternativeName: "lan_mgmt"
+        - AlternativeName: "lan_ptp"
+  20_lan2:
+    - Match:
+        - Name: "lan2"
+        - Driver: "igc"
+        - PermanentMACAddress: "{{ mac_address_map['lan2'] }}"
+    - Link:
+        - NamePolicy:
+        - AlternativeNamesPolicy:
+        - Name: "lan2"
+  20_lan3:
+    - Match:
+        - Name: "lan3"
+        - Driver: "igc"
+        - PermanentMACAddress: "{{ mac_address_map['lan3'] }}"
+    - Link:
+        - NamePolicy:
+        - AlternativeNamesPolicy:
+        - Name: "lan3"
+  20_lan4:
+    - Match:
+        - Name: "lan4"
+        - Driver: "igc"
+        - PermanentMACAddress: "{{ mac_address_map['lan4'] }}"
+    - Link:
+        - NamePolicy:
+        - AlternativeNamesPolicy:
+        - Name: "lan4"
+  20_lan5:
+    - Match:
+        - Name: "lan5"
+        - Driver: "igc"
+        - PermanentMACAddress: "{{ mac_address_map['lan5'] }}"
+    - Link:
+        - NamePolicy:
+        - AlternativeNamesPolicy:
+        - Name: "lan5"
+  20_lan6:
+    - Match:
+        - Name: "lan6"
+        - Driver: "igc"
+        - PermanentMACAddress: "{{ mac_address_map['lan6'] }}"
+    - Link:
+        - NamePolicy:
+        - AlternativeNamesPolicy:
+        - Name: "lan6"
+  20_lan7:
+    - Match:
+        - Name: "lan7"
+        - Driver: "igc"
+        - PermanentMACAddress: "{{ mac_address_map['lan7'] }}"
+    - Link:
+        - NamePolicy:
+        - AlternativeNamesPolicy:
+        - Name: "lan7"
+  20_lan8:
+    - Match:
+        - Name: "lan8"
+        - Driver: "igc"
+        - PermanentMACAddress: "{{ mac_address_map['lan8'] }}"
+    - Link:
+        - NamePolicy:
+        - AlternativeNamesPolicy:
+        - Name: "lan8"
+  20_lan_prp:
+      - Match:
+          - Name: "lan_prp"
+          - Driver: "igc"
+          - PermanentMACAddress: "{{ mac_address_map['lan_hsr-prp'] }}"
+      - Link:
+          - NamePolicy:
+          - AlternativeNamesPolicy:
+          - Name: "lan_hsr-prp"

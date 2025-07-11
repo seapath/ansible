@@ -1,0 +1,36 @@
+# Copyright (C) 2025 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+---
+- include_vars: "network_link.yaml"
+
+- name: Gather interfaces MAC addresses
+  shell:
+    cmd: "cat /sys/class/net/*/address|grep 78:70|sort|uniq"
+  register: mac_addresses
+- name: Gather PRP-HSR interfaces MAC addresses
+  shell:
+    cmd: "cat /sys/class/net/*/address|grep 70:F8:E7*|sort|uniq"
+  register: mac_addresses_hsr_prp
+- name: Map MAC addresses to interfaces
+  set_fact:
+    mac_address_map: >-
+      {{
+        dict(
+          [
+                ('lan5', mac_addresses.stdout_lines[0]),
+                ('lan6', mac_addresses.stdout_lines[1]),
+                ('lan7', mac_addresses.stdout_lines[2]),
+                ('lan8', mac_addresses.stdout_lines[3]),
+                ('lan1', mac_addresses.stdout_lines[4]),
+                ('lan2', mac_addresses.stdout_lines[5]),
+                ('lan3', mac_addresses.stdout_lines[6]),
+                ('lan4', mac_addresses.stdout_lines[7]),
+                ('lan_hsr-prp', mac_addresses_hsr_prp.stdout_lines[0]),
+          ]
+        )
+      }}
+- name: Apply config
+  include_role:
+    name: systemd_networkd
+  vars:
+    systemd_networkd_apply_config: "{{ apply_network_config | default(false) }}"
