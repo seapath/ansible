@@ -1,0 +1,9 @@
+# Copyright (C) 2025 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+---
+galaxy_info:
+  author: "Seapath"
+  description: Contains the hardware customization for Welotec RSAPCMK2 hypervisor
+  min_ansible_version: 2.9.10
+  license: Apache-2.0
+dependencies: []
