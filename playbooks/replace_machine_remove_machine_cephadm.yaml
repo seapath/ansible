@@ -25,7 +25,6 @@
       delegate_to: "{{ first_node }}"
       run_once: true
       changed_when: true
-      run_once: true
 
     - name: Remove machine from ceph cluster # noqa: run-once[task]
       command: "ceph orch host rm {{ machine_to_remove_hostname }} --force --offline"
