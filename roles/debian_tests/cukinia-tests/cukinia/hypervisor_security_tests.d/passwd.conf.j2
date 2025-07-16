@@ -54,5 +54,5 @@ done
 
 cukinia_log "$(_colorize yellow "--- check /etc/passwd ---")"
 nb_passwd=$(echo $passwd | wc -w)
-id "SEAPATH-00047" as "/etc/passwd is consistent" cukinia_test $(grep $args /etc/passwd | wc -l) -eq 0
-id "SEAPATH-00048" as "/etc/passwd does not include extra user" cukinia_test $(cat /etc/passwd | wc -l) -eq $nb_passwd
+test_id "SEAPATH-00047" as "/etc/passwd is consistent" cukinia_test $(grep $args /etc/passwd | wc -l) -eq 0
+test_id "SEAPATH-00048" as "/etc/passwd does not include extra user" cukinia_test $(cat /etc/passwd | wc -l) -eq $nb_passwd
