@@ -36,7 +36,8 @@
         cmd: >-
           MACHINENAME={{ cukinia_namespace | default(inventory_hostname) }}
           {{ cukinia_command_path }} -f {{ tests_format }}
-          -o {{ tmp_cukinia_dir.path }}/{{ tests_result_name }} || true
+          -o {{ tmp_cukinia_dir.path }}/{{ tests_result_name }}
+          /etc/cukinia/cukinia.conf || true
       changed_when: true
     - name: Fetch result
       fetch:

@@ -77,7 +77,7 @@ done
 
 cukinia_log "$(_colorize yellow "--- check /etc/group ---")"
 nb_group=$(echo $groups | wc -w)
-id "SEAPATH-00033" as "/etc/group is consistent" cukinia_test $(grep $args /etc/group | wc -l)
-id "SEAPATH-00033" as "/etc/gshadow is consistent" cukinia_test $(grep $args /etc/gshadow | wc -l)
-id "SEAPATH-00034" as "/etc/group does not include extra group" cukinia_test $(cat /etc/group | wc -l) -eq $nb_group
-id "SEAPATH-00034" as "/etc/gshadow does not include extra group" cukinia_test $(cat /etc/gshadow | wc -l) -eq $nb_group
+test_id "SEAPATH-00033" as "/etc/group is consistent" cukinia_test $(grep $args /etc/group | wc -l)
+test_id "SEAPATH-00033" as "/etc/gshadow is consistent" cukinia_test $(grep $args /etc/gshadow | wc -l)
+test_id "SEAPATH-00034" as "/etc/group does not include extra group" cukinia_test $(cat /etc/group | wc -l) -eq $nb_group
+test_id "SEAPATH-00034" as "/etc/gshadow does not include extra group" cukinia_test $(cat /etc/gshadow | wc -l) -eq $nb_group

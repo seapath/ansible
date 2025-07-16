@@ -2,15 +2,15 @@ cukinia_log "$(_colorize yellow "--- check apt configuration ---")"
 
 {% if ansible_distribution == 'Debian' and ansible_distribution_version | int == 12 %}
 
-id "SEAPATH-00197" as "Only wanted apt repositories configured: only one repo in sources.list.d (ceph)" \
+test_id "SEAPATH-00197" as "Only wanted apt repositories configured: only one repo in sources.list.d (ceph)" \
     cukinia_cmd [ -d /etc/apt/sources.list.d/ ] && [ $(ls /etc/apt/sources.list.d/ 2>/dev/null | wc -l) -eq 1 ] && [ -f /etc/apt/sources.list.d/ceph.list ]
 
 {% if apt_repo is defined %}
-id "SEAPATH-00197" as "Only wanted apt repositories configured: do not add other repositories" \
+test_id "SEAPATH-00197" as "Only wanted apt repositories configured: do not add other repositories" \
     cukinia_test $(cat /etc/apt/sources.list |wc -l) -eq {{ apt_repo | length }}
 
 {% for repo in apt_repo %}
-id "SEAPATH-00197" as "Only official apt repositories configured: {{ repo }}" \
+test_id "SEAPATH-00197" as "Only official apt repositories configured: {{ repo }}" \
     cukinia_cmd  grep -Eq "^deb {{ repo }}$" /etc/apt/sources.list
 {% endfor %}
 {% endif %}
@@ -20,14 +20,14 @@ id "SEAPATH-00197" as "Only official apt repositories configured: {{ repo }}" \
 {% if ansible_distribution == 'Debian' and ansible_distribution_release == 'trixie' %}
 
 {% if apt_repo is defined %}
-id "SEAPATH-00197" as "Only wanted apt repositories configured: only use sources.list.d" \
+test_id "SEAPATH-00197" as "Only wanted apt repositories configured: only use sources.list.d" \
     cukinia_test ! -e /etc/apt/sources.list
 
-id "SEAPATH-00197" as "Only wanted apt repositories configured: do not add other repositories" \
+test_id "SEAPATH-00197" as "Only wanted apt repositories configured: do not add other repositories" \
     cukinia_test $(ls /etc/apt/sources.list.d | wc -l) -eq {{ apt_repo | length }}
 
 {% for repo in apt_repo %}
-id "SEAPATH-00197" as "Only official apt repositories configured: {{ repo.name }}" \
+test_id "SEAPATH-00197" as "Only official apt repositories configured: {{ repo.name }}" \
     cukinia_cmd  grep -Eq "^URIs: {{ repo.uris }}$" /etc/apt/sources.list.d/{{ repo.name }}.sources
 {% endfor %}
 {% endif %}
@@ -233,5 +233,5 @@ if [ "$UNRECOGNIZED_PACKAGES" != "" ]; then
     cukinia_log "$(_colorize red Unrecognized packages: $UNRECOGNIZED_PACKAGES)"
 fi
 
-id "SEAPATH-00198" as "No unrecognized packages installed" \
+test_id "SEAPATH-00198" as "No unrecognized packages installed" \
     cukinia_test "$UNRECOGNIZED_PACKAGES" = ""
