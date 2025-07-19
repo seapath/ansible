@@ -1,6 +1,22 @@
 # Copyright (C) 2023, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
+- name: Wait for firstboot.service to no longer exist
+  hosts:
+    - cluster_machines
+  become: true
+  tasks:
+    - name: Wait for firstboot.service to no longer exist
+      ansible.builtin.shell: |
+        set -o pipefail
+        systemctl list-units --type=service --all | grep -q '^\s*firstboot.service'
+      register: firstboot_check
+      changed_when: false
+      failed_when: false
+      retries: 20
+      delay: 5
+      until: firstboot_check.rc != 0
+
 - name: Prerequis machine debian
   gather_facts: true
   hosts:
