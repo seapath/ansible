@@ -1,6 +1,22 @@
 # Copyright (C) 2023, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
+- name: Wait for firstboot.service to no longer exist
+  hosts:
+    - cluster_machines
+  become: true
+  tasks:
+    - name: Wait for firstboot.service to no longer exist
+      ansible.builtin.shell: |
+        set -o pipefail
+        systemctl list-units --type=service --all | grep -q '^\s*firstboot.service'
+      register: firstboot_check
+      changed_when: false
+      failed_when: false
+      retries: 20
+      delay: 5
+      until: firstboot_check.rc != 0
+
 - name: Prerequis machine debian
   gather_facts: true
   hosts:
@@ -91,6 +107,23 @@
       when: commands_to_run_after_upload is defined
 
 
+- name: Remove what is not needed after installation on guests
+  hosts:
+    - VMs
+  become: true
+  tasks:
+    - name: Uninstall apt packages not required after installation (trixie)
+      apt:
+        name:
+          - gcc-12-base
+          - libargon2-1
+          - libfdisk1
+          - libunistring2
+        state: absent
+        purge: yes
+        autoremove: yes
+      when: ansible_distribution_release == 'trixie'
+
 - name: Remove what is not needed after installation
   hosts:
     - cluster_machines
@@ -123,14 +156,16 @@
         state: absent
         purge: yes
         autoremove: yes
-    - name: Uninstall apt packages not required after installation (only debian11)
+    - name: Uninstall apt packages not required after installation (trixie)
       apt:
         name:
-          - libfdisk1
+          - dhcpcd-base
+          - libapt-pkg6.0
+          - usr-is-merged
         state: absent
         purge: yes
         autoremove: yes
-      when: ansible_distribution == 'Debian' and ansible_distribution_version | int < 12
+      when: ansible_distribution_release == 'trixie'
     - name: Disable unused systemd services
       systemd:
         unit: "{{ item }}"

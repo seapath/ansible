@@ -1,7 +1,7 @@
 # Copyright (C) 2025 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
 ---
-systemd_networkd_link:
+hardware_customization_welotec_systemd_networkd_link:
   20_lan1:
     - Match:
         - Name: "lan1"
