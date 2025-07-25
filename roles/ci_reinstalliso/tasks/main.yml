@@ -31,7 +31,7 @@
 
 - name: Reboot for ISO installation to happen
   reboot:
-    #reboot_command: systemctl reboot --force
+    reboot_command: systemctl reboot --force
     reboot_timeout: 1500
 
 - name: Get root filesystem device
@@ -75,4 +75,3 @@
 - name: Continue if system is recent
   ansible.builtin.debug:
     msg: "System was installed less than 15 minutes ago. Proceeding..."
-
