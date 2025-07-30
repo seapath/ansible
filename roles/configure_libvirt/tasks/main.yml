@@ -98,3 +98,21 @@
     group: root
     mode: 0644
   notify: Restart libvirtd
+
+- name: Ensure libvirt hooks/qemu.d directory exists
+  file:
+    path: /etc/libvirt/hooks/qemu.d/
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  notify: Restart libvirtd
+
+- name: Copy qemu_hook.py to libvirt qemu hook
+  copy:
+    src: qemu_hook.py
+    dest: /etc/libvirt/hooks/qemu
+    mode: '0755'
+    owner: root
+    group: root
+  notify: Restart libvirtd
