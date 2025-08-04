@@ -14,8 +14,18 @@ VMs:
       bridges:
         - name: "br0"
           mac_address: "52:54:00:c4:ff:06"
-      sv_interfaces:
-        - name: "enp88s0" # Change to your SV interface
-          mac_address: "52:54:00:c4:ff:07"
-          mode: "vepa"
+      # The following interfaces uses PCI passthrough
+      # We need to pass the PCI device address
+      # You can find the PCI address using the command lspci -nn or dpdk-devbind -s
+      # Please be aware that the interface will not be available to the hypervisor anymore
+      process_bus_interfaces: # Process bus interfaces (can be defined multiple times)
+        - domain: 0 # Replace by your interface
+          bus: 7
+          slot: 0
+          function: 0
+      protection_port: # Protection communication port (only one)
+        domain: 0
+        bus: 8
+        slot: 0
+        function: 0
       wait_for_connection: false
