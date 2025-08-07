@@ -1,0 +1,292 @@
+#!/bin/sh
+# Version: 1.1.2
+# Date: 2020-06-24
+#
+# Resource script for running docker
+#
+# Description:  Manages docker services using docker as an OCF
+#               resource in an High Availability setup.
+#               It relies on a well-tested docker compose YAML file which
+#               distributed on an identical location on all cluster nodes.
+#
+# Caveat: 1. A YAML file (docker.yml) and an optional Dockerfile
+#            must be provided in a working directory.
+#         2. It is suggested to test run the docker and verify
+#            on all cluster nodes before enabling this agent.
+#
+# docker OCF script's Author: Kenny Chen <netman@study-area.org>
+# License: GNU General Public License (GPL)
+#
+#	usage: $0 {start|stop|status|monitor|validate-all|meta-data}
+#
+#	The "start" arg starts docker service.
+#	The "stop" arg stops it.
+#
+# OCF parameters:
+# OCF_RESKEY_binpath
+# OCF_RESKEY_dirpath
+# OCF_RESKEY_ymlfile
+#
+##########################################################################
+# Initialization:
+
+: ${OCF_ROOT:=/usr/lib/ocf}
+: ${OCF_FUNCTIONS_DIR=${OCF_ROOT}/lib/heartbeat}
+. ${OCF_FUNCTIONS_DIR}/ocf-shellfuncs
+
+# Defaults
+# OCF parameters:
+# OCF_RESKEY_binpath
+# OCF_RESKEY_dirpath
+# OCF_RESKEY_ymlfile
+#
+
+USAGE="Usage: $0 {start|stop|status|monitor|validate-all|meta-data}"
+
+##########################################################################
+
+usage()
+{
+	echo $USAGE >&2
+}
+
+meta_data()
+{
+cat <<END
+<?xml version="1.0"?>
+<!DOCTYPE resource-agent SYSTEM "ra-api-1.dtd">
+<resource-agent name="docker" version="1.0.3">
+<version>1.0</version>
+<longdesc lang="en">
+Manages docker services using docker as an OCF resource in an High Availability setup.
+It relies on a well-tested docker compose YAML file which distributed on an identical location on all cluster nodes.
+
+Caveat: 1. A YAML file (docker.yml) and an optional Dockerfile
+		   must be provided in a working directory.
+		2. It is suggested to test run the docker and verify on all cluster nodes
+		   before enabling this agent.
+</longdesc>
+<shortdesc lang="en">This script manages docker services using docker.</shortdesc>
+
+<parameters>
+
+<parameter name="name">
+<longdesc lang="en">
+The docker service name.
+For example, "my_docker_service"
+</longdesc>
+<shortdesc lang="en">The docker service name</shortdesc>
+<content type="string"/>
+</parameter>
+
+<parameter name="image_name" required="1">
+<longdesc lang="en">
+The name of the docker image.
+For example, "my_docker_image"
+</longdesc>
+<shortdesc lang="en">The name of the docker image</shortdesc>
+<content type="string"/>
+</parameter>
+
+</parameters>
+
+<actions>
+<action name="start" timeout="240s"/>
+<action name="stop" timeout="60s"/>
+<action name="monitor" depth="0" timeout="10s" interval="60s" />
+<action name="validate-all" timeout="5s" />
+<action name="meta-data"  timeout="5s"/>
+</actions>
+</resource-agent>
+END
+exit $OCF_SUCCESS
+}
+
+DIR="$OCF_RESKEY_dirpath"
+PRE="$(echo ${DIR##*/} | tr A-Z a-z | sed 's/[^a-z0-9]//g')"
+SERVICENAME="${OCF_RESKEY_name}"
+IMAGE="${OCF_RESKEY_image_name}"
+MOUNT_POINT="/mnt/${SERVICENAME}"
+DEVICENAME=$(rbd showmapped | awk -v img="${OCF_RESKEY_name}" '$3 == img {print $5}')
+
+docker_kill()
+{
+	for i in $(docker ps --all | awk -e '$NF ~ /\<'"${PRE}"'_.*_[0-9]+\>/ {print $1}'); do
+		docker kill $i >/dev/null 2>&1
+		docker rm $i >/dev/null 2>&1 || RTV=false
+	done
+	if [ "$RTV" = false ]; then
+		ocf_log err "failed to kill docker"
+		return $OCF_ERR_GENERIC
+	else
+		RUN=false
+	fi
+}
+
+docker_status()
+{
+	# Check if the Docker container with SERVICENAME is running
+	if docker ps -a --filter "name=$SERVICENAME" --format '{{.Names}}'; then
+		ocf_log info "Docker service $SERVICENAME is running."
+		return $OCF_SUCCESS
+	else
+		ocf_log info "Docker service $SERVICENAME is not running."
+		return $OCF_NOT_RUNNING
+	fi
+
+	# If an image file exists at the mount point, check if it is loaded
+	if [ -n "$IMAGE" ] && [ -f "$MOUNT_POINT/$IMAGE" ]; then
+		IMAGE_NAME=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep -m1 "$IMAGE")
+		if [ -n "$IMAGE_NAME" ]; then
+			ocf_log info "Docker image $IMAGE_NAME is loaded."
+		else
+			ocf_log info "Docker image $IMAGE not loaded."
+			return $OCF_NOT_RUNNING
+		fi
+	fi
+
+	# Optionally, check if the mount point is mounted
+	if [ -n "$MOUNT_POINT" ] && ! mountpoint -q "$MOUNT_POINT"; then
+		ocf_log info "Mount point $MOUNT_POINT is not mounted."
+		return $OCF_NOT_RUNNING
+	fi
+
+	return $OCF_SUCCESS
+}
+
+docker_start() {
+	ocf_log info "Starting Docker container: $SERVICENAME"
+
+	if [ -z "$MOUNT_POINT" ]; then
+		ocf_log err "Mount point is not set. Aborting."
+		return $OCF_ERR_GENERIC
+	fi
+
+	# Mount the RBD device if not already mounted
+	if ! mountpoint -q "$MOUNT_POINT"; then
+		ocf_log info "Mounting RBD device $DEVICENAME to $MOUNT_POINT"
+		sudo mount "$DEVICENAME" "$MOUNT_POINT" || return $OCF_ERR_GENERIC
+	fi
+
+	# Check if the container exists
+	if docker ps -a --format '{{.Names}}' | grep -q "^$SERVICENAME$"; then
+		ocf_log info "Container $SERVICENAME exists, restarting."
+		docker restart "$SERVICENAME" || return $OCF_ERR_GENERIC
+		return $OCF_SUCCESS
+	fi
+
+	# Load image and start container if not exists
+	if [ -n "$IMAGE" ]; then
+		ocf_log info "Loading Docker image from $MOUNT_POINT/$IMAGE"
+		IMAGE_NAME=$(docker load < "$MOUNT_POINT/$IMAGE" | awk -F': ' '/Loaded image:/ {print $2}')
+		ocf_log info "Running Docker container: $SERVICENAME"
+		docker run -d --name "$SERVICENAME" "$IMAGE_NAME" || return $OCF_ERR_GENERIC
+	fi
+
+	return $OCF_SUCCESS
+}
+
+docker_stop() {
+	ocf_log info "Stopping Docker container: $SERVICENAME"
+	docker stop "$SERVICENAME"
+	docker commit "$SERVICENAME" img
+	docker save img > "$MOUNT_POINT/${SERVICENAME}.tar"
+	ocf_log info "Unmounting $MOUNT_POINT"
+	sudo umount "$MOUNT_POINT"
+	return $OCF_SUCCESS
+}
+
+docker_monitor()
+{
+	docker_status
+}
+
+docker_validate_all()
+{
+	if [ -z "$SERVICENAME" ]; then
+		ocf_log err "Docker service name (SERVICENAME) is not defined."
+		exit $OCF_ERR_ARGS
+	fi
+
+	if [ -z "$IMAGE" ]; then
+		ocf_log err "Docker image name (IMAGE) is not defined."
+		exit $OCF_ERR_ARGS
+	fi
+
+	# Check if the device to mount is defined
+	if [ -z "$DEVICENAME" ]; then
+		ocf_log err "Device to mount (DEVICENAME) is not defined."
+		exit $OCF_ERR_ARGS
+	fi
+
+	# Check if the mount point is defined
+	if [ -z "$MOUNT_POINT" ]; then
+		ocf_log err "Mount point (MOUNT_POINT) is not defined."
+		exit $OCF_ERR_ARGS
+	fi
+
+	# Check if the device exists
+	if [ ! -b "$DEVICENAME" ]; then
+		ocf_log err "Device $DEVICENAME does not exist or is not a block device."
+		exit $OCF_ERR_ARGS
+	fi
+
+	# Check if the mount point exists or can be created
+	if [ ! -d "$MOUNT_POINT" ]; then
+		mkdir -p "$MOUNT_POINT" || {
+			ocf_log err "Unable to create mount point $MOUNT_POINT."
+			exit $OCF_ERR_ARGS
+		}
+	fi
+
+	return $OCF_SUCCESS
+}
+
+
+#
+# Main
+#
+
+if [ $# -ne 1 ]; then
+	usage
+	exit $OCF_ERR_ARGS
+fi
+
+case $1 in
+	start)
+		docker_start
+		;;
+		restart)
+		docker_stop
+		docker_start
+		;;
+
+	stop)
+		docker_stop
+		;;
+
+	status)
+		docker_status
+		;;
+
+	monitor)
+		docker_monitor
+		;;
+
+	validate-all)
+		docker_validate_all
+		;;
+
+	meta-data)
+		meta_data
+		;;
+
+	usage)	usage
+		exit $OCF_SUCCESS
+		;;
+
+	*)	usage
+		exit $OCF_ERR_UNIMPLEMENTED
+		;;
+esac
+# Créer la ressource docker
