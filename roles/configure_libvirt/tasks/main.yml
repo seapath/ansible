@@ -64,32 +64,6 @@
     command: 'virsh secret-set-value --secret "{{ libvirt_uuid_rbd }}" --base64 "{{ ceph_key.stdout }}"'
     changed_when: true
 
-- name: Get secret UUID
-  shell:
-    cmd: set -o pipefail && virsh secret-list |grep "ceph" |grep -oE '[a-f0-9]+-[a-f0-9]+-[a-f0-9]+-[a-f0-9]+-[a-f0-9]+'
-    executable: /bin/bash
-  register: secret_uuid_raw
-  changed_when: false
-- name: Register secret UUID
-  set_fact:
-    libvirt_uuid_rbd: "{{ secret_uuid_raw.stdout }}"
-- name: Create libvirt pool link with rbd pool
-  community.libvirt.virt_pool:
-    command: define
-    xml: '{{ lookup("template", "libvirt_pool.xml.j2") }}'
-    name: "{{ configure_libvirt_libvirt_pool_name }}"
-- name: Start libvirt pool
-  community.libvirt.virt_pool:
-    state: active
-    name: "{{ configure_libvirt_libvirt_pool_name }}"
-- name: Autostart pool
-  community.libvirt.virt_pool:
-    autostart: yes
-    name: "{{ configure_libvirt_libvirt_pool_name }}"
-- name: Refresh pool
-  command: virsh pool-refresh --pool ceph
-  changed_when: false
-
 - name: Copy libvirtd.conf
   template:
     src: libvirtd.conf.j2
