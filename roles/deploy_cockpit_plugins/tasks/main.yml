@@ -1,0 +1,30 @@
+# Copyright (C) 2025 Savoir-faire Linux, Inc.
+# SPDX-Licence-Identifier: Apache-2.0
+---
+- name: Check if cockpit is installed
+  command:
+    which cockpit-bridge
+  register: cockpit_status
+  ignore_errors: true
+  changed_when: false
+
+- name: Create cockpit plugin directories
+  file:
+    path: "/usr/share/cockpit/{{ item }}"
+    state: directory
+    mode: '0755'
+  when: cockpit_status.rc == 0
+  loop:
+    - cockpit-cluster-dashboard
+    - cockpit-cluster-vm-management
+
+- name: Extract Cockpit plugins archives
+  unarchive:
+    src: "{{ item }}.tar.gz"
+    dest: "/usr/share/cockpit/{{ item }}"
+    owner: root
+    group: root
+  when: cockpit_status.rc == 0
+  loop:
+    - cockpit-cluster-dashboard
+    - cockpit-cluster-vm-management

@@ -29,6 +29,10 @@
   import_playbook: seapath_setup_prerequisdebian.yaml
   when: seapath_distro == "Debian"
 
+- name: Import seapath_setup_cockpit_plugins playbook
+  import_playbook: seapath_setup_cockpit_plugins.yaml
+  when: seapath_distro != "Yocto"
+
 - name: Import seapath_setup_prerequisyocto playbook
   import_playbook: seapath_setup_prerequisyocto.yaml
   when: seapath_distro == "Yocto"
