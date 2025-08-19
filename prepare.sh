@@ -60,3 +60,10 @@ cp -vf src/ceph-ansible-site.yaml ceph-ansible/site.yml
 echo "Patch ceph-ansible"
 find src/ceph-ansible-patches -type f -name "*.diff" -exec git -C ceph-ansible \
     apply ../{} \;
+
+echo "Fetch Cockpit plugins"
+mkdir -p roles/deploy_cockpit_plugins/files
+curl -L -o roles/deploy_cockpit_plugins/files/cockpit-cluster-dashboard.tar.gz \
+    https://github.com/seapath/cockpit-cluster-dashboard/releases/download/v1.1.0/cockpit-cluster-dashboard.tar.gz
+curl -L -o roles/deploy_cockpit_plugins/files/cockpit-cluster-vm-management.tar.gz \
+    https://github.com/seapath/cockpit-cluster-vm-management/releases/download/v1.1.0/cockpit-cluster-vm-management.tar.gz
