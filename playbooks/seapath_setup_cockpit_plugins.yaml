@@ -1,0 +1,10 @@
+# Copyright (C) 2025 Savoir-faire Linux, Inc.
+# SPDX-Licence-Identifier: Apache-2.0
+
+- name: Install Cockpit Plugins
+  hosts:
+    - cluster_machines
+  become: true
+  roles:
+    - deploy_cockpit_plugins
+
