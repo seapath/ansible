@@ -3,10 +3,10 @@
 
 ---
 - debug:
-    msg: "the network pool name is {{ sriov_network_pool_name }}"
+    msg: "the network pool name is {{ network_sriovpool_sriov_network_pool_name }}"
 - name: Try to get sriov network pool
   shell:
-    cmd: set -o pipefail && virsh -q net-list --all | awk '{ print $1 }' | grep -q "{{ sriov_network_pool_name }}"
+    cmd: set -o pipefail && virsh -q net-list --all | awk '{ print $1 }' | grep -q "{{ network_sriovpool_sriov_network_pool_name }}"
     executable: /bin/bash
   register: pool_defined
   failed_when: pool_defined.rc > 1
@@ -21,10 +21,10 @@
       command: "virsh net-define /tmp/sriov_network_pool.xml"
       changed_when: true
     - name: AutoStart libvirt SRIOV network pool
-      command: "virsh net-autostart {{ sriov_network_pool_name }}"
+      command: "virsh net-autostart {{ network_sriovpool_sriov_network_pool_name }}"
       changed_when: true
     - name: Start libvirt SRIOV network pool
-      command: "virsh net-start {{ sriov_network_pool_name }}"
+      command: "virsh net-start {{ network_sriovpool_sriov_network_pool_name }}"
       changed_when: true
     - name: Remove temporary file
       file:
