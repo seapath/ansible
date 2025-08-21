@@ -181,14 +181,7 @@
 {% if vm.sriov is defined %}
 {%     for interface in vm.sriov %}
         <interface type="network">
-            <source network="{{ interface }}">
-        </interface>
-{%     endfor %}
-{% endif %}
-{% if vm.sriov is defined %}
-{%     for interface in vm.sriov %}
-        <interface type="network">
-            <source network="{{ interface }}">
+            <source network="{{ interface }}" />
         </interface>
 {%     endfor %}
 {% endif %}
