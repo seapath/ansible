@@ -11,6 +11,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN set -x \
     && apt-get update \
     && apt-get install -y \
+        curl \
         libarchive-tools \
         locales \
         git \
