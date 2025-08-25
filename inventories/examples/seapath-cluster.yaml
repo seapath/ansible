@@ -86,6 +86,7 @@ cluster_machines:
     gateway_addr: "192.168.200.1" # TODO : Put your gatway address
     dns_servers: "192.168.200.1" # TODO : Put your dns address
     ip_addr: "{{ ansible_host }}"
+    hostname: "{{ inventory_hostname }}"
     subnet: 24 # TODO : Put your subnet mask in CIDR notation
     apply_network_config: true
     # systemd-networkd is used by default to configure the network
