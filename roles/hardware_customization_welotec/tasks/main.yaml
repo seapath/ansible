@@ -11,7 +11,7 @@
   changed_when: false
 - name: Gather PRP-HSR interfaces MAC addresses
   shell:
-    cmd: "set -o pipefail && cat /sys/class/net/*/address|grep 70:F8:E7*|sort|uniq"
+    cmd: "set -o pipefail && cat /sys/class/net/*/address|grep 70:f8:e7*|sort|uniq"
     executable: "/bin/bash"
   register: mac_addresses_hsr_prp
   changed_when: false
@@ -37,5 +37,5 @@
   include_role:
     name: systemd_networkd
   vars:
-    systemd_networkd_link: hardware_customization_welotec_systemd_networkd_link
+    systemd_networkd_link: "{{ hardware_customization_welotec_systemd_networkd_link }}"
     systemd_networkd_apply_config: "{{ apply_network_config | default(false) }}"

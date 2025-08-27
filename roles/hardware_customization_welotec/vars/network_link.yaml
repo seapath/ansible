@@ -79,7 +79,7 @@ hardware_customization_welotec_systemd_networkd_link:
   20_lan_prp:
       - Match:
           - Name: "lan_prp"
-          - Driver: "igc"
+          - Driver: "igb"
           - PermanentMACAddress: "{{ mac_address_map['lan_hsr-prp'] }}"
       - Link:
           - NamePolicy:
