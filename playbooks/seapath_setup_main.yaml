@@ -62,7 +62,10 @@
   import_playbook: cluster_setup_ha.yaml
 - name: Import seapath_setup_vmmgrapi playbook
   import_playbook: seapath_setup_vmmgrapi.yaml
-
+- name: Disable chrony-wait.service
+  ansible.builtin.systemd:
+    name: chrony-wait.service
+    enabled: no
 - name: Restart all hosts
   hosts:
     - cluster_machines
