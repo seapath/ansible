@@ -68,14 +68,14 @@
                 unit: MiB
                 state: info
               register: parted_info
-        
+
             - name: Check if current partition exists
               set_fact:
                 current_exists: >-
                   {{ parted_info.partitions
                      | selectattr('num', 'equalto', lvm_volumes[0].device_number)
                      | list | length > 0 }}
-        
+
             - name: Check if previous partition exists
               set_fact:
                 previous_exists: >-
@@ -93,7 +93,7 @@
                         | map(attribute='end')
                         | first
                       ) | float if previous_exists else 0.0 }}
-        
+
             - debug:
                 var: prev_end
             - debug:
