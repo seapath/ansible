@@ -60,7 +60,7 @@
     src: "{{ hostvars[item].vm_disk }}"
     dest: "{{ deploy_vms_standalone_disk_pool }}/{{ hostvars[item].inventory_hostname }}.img.gz"
   when:
-    - deploy_vms_standalone_disk_copy | default(true) | bool
+    - deploy_vms_standalone_disk_copy | bool
     - hostvars[item].disk_extract is defined
     - hostvars[item].disk_extract | bool
     - item not in all_vms.list_vms or (item in all_vms.list_vms and hostvars[item].force is defined and hostvars[item].force)
@@ -71,7 +71,7 @@
     cmd: "gzip -d -f {{ deploy_vms_standalone_disk_pool }}/{{ hostvars[item].inventory_hostname }}.img.gz"
     creates: "{{ hostvars[item].inventory_hostname }}.img"
   when:
-    - deploy_vms_standalone_disk_copy | default(true) | bool
+    - deploy_vms_standalone_disk_copy | bool
     - hostvars[item].disk_extract is defined
     - hostvars[item].disk_extract | bool
     - item not in all_vms.list_vms or (item in all_vms.list_vms and hostvars[item].force is defined and hostvars[item].force)
