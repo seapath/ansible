@@ -4,7 +4,7 @@ Description=VSock server for PTP status
 [Service]
 DynamicUser=yes
 Restart=always
-
+Environment=PYTHONUNBUFFERED=1
 ExecStart=/var/lib/ptp/ptp_vsock.py 9999
 
 [Install]
