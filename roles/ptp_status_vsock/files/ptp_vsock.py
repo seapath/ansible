@@ -4,7 +4,7 @@
 
 import socket,sys
 from time import sleep
-from _thread import *
+from _thread import start_new_thread
 
 CID = socket.VMADDR_CID_HOST
 PORT = int(sys.argv[1])
