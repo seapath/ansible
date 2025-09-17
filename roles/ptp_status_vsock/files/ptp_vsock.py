@@ -12,12 +12,20 @@ PORT = int(sys.argv[1])
 def client_handler(connection):
     data = connection.recv(2048)
     message = data.decode('utf-8')
+    filename = ""
     if message == 'STATUS':
-      file = open("/var/run/ptpstatus/ptp_state", "r")
+        filename = "/var/run/ptpstatus/ptp_state"
     if message == 'DETAILS':
-      file = open("/var/run/ptpstatus/ptp_status", "r")
-    data = file.read()
-    connection.sendall(data.encode("utf-8"))
+        filename = "/var/run/ptpstatus/ptp_status"
+
+    ptp_data = "0"
+    try:
+        with open(filename, "r", encoding="utf-8") as file:
+            ptp_data = file.read()
+    except FileNotFoundError:
+        print(f'PTP {message} file not found, returning default sync state ({ptp_data})')
+
+    connection.sendall(ptp_data.encode("utf-8"))
     connection.close()
 
 def accept_connections(s):
