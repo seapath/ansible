@@ -26,17 +26,17 @@ def accept_connections(s):
     start_new_thread(client_handler, (conn, ))
 
 def start_server(host, port):
-    s = socket.socket(socket.AF_VSOCK, socket.SOCK_STREAM)
-    while True:
-        try:
-            s.bind((host, port))
-            s.listen()
-        except socket.error as e:
-            sleep(5)
-            continue
-        break
-    print(f'Server is listing on the port {port}...')
-    while True:
-        accept_connections(s)
+    with socket.socket(socket.AF_VSOCK, socket.SOCK_STREAM) as s:
+        while True:
+            try:
+                s.bind((host, port))
+                s.listen()
+            except socket.error:
+                sleep(5)
+                continue
+            break
+        print(f'Server is listing on the port {port}...')
+        while True:
+            accept_connections(s)
 
 start_server(CID, PORT)
