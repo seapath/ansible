@@ -1,4 +1,5 @@
 // Copyright (C) 2020, RTE (http://www.rte-france.com)
+// Copyright (C) 2025 Savoir-faire Linux, Inc
 // SPDX-License-Identifier: CC-BY-4.0
 
 Setup machines with Ansible
@@ -8,27 +9,6 @@ Setup machines with Ansible
 
 image::https://github.com/seapath/ansible/actions/workflows/ci-yocto-weekly.yml/badge.svg["CI Yocto status", link=https://github.com/seapath/ansible/actions/workflows/ci-yocto-weekly.yml]
 image::https://github.com/seapath/ansible/actions/workflows/ci-debian-weekly.yml/badge.svg["CI Debian status", link=https://github.com/seapath/ansible/actions/workflows/ci-debian-weekly.yml]
-
-*Warning : The Debian and Yocto Ansible branches were recently merged.*
-*The content of this main branch has been forced push to contain the merged code.*
-*The content of the old main branch is now archived on the yocto_legacy branch*
-
-*If you have pulled the main branch before December 19, 2024, you have to do a fresh pull.*
-*We strongly encourage you to switch to the new main branch, as the following branches will not be maintained anymore* :
-
-* debiancentos
-* yocto_legacy
-* debian-main
-
-If you have ongoing work on the old main branch, you can proceed as follows.
-This assumes your HEAD points to this work
-```
-$ git switch -c my_work_branch
-$ git fetch
-$ git rebase yocto_legacy
-$ git branch -f main origin/main
-```
-Your work is now rebased on yocto_legacy branch.
 
 == Introduction
 
@@ -40,6 +20,11 @@ To perform these tasks we use Ansible which is a tool designed to configure
 Linux machines.
 
 The Ansible documentation is accessible at https://docs.ansible.com/.
+
+The SEAPATH Ansible documentation is accessible on https://galaxy.ansible.com/ui/repo/published/seapath/ansible/[ansible galaxy].
+
+This Readme only tackles how to handle the SEAPATH ansible sources and launch the default playbooks.
+For any advanced scenarios and setup, refer to the https://lf-energy.atlassian.net/wiki/spaces/SEAP/overview?homepageId=31817739[SEAPATH Wiki].
 
 === Yocto
 
@@ -226,10 +211,7 @@ To check only *host3*:
 Playbooks are files that will contain the actions to be performed by Ansible.
 For more information about playbooks, see the Ansible documentation:
 https://docs.ansible.com/ansible/2.10/user_guide/playbooks.html.
-Ready-to-use playbooks are provided in this repository. Playbooks performing
-specific actions such as importing a disk will have to be written by you,
-referring if necessary to the playbook examples in the _examples/playbooks_
-folder.
+Ready-to-use playbooks are provided in this repository.
 
 == Roles
 
@@ -289,19 +271,17 @@ cluster_machines Ansible group.
 
 To launch the playbook _seapath_setup_main.yaml_ use the following command:
 
- $ ansible-playbook -i inventories/cluster_inventory.yaml -i inventories/networktopology_inventory.yaml playbooks/seapath_setup_main.yaml
+ $ ansible-playbook -i inventories/<your_cluster_inventory.yaml> playbooks/seapath_setup_main.yaml
 
 Or if you use `cqfd`:
 
- $ cqfd run ansible-playbook -i inventories/cluster_inventory.yaml -i inventories/networktopology_inventory.yaml playbooks/seapath_setup_main.yaml
-
-If your inventory contains different types of machines, you can add `--limit cluster_machines` or `--limit standalone_machine` to only apply this playbook to a group. It is useful for example, to avoid targetting the VMs when applying a change on the cluster machines.
+ $ cqfd run ansible-playbook -i inventories/<cluster_inventory.yaml> playbooks/seapath_setup_main.yaml
 
 === Debian Hardening ===
 
 When using SEAPATH Debian, the security features are applied with the hardening playbook
 _playbooks/seapath_setup_hardened_debian.yaml_.
-If you are using SEAPATH Yocto, the security features are already applied in meta-seapath.
+If you are using SEAPATH Yocto, the security features are already applied in meta-seapath at build time.
 
 To launch the playbook _seapath_setup_hardened_debian.yaml_ use the following command:
 
@@ -311,69 +291,12 @@ Or if you use `cqfd`:
 
  $ cqfd run ansible-playbook -i inventories/cluster_inventory.yaml -i inventories/networktopology_inventory.yaml playbooks/seapath_setup_hardened_debian.yaml
 
+== Advanced usage
 
-=== Deploy a virtual machine on seapath
+For advanced SEAPATH scenarios and configuration, refer to :
 
-A basic virtual machine for SEAPATH based on debian can be created using the https://github.com/seapath/build_debian_iso#build-a-virtual-machine-image[build_debian_iso] repository.
-
-You can also create a yocto VM using the flavour cqfd _guest_efi_, as described in the https://github.com/seapath/yocto-bsp[yocto-bsp] repository, in the following way:
-
- $ cqfd -b guest_efi
-
-To deploy this machine on the cluster, follow these steps :
-- Create a folder `vm_images` at the base of this repo
-- Place the generated qcow2 file in the `vm_images` directory with the name `guest.qcow2`.
-- Create an inventory describing your virtual machines. Follow the example `inventories/examples/seapath-vm-deployement.yaml`
-- For a cluster, call the playbook `playbooks/deploy_vms_cluster.yaml`
-
- $ ansible-playbook -i inventories/cluster_inventory.yaml -i inventories/vm_inventory.yaml playbooks/deploy_vms_cluster.yaml
-
-Or if you use `cqfd`:
-
- $ cqfd run ansible-playbook -i inventories/cluster_inventory.yaml -i inventories/vm_inventory.yaml playbooks/deploy_vms_cluster.yaml
-
-Otherwise, for the standalone, call the playbook `playbooks/deploy_vms_standalone.yaml`
-
- $ ansible-playbook -i inventories/standalone_inventory.yaml -i inventories/vm_inventory.yaml playbooks/deploy_vms_standalone.yaml
-
-Or if you use `cqfd`:
-
- $ cqfd run ansible-playbook -i inventories/standalone_inventory.yaml -i inventories/vm_inventory.yaml playbooks/deploy_vms_standalone.yaml
-
-
-=== Update a hypervisor
-
-==== Debian
-
-On Debian, hypervisors are updated using `apt update` commands. More information on the https://lf-energy.atlassian.net/wiki/spaces/SEAP/pages/31820194/Update+and+Rollback:"wiki".
-
-==== Yocto
-
-Machines are updated using https://github.com/sbabic/swupdate[software update].
-
-First, create a swu file using the https://github.com/seapath/yocto-bsp[yocto-bsp] repository.
-
-Then, the update will be deployed by ansible. You need to pass two variables in the command line :
-- `machine_to_update` is the name of the machine that ansible will update
-- `swu_image` is the name of the swu file that was created in yocto-bsp.
-
-Note: The swu image must be placed in the `swu_images` directory.
-
-For the update of a machine in the cluster, call the playbook `playbooks/update_machine_cluster.yaml`
-
- $ ansible-playbook -i inventories/cluster_inventory.yaml -e "machine_to_update=node1" -e "swu_image=update.swu" playbooks/update_machine_cluster.yaml
-
-Or if you use `cqfd`:
-
- $ cqfd run ansible-playbook -i inventories/cluster_inventory.yaml -e "machine_to_update=node" -e "swu_image=update.swu" playbooks/update_machine_cluster.yaml
-
-Otherwise, for the standalone, call the playbook `playbooks/update_machine_standalone.yaml`
-
- $ ansible-playbook -i inventories/standalone_inventory.yaml -e "machine_to_update=node1" -e "swu_image=update.swu" playbooks/update_machine_standalone.yaml
-
-Or if you use `cqfd`:
-
- $ cqfd run ansible-playbook -i inventories/standalone_inventory.yaml -e "machine_to_update=node" -e "swu_image=update.swu" playbooks/update_machine_standalone.yaml
+* The https://lf-energy.atlassian.net/wiki/spaces/SEAP/overview?homepageId=31817739[SEAPATH Wiki] explaining the use cases and the scenarios
+* The seapath.ansible collection documentation on https://galaxy.ansible.com/ui/repo/published/seapath/ansible/[ansible galaxy] describing all the roles and variables.
 
 == Contributing to SEAPATH
 
