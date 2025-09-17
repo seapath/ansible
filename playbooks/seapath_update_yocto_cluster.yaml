@@ -10,9 +10,11 @@
   tasks:
     - name: Set hypervisor in maintenance mode
       command: crm node standby "{{ machine_to_update }}"
+      changed_when: true
     - name: Wait for all VMs to be migrated
       shell:
         cmd: crm status|grep "Migrating"|wc -l
+      changed_when: false
       register: check_migration
       until: check_migration.stdout == '0'
       retries: 10
@@ -22,6 +24,7 @@
         dest: "/tmp/update.swu"
     - name: Apply update
       command: swupdate -i /tmp/update.swu
+      changed_when: true
     - name: Reboot host
       reboot:
         msg: "Reboot initiated by Ansible"
@@ -38,9 +41,10 @@
         - skip_ansible_lint
     - name: unset maintenance mode for hypervisor
       command: crm node online "{{ machine_to_update }}"
-      when: {{ machine_to_update }} in group['cluster_machines']
+      changed_when: true
     - name: Check if update has succeed
       shell:
         cmd: journalctl -u swupdate_check.service -b |grep "Update have failed"|wc -l
       register: update_status
       failed_when: update_status.stdout != '0'
+      changed_when: false
