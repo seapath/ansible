@@ -15,6 +15,7 @@
         dest: "/tmp/update.swu"
     - name: Apply update
       command: swupdate -i /tmp/update.swu
+      changed_when: true
     - name: Reboot host
       reboot:
         msg: "Reboot initiated by Ansible"
@@ -27,6 +28,7 @@
       command: systemctl is-system-running --wait
       register: system_status
       failed_when: system_status.rc != 0 and system_status.rc != 1
+      changed_when: false
       tags:
         - skip_ansible_lint
     - name: Check if update has succeed
@@ -34,3 +36,4 @@
         cmd: journalctl -u swupdate_check.service -b |grep "Update have failed"|wc -l
       register: update_status
       failed_when: update_status.stdout != '0'
+      changed_when: false
