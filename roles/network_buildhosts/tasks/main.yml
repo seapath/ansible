@@ -9,8 +9,8 @@
 - name: Build hosts file (Cluster Network)
   lineinfile:
     dest: /etc/hosts
-    regexp: '.*{{ hostvars[item].hostname | default(item) }}(| rbd)$'
-    line: "{{ hostvars[item].cluster_ip_addr }} {{ item }} {{ hostvars[item].hostname | default('') }}{% if hostvars[item].hostname is defined %} {% endif %}{% if item == inventory_hostname %}rbd{% endif %}"
+    regexp: '.*{{ hostvars[item].hostname | default(item) }}$'
+    line: "{{ hostvars[item].cluster_ip_addr }} {{ item }} {{ hostvars[item].hostname | default('') }}"
     state: present
   loop: "{{ groups['cluster_machines'] | default([]) }}"
   when: hostvars[item].cluster_ip_addr is defined
@@ -19,8 +19,8 @@
   # Ceph will use the public network instead.
   lineinfile:
     dest: /etc/hosts
-    regexp: '.*{{ hostvars[item].hostname | default(item) }}(| rbd)$'
-    line: "{{ hostvars[item].ip_addr }} {{ item }} {{ hostvars[item].hostname | default('') }}{% if hostvars[item].hostname is defined %} {% endif %}{% if item == inventory_hostname %}rbd{% endif %}"
+    regexp: '.*{{ hostvars[item].hostname | default(item) }}$'
+    line: "{{ hostvars[item].ip_addr }} {{ item }} {{ hostvars[item].hostname | default('') }}"
     state: present
   loop: "{{ groups['cluster_machines'] | default([]) }}"
   when: hostvars[item].cluster_ip_addr is undefined
