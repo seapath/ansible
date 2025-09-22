@@ -27,7 +27,7 @@
           Exiting shrink-cluster playbook, no monitor was removed.
            On the command line when invoking the playbook, you can use
            -e mon_to_kill=ceph-mon01 argument. You can only remove a single monitor each time the playbook runs."
-      when: Mon_to_kill is not defined
+      when: mon_to_kill is not defined
 
 - name: Import replace_machine_find_online_ceph_machine playbook
   import_playbook: replace_machine_find_online_ceph_machine.yaml
