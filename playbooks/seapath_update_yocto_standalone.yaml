@@ -33,7 +33,8 @@
         - skip_ansible_lint
     - name: Check if update has succeed
       shell:
-        cmd: journalctl -u swupdate_check.service -b |grep "Update have failed"|wc -l
+        cmd: set -o pipefail && journalctl -u swupdate_check.service -b |grep "Update have failed"|wc -l
+        executable: /bin/bash
       register: update_status
       failed_when: update_status.stdout != '0'
       changed_when: false
