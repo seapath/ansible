@@ -1,3 +1,6 @@
+{% if snmp_accounts is defined and extra_snmpd_directives is defined %}
+{{ extra_snmpd_directives }}
+{% else %}
 com2sec readonly  default         public
 group MyROSystem v1        paranoid
 group MyROSystem v2c       paranoid
@@ -20,3 +23,4 @@ syscontact Root <root@localhost> (configure /etc/snmp/snmpd.local.conf)
 {% endif %}
 pass_persist .2.25.1936023920.1635018752 /usr/bin/timeout 3610s /usr/local/bin/exposeseapathsnmp.pl
 agentAddress udp:{{ snmp_admin_ip_addr }}:161
+{% endif %}
