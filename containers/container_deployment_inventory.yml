@@ -1,0 +1,18 @@
+cluster_machines:
+  hosts:
+    hypervisor1:
+      ansible_host: 10.201.64.125
+    hypervisor2:
+      ansible_host: 10.201.64.126
+    observer:
+      ansible_host: 10.201.64.127
+  vars:
+    ansible_user: root
+
+CTs:
+  hosts:
+    grafana_test1: #TODO: change with the name of your container
+      file: docker-compose.yml #TODO: change with the path to your docker-compose file
+
+    grafana_test2: #TODO: change with the name of your container
+      file: docker-compose.yml #TODO: change with the path to your docker-compose file
