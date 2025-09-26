@@ -2,8 +2,9 @@
 # handlers file for roles/containers/container/copy_ra_docker_compose
 # roles/copy_ra_docker_compose/handlers/main.yml
 
-- name: restart pacemaker
-  ansible.builtin.systemd:
-    name: pacemaker
+- name: restart docker
+  service:
+    name: docker
     state: restarted
+    enabled: yes
   become: yes

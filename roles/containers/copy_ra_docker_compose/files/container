@@ -1,0 +1,412 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-only
+#
+#
+# Resource script for running docker-compose/ docker compose / podman-compose
+#
+# Description:  Manages docker / podman services using a container orchestrator
+#               as an OCF resource in an High Availability setup.
+#               It relies on a well-tested docker-compose YAML file which
+#               distributed on an identical location on all cluster nodes.
+#
+# Caveat: 1. A YAML file (docker-compose.yml) and an optional Dockerfile
+#            must be provided in a working directory.
+#         2. It is suggested to test run the docker-compose and verify
+#            on all cluster nodes before enabling this agent.
+#         3. Python3 with PyYAML module must be installed for YAML parsing.
+
+##Based on : https://raw.githubusercontent.com/ClusterLabs/resource-agents/33d73b0113b3acf77b8346ceac1bfdcf3cdaebe6/heartbeat/docker-compose of:
+# docker-compose OCF script's Author: Kenny Chen <netman@study-area.org>
+#
+#  usage: $0 {start|stop|status|monitor|validate-all|meta-data}
+#
+#  The "start" arg starts docker service.
+#  The "stop" arg stops it.
+#
+# OCF parameters:
+# OCF_RESKEY_dirpath
+# OCF_RESKEY_ymlfile
+# OCF_RESKEY_mountpoint
+# OCF_RESKEY_name
+# OCF_RESKEY_composer
+# $SERVICE_NAME
+##########################################################################
+# Initialization:
+
+: ${OCF_ROOT:=/usr/lib/ocf}
+: ${OCF_FUNCTIONS_DIR=${OCF_ROOT}/lib/heartbeat}
+. ${OCF_FUNCTIONS_DIR}/ocf-shellfuncs
+
+# Defaults
+#OCF_RESKEY_ymlfile_default=docker-compose.yml
+#OCF_RESKEY_composer_default=auto
+#: ${OCF_RESKEY_ymlfile=${OCF_RESKEY_ymlfile_default}}
+
+USAGE="Usage: $0 {start|stop|status|monitor|validate-all|meta-data}"
+
+##########################################################################
+
+usage()
+{
+  echo $USAGE >&2
+}
+
+meta_data()
+{
+cat <<END
+<?xml version="1.0"?>
+<!DOCTYPE resource-agent SYSTEM "ra-api-1.dtd">
+<resource-agent name="container" version="1.0.3">
+  <version>1.0</version>
+  <longdesc lang="en">
+Manages docker / podman services using docker-compose, docker compose or podman-compose as an OCF resource in an High Availability setup.
+It relies on a well-tested docker-compose YAML file which distributed on an identical location on all cluster nodes.
+
+Caveat: 1. A YAML file (docker-compose.yml) and an optional Dockerfile
+           must be provided in a working directory.
+        2. It is suggested to test run the docker-compose and verify on all cluster nodes
+           before enabling this agent.
+        3. Python3 with PyYAML module must be installed for YAML parsing.
+  </longdesc>
+  <shortdesc lang="en">This script manages docker/podman services using docker-compose/podman-compose.</shortdesc>
+
+  <parameters>
+    <parameter name="name">
+      <longdesc lang="en">The container resource name. For example, "my_docker_service"</longdesc>
+      <shortdesc lang="en">The container resource name</shortdesc>
+      <content type="string"/>
+    </parameter>
+
+    <parameter name="ymlfile">
+      <longdesc lang="en">The docker-compose yaml file. For example, "docker-compose.yml"</longdesc>
+      <shortdesc lang="en">The docker-compose yaml</shortdesc>
+      <content type="string" default=""/>
+    </parameter>
+
+    <parameter name="composer">
+      <longdesc lang="en">
+The tools to use as "containers composer".
+docker-compose, docker compose, podman-compose or auto.
+
+If auto, the script will search for a composer and will use the first one found in this order:
+1. podman-compose
+2. docker compose
+3. docker-compose
+      </longdesc>
+      <shortdesc lang="en">The container composer</shortdesc>
+      <content type="string" default=""/>
+    </parameter>
+  </parameters>
+
+  <actions>
+    <action name="start" timeout="200s"/>
+    <action name="stop" timeout="20s"/>
+    <action name="monitor" depth="0" timeout="10s" interval="60s"/>
+    <action name="validate-all" timeout="5s"/>
+    <action name="meta-data" timeout="5s"/>
+  </actions>
+</resource-agent>
+
+END
+exit $OCF_SUCCESS
+}
+
+SERVICE_NAME="$OCF_RESKEY_name"
+YML="$OCF_RESKEY_ymlfile"
+MOUNT_POINT="/opt/${SERVICE_NAME}"
+COMPOSER=
+CT_ENGINE=
+
+composer_auto_detect()
+{
+  if [ "$OCF_RESKEY_composer" != "auto" ]; then
+    COMPOSER="$OCF_RESKEY_composer"
+    if ! command -v $COMPOSER >/dev/null 2>&1; then
+      ocf_log err "Specified composer $COMPOSER not found."
+      exit $OCF_ERR_INSTALLED
+    fi
+    ocf_log info "Using specified composer: $COMPOSER"
+    return
+  fi
+  if command -v podman-compose >/dev/null 2>&1; then
+    COMPOSER="podman-compose"
+  elif command -v docker >/dev/null 2>&1; then
+    if docker compose version >/dev/null 2>&1; then
+      COMPOSER="docker compose"
+    elif command -v docker-compose >/dev/null 2>&1; then
+      COMPOSER="docker-compose"
+    else
+      ocf_log err "No suitable docker composer found."
+      exit $OCF_ERR_INSTALLED
+    fi
+  else
+    ocf_log err "No suitable container composer found."
+    exit $OCF_ERR_INSTALLED
+  fi
+  ocf_log info "Using composer: $COMPOSER"
+  if [ "$COMPOSER" = "podman-compose" ]; then
+    CT_ENGINE="podman"
+  else
+    CT_ENGINE="docker"
+  fi
+}
+
+container_kill()
+{
+  for i in $($CT_ENGINE ps --all | awk -e '$NF ~ /\<'"${PRE}"'_.*_[0-9]+\>/ {print $1}'); do
+    $CT_ENGINE kill $i >/dev/null 2>&1
+    $CT_ENGINE rm $i >/dev/null 2>&1 || RTV=false
+  done
+  if [ "$RTV" = false ]; then
+    ocf_log err "failed to kill containers"
+    return $OCF_ERR_GENERIC
+  else
+    RUN=false
+  fi
+}
+
+composer_status()
+{
+  # use $COMPOSER ps if YML found, otherwise try docker ps and kill containers
+  if [ -r "$MOUNT_POINT/$YML" ]; then
+    DKPS=$($COMPOSER -f "$MOUNT_POINT/$YML" ps -q)
+
+    # get number of all containers
+    [ -n "$DKPS" ] && PSNU=$(echo "$DKPS" | wc -l)
+    # get number of running containers
+    for UUID in $DKPS; do
+      UP=$($CT_ENGINE inspect --format='{{.State.Running}}' "$UUID")
+      [ "$UP" = "true" ] && UPNU=$((UPNU+1))
+    done
+
+    if [ "${PSNU:-0}" -ne 0 ]; then
+      if [ ${UPNU:-0} -eq 0 ]; then
+        ocf_log info "docker service is running but not in up state."
+        return $OCF_NOT_RUNNING
+      elif [ "$PSNU" -eq $UPNU ]; then
+        ocf_log info "docker service is up and running"
+        return $OCF_SUCCESS
+      else
+        ocf_log err "docker service is running with partial up state"
+        return $OCF_ERR_GENERIC
+      fi
+    else
+      RUN=false
+    fi
+  else
+    STAT_MSG=$($CT_ENGINE ps --all | awk -e '$NF ~ /\<'"$PRE"'_.*_[0-9]+\>/ {print $1}')
+    if [ -z "$STAT_MSG" ]; then
+      RUN=false
+    else
+      ocf_log log "docker service is running without $COMPOSER, try to kill..."
+      container_kill
+    fi
+  fi
+  [ "$RUN" = false ] && {
+    ocf_log info "docker service is not running"
+    return $OCF_NOT_RUNNING
+  }
+}
+
+# Steps:
+#   1. Validate Docker Compose configuration.
+#   2. Check if the service is already running.
+#   3. If not running, check and create volumes as defined in the YAML file and flag them as external.
+#   4. Generate an override YAML file to mark created volumes as external.
+#   5. Start the Docker Compose stack in detached mode.
+composer_start(){
+
+  #composer_validate_all
+  composer_status >/dev/null 2>&1
+  retVal=$?
+  ocf_log info "$CT_ENGINE status returned $retVal"
+  # return success if docker service is running
+  [ $retVal -eq $OCF_SUCCESS ] && exit $OCF_SUCCESS
+
+  ocf_log info "Starting $CT_ENGINE service $SERVICE_NAME..."
+
+  composer_up_with_create_volumes || {
+    ocf_log err "Error. $COMPOSER returned error $?."
+    exit $OCF_ERR_GENERIC
+  }
+  ocf_log info "docker service started."
+  exit $OCF_SUCCESS
+}
+
+
+composer_stop() {
+    FILE="$MOUNT_POINT/$YML"
+  ocf_log info "Stopping docker service $SERVICE_NAME..."
+    if [ ! -f "$FILE" ]; then
+      ocf_log err "YAML file $FILE does not exist."
+      return $OCF_ERR_GENERIC
+    fi
+    $COMPOSER -f "$FILE" down -t 30 || {
+      ocf_log err "Error on shutting down docker service, trying to kill..."
+    }
+
+  # TODO remove volumes if needed
+  ocf_log info "Docker service $SERVICE_NAME stopped."
+  exit $OCF_SUCCESS
+}
+
+composer_monitor()
+{
+  composer_status
+  ocf_log info "$CT_ENGINE monitor returned $?."
+}
+
+composer_validate_all()
+{
+  check_binary "$OCF_RESKEY_binpath" || {
+    ocf_log err "Missing Docker binary: $OCF_RESKEY_binpath"
+    exit $OCF_ERR_INSTALLED
+  }
+
+  if [ ! -d "$OCF_RESKEY_dirpath" ]; then
+    ocf_log err "Working directory $OCF_RESKEY_dirpath is invalid."
+    exit $OCF_ERR_ARGS
+  fi
+
+  if [ -z "$OCF_RESKEY_image_name" ]; then
+    ocf_log err "Docker image name must be specified."
+    exit $OCF_ERR_ARGS
+  fi
+
+  if [ -z "$OCF_RESKEY_name" ]; then
+    ocf_log err "Service name must be provided."
+    exit $OCF_ERR_ARGS
+  fi
+
+  # Check for Python3 and yaml module
+  if ! command -v python3 >/dev/null 2>&1; then
+    ocf_log err "Python3 is required but not found."
+    exit $OCF_ERR_INSTALLED
+  fi
+
+  if ! python3 -c "import yaml" >/dev/null 2>&1; then
+    ocf_log err "Python yaml module is required but not found. Please install python3-yaml or PyYAML."
+    exit $OCF_ERR_INSTALLED
+  fi
+
+  return $OCF_SUCCESS
+}
+composer_up_with_create_volumes() {
+  COMPOSE_FILE="$MOUNT_POINT/$YML"
+  OVERRIDE_FILE="$MOUNT_POINT/$COMPOSER.override.yml"
+  YAML_PARSER="${OCF_ROOT}/../ra/yaml_parser.py"
+
+  # Fallback to local path if OCF_ROOT path doesn't exist
+  if [ ! -f "$YAML_PARSER" ]; then
+    YAML_PARSER="$(dirname "$0")/yaml_parser.py"
+  fi
+
+  # Check if Python YAML parser exists
+  if [ ! -f "$YAML_PARSER" ]; then
+    ocf_log err "YAML parser script not found: $YAML_PARSER"
+    exit $OCF_ERR_INSTALLED
+  fi
+
+  # override file header
+  {
+    echo "version: '3.9'"
+    echo "volumes:"
+  } > "$OVERRIDE_FILE"
+
+  ocf_log info "Checking/Creating volumes for $COMPOSE_FILE"
+
+  # Iterate over defined volumes
+  for vname in $(python3 "$YAML_PARSER" "$COMPOSE_FILE" volume_names 2>/dev/null || true); do
+    external=$(python3 "$YAML_PARSER" "$COMPOSE_FILE" volume_property "$vname" external)
+    driver=$(python3 "$YAML_PARSER" "$COMPOSE_FILE" volume_property "$vname" driver)
+
+    if [ "$external" = "true" ]; then
+      ocf_log info "Volume $vname already external"
+      {
+        echo "  $vname:"
+        echo "    external: true"
+      } >> "$OVERRIDE_FILE"
+      continue
+    fi
+
+    if [ "$driver" = "null" ] || [ -z "$driver" ]; then
+      ocf_log info "Volume $vname without driver (ignored)"
+      continue
+    fi
+
+    # Build the creation command
+    cmd="$CT_ENGINE volume create --driver $driver --name $vname"
+
+    # Add driver_opts if they exist
+    for opt in $(python3 "$YAML_PARSER" "$COMPOSE_FILE" driver_opts_keys "$vname" 2>/dev/null || true); do
+      val=$(python3 "$YAML_PARSER" "$COMPOSE_FILE" driver_opt_value "$vname" "$opt")
+      cmd="$cmd --opt $opt=$val"
+    done
+
+    ocf_log info "Creating volume $vname with $driver"
+    if ! eval "$cmd"; then
+      ocf_log warn "Volume $vname already exists or creation failed"
+    fi
+
+    # Add external in override
+    {
+      echo "  $vname:"
+      echo "    external: true"
+    } >> "$OVERRIDE_FILE"
+  done
+
+  ocf_log info "Override file generated: $OVERRIDE_FILE"
+
+  # Run $COMPOSER
+  if ! $COMPOSER -f "$COMPOSE_FILE" -f "$OVERRIDE_FILE" up -d; then
+    ocf_log err "$COMPOSER failed"
+    exit $OCF_ERR_GENERIC
+  fi
+
+  ocf_log info "$COMPOSER executed successfully"
+  exit $OCF_SUCCESS
+}
+
+
+#
+# Main
+#
+
+if [ $# -ne 1 ]; then
+  usage
+  exit $OCF_ERR_ARGS
+fi
+
+case $1 in
+  start)
+    composer_start
+    ;;
+
+  stop)
+    composer_stop
+    ;;
+
+  status)
+    composer_status
+    ;;
+
+  monitor)
+    composer_monitor
+    ;;
+
+  validate-all)
+    composer_validate_all
+    ;;
+
+  meta-data)
+    meta_data
+    ;;
+
+  usage)  usage
+    exit $OCF_SUCCESS
+    ;;
+
+  *)  usage
+    exit $OCF_ERR_UNIMPLEMENTED
+    ;;
+esac

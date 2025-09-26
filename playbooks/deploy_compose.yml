@@ -1,4 +1,4 @@
 - hosts: cluster_machines
   gather_facts: false
   roles:
-    - role: copy_ra_docker_compose
+    - role: containers/copy_ra_docker_compose
