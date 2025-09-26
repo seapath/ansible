@@ -1,0 +1,15 @@
+---
+# defaults file for roles/containers/container/copy_ra_docker_compose
+docker_rbd_plugin_name: "wetopi/rbd"
+docker_rbd_alias: "wetopi/rbd"
+docker_rbd_conf:
+  LOG_LEVEL: 1
+  RBD_CONF_POOL: "rbd"
+  RBD_CONF_CLUSTER: "ceph"
+  RBD_CONF_KEYRING_USER: "client.admin"
+  RBD_CONF_NAMESPACE: ""
+  MOUNT_OPTIONS: "--options=noatime"
+  VOLUME_FSTYPE: "ext4"
+  VOLUME_MKFS_OPTIONS: "-O mmp"
+  VOLUME_SIZE: 512
+  VOLUME_ORDER: 22

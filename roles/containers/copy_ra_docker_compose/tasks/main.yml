@@ -1,0 +1,40 @@
+---
+# roles/copy_ra/tasks/main.yml
+- name: Check if docker-volume-rbd plugin exists
+  command: docker plugin inspect "{{ docker_rbd_alias }}"
+  register: rbd_plugin_check
+  changed_when: false
+  failed_when: false
+  become: yes
+
+- name: Install docker-volume-rbd plugin via CLI
+  command: >
+    docker plugin install {{ docker_rbd_plugin_name }}
+    LOG_LEVEL={{ docker_rbd_conf.LOG_LEVEL }}
+    RBD_CONF_POOL={{ docker_rbd_conf.RBD_CONF_POOL }}
+    RBD_CONF_CLUSTER={{ docker_rbd_conf.RBD_CONF_CLUSTER }}
+    RBD_CONF_KEYRING_USER={{ docker_rbd_conf.RBD_CONF_KEYRING_USER }}
+    --alias {{ docker_rbd_alias }}
+    --grant-all-permissions
+  become: yes
+  when: rbd_plugin_check.rc != 0
+
+
+
+- name: Deploy yaml_parser script
+  ansible.builtin.copy:
+    src: yaml_parser.py
+    dest: /usr/lib/ocf/resource.d/seapath/yaml_parser.py
+    mode: '0755'
+    owner: root
+    group: root
+  become: yes
+
+- name: Copy Resource Agent files
+  ansible.builtin.copy:
+    src: "container"
+    dest: "/usr/lib/ocf/resource.d/seapath/"
+    mode: '0755'
+    owner: root
+    group: root
+  become: yes
