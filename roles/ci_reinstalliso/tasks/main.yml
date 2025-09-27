@@ -31,7 +31,7 @@
 
 - name: Reboot for ISO installation to happen
   reboot:
-    #reboot_command: systemctl reboot --force
+    reboot_command: systemctl reboot --force
     reboot_timeout: 1500
 
 - name: Get root filesystem device
