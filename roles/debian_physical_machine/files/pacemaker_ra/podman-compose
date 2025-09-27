@@ -1,0 +1,160 @@
+#!/bin/bash
+# Copyright (C) 2025, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+#
+# OCF Resource Agent for managing a Podman Compose project
+# Generic and configurable
+#
+
+: ${OCF_FUNCTIONS_DIR=${OCF_ROOT}/lib/heartbeat}
+. ${OCF_FUNCTIONS_DIR}/ocf-shellfuncs
+
+#---------------------
+# Metadata function
+#---------------------
+meta_data() {
+    cat <<END
+<?xml version="1.0"?>
+<!DOCTYPE resource-agent SYSTEM "ra-api-1.dtd">
+<resource-agent name="podman-compose" version="1.2">
+  <version>1.0</version>
+  <longdesc>Podman Compose OCF Resource Agent</longdesc>
+  <shortdesc>Manage Podman Compose projects</shortdesc>
+  <parameters>
+    <parameter name="compose_dir" required="1" unique="1">
+      <content type="string" default="/mnt/cephfs/myapp"/>
+      <description>Directory containing podman-compose.yml</description>
+    </parameter>
+    <parameter name="project_name" required="1" unique="1">
+      <content type="string"/>
+      <description>Podman Compose project name (-p)</description>
+    </parameter>
+    <parameter name="ipv4_address" required="0" unique="0">
+      <content type="string" default="10.10.10.10"/>
+      <description>container macvlan ipv4 address</description>
+    </parameter>
+    <parameter name="yaml_file" required="0" unique="0">
+      <content type="string" default="podman-compose.yml"/>
+      <description>Compose YAML file name</description>
+    </parameter>
+  </parameters>
+  <actions>
+    <action name="start" timeout="60"/>
+    <action name="stop" timeout="60"/>
+    <action name="monitor" timeout="30" interval="10s"/>
+    <action name="restart" timeout="60"/>
+    <action name="status" timeout="30"/>
+  </actions>
+</resource-agent>
+END
+}
+
+#---------------------
+# Default values
+#---------------------
+: ${OCF_RESKEY_COMPOSE_DIR_DEFAULT=""}
+: ${OCF_RESKEY_PROJECT_NAME_DEFAULT=""}
+: ${OCF_RESKEY_OCF_RESKEY_IPV4_ADDRESS=""}
+: ${OCF_RESKEY_YAML_FILE_DEFAULT="podman-compose.yml"}
+
+# Assign actual values
+: ${OCF_RESKEY_COMPOSE_DIR=${OCF_RESKEY_compose_dir:-$OCF_RESKEY_COMPOSE_DIR_DEFAULT}}
+: ${OCF_RESKEY_PROJECT_NAME=${OCF_RESKEY_project_name:-$OCF_RESKEY_PROJECT_NAME_DEFAULT}}
+: ${OCF_RESKEY_YAML_FILE=${OCF_RESKEY_yaml_file:-$OCF_RESKEY_YAML_FILE_DEFAULT}}
+: ${OCF_RESKEY_IPV4_ADDRESS=${OCF_RESKEY_ipv4_address:-$OCF_RESKEY_OCF_RESKEY_IPV4_ADDRESS}}
+
+compose_cmd() {
+    podman-compose -f "$OCF_RESKEY_YAML_FILE" -p "$OCF_RESKEY_PROJECT_NAME" "$@"
+}
+
+start() {
+    ocf_log info "Starting Podman Compose project '$OCF_RESKEY_PROJECT_NAME' in $OCF_RESKEY_COMPOSE_DIR"
+
+    cd "$OCF_RESKEY_COMPOSE_DIR" || {
+        ocf_log err "Cannot cd to $OCF_RESKEY_COMPOSE_DIR"
+        return $OCF_ERR_GENERIC
+    }
+
+    export CONTAINER_IP="$OCF_RESKEY_IPV4_ADDRESS"
+
+    # Start the compose project
+    compose_cmd up -d || {
+        ocf_log err "Failed to start project $OCF_RESKEY_PROJECT_NAME"
+        return $OCF_ERR_GENERIC
+    }
+
+    # Find container PID
+    CONTAINER_NAME=$(podman ps --filter "name=$OCF_RESKEY_PROJECT_NAME" --format "{{.Names}}" | head -n1)
+    if [ -n "$CONTAINER_NAME" ]; then
+        PID=$(podman inspect -f '{{.State.Pid}}' "$CONTAINER_NAME")
+        if [ -n "$PID" ] && [ "$PID" -ne 0 ]; then
+            nsenter -t "$PID" -n arping -c 3 -A -I eth0 "$CONTAINER_IP" && \
+              ocf_log info "Sent gratuitous ARP for $CONTAINER_IP"
+
+        else
+            ocf_log warn "Cannot determine PID of container $CONTAINER_NAME"
+        fi
+    else
+        ocf_log warn "Container for project $OCF_RESKEY_PROJECT_NAME not found"
+    fi
+
+    ocf_log info "Project $OCF_RESKEY_PROJECT_NAME started"
+    return $OCF_SUCCESS
+
+}
+
+stop() {
+    ocf_log info "Stopping Podman Compose project ${OCF_RESKEY_PROJECT_NAME} in ${OCF_RESKEY_COMPOSE_DIR}"
+
+    cd "${OCF_RESKEY_COMPOSE_DIR}" || {
+        ocf_log err "compose_dir ${OCF_RESKEY_COMPOSE_DIR} not accessible"
+        return $OCF_ERR_GENERIC
+    }
+
+    # Check running containers first
+    running=$(podman ps --filter "name=${OCF_RESKEY_PROJECT_NAME}" --format "{{.Names}}")
+    if [ -z "$running" ]; then
+        ocf_log info "No containers running for project ${OCF_RESKEY_PROJECT_NAME}, nothing to stop."
+        return $OCF_SUCCESS
+    fi
+
+    podman-compose -p "${OCF_RESKEY_PROJECT_NAME}" -f "${OCF_RESKEY_YAML_FILE}" down -v
+    rc=$?
+
+    if [ $rc -ne 0 ]; then
+        ocf_log err "podman-compose down failed with rc=$rc"
+        return $OCF_ERR_GENERIC
+    fi
+
+    ocf_log info "Stopped project ${OCF_RESKEY_PROJECT_NAME}"
+    return $OCF_SUCCESS
+}
+
+
+monitor() {
+    running=$(podman ps --filter "name=${OCF_RESKEY_PROJECT_NAME}" --format "{{.Names}}")
+    if [ -n "$running" ]; then
+        ocf_log debug "Monitor: $OCF_RESKEY_PROJECT_NAME running (containers: $running)"
+        return $OCF_SUCCESS
+    else
+        ocf_log warn "Monitor: $OCF_RESKEY_PROJECT_NAME not running"
+        return $OCF_NOT_RUNNING
+    fi
+}
+
+restart() {
+    ocf_log info "Restarting Podman Compose project $OCF_RESKEY_PROJECT_NAME"
+    stop
+    start
+}
+
+case "$1" in
+    meta-data) meta_data; exit $OCF_SUCCESS ;;
+    start) start ;;
+    stop) stop ;;
+    monitor|status) monitor ;;
+    restart) restart ;;
+    *) ocf_log err "Usage: $0 {meta-data|start|stop|monitor|restart|status}"; exit $OCF_ERR_UNIMPLEMENTED ;;
+esac
+
+exit $?
