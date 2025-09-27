@@ -1,0 +1,6 @@
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+deploy_cephfs_localdirtoupload: "../inventories_private/cephfs_upload/"
+deploy_cephfs_remotedir: "/mnt/cephfs/"
