@@ -40,3 +40,4 @@
   roles:
     - detect_seapath_distro
     - cephadm
+    - deploy_cephfs
