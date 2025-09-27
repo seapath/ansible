@@ -1,0 +1,159 @@
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Check which nodes have a Ceph monitor running
+  command: ceph -s
+  ignore_errors: true
+  changed_when: false
+  delegate_to: "{{ item }}"
+  loop: "{{ ansible_play_hosts }}"
+  run_once: true
+  register: ceph_status_results
+
+- name: Find the first node with an active monitor
+  set_fact:
+    first_mon_node: "{{ (ceph_status_results.results | selectattr('rc', 'equalto', 0) | map(attribute='item') | list)[0] }}"
+  run_once: true
+
+- name: Debug first monitor node
+  debug:
+    msg: "First monitor node detected: {{ first_mon_node }}"
+  run_once: true
+
+- name: Create CephFS volume 'seapathcephfs' on the first monitor
+  command: ceph fs volume create seapathcephfs
+  register: create_fs
+  delegate_to: "{{ first_mon_node }}"
+  run_once: true
+
+- name: Get CephFS info to find the data pool
+  command: ceph fs ls --format json
+  register: fs_list
+  changed_when: false
+  delegate_to: "{{ first_mon_node }}"
+  run_once: true
+
+- name: Set data pool variable
+  set_fact:
+    cephfs_data_pool: "{{ (fs_list.stdout | from_json | selectattr('name', 'equalto', 'seapathcephfs') | list)[0].data_pools[0] }}"
+  run_once: true
+
+- name: Create Ceph user 'volumemount' on first monitor
+  command: >
+    ceph auth get-or-create client.volumemount
+    mon 'allow r'
+    mds 'allow rw'
+    osd 'allow rw pool={{ cephfs_data_pool }}'
+  register: ceph_user
+  changed_when: >
+    'already exists' not in (ceph_user.stderr | default('')) and
+    'already exists' not in (ceph_user.stdout | default(''))
+  delegate_to: "{{ first_mon_node }}"
+  run_once: true
+
+- name: Gather volumemount key on all nodes via keyring file
+  command: ceph auth get client.volumemount -o /etc/ceph/ceph.client.volumemount.keyring
+  register: volumemount_keyring
+  changed_when: false
+
+- name: Read the key from the keyring file
+  slurp:
+    src: /etc/ceph/ceph.client.volumemount.keyring
+  register: keyring_file
+
+- name: Extract base64 key from keyring
+  set_fact:
+    volumemount_key: >-
+      {{
+       keyring_file.content | b64decode
+         | regex_findall('^\s*key\s*=\s*([A-Za-z0-9+/=]+)', multiline=True)
+         | first
+      }}
+
+- name: Write volumemount key to /etc/ceph/volumemount.secret
+  copy:
+    content: "{{ volumemount_key }}"
+    dest: /etc/ceph/volumemount.secret
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Deploy MDS for CephFS volume 'seapathcephfs'
+  command: ceph orch apply mds seapathcephfs --placement="count:3"
+  register: mds_deploy
+  changed_when: "'already exists' not in mds_deploy.stderr"
+  delegate_to: "{{ first_mon_node }}"
+  run_once: true
+
+- name: Install wait-for-mds.sh
+  copy:
+    src: wait-for-mds.sh
+    dest: /usr/local/bin/wait-for-mds.sh
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Install ceph-mds-ready@seapathcephfs.service
+  copy:
+    src: ceph-mds-ready@seapathcephfs.service
+    dest: /etc/systemd/system/ceph-mds-ready@seapathcephfs.service
+    mode: '0644'
+    owner: root
+    group: root
+
+- name: Enable and start ceph-mds-ready@seapathcephfs.service
+  systemd:
+    name: ceph-mds-ready@seapathcephfs.service
+    enabled: yes
+    state: started
+    daemon_reload: yes
+
+- name: Build Ceph monitor list for fstab from detected monitors
+  set_fact:
+    ceph_mon_hosts: >-
+      {{
+        ceph_status_results.results
+        | selectattr('rc','equalto',0)
+        | map(attribute='item')
+        | map('extract', hostvars, ['hostname'])
+        | join(',')
+      }}
+  run_once: true
+
+- name: Ensure deploy_cephfs_remotedir directory exists
+  file:
+    path: "{{ deploy_cephfs_remotedir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Ensure CephFS is mounted
+  ansible.posix.mount:
+    path: "{{ deploy_cephfs_remotedir }}"
+    src: "{{ ceph_mon_hosts }}:/"
+    fstype: ceph
+    opts: "name=volumemount,secretfile=/etc/ceph/volumemount.secret,_netdev,x-systemd.after=network-online.target,x-systemd.after=ceph.target,x-systemd.after=ceph-mds-ready@seapathcephfs.service,x-systemd.requires=ceph-mds-ready@seapathcephfs.service"
+    state: mounted
+
+- name: Check if local source directory exists
+  delegate_to: localhost
+  become: false
+  run_once: true
+  ansible.builtin.stat:
+    path: "{{ deploy_cephfs_localdirtoupload }}"
+  register: cephfs_upload_dir
+  when: deploy_cephfs_localdirtoupload is defined
+
+- name: Synchronize local cephfs_upload content to remote deploy_cephfs_remotedir
+  ansible.posix.synchronize:
+    src: "{{ deploy_cephfs_localdirtoupload }}"
+    dest: "{{ deploy_cephfs_remotedir }}"
+    archive: yes
+    delete: no
+    recursive: yes
+    rsync_opts:
+      - "--chown=root:root"
+  run_once: true
+  when: cephfs_upload_dir is defined and cephfs_upload_dir.stat.exists | default(false)
