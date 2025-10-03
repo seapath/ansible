@@ -80,6 +80,12 @@
     - role: conntrackd
       when: conntrackd_ignore_ip_list is defined
 
+- name: Podman Networks
+  hosts: cluster_machines
+  become: true
+  roles:
+    - deploy_podmannetworks
+
 - name: Restart machine if needed
   hosts:
     - cluster_machines
