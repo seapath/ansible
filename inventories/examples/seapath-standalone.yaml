@@ -1,66 +1,50 @@
 # This inventory describes a standalone SEAPATH machine (no cluster)
 # It contains all required variables to configure and run your standalone machine.
 # Replace all the TODOs to fit your physical machines.
-# More informations on SEAPATH Wiki: https://lf-energy.atlassian.net/wiki/x/lIblAQ
-
+# More informations on SEAPATH Wiki: https://lf-energy.atlassian.net/wiki/x/BIDtGQ
 ---
+all:
+  hosts:
+    seapath-machine:
+
+      # Admin network settings
+      ansible_host: 192.168.200.125 # administration IP. TODO
+      network_interface: eno1 # Administration interface name. TODO
+      gateway_addr: 192.168.200.1 # Administration Gateway. TODO
+      dns_servers: 192.168.200.1 # DNS servers. Remove if not used. TODO
+      subnet: 24 # Subnet mask in CIDR notation. TODO
+
+      # Time synchronisation
+      ptp_interface: eno12419 # PTP interface receiving PTP frames. TODO
+      ntp_servers:
+        - "185.254.101.25" # public NTP server example
+
+      # Debian specific, remove if you use Yocto. TODO
+      admin_user: admin
+
+      # Main network configuration. Nothing to change here
+      ip_addr: "{{ ansible_host }}"
+      apply_network_config: true
+
+      # Ansible variables
+      ansible_connection: ssh
+      ansible_python_interpreter: /usr/bin/python3
+      ansible_remote_tmp: /tmp/.ansible/tmp
+      ansible_user: ansible
+
+# The machine is standalone
 standalone_machine:
-  children:
-    hypervisors:
-      hosts:
-        hypervisor:
-          # TODO : Replace the variable by your IP or interfaces
+  hosts:
+    seapath-machine:
 
-          # Admin network settings
-          ansible_host: 192.168.200.125
-          network_interface: eno1
-
-          # PTP configuration.
-          # Optional, remove if the machine is not synchronised with PTP
-          ptp_interface: "eno12419"
-
-
+# The machine is an hypervisor
+hypervisors:
+  hosts:
+    seapath-machine:
   vars:
-    # Ansible vars
-    ansible_connection: ssh
-    ansible_python_interpreter: /usr/bin/python3
-    ansible_remote_tmp: /tmp/.ansible/tmp
-    ansible_user: ansible # TODO: Put the name of your ansible user
-    # By default, this user is "ansible" on Debian and "admin" on Yocto
+    isolcpus: "4-N" # List of CPUs to isolate (Debian only). TODO
 
-    # Debian specific, remove if you use Yocto
-    admin_user: admin
-    isolcpus: "4-N" # TODO : Put the list of cpus to isolate.
-      # This variable is only used on Debian.
-      # On Yocto, it is configured in yocto-bsp
-
-    # Main network configuration
-    gateway_addr: "192.168.200.1" # TODO : Put your gatway address
-    dns_servers: "192.168.200.1" # TODO : Put your dns address
-    ip_addr: "{{ ansible_host }}"
-    subnet: 24 # TODO : Put your subnet mask in CIDR notation
-    apply_network_config: true
-    # List of interfaces to wait for before considering the network as up.
-    # With the default network configuration, it should be "br0"
-    interfaces_to_wait_for:
-      - "br0"
-    # systemd-networkd is used by default to configure the network
-    # netplan can also be used to sum up complex network in one yaml file
-    # See the wiki for more informations : TODO put link
-
-    # NTP time synchronisation
-    ntp_servers:
-      - "185.254.101.25" # public ntp server
-      - "51.145.123.29"  # public ntp server
-
-    # Hardening (Debian only)
-    # TODO : Put the password hash for the grub password
-    # It can be generated with the following command: grub-mkpasswd-pbkdf2
-    grub_password: grub.pbkdf2.sha512.10000.666FF16D5587509B2B3340B2388CB798BEF9553A9666CECA6282E0D822C1529F94AF693CC6738C1F757B868D8090F24FD48D8F56486C70C545D559CB4BAAAA3E.9718E767036BDB71CC1B82BCFC906610F8772DD4757F6F075D82A23E70DA46FBED372A3E5143E5C2D40AA888C6B884E4AA437488D82008383C54ED79D68A42CF
-
-# ------------------------------------------------------------------------------
-# ----------------------- Empty groups, prevent warnings -----------------------
-# ------------------------------------------------------------------------------
+# Empty groups to prevent warnings, mostly ceph-ansible
 grafana-server:
 iscsigws:
 iscsi-gws:
