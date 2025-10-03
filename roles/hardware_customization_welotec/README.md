@@ -9,9 +9,8 @@ This role applies specific configuration for Welotec hardware:
 No requirement.
 
 ## Role Variables
-* `network_link.yaml`: a var file containing the mapping of network interfaces.
-* `welotec_rsapcmk2`: a boolean variable to enable or disable the role.
-  Default is `false`.
+
+No variables.
 
 ## Example Playbook
 

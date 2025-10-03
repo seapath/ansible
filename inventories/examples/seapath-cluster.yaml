@@ -1,118 +1,103 @@
-# This inventory describes a SEAPATH cluster with two hypervisors and one observer.
-# It contains all required variables to configure and run your cluster.
+# This inventory describes a SEAPATH cluster. It contains all required variables for a default deployment
 # Replace all the TODOs to fit your physical machines.
-# More informations on SEAPATH Wiki: https://lf-energy.atlassian.net/wiki/x/lIblAQ
+# More informations on SEAPATH Wiki: https://lf-energy.atlassian.net/wiki/x/BIDtGQ
+
+# Note : This inventory uses a three hypervisors setup.
+# If you want to switch to a two hypervisor + one observer setup, you must :
+# - choose which machine will be the observer (ex: node3)
+# - remove the machine from the hypervisors group
+# - add the machine to the observers group
+# - remove the machine from the osds group
+# - optionally, remove the ptp_interface variable of the machine
 
 ---
-cluster_machines:
-  children:
-    hypervisors:
-      hosts:
-        hypervisor1:
-          # TODO : Replace the variable by your IP or interfaces
+all:
+  hosts:
+    node1:
+      ansible_host: 192.168.200.121 # Administration IP. TODO
+      network_interface: eno1 # Administration interface. TODO
+      ptp_interface: "eno12419" # PTP interface. TODO
 
-          # Admin network settings
-          ansible_host: 192.168.200.125
-          network_interface: eno1
+    node2:
+      ansible_host: 192.168.200.122 # Administration IP. TODO
+      network_interface: eno1 # Administration interface. TODO
+      ptp_interface: "eno12419" # PTP interface. TODO
 
-          # Cluster network settings
-          team0_0: "eno2"
-          team0_1: "eno3"
-          cluster_next_ip_addr : "192.168.55.2"
-          cluster_previous_ip_addr : "192.168.55.3"
-          cluster_ip_addr: "192.168.55.1"
-
-          # PTP configuration.
-          # Optional, remove if the machine is not synchronised with PTP
-          ptp_interface: "eno12419"
-
-        hypervisor2:
-          # TODO : Replace the variables by your IP or interfaces
-
-          # Admin network settings
-          ansible_host: 192.168.200.126
-          network_interface: eno1
-
-          # Cluster network settings
-          team0_0: "eno2"
-          team0_1: "eno3"
-          cluster_next_ip_addr : "192.168.55.3"
-          cluster_previous_ip_addr :  "192.168.55.1"
-          cluster_ip_addr: "192.168.55.2"
-
-          # PTP configuration.
-          # Optional, remove if the machine is not synchronised with PTP
-          ptp_interface: "eno12419"
-
-      vars:
-        livemigration_user: livemigration
-        isolcpus: "4-N" # TODO : Put the list of cpus to isolate.
-          # This variable is only used on Debian.
-          # On Yocto, it is configured in yocto-bsp
-
-    observers:
-      hosts:
-        observer:
-          # TODO : Replace the variables by your IP or interfaces
-
-          # Admin network settings
-          ansible_host: 192.168.200.10
-          network_interface: enp0s20f0u3u2
-
-          # Cluster network settings
-          team0_0: "enp2s0"
-          team0_1: "enp3s0"
-          cluster_next_ip_addr : "192.168.55.1"
-          cluster_previous_ip_addr :  "192.168.55.2"
-          cluster_ip_addr: "192.168.55.3"
-          br_rstp_priority: 12288 # Do not modify
-            # This value is needed only on third machine for the RSTP to work
-
-          # PTP configuration.
-          ptp_interface: "eno12419"
+    node3:
+      ansible_host: 192.168.200.123 # Administration IP. TODO
+      network_interface: eno1 # Administration interface. TODO
+      ptp_interface: "eno12419" # PTP interface. TODO
 
   vars:
-    # Ansible vars
-    ansible_connection: ssh
-    ansible_python_interpreter: /usr/bin/python3
-    ansible_remote_tmp: /tmp/.ansible/tmp
-    ansible_user: ansible # TODO: Put the name of your ansible user
-    # By default, this user is "ansible" on Debian and "admin" on Yocto
-
-    # Debian specific, remove if you use Yocto
+    # Debian specific, remove if you use Yocto. TODO
     admin_user: admin
 
     # Main network configuration
-    gateway_addr: "192.168.200.1" # TODO : Put your gatway address
-    dns_servers: "192.168.200.1" # TODO : Put your dns address
+    gateway_addr: "192.168.200.1" # Administration Gateway. TODO
+    dns_servers: "192.168.200.1" # DNS servers. Remove if not used. TODO
+    subnet: 24 # Subnet mask in CIDR notation. TODO
+    ntp_servers: # NTP servers IP. TODO
+      - "185.254.101.25" # public NTP server example
+
+    # SEAPATH ansible variables
+    ansible_connection: ssh
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_remote_tmp: /tmp/.ansible/tmp
+    ansible_user: ansible
     ip_addr: "{{ ansible_host }}"
     hostname: "{{ inventory_hostname }}"
-    subnet: 24 # TODO : Put your subnet mask in CIDR notation
     apply_network_config: true
-    # systemd-networkd is used by default to configure the network
-    # netplan can also be used to sum up complex network in one yaml file
-    # See the wiki for more informations : TODO put link
 
-    # NTP time synchronisation
-    ntp_servers:
-      - "185.254.101.25" # public ntp server
-      - "51.145.123.29"  # public ntp serve
-    # Hardening (Debian only)
-    # TODO : Put the password hash for the grub password
-    # It can be generated with the following command: grub-mkpasswd-pbkdf2
-    grub_password: grub.pbkdf2.sha512.10000.666FF16D5587509B2B3340B2388CB798BEF9553A9666CECA6282E0D822C1529F94AF693CC6738C1F757B868D8090F24FD48D8F56486C70C545D559CB4BAAAA3E.9718E767036BDB71CC1B82BCFC906610F8772DD4757F6F075D82A23E70DA46FBED372A3E5143E5C2D40AA888C6B884E4AA437488D82008383C54ED79D68A42CF
+# Three hypervisors setup. All machines are part of the hypervisor group.
+hypervisors:
+  hosts:
+    node1:
+    node2:
+    node3:
+  vars:
+    isolcpus: "4-N" # The list of CPUs to isolate. TODO
+    livemigration_user: livemigration
 
-# ------------------------------------------------------------------------------
-# ------------------- Ceph configuration part ----------------------------------
-# ------------------------------------------------------------------------------
+# Three hypervisors setup. The observer group is empty.
+observers:
+  hosts:
 
-# This part contains SEAPATH default ceph configuration
-# Change only the TODOs, Do not change the other variables, unless you know
-# exactly what you are doing.
-    force_cephadm: false # by default seapath uses ceph-ansible, but we can use cephadm instead
+# Cluster part. More information on the wiki: https://lf-energy.atlassian.net/wiki/x/SgB9GQ
+cluster_machines:
+  hosts:
+    node1:
+      team0_0: "eno2" # Cluster interface connected to node2. TODO
+      team0_1: "eno3" # Cluster interface connected to node3. TODO
+      cluster_ip_addr: "192.168.55.1" # IP address of this node on the cluster. TODO
+      cluster_next_ip_addr : "192.168.55.2" # IP address of node2 on the cluster. TODO
+      cluster_previous_ip_addr : "192.168.55.3" # IP address of node3 on the cluster. TODO
+
+    node2:
+      team0_0: "eno2" # Cluster interface connected to node3. TODO
+      team0_1: "eno3" # Cluster interface connected to node1. TODO
+      cluster_ip_addr: "192.168.55.2" # IP address of this node on the cluster. TODO
+      cluster_next_ip_addr : "192.168.55.3" # IP address of node3 on the cluster. TODO
+      cluster_previous_ip_addr :  "192.168.55.1" # IP address of node1 on the cluster. TODO
+
+    node3:
+      team0_0: "enp2s0" # Cluster interface connected to node1. TODO
+      team0_1: "enp3s0" # Cluster interface connected to node2. TODO
+      cluster_ip_addr: "192.168.55.3" # IP address of this node on the cluster. TODO
+      cluster_next_ip_addr : "192.168.55.1" # IP address of node1 on the cluster. TODO
+      cluster_previous_ip_addr :  "192.168.55.2" # IP address of node2 on the cluster. TODO
+      br_rstp_priority: 12288 # Do not modify, used by RSTP
+
+# Ceph monitor. All machines in the cluster must be part of mons groups
+# Note : By default SEAPATH uses ceph-ansible to configure Ceph.
+# You can also switch to cephadm deployment by setting force_cephadm to true (Only available on Debian for now)
+mons:
+  hosts:
+    node1:
+    node2:
+    node3:
+  vars:
     ceph_origin: distro
-    cluster_network: "192.168.55.0/24" # TODO : Replace by the IP range of your cluster
-    #no_cluster_network: true # if this variable is defined, whatever its value, seapath won't configure the cluster network (neither with RSTP nor HSR)
+    cluster_network: "192.168.55.0/24" # IP range of your cluster. TODO
     public_network: "{{ cluster_network }}"
     monitor_address: "{{ cluster_ip_addr }}"
     configure_firewall: false
@@ -121,10 +106,7 @@ cluster_machines:
     ceph_conf_overrides:
       global:
         osd_pool_default_size: "{{ groups['hypervisors'] | length }}"
-        osd_pool_default_min_size: 2 # TODO
-          # Set to the minimum number of osd needed to run the cluster
-          # You probably want 2 in case of a three hypervisors configuration
-          # And 1 in case of a two hypervisors and one observer
+        osd_pool_default_min_size: 1
         osd_pool_default_pg_num: 128
         osd_pool_default_pgp_num: 128
         osd_crush_chooseleaf_type: 1
@@ -134,30 +116,27 @@ cluster_machines:
       osd:
         osd memory target: 8076326604
 
-# Ceph monitor. All machines in the cluster must be part of mons groups
-mons:
-  hosts:
-    hypervisor1:
-    hypervisor2:
-    observer:
 
 # Ceph OSD. Machines that will be used as OSDs (which will store data)
 osds:
   hosts:
-    hypervisor1:
-    hypervisor2:
-  vars:
-    ceph_osd_disk: "/dev/disk/by-path/pci-0000:03:00.0-scsi-0:2:1:0" # TODO
+    node1:
       # Set this to the path of the disk that will contains ceph data.
       # The path can be found in "/dev/disk/by-path/"
+      ceph_osd_disk: "/dev/disk/by-path/pci-0000:03:00.0-scsi-0:2:1:0" # TODO
+    node2:
+      ceph_osd_disk: "/dev/disk/by-path/pci-0000:03:00.0-scsi-0:2:1:0" # TODO
+    node3:
+      ceph_osd_disk: "/dev/disk/by-path/pci-0000:03:00.0-scsi-0:2:1:0" # TODO
+  vars:
     devices: "{{ ceph_osd_disk }}"
 
 # Ceph clients. All machines in the cluster must be part of clients groups
 clients:
   hosts:
-    hypervisor1:
-    hypervisor2:
-    observer:
+    node1:
+    node2:
+    node3:
   vars:
     user_config: true
     rbd:
@@ -174,9 +153,7 @@ clients:
           osd: "allow class-read object_prefix rbd_children, profile rbd pool=rbd"
         mode: "{{ ceph_keyring_permissions }}"
 
-# ------------------------------------------------------------------------------
-# ----------------------- Empty groups, prevent warnings -----------------------
-# ------------------------------------------------------------------------------
+# Empty groups to prevent warnings, mostly ceph-ansible
 grafana-server:
 iscsigws:
 iscsi-gws:

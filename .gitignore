@@ -1,9 +1,9 @@
-# Ignore roles directory
-roles/systemd_networkd/
-# Ignore collections directory
+# Ansible generated files
 collections/
-*.pdf
 ansible.log
+roles/systemd_networkd/
+
+# Ignore user defined playbooks and inventory
 playbooks/*
 !playbooks/README.adoc
 !playbooks/cluster_setup_*.yaml
@@ -24,34 +24,25 @@ inventories/*
 # Ide
 .idea/
 
-# Ignore module documentation
+# Module documentation
 module_documentation
 
-# Ignore python cache files
-__pycache__/
-.pyc
-
-#privatekey
-cluster_rsa
-
-#ansible facts
-facts/
-
-#private inventories
-inventories_private/
-
-# Ignore Cukinia results
+# Cukinia results
 /*.csv
 /*.xml
 
-# VM folder
-vm_images/*.qcow2
+# Files folder
+files/*
 
 # Src from privates repos
 src/trafgen/*
 !src/trafgen/README
 src/svtools/*
 !src/svtools/README
+
+# Fetch cockpit plugins
+roles/deploy_cockpit_plugins/files/cockpit-cluster-dashboard.tar.gz
+roles/deploy_cockpit_plugins/files/cockpit-cluster-vm-management.tar.gz
 
 # Tests results
 tests_results/*
