@@ -44,7 +44,9 @@
         network_configovs_apply_config: "{{ apply_network_config | default(false) }}"
     - network_buildhosts
     - network_resolved
-    - network_networkdwait
+    - role: network_networkdwait
+      vars:
+        network_networkdwait_no_cluster_network: "{{ no_cluster_network | default(false) }}"
 
 - name: Configure sriov libvirt network pool
   hosts:

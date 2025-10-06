@@ -1,3 +1,5 @@
 [Service]
+{% set no_cluster_network_variable = network_networkdwait_no_cluster_network is defined and network_networkdwait_no_cluster_network %}
+{% set wait_on_team0 = 'cluster_machines' in groups and inventory_hostname in groups['cluster_machines'] and not no_cluster_network_variable %}
 ExecStart=
-ExecStart=/lib/systemd/systemd-networkd-wait-online {% if interfaces_to_wait_for is defined %}{% for interface in interfaces_to_wait_for %}{{" -i " + interface}}{% endfor %}{% endif %}{% if cluster_protocol is defined and cluster_protocol == 'HSR' %} -i hsr0 {% elif cluster_ip_addr is defined and no_cluster_network is not defined %} -i team0 {% endif %}
+ExecStart=/lib/systemd/systemd-networkd-wait-online {% if interfaces_to_wait_for is defined %}{% for interface in interfaces_to_wait_for %}{{" -i " + interface}}{% endfor %}{% endif %}{% if cluster_protocol is defined and cluster_protocol == 'HSR' %} -i hsr0 {% elif wait_on_team0 %} -i team0 {% endif %}
