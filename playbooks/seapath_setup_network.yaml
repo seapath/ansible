@@ -78,7 +78,6 @@
   become: true
   roles:
     - role: conntrackd
-      when: conntrackd_ignore_ip_list is defined
 
 - name: Podman Networks
   hosts: cluster_machines

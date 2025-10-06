@@ -46,8 +46,9 @@ General {
                         ESTABLISHED CLOSED TIME_WAIT CLOSE_WAIT for TCP
                 }
         }
-        Scheduler {
-                Type RR
-                Priority 0
-        }
+# This does not work, it set the class to SCHED_OTHER
+#        Scheduler {
+#                Type RR
+#                Priority 0
+#        }
 }
