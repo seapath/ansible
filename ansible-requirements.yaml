@@ -1,14 +1,9 @@
 # Copyright (C) 2020, RTE (http://www.rte-france.com)
+# Copyright (C) 2025 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 # External Ansible roles and collections used by SEAPATH are described here.
 ---
-roles:
-    - name: "systemd_networkd"
-      src: "https://github.com/seapath/ansible-role-systemd-networkd"
-      scm: git
-      version: "c8f87c6d9a7e01ba86b4ec6bb22466de1f95d3bf"
-
 collections:
     - name: "community.libvirt"
       version: "1.0.2"
