@@ -1,0 +1,18 @@
+---
+# handlers for ansible-role-systemd-networkd
+
+- name: restart udev
+  service:
+    name: "{{ service_name_udev }}"
+    state: restarted
+
+- name: reload systemd-networkd
+  service:
+    name: systemd-networkd
+    state: reloaded
+  when: systemd_networkd_apply_config
+
+- name: check reboot
+  set_fact:
+    need_reboot: true
+  when: not systemd_networkd_apply_config

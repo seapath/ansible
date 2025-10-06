@@ -1,7 +1,6 @@
 # Ansible generated files
 collections/
 ansible.log
-roles/systemd_networkd/
 
 # Ignore user defined playbooks and inventory
 playbooks/*

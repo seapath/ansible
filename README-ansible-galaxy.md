@@ -70,6 +70,7 @@ You can use default SEAPATH playbooks or write your own.
 - `network_clusternetwork`: Configure the cluster network
 - `network_configovs`: Create user defined Open vSwitch networks
 - `network_netplan`: Configure the machine network using netplan
+- `network_systemdnetworkd`: Configure the machine network using systemd-networkd
 - `network_networkdwait`: Configure systemd-networkd service
 - `network_resolved`: Configure DNS with resolved
 - `network_sriovpool`: Create a Libvirt pool for SR-IOV interfaces

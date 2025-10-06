@@ -5,26 +5,21 @@
 # This Ansible playbook configures the networks and defines the hostnames.
 
 ---
-- name: Network configuration
+- name: Configure hypervisor network
   hosts:
     - cluster_machines
     - standalone_machine
   become: true
   gather_facts: true
-  vars_files:
-    - "../vars/network_team0.yml"
-  pre_tasks:
-    - name: Dynamically include network configuration variables
-      include_vars:
-        file: "../vars/network_{{ 'empty' if netplan_configurations is defined or (network_simple is defined and network_simple) else 'defaults' }}.yml"
   roles:
     - detect_seapath_distro
     - role: network_basics
-    - role: systemd_networkd
+    - role: network_systemdnetworkd
       vars:
         systemd_networkd_apply_config: "{{ apply_network_config | default(false) }}"
       when: netplan_configurations is not defined
     - role: network_netplan
+      when: netplan_configurations is defined
 
 - name: Configure cluster network
   hosts: cluster_machines

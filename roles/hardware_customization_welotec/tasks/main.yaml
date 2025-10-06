@@ -35,7 +35,7 @@
       }}
 - name: Apply config
   include_role:
-    name: systemd_networkd
+    name: network_systemdnetworkd
   vars:
     systemd_networkd_link: "{{ hardware_customization_welotec_systemd_networkd_link }}"
     systemd_networkd_network: "{{ hardware_customization_welotec_systemd_networkd_network }}"
