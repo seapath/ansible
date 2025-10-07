@@ -1,0 +1,13 @@
+[Unit]
+Description=Configure SR-IOV Virtual Functions
+After=network-pre.target
+Wants=network-pre.target
+
+[Service]
+Type=oneshot
+{% for device in sriov | dict2items %}
+ExecStart=/bin/sh -c 'echo {{ device.value }} > /sys/class/net/{{ device.key }}/device/sriov_numvfs'
+{% endfor %}
+
+[Install]
+WantedBy=multi-user.target

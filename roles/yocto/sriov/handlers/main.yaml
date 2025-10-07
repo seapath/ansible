@@ -1,0 +1,8 @@
+# Copyright (C) 2025 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+- name: Restart sriov-configure.service
+  ansible.builtin.systemd:
+    name: sriov-configure.service
+    state: restarted
+    enabled: true
