@@ -1,0 +1,14 @@
+# Copyright (C) 2025 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+# This role configures SR-IOV.
+
+
+---
+- name: Add sriov sysfs rules
+  template:
+    src: sriov-configure.service.j2
+    dest: /etc/systemd/system/sriov-configure.service
+    mode: '0644'
+  when: sriov is defined
+  notify: Restart sriov-configure.service

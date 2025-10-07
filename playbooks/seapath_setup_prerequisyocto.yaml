@@ -1,5 +1,5 @@
 # Copyright (C) 2021, RTE (http://www.rte-france.com)
-# Copyright (C) 2024 Savoir-faire Linux, Inc.
+# Copyright (C) 2024-2025 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 # This Ansible playbook configures a SEAPATH machine.
@@ -18,6 +18,12 @@
   become: true
   roles:
     - yocto/hugepages
+
+- name: Configure SR-IOV
+  hosts: hypervisors
+  become: true
+  roles:
+    - yocto/sriov
 
 - name: Upload extra files
   hosts:
@@ -55,4 +61,3 @@
         - skip_ansible_lint
       loop: "{{ commands_to_run_after_upload }}"
       when: commands_to_run_after_upload is defined
-

@@ -105,7 +105,7 @@ Note: For the Yocto based SEAPATH, this configuration is done at build time
 ## Utility roles
 
 - `update`: Update a SEAPATH machine (Yocto only)
-- `yocto`: Specify additional kernel parameters (Yocto only)
+- `yocto`: Specify additional kernel parameters and SR-IOV configuration (Yocto only)
 - `debian_grub_bootcount`: Setup a rollback system in GRUB (Debian only)
 - `deploy_cukinia`: Deploy the testing system on a Debian machine (Debian only)
 - `debian_tests`: Launch the system tests on a Debian machine (Debian only)
