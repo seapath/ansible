@@ -22,7 +22,7 @@ function check_kernel_configuration() {
         for testcase in ${kernel_options["${category}"]}; do
             state=${testcase#*:}
             option=${testcase%:*}
-            id "SEAPATH-00050" as "Linux kernel '${category}' : \
+            test_id "SEAPATH-00050" as "Linux kernel '${category}' : \
                 ${option} is $(get_string_from_option ${state})" \
                 cukinia_kconf "${option}" "${state}"
         done
