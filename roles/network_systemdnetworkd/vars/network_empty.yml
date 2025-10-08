@@ -3,13 +3,13 @@
 # SPDX-License-Identifier: Apache-2.0
 ---
 
-systemd_networkd_network_custom: "{{ custom_network | default({}) }}"
-systemd_networkd_netdev: "{{ custom_netdev | default({}) }}"
+network_systemdnetworkd_network_custom: "{{ custom_network | default({}) }}"
+network_systemdnetworkd_netdev: "{{ custom_netdev | default({}) }}"
 
 ## Helper variables, this should probably be refactored with the other network vars files TODO
 no_cluster_network_variable: "{{ network_systemdnetworkd_no_cluster_network is defined and network_systemdnetworkd_no_cluster_network }}"
 include_cluster: "{{ 'cluster_machines' in groups and inventory_hostname in groups['cluster_machines'] and not no_cluster_network_variable }}"
 
-systemd_networkd_network: "{{ systemd_networkd_network_custom | combine(team0_systemd_networkd_network) if include_cluster else systemd_networkd_network_custom }}"
+network_systemdnetworkd_network: "{{ network_systemdnetworkd_network_custom | combine(team0_network_systemdnetworkd_network) if include_cluster else network_systemdnetworkd_network_custom }}"
 
 ...

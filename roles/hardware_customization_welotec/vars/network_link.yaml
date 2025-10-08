@@ -1,7 +1,7 @@
 # Copyright (C) 2025 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
 ---
-hardware_customization_welotec_systemd_networkd_link:
+hardware_customization_welotec_network_systemdnetworkd_link:
   20_lan1:
     - Match:
         - Name: "lan1"
@@ -85,7 +85,7 @@ hardware_customization_welotec_systemd_networkd_link:
           - NamePolicy:
           - AlternativeNamesPolicy:
           - Name: "lan_hsr-prp"
-hardware_customization_welotec_systemd_networkd_network:
+hardware_customization_welotec_network_systemdnetworkd_network:
   20_lan_prp:
       - Match:
           - Name: "lan_hsr-prp"
