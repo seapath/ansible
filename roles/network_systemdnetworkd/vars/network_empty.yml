@@ -6,6 +6,10 @@
 systemd_networkd_network_custom: "{{ custom_network | default({}) }}"
 systemd_networkd_netdev: "{{ custom_netdev | default({}) }}"
 
-systemd_networkd_network: "{{ team0_systemd_networkd_network | combine(systemd_networkd_network_custom) if cluster_ip_addr is defined else systemd_networkd_network_custom }}"
+## Helper variables, this should probably be refactored with the other network vars files TODO
+no_cluster_network_variable: "{{ network_systemdnetworkd_no_cluster_network is defined and network_systemdnetworkd_no_cluster_network }}"
+include_cluster: "{{ 'cluster_machines' in groups and inventory_hostname in groups['cluster_machines'] and not no_cluster_network_variable }}"
+
+systemd_networkd_network: "{{ systemd_networkd_network_custom | combine(team0_systemd_networkd_network) if include_cluster else systemd_networkd_network_custom }}"
 
 ...
