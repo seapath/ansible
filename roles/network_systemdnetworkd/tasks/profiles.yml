@@ -7,7 +7,7 @@
     owner: root
     group: systemd-network
     mode: 0640
-  loop: "{{ systemd_networkd_link | dict2items }}"
+  loop: "{{ network_systemdnetworkd_link | dict2items }}"
   notify:
     - reload systemd-networkd
     - restart udev
@@ -20,7 +20,7 @@
     owner: root
     group: systemd-network
     mode: 0640
-  loop: "{{ systemd_networkd_netdev | dict2items }}"
+  loop: "{{ network_systemdnetworkd_netdev | dict2items }}"
   notify:
     - reload systemd-networkd
     - check reboot
@@ -32,7 +32,7 @@
     owner: root
     group: systemd-network
     mode: 0640
-  loop: "{{ systemd_networkd_network | dict2items }}"
+  loop: "{{ network_systemdnetworkd_network | dict2items }}"
   notify:
     - reload systemd-networkd
     - check reboot

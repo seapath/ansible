@@ -1,12 +1,13 @@
 ---
 
 network_systemdnetworkd_no_cluster_network: false
+network_systemdnetworkd_apply_config: false
 
-systemd_networkd_link: {}
-systemd_networkd_netdev: {}
-systemd_networkd_network: {}
+network_systemdnetworkd_link: {}
+network_systemdnetworkd_netdev: {}
+network_systemdnetworkd_network: {}
 
-systemd_networkd_apply_config: false
-systemd_networkd_enable_resolved: true
+network_systemdnetworkd_apply_config: false
+network_systemdnetworkd_enable_resolved: true
 
 service_name_udev: "systemd-udev"

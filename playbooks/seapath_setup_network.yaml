@@ -16,7 +16,7 @@
     - role: network_basics
     - role: network_systemdnetworkd
       vars:
-        systemd_networkd_apply_config: "{{ apply_network_config | default(false) }}"
+        network_systemdnetworkd_apply_config: "{{ apply_network_config | default(false) }}"
         network_systemdnetworkd_no_cluster_network: "{{ no_cluster_network | default(false) }}"
       when: netplan_configurations is not defined
     - role: network_netplan

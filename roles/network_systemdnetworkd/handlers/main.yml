@@ -10,9 +10,9 @@
   service:
     name: systemd-networkd
     state: reloaded
-  when: systemd_networkd_apply_config
+  when: network_systemdnetworkd_apply_config
 
 - name: check reboot
   set_fact:
     need_reboot: true
-  when: not systemd_networkd_apply_config
+  when: not network_systemdnetworkd_apply_config
