@@ -20,10 +20,9 @@ The network role is separated in three parts :
 | Variable             | Required | Type   | Comments                                                                     |
 |----------------------|----------|--------|------------------------------------------------------------------------------|
 | network_simple       | No       | Bool   | Put to true to avoid defining the administration network. See below          |
-| no_cluster_network   | No       | Bool   | Put to true to avoid defining the cluster IP configuration. See below        |
+| network_systemdnetworkd_no_cluster_network | No       | Bool   | Put to true to avoid defining the cluster IP configuration. See below        |
 | custom_netdev        | No       | Custom | Additional systemd-networkd network for the user to define. See syntax below |
 | custom_network       | No       | Custom | Additional systemd-networkd netdev for the user to define. See syntax below  |
-
 
 The `custom_netdev` and `custom_network` variables are structure uses systemd-networkd files structure in a yaml format.
 For example to define a new VLAN:

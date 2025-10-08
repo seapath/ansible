@@ -1,5 +1,7 @@
 ---
 
+network_systemdnetworkd_no_cluster_network: false
+
 systemd_networkd_link: {}
 systemd_networkd_netdev: {}
 systemd_networkd_network: {}
