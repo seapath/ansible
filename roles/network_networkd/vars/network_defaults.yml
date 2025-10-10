@@ -1,0 +1,75 @@
+# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# Copyright (C) 2024 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+---
+
+network_networkd_network_custom: "{{ custom_network | default({}) }}" # noqa var-naming[no-role-prefix]
+network_networkd_netdev_custom: "{{ custom_netdev | default({}) }}" # noqa var-naming[no-role-prefix]
+
+br0vlan_network_networkd_netdev: # noqa var-naming[no-role-prefix]
+  79-br0:
+    - NetDev:
+        - Name: "br0"
+        - Kind: "bridge"
+    - Bridge:
+        - DefaultPVID: "none"
+        - VLANFiltering: "yes"
+  79-br0vlan:
+    - NetDev:
+        - Name: "vlan{{ br0vlan | default('') }}"
+        - Kind: "vlan"
+    - VLAN:
+        - Id: "{{ br0vlan | default('') }}"
+br0vlan_network_networkd_network: # noqa var-naming[no-role-prefix]
+  79-br0vlan:
+    - Match:
+        - Name: "vlan{{ br0vlan | default('') }}"
+    - Network:
+        - Gateway: "{{ gateway_addr }}"
+        - Address: "{{ ip_addr }}/{{ subnet | default(24) }}"
+  79-br0:
+    - Match:
+        - Name: "br0"
+    - Network:
+        - VLAN: "vlan{{ br0vlan | default('') }}"
+    - BridgeVLAN:
+        - VLAN: "{{ br0vlan | default('') }}"
+  79-wired:
+    - Match:
+        - Name: "{{ network_interface }}"
+    - Network:
+      - Bridge: "br0"
+    - BridgeVLAN:
+        - VLAN: "1-4094"
+
+br0_network_networkd_netdev: # noqa var-naming[no-role-prefix]
+  79-br0:
+    - NetDev:
+        - Name: "br0"
+        - Kind: "bridge"
+
+br0_network_networkd_network: # noqa var-naming[no-role-prefix]
+  79-br0:
+    - Match:
+        - Name: "br0"
+    - Network:
+        - Gateway: "{{ gateway_addr }}"
+        - Address: "{{ ip_addr }}/{{ subnet | default(24) }}"
+  79-wired:
+    - Match:
+        - Name: "{{ network_interface }}"
+    - Network:
+      - Bridge: "br0"
+
+wired_network_networkd_netdev: "{{ br0vlan_network_networkd_netdev if br0vlan is defined else br0_network_networkd_netdev }}" # noqa var-naming[no-role-prefix]
+wired_network_networkd_network: "{{ br0vlan_network_networkd_network if br0vlan is defined else br0_network_networkd_network }}" # noqa var-naming[no-role-prefix]
+
+network_networkd_netdev_nocluster: "{{ wired_network_networkd_netdev | combine(network_networkd_netdev_custom) }}" # noqa var-naming[no-role-prefix]
+network_networkd_network_nocluster: "{{ wired_network_networkd_network | combine(network_networkd_network_custom) }}" # noqa var-naming[no-role-prefix]
+
+## Helper variables, this should probably be refactored with the other network vars files TODO
+no_cluster_network_variable: "{{ network_networkd_no_cluster_network is defined and network_networkd_no_cluster_network }}" # noqa var-naming[no-role-prefix]
+include_cluster: "{{ 'cluster_machines' in groups and inventory_hostname in groups['cluster_machines'] and not no_cluster_network_variable }}" # noqa var-naming[no-role-prefix]
+
+network_networkd_network: "{{ network_networkd_network_nocluster | combine(team0_network_networkd_network) if include_cluster else network_networkd_network_nocluster }}"
+network_networkd_netdev: "{{ network_networkd_netdev_nocluster }}"

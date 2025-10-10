@@ -1,0 +1,12 @@
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+network_networkd_apply_config: false
+
+network_networkd_link: {}
+network_networkd_netdev: {}
+network_networkd_network: {}
+
+network_networkd_service_name_udev: "systemd-udev-trigger"
+
+network_networkd_no_cluster_network: false

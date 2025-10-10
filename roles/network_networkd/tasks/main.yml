@@ -1,0 +1,55 @@
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Dynamically include network configuration variables 1/2
+  include_vars:
+    file: "network_team0.yml"
+- name: Dynamically include network configuration variables 2/2
+  include_vars:
+    file: "network_{{ 'empty' if netplan_configurations is defined or (network_simple is defined and network_simple) else 'defaults' }}.yml"
+
+- name: Ensure systemd-networkd directory exists
+  file:
+    path: "/etc/systemd/network"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Generate .link files
+  template:
+    src: systemd_network_generic.j2
+    dest: "/etc/systemd/network/{{ item.key }}.link"
+    owner: root
+    group: systemd-network
+    mode: "0644"
+  loop: "{{ network_networkd_link | default({}) | dict2items }}"
+  notify:
+    - Reload systemd-networkd
+    - Restart udev
+    - Check reboot
+
+- name: Generate .netdev files
+  template:
+    src: systemd_network_generic.j2
+    dest: "/etc/systemd/network/{{ item.key }}.netdev"
+    owner: root
+    group: systemd-network
+    mode: "0644"
+  loop: "{{ network_networkd_netdev | default({}) | dict2items }}"
+  notify:
+    - Reload systemd-networkd
+    - Check reboot
+
+- name: Generate .network files
+  template:
+    src: systemd_network_generic.j2
+    dest: "/etc/systemd/network/{{ item.key }}.network"
+    owner: root
+    group: systemd-network
+    mode: "0644"
+  loop: "{{ network_networkd_network | default({}) | dict2items }}"
+  notify:
+    - Reload systemd-networkd
+    - Check reboot
