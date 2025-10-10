@@ -1,9 +1,10 @@
-# Copyright (C) 2020, RTE (http://www.rte-france.com)
 # Copyright (C) 2025 Savoir-faire Linux, Inc.
+# Copyright (C) 2025, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
 # External Ansible roles and collections used by SEAPATH are described here.
 ---
+
 collections:
     - name: "community.libvirt"
     - name: "community.general"

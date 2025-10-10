@@ -14,10 +14,10 @@
   roles:
     - detect_seapath_distro
     - role: network_basics
-    - role: network_systemdnetworkd
+    - role: network_networkd
       vars:
-        network_systemdnetworkd_apply_config: "{{ apply_network_config | default(false) }}"
-        network_systemdnetworkd_no_cluster_network: "{{ no_cluster_network | default(false) }}"
+        network_networkd_apply_config: "{{ apply_network_config | default(false) }}"
+        network_networkd_no_cluster_network: "{{ no_cluster_network | default(false) }}"
       when: netplan_configurations is not defined
     - role: network_netplan
       when: netplan_configurations is defined
