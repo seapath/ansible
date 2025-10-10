@@ -1,0 +1,18 @@
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+- name: Restart udev
+  service:
+    name: "{{ service_name_udev }}"
+    state: restarted
+
+- name: Reload systemd-networkd
+  service:
+    name: systemd-networkd
+    state: reloaded
+  when: network_networkd_apply_config
+
+- name: Check reboot
+  set_fact:
+    need_reboot: true
+  when: not network_networkd_apply_config
