@@ -23,6 +23,10 @@ inventories/*
 # Ide
 .idea/
 
+# Ignore python cache files
+__pycache__/
+.pyc
+
 # Module documentation
 module_documentation
 
