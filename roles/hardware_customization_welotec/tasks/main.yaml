@@ -1,20 +1,21 @@
 # Copyright (C) 2025 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
 ---
-- include_vars: "network_link.yaml"
-
 - name: Gather interfaces MAC addresses
   shell:
     cmd: "set -o pipefail && cat /sys/class/net/*/address|grep 78:70|sort|uniq"
     executable: "/bin/bash"
   register: mac_addresses
   changed_when: false
+  failed_when: false
+  when: mac_address_prp is not defined
 - name: Gather PRP-HSR interfaces MAC addresses
   shell:
     cmd: "set -o pipefail && cat /sys/class/net/*/address|grep 70:f8:e7*|sort|uniq"
     executable: "/bin/bash"
   register: mac_addresses_hsr_prp
   changed_when: false
+  failed_when: false
 - name: Map MAC addresses to interfaces
   set_fact:
     mac_address_map: >-
@@ -29,14 +30,57 @@
                 ('lan2', mac_addresses.stdout_lines[5]),
                 ('lan3', mac_addresses.stdout_lines[6]),
                 ('lan4', mac_addresses.stdout_lines[7]),
-                ('lan_hsr-prp', mac_addresses_hsr_prp.stdout_lines[0]),
           ]
         )
       }}
-- name: Apply config
-  include_role:
-    name: network_systemdnetworkd
+  when: mac_address_map is not defined and mac_addresses.rc == 0
+- name: Define PRP-HSR MAC address to interface
+  set_fact:
+    mac_address_prp: "{{ mac_addresses_hsr_prp.stdout_lines[0] }}"
+  when: mac_address_prp is not defined and mac_addresses_hsr_prp.rc == 0
+
+- name: Copy PRP-HSR network configuration
+  copy:
+    src: 20_welotec_lan_prp.network
+    dest: /etc/systemd/network/20_welotec_lan_prp.network
+    mode: '0644'
+  when: mac_address_prp is defined
+  notify: reload systemd-networkd
+
+- name: Copy interface link configuration for lan_hsr-prp
+  template:
+    src: 20_welotec_lan_hsr-prp.link.j2
+    dest: /etc/systemd/network/20_welotec_lan_hsr-prp.link
+    mode: '0644'
   vars:
-    network_systemdnetworkd_link: "{{ hardware_customization_welotec_network_systemdnetworkd_link }}"
-    network_systemdnetworkd_network: "{{ hardware_customization_welotec_network_systemdnetworkd_network }}"
-    network_systemdnetworkd_apply_config: "{{ apply_network_config | default(false) }}"
+    mac_address: "{{ mac_address_prp }}"
+  when: mac_address_prp is defined
+  notify: reload systemd-networkd
+
+- name: Copy interface link configurations for lan2-lan8
+  template:
+    src: 20_welotec_lan.link.j2
+    dest: "/etc/systemd/network/20_welotec_{{ item }}.link"
+    mode: '0644'
+  vars:
+    mac_address: "{{ mac_address_map[item] }}"
+  loop:
+    - lan2
+    - lan3
+    - lan4
+    - lan5
+    - lan6
+    - lan7
+    - lan8
+  when: mac_address_map is defined
+  notify: reload systemd-networkd
+
+- name: Copy interface link configuration for lan1
+  template:
+    src: 20_welotec_lan1.link.j2
+    dest: /etc/systemd/network/20_welotec_lan1.link
+    mode: '0644'
+  vars:
+    mac_address: "{{ mac_address_map['lan1'] }}"
+  when: mac_address_map is defined
+  notify: reload systemd-networkd
