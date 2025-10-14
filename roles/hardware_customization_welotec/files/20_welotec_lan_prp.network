@@ -1,0 +1,8 @@
+# Copyright (C) 2025 Savoir-faire Linux, Inc.
+# SPDX-Licence-Identifier: Apache-2.0
+
+[Match]
+Name=lan_hsr-prp
+
+[Network]
+KeepConfiguration=static
