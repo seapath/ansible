@@ -8,12 +8,15 @@ non_isolated_cores_expanded=${f:cpulist_unpack:${non_isolated_cores}}
 
 [sysctl]
 kernel.printk=3 1 1 7
+#vm.nr_hugepages = 13312
+vm.stat_interval = 60
 
 [sysfs]
 /sys/module/kvm/parameters/halt_poll_ns = 0
+/sys/kernel/mm/ksm/run = 0
 
 [bootloader]
-cmdline_srh=+processor.max_cstate=1 intel_idle.max_cstate=1 cpufreq.default_governor=performance rcu_nocb_poll
+cmdline_srh=+processor.max_cstate=1 intel_idle.max_cstate=1 cpufreq.default_governor=performance rcu_nocb_poll iomem=relaxed iommu=pt threadirqs rdt=cmt,l3_cat,l3_cdp,mba
 
 [scheduler]
 # for i in `pgrep rcuc` ; do grep Cpus_allowed_list /proc/$i/status ; done
