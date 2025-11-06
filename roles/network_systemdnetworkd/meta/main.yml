@@ -1,9 +1,0 @@
-# Copyright (C) 2024 RTE
-# SPDX-License-Identifier: Apache-2.0
----
-galaxy_info:
-  author: "Anthony Ruhier; Seapath"
-  description: configures the network via systemd-networkd
-  license: BSD
-  min_ansible_version: 2.9.10
-dependencies: []
