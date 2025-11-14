@@ -34,12 +34,6 @@
   with_items: "{{ sriov | dict2items }}"
   when: sriov is defined
   register: sriov_tmpfiles
-- name: Copy sysfs.d cpumask
-  template:
-    src: tmpfiles-workqueue_cpumask.conf.j2
-    dest: /etc/tmpfiles.d/tmpfiles-workqueue_cpumask.conf
-    mode: '0644'
-  register: tmpfiles_cpumask
 
 - name: Setup irqbalance conf
   lineinfile:
