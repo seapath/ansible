@@ -1,0 +1,12 @@
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+[Unit]
+Description=Wait for active MDS for seapathcephfs
+After=ceph.target
+Requires=ceph.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/wait-for-mds.sh seapathcephfs
+RemainAfterExit=yes
