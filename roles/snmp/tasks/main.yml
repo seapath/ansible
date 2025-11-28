@@ -5,7 +5,9 @@
 - include_vars: "{{ seapath_distro }}.yml"
 
 - name: Configure snmp
-  when: snmp_admin_ip_addr is defined
+  when:
+    - seapath_distro != "Yocto"
+    - snmp_admin_ip_addr is defined
   block:
   - name: Get uid for {{ snmp_user_name }}
     getent:
@@ -21,7 +23,9 @@
         - "group id {{ getent_group[snmp_user_name][1] }}"
 
   - name: Set correct uid/gid for {{ snmp_user_name }}
-    when: getent_passwd[snmp_user_name][1] != '902' or getent_group[snmp_user_name][1] != '902'
+    when:
+      - getent_passwd[snmp_user_name][1] != '902' or getent_group[snmp_user_name][1] != '902'
+      - seapath_distro != "Yocto"
     block:
       - name: Stop snmpd if needed
         ansible.builtin.systemd:
@@ -125,4 +129,4 @@
     name: snmpd.service
     state: stopped
     enabled: no
-  when: snmp_admin_ip_addr is not defined
+  when: snmp_admin_ip_addr is not defined or seapath_distro == "Yocto"

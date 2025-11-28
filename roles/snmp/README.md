@@ -2,7 +2,8 @@
 
 This role configure the SNMP feature
 
-This role is disable SNMP if the *snmp_admin_ip_addr* variable is not defined.
+This role disables SNMP if the *snmp_admin_ip_addr* variable is not defined or
+*seapath_distro* is *Yocto*.
 
 ## Requirements
 
