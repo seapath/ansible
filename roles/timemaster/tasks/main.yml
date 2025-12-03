@@ -45,3 +45,13 @@
     name: "{{ timemaster_service_name_chrony }}"
     state: stopped
     enabled: false
+- name: Copy SELinux rule for ptp4l
+  copy:
+    src: ptp4l_local.pp
+    dest: "/tmp/ptp4l_local.pp"
+    mode: '0755'
+  when: seapath_distro == "CentOS"
+- name: Install SELinux rule for ptp4l
+  command:
+    cmd: semodule -i /tmp/ptp4l_local.pp
+  when: seapath_distro == "CentOS"
