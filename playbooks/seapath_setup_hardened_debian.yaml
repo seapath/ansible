@@ -11,6 +11,7 @@
   vars:
     revert: false
   roles:
+    - detect_seapath_distro
     - debian_hardening
 - name: Add hardened for SEAPATH physical machines
   become: true
