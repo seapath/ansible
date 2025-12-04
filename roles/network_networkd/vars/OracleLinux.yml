@@ -1,0 +1,5 @@
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+network_networkd_service_name_udev: "systemd-udevd"

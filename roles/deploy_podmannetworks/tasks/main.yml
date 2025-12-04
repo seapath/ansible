@@ -1,0 +1,16 @@
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Ensure Podman networks are present
+  containers.podman.podman_network:
+    name: "{{ item.name }}"
+    driver: "{{ item.driver | default('macvlan') }}"
+    subnet: "{{ item.subnet }}"
+    gateway: "{{ item.gateway }}"
+    opt:
+      parent: "{{ item.parent }}"
+    state: present
+  loop: "{{ podman_networks | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"

@@ -1,0 +1,14 @@
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+{% for section in item.value %}
+{% for section_name, entries in section.items() %}
+[{{ section_name }}]
+{% for entry in entries %}
+{% for k, v in entry.items() %}
+{{ k }}={{ v }}
+{% endfor %}
+{% endfor %}
+
+{% endfor %}
+{% endfor %}
