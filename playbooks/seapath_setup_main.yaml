@@ -54,8 +54,8 @@
   import_playbook: cluster_setup_cephadm.yaml
   when: is_using_cephadm | bool
 
-- name: Import cluster_setup_libvirt playbook
-  import_playbook: cluster_setup_libvirt.yaml
+- name: Import seapath_setup_libvirt playbook
+  import_playbook: seapath_setup_libvirt.yaml
 - name: Import cluster_setup_users playbook
   import_playbook: cluster_setup_users.yaml
 - name: Import cluster_setup_ha playbook
