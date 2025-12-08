@@ -1,0 +1,12 @@
+# Copyright (C) 2022, RTE (http://www.rte-france.com)
+# Copyright (C) 2024-2025 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+# This Ansible playbook configures libvirt
+
+---
+- name: Configure libvirt
+  hosts: hypervisors
+  become: true
+  roles:
+    - configure_libvirt
