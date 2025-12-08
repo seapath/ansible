@@ -2,4 +2,5 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-configure_libvirt_allow_non_root_libvirt_socket_access: true
+configure_libvirt_libvirt_rbd_pool: "rbd"
+configure_libvirt_libvirt_pool_name: "ceph"

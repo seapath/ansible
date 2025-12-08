@@ -1,0 +1,65 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2024 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Try to get already defined secret
+  shell:
+    cmd: set -o pipefail && virsh secret-list |grep "ceph" |grep -oE '[a-f0-9]+-[a-f0-9]+-[a-f0-9]+-[a-f0-9]+-[a-f0-9]+'
+    executable: /bin/bash
+  register: secret_defined
+  failed_when: secret_defined.rc > 1
+  changed_when: false
+- debug:
+    var: secret_defined
+
+- name: Check if a secret pool has to be created
+  set_fact:
+    create_secret_pool: "{% if hostvars[item]['secret_defined'].stdout == '' %}true{% else %}{{ create_secret_pool | default(false) }}{% endif %}"
+  loop: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) }}"
+
+- when: create_secret_pool
+  block:
+    - name: Check if the secret is already defined
+      set_fact:
+        libvirt_uuid_rbd: "{% if hostvars[item]['secret_defined'].stdout != '' %}{{ hostvars[item]['secret_defined'].stdout }}{% else %}{{ libvirt_uuid_rbd | default('') }}{% endif %}"
+      loop: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) }}"
+    - debug:
+        msg: "Found UUID {{ libvirt_uuid_rbd }}"
+      when: libvirt_uuid_rbd | length > 0
+      run_once: true
+    - name: Generate secret uuid
+      command: uuidgen
+      changed_when: false
+      register: raw_uuid
+      run_once: true
+      when: libvirt_uuid_rbd | length == 0
+    - name: Register uuid
+      set_fact:
+        libvirt_uuid_rbd: "{{ raw_uuid.stdout }}"
+      when: libvirt_uuid_rbd | length == 0
+    - name: Get Ceph libvirt client key
+      command: ceph auth get-key client.libvirt
+      changed_when: false
+      register: ceph_key
+      run_once: true
+
+- when:
+    - create_secret_pool
+    - secret_defined.stdout == ''
+  block:
+  - name: Copy libvirt xml secret file
+    template:
+        src: secret.xml.j2
+        dest: /tmp/secret.xml
+  - name: Create libvirt rbd secret
+    command: virsh secret-define /tmp/secret.xml
+    when: not secret_defined.failed
+    changed_when: true
+  - name: Remove temporary file
+    file:
+        path: /tmp/secret.xml
+        state: absent
+  - name: Set key in libvirt secret
+    command: 'virsh secret-set-value --secret "{{ libvirt_uuid_rbd }}" --base64 "{{ ceph_key.stdout }}"'
+    changed_when: true
