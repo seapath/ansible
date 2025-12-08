@@ -5,8 +5,8 @@
 # This Ansible playbook configures libvirt to work with Ceph.
 
 ---
-- name: Configure libvirt
+- name: Configure libvirt to work with Ceph
   hosts: hypervisors:&cluster_machines
   become: true
   roles:
-    - configure_libvirt
+    - configure_libvirt_rdb_secret

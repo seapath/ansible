@@ -43,6 +43,9 @@
 - name: Import seapath_setup_timemaster playbook
   import_playbook: seapath_setup_timemaster.yaml
 
+- name: Import seapath_setup_libvirt playbook
+  import_playbook: seapath_setup_libvirt.yaml
+
 - name: Import seapath_setup_snmp playbook
   import_playbook: seapath_setup_snmp.yaml
 
