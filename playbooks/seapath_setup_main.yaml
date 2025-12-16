@@ -59,10 +59,13 @@
 
 - name: Import cluster_setup_libvirt playbook
   import_playbook: cluster_setup_libvirt.yaml
+
 - name: Import cluster_setup_users playbook
   import_playbook: cluster_setup_users.yaml
+
 - name: Import cluster_setup_ha playbook
   import_playbook: cluster_setup_ha.yaml
+
 - name: Import seapath_setup_vmmgrapi playbook
   import_playbook: seapath_setup_vmmgrapi.yaml
 
