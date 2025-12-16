@@ -112,18 +112,6 @@
         line: "{{ item }}"
       with_items: "{{ extra_kernel_modules | default([]) }}"
 
-- name: Add admin user to libvirt group
-  user:
-    name: "{{ admin_user }}"
-    groups: libvirt
-    append: yes
-
-- name: Creating libvirt user with libvirtd permissions
-  user:
-    name: libvirt
-    group: libvirt
-    shell: /bin/false
-
 - name: Add br_netfilter to /etc/modules-load.d
   ansible.builtin.copy:
     src: modules/netfilter.conf
