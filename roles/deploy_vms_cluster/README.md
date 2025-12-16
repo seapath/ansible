@@ -15,7 +15,7 @@ No requirement.
 | Variable                                | Required | Type   | Default | Comments                                                                                 |
 |-----------------------------------------|----------|--------|---------|------------------------------------------------------------------------------------------|
 | item                                    | Yes      | String |         | Name of the VM to deploy. This VM must be defined in the inventory. See structure below. |
-| livemigration                           | No       | String |         | Linux user to use for VM livemigration                                                   |
+| livemigration_user                      | No       | String |         | Linux user to use for VM livemigration                                                   |
 | deploy_vms_cluster_qcow2tmpuploadfolder | No       | String | "/tmp"  | Hypervisor directory to store VM disks temporarily while VMs are beeing created          |
 | deploy_vms_cluster_vms_disks_directory  | No       | String |         | Path in the Ansible machine to be prepend to the disk image path                         |
 | deploy_vms_cluster_disk_copy            | No       | Bool   | true    | Set true to copy the VM disk from the Ansible machine before creating the VM             |
