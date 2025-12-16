@@ -14,10 +14,6 @@ standalone_machine:
 
           nics_affinity:
           - enp88s0: 3  # Change to your NICs
-          upload_files: # This file is given with the ssc600 sw package
-            - src: '../files/qemu.hook'
-              dest: '/etc/libvirt/hooks/'
-              mode: "0744"
 
   vars:
     ansible_connection: ssh
