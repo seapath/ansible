@@ -9,4 +9,4 @@ network_systemdnetworkd_network: {}
 
 network_systemdnetworkd_enable_resolved: true
 
-service_name_udev: "systemd-udev"
+network_systemdnetworkd_service_name_udev: "systemd-udev"

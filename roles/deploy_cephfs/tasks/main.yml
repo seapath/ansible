@@ -26,6 +26,7 @@
   register: create_fs
   delegate_to: "{{ first_mon_node }}"
   run_once: true
+  changed_when: true
 
 - name: Get CephFS info to find the data pool
   command: ceph fs ls --format json

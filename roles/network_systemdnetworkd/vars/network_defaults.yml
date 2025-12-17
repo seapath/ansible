@@ -6,7 +6,7 @@
 network_systemdnetworkd_network_custom: "{{ custom_network | default({}) }}"
 network_systemdnetworkd_netdev_custom: "{{ custom_netdev | default({}) }}"
 
-br0vlan_network_systemdnetworkd_netdev:
+network_systemdnetworkd_br0vlan_netdev:
   79-br0:
     - NetDev:
         - Name: "br0"
@@ -20,7 +20,7 @@ br0vlan_network_systemdnetworkd_netdev:
         - Kind: "vlan"
     - VLAN:
         - Id: "{{ br0vlan | default('') }}"
-br0vlan_network_systemdnetworkd_network:
+network_systemdnetworkd_br0vlan_network:
   79-br0vlan:
     - Match:
         - Name: "vlan{{ br0vlan | default('') }}"
@@ -42,13 +42,13 @@ br0vlan_network_systemdnetworkd_network:
     - BridgeVLAN:
         - VLAN: "1-4094"
 
-br0_network_systemdnetworkd_netdev:
+network_systemdnetworkd_br0_netdev:
   79-br0:
     - NetDev:
         - Name: "br0"
         - Kind: "bridge"
 
-br0_network_systemdnetworkd_network:
+network_systemdnetworkd_br0_network:
   79-br0:
     - Match:
         - Name: "br0"
@@ -61,15 +61,15 @@ br0_network_systemdnetworkd_network:
     - Network:
       - Bridge: "br0"
 
-wired_network_systemdnetworkd_netdev: "{{ br0vlan_network_systemdnetworkd_netdev if br0vlan is defined else br0_network_systemdnetworkd_netdev }}"
-wired_network_systemdnetworkd_network: "{{ br0vlan_network_systemdnetworkd_network if br0vlan is defined else br0_network_systemdnetworkd_network }}"
+network_systemdnetworkd_wired_netdev: "{{ network_systemdnetworkd_br0vlan_netdev if br0vlan is defined else network_systemdnetworkd_br0_netdev }}"
+network_systemdnetworkd_wired_network: "{{ network_systemdnetworkd_br0vlan_network if br0vlan is defined else network_systemdnetworkd_br0_network }}"
 
-network_systemdnetworkd_netdev_nocluster: "{{ wired_network_systemdnetworkd_netdev | combine(network_systemdnetworkd_netdev_custom) }}"
-network_systemdnetworkd_network_nocluster: "{{ wired_network_systemdnetworkd_network | combine(network_systemdnetworkd_network_custom) }}"
+network_systemdnetworkd_netdev_nocluster: "{{ network_systemdnetworkd_wired_netdev | combine(network_systemdnetworkd_netdev_custom) }}"
+network_systemdnetworkd_network_nocluster: "{{ network_systemdnetworkd_wired_network | combine(network_systemdnetworkd_network_custom) }}"
 
 ## Helper variables, this should probably be refactored with the other network vars files TODO
-no_cluster_network_variable: "{{ network_systemdnetworkd_no_cluster_network is defined and network_systemdnetworkd_no_cluster_network }}"
-include_cluster: "{{ 'cluster_machines' in groups and inventory_hostname in groups['cluster_machines'] and not no_cluster_network_variable }}"
+network_systemdnetworkd_no_cluster_network_variable: "{{ network_systemdnetworkd_no_cluster_network is defined and network_systemdnetworkd_no_cluster_network }}"
+network_systemdnetworkd_include_cluster: "{{ 'cluster_machines' in groups and inventory_hostname in groups['cluster_machines'] and not network_systemdnetworkd_no_cluster_network_variable }}"
 
-network_systemdnetworkd_network: "{{ network_systemdnetworkd_network_nocluster | combine(team0_network_systemdnetworkd_network) if include_cluster else network_systemdnetworkd_network_nocluster }}"
+network_systemdnetworkd_network: "{{ network_systemdnetworkd_network_nocluster | combine(network_systemdnetworkd_team0_network) if network_systemdnetworkd_include_cluster else network_systemdnetworkd_network_nocluster }}"
 network_systemdnetworkd_netdev: "{{ network_systemdnetworkd_netdev_nocluster }}"

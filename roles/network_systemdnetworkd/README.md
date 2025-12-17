@@ -2,7 +2,7 @@
 
 This role configures the network via systemd-networkd
 
-Note: This role is originally copied from https://github.com/aruhier/ansible-role-systemd-networkd and thus under licensed under BSD.
+Note: This role is originally copied from https://github.com/aruhier/ansible-role-systemd-networkd and thus under BSD license.
 
 ## Requirements
 

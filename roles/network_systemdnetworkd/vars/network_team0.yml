@@ -4,7 +4,7 @@
 
 ---
 
-team0_network_systemdnetworkd_network:
+network_systemdnetworkd_team0_network:
   79-team0:
     - Match:
         - Name: "team0"

@@ -11,30 +11,28 @@
   include_vars: "network_defaults.yml"
   when: network_simple is not defined or not network_simple
 
-- name: gather service facts to detect udev service
+- name: Gather service facts to detect udev service
   ansible.builtin.service_facts:
 
-- name: gather service facts to detect udev service
+- name: Gather service facts to detect udev service
   ansible.builtin.service_facts:
 
-- name: check if systemd-udev-trigger is present
+- name: Check if systemd-udev-trigger is present
   ansible.builtin.set_fact:
-    service_name_udev: systemd-udev-trigger
+    network_systemdnetworkd_service_name_udev: systemd-udev-trigger
   when: '"systemd-udev-trigger.service" in services'
 
 - import_tasks: profiles.yml
 
-- name: enable systemd-networkd
+- name: Enable systemd-networkd
   service:
     name: systemd-networkd
     enabled: yes
   when: network_systemdnetworkd_network or network_systemdnetworkd_link or network_systemdnetworkd_netdev
 
-- name: start and enable systemd-resolved
+- name: Start and enable systemd-resolved
   service:
     name: systemd-resolved
     enabled: yes
     state: started
   when: network_systemdnetworkd_enable_resolved
-
-# vim: set ts=2 sw=2:
