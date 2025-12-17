@@ -214,7 +214,6 @@ They should not be called alone.
 
 - `test_deploy_cukinia_tests.yaml`: Deploy the tests on all machine (Debian only, on Yocto the tests are natively present)
 - `test_run_cukinia.yaml`: Run functional tests and export a CSV.
-- `test_run_cukinia-sec.yaml`: Run security tests and export a CSV.
 
 ## CI
 
