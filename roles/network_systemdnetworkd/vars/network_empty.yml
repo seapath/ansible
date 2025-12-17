@@ -7,9 +7,9 @@ network_systemdnetworkd_network_custom: "{{ custom_network | default({}) }}"
 network_systemdnetworkd_netdev: "{{ custom_netdev | default({}) }}"
 
 ## Helper variables, this should probably be refactored with the other network vars files TODO
-no_cluster_network_variable: "{{ network_systemdnetworkd_no_cluster_network is defined and network_systemdnetworkd_no_cluster_network }}"
-include_cluster: "{{ 'cluster_machines' in groups and inventory_hostname in groups['cluster_machines'] and not no_cluster_network_variable }}"
+network_systemdnetworkd_no_cluster_network_variable: "{{ network_systemdnetworkd_no_cluster_network is defined and network_systemdnetworkd_no_cluster_network }}"
+network_systemdnetworkd_include_cluster: "{{ 'cluster_machines' in groups and inventory_hostname in groups['cluster_machines'] and not network_systemdnetworkd_no_cluster_network_variable }}"
 
-network_systemdnetworkd_network: "{{ network_systemdnetworkd_network_custom | combine(team0_network_systemdnetworkd_network) if include_cluster else network_systemdnetworkd_network_custom }}"
+network_systemdnetworkd_network: "{{ network_systemdnetworkd_network_custom | combine(network_systemdnetworkd_team0_network) if network_systemdnetworkd_include_cluster else network_systemdnetworkd_network_custom }}"
 
 ...

@@ -1,6 +1,6 @@
 ---
 
-- name: copy .link profiles
+- name: Copy .link profiles
   template:
     src: "systemd_networkd_profile.j2"
     dest: "/etc/systemd/network/{{ item.key }}.link"
@@ -9,11 +9,11 @@
     mode: 0640
   loop: "{{ network_systemdnetworkd_link | dict2items }}"
   notify:
-    - reload systemd-networkd
-    - restart udev
-    - check reboot
+    - Reload systemd-networkd
+    - Restart udev
+    - Check reboot
 
-- name: copy .netdev profiles
+- name: Copy .netdev profiles
   template:
     src: "systemd_networkd_profile.j2"
     dest: "/etc/systemd/network/{{ item.key }}.netdev"
@@ -22,10 +22,10 @@
     mode: 0640
   loop: "{{ network_systemdnetworkd_netdev | dict2items }}"
   notify:
-    - reload systemd-networkd
-    - check reboot
+    - Reload systemd-networkd
+    - Check reboot
 
-- name: copy .network profiles
+- name: Copy .network profiles
   template:
     src: "systemd_networkd_profile.j2"
     dest: "/etc/systemd/network/{{ item.key }}.network"
@@ -34,7 +34,5 @@
     mode: 0640
   loop: "{{ network_systemdnetworkd_network | dict2items }}"
   notify:
-    - reload systemd-networkd
-    - check reboot
-
-# vim: set ts=2 sw=2:
+    - Reload systemd-networkd
+    - Check reboot
