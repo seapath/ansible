@@ -37,12 +37,6 @@ module_documentation
 # Files folder
 files/*
 
-# Src from privates repos
-src/trafgen/*
-!src/trafgen/README
-src/svtools/*
-!src/svtools/README
-
 # Fetch cockpit plugins
 roles/deploy_cockpit_plugins/files/cockpit-cluster-dashboard.tar.gz
 roles/deploy_cockpit_plugins/files/cockpit-cluster-vm-management.tar.gz

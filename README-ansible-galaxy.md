@@ -228,4 +228,3 @@ CI playbooks. These should not be used directly. They should be moved into a dif
 - `ci_standalone_setup.yaml`
 - `ci_test.yaml`
 - `ci_vms_standalone_ptp.yaml`
-- `test_run_latency_tests.yaml`
