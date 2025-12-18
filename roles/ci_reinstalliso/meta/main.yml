@@ -3,12 +3,15 @@
 ---
 galaxy_info:
   author: "Seapath"
-  description: Reinstall the VMs from the SEAPATH debian ISO
+  description: Reinstall the machine from the SEAPATH ISO (Debian or CentOS)
   license: Apache-2.0
   min_ansible_version: 2.9.10
   platforms:
   - name: Debian
     versions:
     - all
+  - name: EL
+    versions:
+    - "9"
 dependencies:
   - role: detect_seapath_distro
