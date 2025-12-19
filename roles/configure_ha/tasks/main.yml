@@ -78,11 +78,6 @@
   run_once: true
   delegate_to: "{{ groups['valid_machine'][0] }}"
   block:
-    - name: Fetch corosync configuration
-      fetch:
-        src: "/etc/corosync/corosync.conf"
-        dest: "{{ configure_ha_tmpdir }}/corosync.conf"
-        flat: true
     - name: Fetch corosync key
       fetch:
         src: "/etc/corosync/authkey"
@@ -94,13 +89,11 @@
     - groups['valid_machine'] is defined
     - "'unconfigured_machine_group' in group_names"
   block:
-    - name: Install corosync configuration
-      copy:
-        src: "{{ configure_ha_tmpdir }}/corosync.conf"
+    - name: Templating corosync.conf
+      template:
+        src: corosync.conf.j2
         dest: /etc/corosync/corosync.conf
-        owner: root
-        group: root
-        mode: '0644'
+      register: corosync_conf
     - name: Install corosync key
       copy:
         src: "{{ configure_ha_tmpdir }}/authkey"
@@ -108,7 +101,7 @@
         owner: root
         group: root
         mode: '0400'
-    - name: Start pacemaker
+    - name: Start Corosync
       ansible.builtin.systemd:
           name: corosync
           state: started
