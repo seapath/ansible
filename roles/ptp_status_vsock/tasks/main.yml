@@ -47,3 +47,11 @@
         name: ptp_vsock.service
         enabled: yes
         state: started
+    - name: Allow execution at /var/lib/ptp/ (semanage)
+      command:
+        cmd: semanage fcontext -a -t bin_t "/var/lib/ptp(/.*)?"
+      when: seapath_distro == "CentOS"
+    - name: Allow execution at /var/lib/ptp/ (restorecon)
+      command:
+        cmd: restorecon -r -v /var/lib/ptp/
+      when: seapath_distro == "CentOS"
