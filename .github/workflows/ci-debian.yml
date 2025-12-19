@@ -48,11 +48,19 @@ jobs:
         run: cd ${{ env.WORK_DIR }};
              ci/launch-debian.sh vm;
 
-      - name: Upload test report
+      - name: Generate test report
         if: ${{ always() && steps.conf.conclusion == 'success' }}
         run: cd ${{ env.WORK_DIR }};
              git -C ci/test-report-pdf checkout 0156f2d35ba7d5983f22b6054aa83f92a42f0f2d;
              ci/launch-debian.sh report;
+
+      - name: Upload test report
+        if: ${{ always() && steps.conf.conclusion == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+            name: seapath-test-report-debian-cluster
+            path: ${{ env.WORK_DIR }}/seapath-test-report.pdf
+            if-no-files-found: error
 
       - name: Clean
         if: always()

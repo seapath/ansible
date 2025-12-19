@@ -75,10 +75,18 @@ jobs:
         run: cd ${{ env.WORK_DIR }};
             ci/launch-yocto.sh test_latency
 
-      - name: Upload test report
+      - name: Generate test report
         if: ${{ always() && steps.conf.conclusion == 'success' }}
         run: cd ${{ env.WORK_DIR }};
              ci/launch-yocto.sh report;
+
+      - name: Upload test report
+        if: ${{ always() && steps.conf.conclusion == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+            name: seapath-test-report-yocto-standalone
+            path: ${{ env.WORK_DIR }}/seapath-test-report.pdf
+            if-no-files-found: error
 
       - name: Clean
         if: always()
