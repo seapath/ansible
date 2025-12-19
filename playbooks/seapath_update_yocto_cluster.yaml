@@ -9,24 +9,27 @@
   hosts: "{{ machine_to_update }}"
   tasks:
     - name: Set hypervisor in maintenance mode
+      become: true
       command: crm node standby "{{ machine_to_update }}"
       changed_when: true
     - name: Wait for all VMs to be migrated
-      shell:
-        cmd: set -o pipefail && crm status|grep "Migrating"|wc -l
-        executable: /bin/bash
-      changed_when: false
+      become: true
+      command: crm status
       register: check_migration
-      until: check_migration.stdout == '0'
+      until: >-
+        "Migrating" not in check_migration.stdout
+      changed_when: false
       retries: 10
     - name: Copy SWU file on machine
       copy:
-        src: "../swu_images/{{ swu_image }}"
+        src: "../{{ swu_image }}"
         dest: "/tmp/update.swu"
     - name: Apply update
+      become: true
       command: swupdate -i /tmp/update.swu
       changed_when: true
     - name: Reboot host
+      become: true
       reboot:
         msg: "Reboot initiated by Ansible"
         connect_timeout: 5
@@ -41,6 +44,7 @@
       tags:
         - skip_ansible_lint
     - name: Unset maintenance mode for hypervisor
+      become: true
       command: crm node online "{{ machine_to_update }}"
       changed_when: true
     - name: Check if update has succeed

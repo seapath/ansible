@@ -11,12 +11,14 @@
   tasks:
     - name: Copy SWU file on machine
       copy:
-        src: "../swu_images/{{ swu_image }}"
+        src: "../{{ swu_image }}"
         dest: "/tmp/update.swu"
     - name: Apply update
+      become: true
       command: swupdate -i /tmp/update.swu
       changed_when: true
     - name: Reboot host
+      become: true
       reboot:
         msg: "Reboot initiated by Ansible"
         connect_timeout: 5

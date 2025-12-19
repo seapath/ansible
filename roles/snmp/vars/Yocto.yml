@@ -2,5 +2,4 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-# TO BE DEFINED
-#snmp_user_name: "snmp"
+snmp_user_name: "snmp"

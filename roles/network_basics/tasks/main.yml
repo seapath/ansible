@@ -14,7 +14,7 @@
       path: "{{ item.path }}"
       state: absent
     with_items: "{{ network_files_to_delete.files }}"
-- name: Remove FAI network configuration
+- name: Remove installation network configuration
   file:
     path: "/etc/systemd/network/{{ item }}.network"
     state: absent
@@ -22,6 +22,7 @@
     - 01-init
     - 00-init-dhcp
     - 00-init
+    - 01-installer
 - name: Copy 80-wired networkd file
   ansible.builtin.copy:
     src: 80-wired.network

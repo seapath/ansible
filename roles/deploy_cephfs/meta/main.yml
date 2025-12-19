@@ -1,0 +1,13 @@
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+galaxy_info:
+  author: "Seapath"
+  description: This role deploys the CephFS using cephadm
+  min_ansible_version: 2.9.10
+  license: Apache-2.0
+  platforms:
+  - name: EL
+    versions:
+    - all
+dependencies: []
