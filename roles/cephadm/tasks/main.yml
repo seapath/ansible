@@ -43,17 +43,25 @@
     url: "https://download.ceph.com/rpm-{{ cephadm_release }}/el9/noarch/cephadm"
     dest: "/tmp/cephadm"
     mode: '0755'
-  when: cephadm_install is true
+  when: cephadm_downloadbinary is true
+
+- name: Copy cephadm to /usr/local/bin
+  copy:
+    src: "/tmp/cephadm"
+    dest: "/usr/local/bin/cephadm"
+    mode: '0755'
+    remote_src: yes
+  when: cephadm_installbinary is true
 
 - name: Install cephadm repository
-  command: "{{ '/tmp/cephadm' if cephadm_install | default(false) else 'cephadm' }} add-repo --release squid"
+  command: "{{ '/tmp/cephadm' if not cephadm_installbinary else 'cephadm' }} add-repo --release {{ cephadm_release_name }}"
   changed_when: true
   when: cephadm_installrepo is true
 
 - name: Install cephadm
   command: /tmp/cephadm install
   changed_when: true
-  when: cephadm_install is true
+  when: cephadm_installpackage is true
 
 - name: Install ceph-common package
   command: cephadm install ceph-common
@@ -311,7 +319,7 @@
 
 - name: Copy ceph orch spec file
   template:
-    src: "{{ ceph_spec_path | default('spec.yaml.j2') }}"
+    src: "{{ cephadm_spec_path | default('spec.yaml.j2') }}"
     dest: /tmp/t.yaml
     mode: 0644
   run_once: true
