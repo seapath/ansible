@@ -12,6 +12,22 @@
     state: stopped
     enabled: false
   when: "'systemd-timesyncd.service' in services and (services['systemd-timesyncd.service'].status != 'not-found')"
+- name: Stop, disable and mask chronyd if it exists
+  systemd:
+    name: "chronyd"
+    state: stopped
+    enabled: false
+    masked: true
+  when: "'chronyd.service' in services and (services['chronyd.service'].status != 'not-found')"
+  failed_when: false
+- name: Stop, disable and mask chrony if it exists
+  systemd:
+    name: "chrony"
+    state: stopped
+    enabled: false
+    masked: true
+  when: "'chrony.service' in services and (services['chrony.service'].status != 'not-found')"
+  failed_when: false
 - name: Create timemaster configuration
   template:
     src: timemaster.conf.j2

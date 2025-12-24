@@ -220,7 +220,7 @@ mkdir -p  /var/log/crmsh/
 
 dnf -y remove @development
 
-CEPH_RELEASE=19.2.2
+CEPH_RELEASE=20.2.0
 curl -o /tmp/cephadm --silent --remote-name --location https://download.ceph.com/rpm-${CEPH_RELEASE}/el9/noarch/cephadm
 chmod +x /tmp/cephadm
 mv /tmp/cephadm /usr/local/bin/cephadm
