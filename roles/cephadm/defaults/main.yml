@@ -2,8 +2,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-cephadm_install: false
-cephadm_release: "19.2.2"
-cephadm_installcommon: false
+cephadm_release: "20.2.0"
+cephadm_release_name: "tentacle"
+cephadm_downloadbinary: false
+cephadm_installbinary: false
 cephadm_installrepo: false
+cephadm_installcommon: false
 cephadm_pullimages: false
