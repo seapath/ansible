@@ -194,10 +194,22 @@
   delegate_to: "{{ first_node }}"
   when: do_bootstrap | bool
 
+- name: Find cephadm location
+  command: which cephadm
+  register: cephadm_path
+  failed_when: false
+  changed_when: false
+  environment:
+    PATH: "{{ ansible_env.PATH }}:/usr/local/bin"
+
+- name: Set cephadm binary path
+  set_fact:
+    cephadm_bin: "{{ cephadm_path.stdout if cephadm_path.rc == 0 else '/usr/local/bin/cephadm' }}"
+
 - name: Show bootstrap command
   ansible.builtin.debug:
-    msg: >
-      cephadm
+    msg: >-
+      {{ cephadm_bin }}
       --image localhost:5000/ceph:v{{ cephadm_release }}
       bootstrap
       --skip-monitoring-stack
@@ -208,8 +220,8 @@
       --mon-ip {{ hostvars[first_node]['cluster_ip_addr'] }}
 
 - name: Bootstrap Ceph cluster
-  command: >
-      cephadm
+  command: >-
+      {{ cephadm_bin }}
       --image localhost:5000/ceph:v{{ cephadm_release }}
       bootstrap
       --skip-monitoring-stack
@@ -327,7 +339,7 @@
   run_once: true
 
 - name: Zap the volume on nodes that need OSDs
-  command: "cephadm --image localhost:5000/ceph:v{{ cephadm_release }} ceph-volume lvm zap vg_ceph/lv_ceph"
+  command: "{{ cephadm_bin }} --image localhost:5000/ceph:v{{ cephadm_release }} ceph-volume lvm zap vg_ceph/lv_ceph"
   delegate_to: "{{ item }}"
   run_once: true
   when: hostvars[item]['hostname'] in nodes_needing_osds
@@ -343,7 +355,7 @@
   delegate_to: "{{ first_node }}"
 
 - name: Add OSD daemon on nodes that need OSDs
-  command: cephadm --image localhost:5000/ceph:v{{ cephadm_release }} shell -v /tmp/t.yaml:/tmp/t.yaml:ro -- ceph orch apply -i /tmp/t.yaml
+  command: "{{ cephadm_bin }} --image localhost:5000/ceph:v{{ cephadm_release }} shell -v /tmp/t.yaml:/tmp/t.yaml:ro -- ceph orch apply -i /tmp/t.yaml"
   delegate_to: "{{ first_node }}"
   run_once: true
   changed_when: true
