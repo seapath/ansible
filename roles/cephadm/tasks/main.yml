@@ -213,9 +213,23 @@
   delegate_to: "{{ first_node }}"
   when: mon_nodes_to_add | length > 0
 
+- name: Get cephadm user entry
+  getent:
+    database: passwd
+    key: cephadm
+  delegate_to: "{{ first_node }}"
+  run_once: true
+
 - name: Fetch the ceph keyfile if it exists, otherwise fetch authorized_keys
   fetch:
-    src: "{{ ceph_pub_stat.stat.exists | ternary('/etc/ceph/ceph.pub', '/home/cephadm/.ssh/authorized_keys') }}"
+    src: >-
+      {{
+        ceph_pub_stat.stat.exists
+        | ternary(
+            '/etc/ceph/ceph.pub',
+            getent_passwd['cephadm'][4] ~ '/.ssh/authorized_keys'
+          )
+      }}
     dest: "/tmp/ceph.pub"
     flat: true
   delegate_to: "{{ first_node }}"
