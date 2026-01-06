@@ -194,6 +194,19 @@
   delegate_to: "{{ first_node }}"
   when: do_bootstrap | bool
 
+- name: Show bootstrap command
+  ansible.builtin.debug:
+    msg: >
+      cephadm
+      --image localhost:5000/ceph:v{{ cephadm_release }}
+      bootstrap
+      --skip-monitoring-stack
+      --skip-dashboard
+      --skip-firewalld
+      --config /tmp/ceph.conf
+      --ssh-user cephadm
+      --mon-ip {{ hostvars[first_node]['cluster_ip_addr'] }}
+
 - name: Bootstrap Ceph cluster
   command: >
       cephadm
@@ -211,6 +224,10 @@
   delegate_to: "{{ first_node }}"
   register: ceph_bootstrap_result
   when: do_bootstrap | bool
+
+- name: Show bootstrap result
+  ansible.builtin.debug:
+    var: ceph_bootstrap_result
 
 # === adding cephadm key on other nodes ===
 - name: Check if /etc/ceph/ceph.pub exists on first_node
