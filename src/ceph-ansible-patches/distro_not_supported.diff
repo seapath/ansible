@@ -1,26 +1,26 @@
 diff --git a/roles/ceph-validate/meta/main.yml b/roles/ceph-validate/meta/main.yml
-index 1c6197efd..339e30deb 100644
+index 01254db62..9b1e07256 100644
 --- a/roles/ceph-validate/meta/main.yml
 +++ b/roles/ceph-validate/meta/main.yml
 @@ -11,4 +11,5 @@ galaxy_info:
-         - 7
+         - 'all'
    galaxy_tags:
      - system
 -dependencies: []
 +dependencies:
 +  - role: ../../roles/detect_seapath_distro
 diff --git a/roles/ceph-validate/tasks/check_system.yml b/roles/ceph-validate/tasks/check_system.yml
-index dc8cdd6fd..8f7d224eb 100644
+index bd2a23196..22b549184 100644
 --- a/roles/ceph-validate/tasks/check_system.yml
 +++ b/roles/ceph-validate/tasks/check_system.yml
 @@ -22,7 +22,9 @@
- - name: fail on unsupported distribution
-   fail:
+ - name: Fail on unsupported distribution
+   ansible.builtin.fail:
      msg: "Distribution not supported {{ ansible_facts['os_family'] }}"
 -  when: ansible_facts['os_family'] not in ['Debian', 'RedHat', 'ClearLinux', 'Suse']
 +  when:
 +    - ansible_facts['os_family'] not in ['Debian', 'RedHat', 'ClearLinux', 'Suse']
 +    - seapath_distro != "Yocto"
  
- - name: fail on unsupported CentOS release
-   fail:
+ - name: Fail on unsupported CentOS release
+   ansible.builtin.fail:
