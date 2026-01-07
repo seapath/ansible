@@ -1,16 +1,17 @@
 diff --git a/roles/ceph-osd/meta/main.yml b/roles/ceph-osd/meta/main.yml
-index 3c2a26e89..283bae30b 100644
+index a5eb83bf3..5e85f507c 100644
 --- a/roles/ceph-osd/meta/main.yml
 +++ b/roles/ceph-osd/meta/main.yml
-@@ -11,4 +11,5 @@ galaxy_info:
-         - 7
+@@ -11,4 +11,6 @@ galaxy_info:
+         - 'all'
    galaxy_tags:
      - system
 -dependencies: []
 +dependencies:
 +  - role: ../../roles/detect_seapath_distro
++
 diff --git a/roles/ceph-osd/tasks/main.yml b/roles/ceph-osd/tasks/main.yml
-index 623731ddd..e1631dc01 100644
+index 8987f57cf..3fd7e8bf3 100644
 --- a/roles/ceph-osd/tasks/main.yml
 +++ b/roles/ceph-osd/tasks/main.yml
 @@ -24,6 +24,7 @@
@@ -19,5 +20,5 @@ index 623731ddd..e1631dc01 100644
      - ansible_facts['os_family'] != 'ClearLinux'
 +    - seapath_distro != "Yocto"
  
- - name: install numactl when needed
-   package:
+ - name: Install numactl when needed
+   ansible.builtin.package:
