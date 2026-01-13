@@ -14,9 +14,6 @@
 - name: Gather service facts to detect udev service
   ansible.builtin.service_facts:
 
-- name: Gather service facts to detect udev service
-  ansible.builtin.service_facts:
-
 - name: Check if systemd-udev-trigger is present
   ansible.builtin.set_fact:
     network_systemdnetworkd_service_name_udev: systemd-udev-trigger
