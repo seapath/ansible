@@ -7,19 +7,19 @@
     filter: ansible_distribution*
 
 - name: Detect Debian distribution
-  set_fact:
+  ansible.builtin.set_fact:
     seapath_distro: Debian
-  when: ansible_distribution | regex_search("Debian")
+  when: ansible_distribution | regex_search("Debian") != None
 
 - name: Detect Centos distribution
-  set_fact:
+  ansible.builtin.set_fact:
     seapath_distro: CentOS
-  when: ansible_distribution | regex_search("CentOS|RedHat")
+  when: ansible_distribution | regex_search("CentOS|RedHat") != None
 
 - name: Detect OracleLinux distribution
-  set_fact:
+  ansible.builtin.set_fact:
     seapath_distro: OracleLinux
-  when: ansible_distribution | regex_search("Oracle")
+  when: ansible_distribution | regex_search("Oracle") != None
 
 - name: Detect Yocto distribution
   when: seapath_distro is not defined
