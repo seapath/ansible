@@ -18,17 +18,17 @@
 - name: Detect Debian distribution
   set_fact:
     detect_seapath_distro_distro: Debian
-  when: ansible_distribution | regex_search("Debian")
+  when: ansible_distribution | regex_search("Debian") != None
 
 - name: Detect Centos distribution
   set_fact:
     detect_seapath_distro_distro: CentOS
-  when: ansible_distribution | regex_search("CentOS|RedHat")
+  when: ansible_distribution | regex_search("CentOS|RedHat") != None
 
 - name: Detect OracleLinux distribution
   set_fact:
     detect_seapath_distro_distro: OracleLinux
-  when: ansible_distribution | regex_search("Oracle")
+  when: ansible_distribution | regex_search("Oracle") != None
 
 - name: Show detect_seapath_distro_distro
   debug:
