@@ -1,4 +1,4 @@
-# Copyright (C) 2021, RTE (http://www.rte-france.com)
+# Copyright (C) 2025, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
 FROM debian:12
@@ -25,14 +25,12 @@ RUN set -x \
     && sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen \
     && python3 -m venv --system-site-packages /env \
     && /env/bin/pip install \
-        ansible==2.10.7 \
-        ansible-lint==5.4.0 \
+        ansible-core~=2.16.0 \
+        ansible-lint \
         yamllint \
         six \
         netaddr \
         jmespath \
-    && cp /env/lib/python3.11/site-packages/pip/_vendor/six.py \
-        /env/lib/python3.11/site-packages/ansible/module_utils/six/__init__.py \
     && rm -rf /var/lib/{apt,dpkg,cache,log}/*
 
 ENV PATH="/env/bin:/env/usr/bin:/env/sbin:/env/usr/sbin:$PATH"

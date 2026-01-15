@@ -1,4 +1,4 @@
-# Copyright (C) 2023, RTE (http://www.rte-france.com)
+# Copyright (C) 2025, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
 name: CI Debian
@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   CI:
-    runs-on: [self-hosted, runner-RTE-12]
+    runs-on: [self-hosted, runner-RTE-13]
     steps:
 
       - name: Initialize sources
