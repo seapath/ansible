@@ -23,11 +23,10 @@ passwd=" \
     cephadm \
 {% endif %}
     irc \
-    libvirt \
     libvirt-qemu \
     list \
-{% if livemigration_user is defined %}
-    {{ livemigration_user }} \
+{% if inventory_hostname in groups.get('cluster_machines', []) %}
+    libvirtadmin \
 {% endif %}
     lp \
     mail \
