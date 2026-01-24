@@ -20,7 +20,7 @@
         msg: "size_m: {{ (ansible_lvm['lvs'][lvm_volumes[0].data]['size_g'] | float * 1024) | round(2) }}"
 - name: Check if lv_ceph has to be expanded
   set_fact:
-    expand_lv: "{{ (lvm_volumes[0].data_size | int) > ((ansible_lvm['lvs'][lvm_volumes[0].data]['size_g'] | float * 1024) | round(2)) }}"
+    ceph_expansion_lv_expand_lv: "{{ (lvm_volumes[0].data_size | int) > ((ansible_lvm['lvs'][lvm_volumes[0].data]['size_g'] | float * 1024) | round(2)) }}"
   when: ansible_lvm is defined and lvm_volumes is defined
 
 - name: Increase Ceph LV
@@ -28,66 +28,65 @@
     vg: "{{ lvm_volumes[0].data_vg }}"
     lv: "{{ lvm_volumes[0].data }}"
     size: "{{ lvm_volumes[0].data_size }}"
-  register: lv_resized
-  when: expand_lv | default(false)
+  register: ceph_expansion_lv_lv_resized
+  when: ceph_expansion_lv_expand_lv | default(false)
 
 - name: Increase OSD cephadm
   when:
-    - expand_lv | default(false)
+    - ceph_expansion_lv_expand_lv | default(false)
     - is_using_cephadm | default(false)
   block:
     - name: Gather systemd service facts
       service_facts:
     - name: Find the first Ceph OSD service
       set_fact:
-        servicename: "{{ item.key }}"
-        osdid: "{{ item.key | regex_search('@(osd\\.[0-9]+)\\.service', '\\1') | list | first }}"
-        osdid_number: "{{ ((item.key | regex_search('@(osd\\.[0-9]+)\\.service', '\\1') | list).0).split('.')[-1] }}"
+        ceph_expansion_lv_servicename: "{{ item.key }}"
+        ceph_expansion_lv_osdid: "{{ item.key | regex_search('@(osd\\.[0-9]+)\\.service', '\\1') | list | first }}"
+        ceph_expansion_lv_osdid_number: "{{ ((item.key | regex_search('@(osd\\.[0-9]+)\\.service', '\\1') | list).0).split('.')[-1] }}"
       loop: "{{ ansible_facts.services | dict2items }}"
       when: "'osd' in item.key"
       loop_control:
         label: "{{ item.key }}"
-      register: osd_match
     - name: Show result
       when: ansible_verbosity >= 3
       debug:
         msg:
-          - "servicename: {{ servicename | default(false) }}"
-          - "osdid: {{ osdid | default(false) }}"
-          - "osdid_number: {{ osdid_number | default(false) }}"
+          - "servicename: {{ ceph_expansion_lv_servicename | default(false) }}"
+          - "osdid: {{ ceph_expansion_lv_osdid | default(false) }}"
+          - "osdid_number: {{ ceph_expansion_lv_osdid_number | default(false) }}"
     - name: Resize OSDs (cephadm)
       when:
-        - lv_resized.changed
-        - servicename | default(false)
+        - ceph_expansion_lv_lv_resized.changed
+        - ceph_expansion_lv_servicename | default(false)
       block:
         - name: Stop Ceph OSD service
           ansible.builtin.systemd:
-            name: "{{ servicename }}"
+            name: "{{ ceph_expansion_lv_servicename }}"
             state: stopped
         - name: Wait for 3 seconds
           ansible.builtin.wait_for:
             timeout: 3
         - name: Resize Ceph OSD with bluestore tool
           ansible.builtin.command: >
-            cephadm shell --name {{ osdid }}
+            cephadm shell --name {{ ceph_expansion_lv_osdid }}
             ceph-bluestore-tool bluefs-bdev-expand
-            --path /var/lib/ceph/osd/ceph-{{ osdid_number }}
+            --path /var/lib/ceph/osd/ceph-{{ ceph_expansion_lv_osdid_number }}
           changed_when: true
         - name: Start Ceph OSD service
           ansible.builtin.systemd:
-            name: "{{ servicename }}"
+            name: "{{ ceph_expansion_lv_servicename }}"
             state: started
         - name: Wait for cluster to be HEALTH_OK
           ansible.builtin.command: /usr/bin/ceph status --format=json
-          register: osdsdown
-          until: osdsdown.stdout | from_json | community.general.json_query('health.status') == "HEALTH_OK"
+          register: ceph_expansion_lv_osdsdown
+          until: ceph_expansion_lv_osdsdown.stdout | from_json | community.general.json_query('health.status') == "HEALTH_OK"
           retries: 20
           delay: 2
           changed_when: false
 
 - name: Increase OSD ceph-ansible
   when:
-    - expand_lv | default(false)
+    - ceph_expansion_lv_expand_lv | default(false)
     - not (is_using_cephadm | default(false))
   block:
     - name: Find the osd number
@@ -96,11 +95,11 @@
         file_type: directory
         patterns: "ceph-[0-9]"
         use_regex: yes
-      register: ceph_osd_number
+      register: ceph_expansion_lv_ceph_osd_number
     - name: Resize OSDs (ceph-ansible)
       when:
-        - lv_resized.changed
-        - ceph_osd_number.files | length > 0
+        - ceph_expansion_lv_lv_resized.changed
+        - ceph_expansion_lv_ceph_osd_number.files | length > 0
       block:
         - name: Stop ceph-osd
           ansible.builtin.systemd:
@@ -112,8 +111,8 @@
         - name: Resize ceph-osd
           command: "{{ item }}"
           with_items:
-            - "/usr/bin/ceph-bluestore-tool bluefs-bdev-expand --path {{ ceph_osd_number.files[0].path }}"
-            - "/usr/bin/ceph-bluestore-tool bluefs-bdev-expand --path {{ ceph_osd_number.files[0].path }}"
+            - "/usr/bin/ceph-bluestore-tool bluefs-bdev-expand --path {{ ceph_expansion_lv_ceph_osd_number.files[0].path }}"
+            - "/usr/bin/ceph-bluestore-tool bluefs-bdev-expand --path {{ ceph_expansion_lv_ceph_osd_number.files[0].path }}"
           changed_when: true
         - name: Start ceph-osd
           ansible.builtin.systemd:
@@ -121,8 +120,8 @@
             state: started
         - name: Wait for cluster to be HEALTH_OK
           command: '/usr/bin/ceph status --format=json'
-          register: osdsdown
-          until: osdsdown.stdout | from_json | community.general.json_query('health.status') == "HEALTH_OK"
+          register: ceph_expansion_lv_osdsdown
+          until: ceph_expansion_lv_osdsdown.stdout | from_json | community.general.json_query('health.status') == "HEALTH_OK"
           retries: 20
           delay: 2
           changed_when: false

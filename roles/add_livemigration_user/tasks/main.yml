@@ -30,11 +30,11 @@
     shell:
       cmd: set -o pipefail && getent passwd root | cut -d ':' -f6
       executable: /bin/bash
-    register: root_home_dir
+    register: add_livemigration_user_root_home_dir
     changed_when: true
   - name: Fetch the root keyfile
     fetch:
-      src: "{{ root_home_dir.stdout }}/.ssh/id_rsa.pub"
+      src: "{{ add_livemigration_user_root_home_dir.stdout }}/.ssh/id_rsa.pub"
       dest: "buffer/{{ inventory_hostname }}-id_rsa.pub"
       flat: true
   - name: Copy the key add to authorized_keys using Ansible module
@@ -50,7 +50,7 @@
       flat: true
   - name: Populate the known_hosts files
     known_hosts:
-      path: "{{ root_home_dir.stdout }}/.ssh/known_hosts"
+      path: "{{ add_livemigration_user_root_home_dir.stdout }}/.ssh/known_hosts"
       name: "{{ item }}"
       key: "{{ item }} {{ lookup('file', 'buffer/' + item + '-ssh_host_ed25519_key.pub') }}"
     loop: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) }}"

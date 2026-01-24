@@ -31,8 +31,8 @@
 
 - name: Wait until snapshot is cleared
   command: lvs -a
-  register: result
-  until: result.stdout | regex_search('root-snap', ignorecase=True) is none
+  register: ci_restore_snapshot_result
+  until: ci_restore_snapshot_result.stdout | regex_search('root-snap', ignorecase=True) is none
   retries: 60
   delay: 20
   changed_when: false

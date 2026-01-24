@@ -8,18 +8,18 @@
 ---
 - name: Check if we need to add extra kernel parameters
   command: "grep -q '{{ extra_kernel_parameters }}' /proc/cmdline"
-  register: extra_param_raw
+  register: yocto_extra_param_raw
   failed_when: extra_param_raw.rc > 1
   changed_when: false
-  when: extra_kernel_parameters is defined
+  when: yocto_extra_kernel_parameters is defined
 - name: Register result extra kernel parameters check
   set_fact:
-    extra_param_needed: true
+    yocto_extra_param_needed: true
   when:
-    - extra_kernel_parameters is defined
-    - extra_param_raw.rc == 1
+    - yocto_extra_kernel_parameters is defined
+    - yocto_extra_param_raw.rc == 1
 
-- when: extra_param_needed is defined
+- when: yocto_extra_param_needed is defined
   block:
     - name: Mount the boot partition if needed
       command: /usr/share/update/mount_boot.sh
@@ -29,7 +29,7 @@
         path: "{{ yocto_config_file }}"
         regexp: '(root=.*)'
         replace: '\1 {{ extra_kernel_parameters }}'
-      when: extra_param_needed is defined
+      when: yocto_extra_param_needed is defined
     - name: Umount the boot partition
       command: /usr/share/update/mount_boot.sh umount
       changed_when: true

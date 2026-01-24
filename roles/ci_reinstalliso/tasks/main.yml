@@ -4,30 +4,30 @@
 ---
 - name: Find boot entry for DVD-ROM
   command: efibootmgr
-  register: boot_entries
+  register: ci_reinstalliso_boot_entries
   changed_when: false
 
 - name: Find line containing DVD-ROM
   set_fact:
-    dvd_bootline: "{{ boot_entries.stdout_lines | select('search', 'DVD-ROM') | list | first | default('') }}"
+    ci_reinstalliso_dvd_bootline: "{{ ci_reinstalliso_boot_entries.stdout_lines | select('search', 'DVD-ROM') | list | first | default('') }}"
 
 - name: Fail if no DVD-ROM boot entry found
   fail:
     msg: "No boot entry containing 'DVD-ROM' found."
-  when: not dvd_bootline
+  when: not ci_reinstalliso_dvd_bootline
 
 - name: Extract boot number from line
   set_fact:
-    dvd_bootnum: "{{ dvd_bootline | regex_search('Boot([0-9A-Fa-f]{4})', '\\1') | first | default('') }}"
+    ci_reinstalliso_dvd_bootnum: "{{ ci_reinstalliso_dvd_bootline | regex_search('Boot([0-9A-Fa-f]{4})', '\\1') | first | default('') }}"
 
 - name: Debug bootnum
   debug:
-    msg: "Boot number for DVD-ROM: {{ dvd_bootnum }}"
+    msg: "Boot number for DVD-ROM: {{ ci_reinstalliso_dvd_bootnum }}"
 
 - name: Set next boot entry to DVD-ROM
-  command: "efibootmgr -n {{ dvd_bootnum }}"
+  command: "efibootmgr -n {{ ci_reinstalliso_dvd_bootnum }}"
   changed_when: true
-  when: dvd_bootnum is defined
+  when: ci_reinstalliso_dvd_bootnum is defined
 
 - name: Reboot for ISO installation to happen
   reboot:
@@ -36,41 +36,41 @@
 
 - name: Get root filesystem device
   ansible.builtin.command: findmnt -n -o SOURCE /
-  register: root_device
+  register: ci_reinstalliso_root_device
   changed_when: false
 
 - name: Get filesystem creation time
   ansible.builtin.shell:
-    cmd:  "set -o pipefail && /usr/sbin/tune2fs -l {{ root_device.stdout }} | grep 'Filesystem created'"
+    cmd:  "set -o pipefail && /usr/sbin/tune2fs -l {{ ci_reinstalliso_root_device.stdout }} | grep 'Filesystem created'"
     executable: "/bin/bash"
-  register: fs_creation
+  register: ci_reinstalliso_fs_creation
   changed_when: false
 
 - name: Parse filesystem creation timestamp
   ansible.builtin.set_fact:
-    fs_creation_time: "{{ fs_creation.stdout | regex_replace('Filesystem created:\\s+', '') | to_datetime('%a %b %d %H:%M:%S %Y') }}"
+    ci_reinstalliso_fs_creation_time: "{{ ci_reinstalliso_fs_creation.stdout | regex_replace('Filesystem created:\\s+', '') | to_datetime('%a %b %d %H:%M:%S %Y') }}"
 
 - name: Parse current local time
   ansible.builtin.set_fact:
-    current_time: "{{ (ansible_date_time.date + ' ' + ansible_date_time.time) | to_datetime('%Y-%m-%d %H:%M:%S') }}"
+    ci_reinstalliso_current_time: "{{ (ansible_date_time.date + ' ' + ansible_date_time.time) | to_datetime('%Y-%m-%d %H:%M:%S') }}"
 
 - name: Get delta
   ansible.builtin.set_fact:
-    delta: "{{ (current_time | to_datetime('%Y-%m-%d %H:%M:%S') - fs_creation_time | to_datetime('%Y-%m-%d %H:%M:%S')).total_seconds() }}"
+    ci_reinstalliso_delta: "{{ (ci_reinstalliso_current_time | to_datetime('%Y-%m-%d %H:%M:%S') - ci_reinstalliso_fs_creation_time | to_datetime('%Y-%m-%d %H:%M:%S')).total_seconds() }}"
 
 - debug:
-    var: fs_creation
+    var: ci_reinstalliso_fs_creation
 - debug:
-    var: fs_creation_time
+    var: ci_reinstalliso_fs_creation_time
 - debug:
-    var: current_time
+    var: ci_reinstalliso_current_time
 - debug:
-    var: delta
+    var: ci_reinstalliso_delta
 
 - name: Fail if system was installed more than 15 minutes ago
   ansible.builtin.fail:
     msg: "System was installed more than 15 minutes ago. Aborting."
-  when: delta | int >= 900
+  when: ci_reinstalliso_delta | int >= 900
 
 - name: Continue if system is recent
   ansible.builtin.debug:

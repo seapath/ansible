@@ -14,5 +14,5 @@
 
 - name: Check reboot
   set_fact:
-    need_reboot: true
+    need_reboot: true # noqa: var-naming[no-role-prefix]
   when: not network_systemdnetworkd_apply_config

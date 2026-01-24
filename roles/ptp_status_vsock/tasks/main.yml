@@ -26,17 +26,17 @@
         src: ptpstatus/ptpstatus.service
         dest: /etc/systemd/system/ptpstatus.service
         mode: '0644'
-      register: ptpstatus
+      register: ptp_status_vsock_ptpstatus
     - name: Copy ptp_vsock.service
       ansible.builtin.copy:
         src: ptp_vsock.service
         dest: /etc/systemd/system/ptp_vsock.service
         mode: '0644'
-      register: ptpvsock
+      register: ptp_status_vsock_ptpvsock
     - name: Daemon-reload ptp status
       ansible.builtin.service:
         daemon_reload: yes
-      when: ptpstatus.changed or ptpvsock.changed
+      when: ptp_status_vsock_ptpstatus.changed or ptp_status_vsock_ptpvsock.changed
     - name: Enable ptpstatus.service
       ansible.builtin.systemd:
         name: ptpstatus.service
