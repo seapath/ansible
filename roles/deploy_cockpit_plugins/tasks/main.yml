@@ -4,7 +4,7 @@
 - name: Check if cockpit is installed
   command:
     which cockpit-bridge
-  register: cockpit_status
+  register: deploy_cockpit_plugins_cockpit_status
   ignore_errors: true
   changed_when: false
 
@@ -13,7 +13,7 @@
     path: "/usr/share/cockpit/{{ item }}"
     state: directory
     mode: '0755'
-  when: cockpit_status.rc == 0
+  when: deploy_cockpit_plugins_cockpit_status.rc == 0
   loop:
     - cockpit-cluster-dashboard
     - cockpit-cluster-vm-management
@@ -24,7 +24,7 @@
     dest: "/usr/share/cockpit/{{ item }}"
     owner: root
     group: root
-  when: cockpit_status.rc == 0
+  when: deploy_cockpit_plugins_cockpit_status.rc == 0
   loop:
     - cockpit-cluster-dashboard
     - cockpit-cluster-vm-management

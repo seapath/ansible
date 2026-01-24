@@ -6,41 +6,59 @@
   ansible.builtin.setup:
     filter: ansible_distribution*
 
+- name: Set detect_seapath_distro_distro from seapath_distro if it exists
+  set_fact:
+    detect_seapath_distro_distro: "{{ seapath_distro }}"
+  when: seapath_distro is defined
+
+- name: Show detect_seapath_distro_distro
+  debug:
+    var: detect_seapath_distro_distro
+
 - name: Detect Debian distribution
   set_fact:
-    seapath_distro: Debian
+    detect_seapath_distro_distro: Debian
   when: ansible_distribution | regex_search("Debian")
 
 - name: Detect Centos distribution
   set_fact:
-    seapath_distro: CentOS
+    detect_seapath_distro_distro: CentOS
   when: ansible_distribution | regex_search("CentOS|RedHat")
 
 - name: Detect OracleLinux distribution
   set_fact:
-    seapath_distro: OracleLinux
+    detect_seapath_distro_distro: OracleLinux
   when: ansible_distribution | regex_search("Oracle")
 
+- name: Show detect_seapath_distro_distro
+  debug:
+    var: detect_seapath_distro_distro
+
 - name: Detect Yocto distribution
-  when: seapath_distro is not defined
+  when: detect_seapath_distro_distro is not defined
   block:
     - name: Search CPE_NAME field of {{ ansible_distribution_file_path }}
       command: grep 'CPE_NAME.*cpe:/o:openembedded' {{ ansible_distribution_file_path }}
-      register: ret
-      failed_when: ret.rc != 0 and ret.rc != 1
+      register: detect_seapath_distro_ret
+      failed_when: detect_seapath_distro_ret.rc != 0 and detect_seapath_distro_ret.rc != 1
       changed_when: false
-    - name: Set seapath_distro for Yocto distro
+    - name: Set detect_seapath_distro_distro for Yocto distro
       set_fact:
-        seapath_distro: Yocto
-      when: ret.rc == 0
+        detect_seapath_distro_distro: Yocto
+      when: detect_seapath_distro_ret.rc == 0
 
 - name: Check distro detection
   fail:
     msg: "The Seapath distribution could not be determined"
-  when: seapath_distro is not defined
+  when: detect_seapath_distro_distro is not defined
+
+- name: Set seapath_distro for external use
+  set_fact:
+    seapath_distro: "{{ detect_seapath_distro_distro }}" # noqa: var-naming[no-role-prefix]
+  when: detect_seapath_distro_distro is defined
 
 - name: Set is_using_cephadm depending on distro and option
   set_fact:
-    is_using_cephadm: "{{ seapath_distro == 'OracleLinux' or (force_cephadm | default(false)) }}"
+    is_using_cephadm: "{{ seapath_distro == 'OracleLinux' or (force_cephadm | default(false)) }}" # noqa: var-naming[no-role-prefix]
 
 ...

@@ -16,13 +16,13 @@
     owner: root
     group: root
     mode: 0644
-  register: conntrackd
+  register: conntrackd_conntrackd
 - name: Restart conntrackd
   ansible.builtin.systemd:
     state: restarted
     daemon_reload: yes
-    name: conntrackd
-  when: conntrackd.changed and conntrackd_ignore_ip_list is defined
+    name: conntrackd_conntrackd
+  when: conntrackd_conntrackd.changed and conntrackd_conntrackd_ignore_ip_list is defined
 - when: conntrackd_ignore_ip_list is defined
   block:
     - name: Copy conntrackd.conf file
@@ -32,7 +32,7 @@
         group: root
         owner: root
         mode: '0644'
-      register: conntrackdconf
+      register: conntrackd_conntrackdconf
     - name: Enable conntrackd.service
       ansible.builtin.systemd:
         name: conntrackd.service
@@ -43,7 +43,7 @@
         name: conntrackd.service
         enabled: yes
         state: restarted
-      when: conntrackdconf.changed
+      when: conntrackd_conntrackdconf.changed
 - when: conntrackd_ignore_ip_list is not defined
   block:
     - name: Stop and disable conntrackd.service

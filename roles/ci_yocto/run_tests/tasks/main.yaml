@@ -7,18 +7,18 @@
 - name: Create temporary test directory
   tempfile:
     state: directory
-  register: tmp_test_dir
+  register: ci_yocto_tmp_test_dir
 
 - name: Launch cukinia tests
   shell:
     cmd: >-
       MACHINENAME={{ cukinia_namespace | default(inventory_hostname) }}
-      cukinia -f junitxml -o {{ tmp_test_dir.path }}/cukinia.xml
+      cukinia -f junitxml -o {{ ci_yocto_tmp_test_dir.path }}/cukinia.xml
       /etc/cukinia/cukinia.conf || true
   changed_when: true
 - name: Fetch result
   fetch:
-    src: '{{ tmp_test_dir.path }}/cukinia.xml'
+    src: '{{ ci_yocto_tmp_test_dir.path }}/cukinia.xml'
     dest: >-
       {{ cukinia_test_prefix | default('..') }}/cukinia_{{ inventory_hostname
       }}.xml
@@ -28,10 +28,10 @@
   when: skip_cyclictest is not defined or not skip_cyclictest
   block:
     - name: Execute cyclitect script
-      script: run_cyclictest.py '{{ tmp_test_dir.path }}/cyclictest.txt'
+      script: run_cyclictest.py '{{ ci_yocto_tmp_test_dir.path }}/cyclictest.txt'
     - name: Fetch results
       fetch:
-        src: '{{ tmp_test_dir.path }}/cyclictest.txt'
+        src: '{{ ci_yocto_tmp_test_dir.path }}/cyclictest.txt'
         dest: "{{ cukinia_test_prefix | default('..') }}/cyclictest_{{ inventory_hostname }}.txt"
         flat: yes
 ...

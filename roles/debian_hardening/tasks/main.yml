@@ -18,7 +18,6 @@
     line: '\1 {{ item }}\2'
     state: present
     backrefs: yes
-  register: updategrub
   with_items: "{{ debian_hardening_kernel_params }}"
   when: not revert
 
@@ -29,7 +28,6 @@
     line: '\1\3'
     state: present
     backrefs: yes
-  register: updategrub
   with_items: "{{ debian_hardening_kernel_params }}"
   when: revert
 
@@ -115,13 +113,13 @@
     src: random-root-passwd.service
     dest: /etc/systemd/system/random-root-passwd.service
   when: not revert
-  register: random_root
+  register: debian_hardening_random_root
 - name: "Enable random-root-passwd.service"
   ansible.builtin.systemd:
     name: random-root-passwd.service
     enabled: yes
     state: started
-  when: not revert and random_root.changed
+  when: not revert and debian_hardening_random_root.changed
 - name: "Disable random-root-passwd.service"
   file:
     path: /etc/systemd/system/sysinit.target.wants/random-root-passwd.service
@@ -132,7 +130,6 @@
     path: /etc/systemd/system/random-root-passwd.service
     state: absent
   when: revert
-  register: random_root
 
 - name: "Enable private TMPDIR"
   copy:
@@ -193,7 +190,7 @@
   find:
     paths: /etc/sudoers.d/
     exclude: README
-  register: sudoers_files
+  register: debian_hardening_sudoers_files
   when: not revert
 - name: Fix sudoers.d permission
   file:
@@ -201,7 +198,7 @@
     owner: root
     group: root
     mode: '0440'
-  with_items: "{{ sudoers_files.files }}"
+  with_items: "{{ debian_hardening_sudoers_files.files }}"
   when: not revert
 
 - name: Adding sudo users to group privileged
@@ -213,7 +210,6 @@
    - "{{ admin_user }}"
    - ansible
   when: not revert
-  register: groups_changed
 
 - name: Reset ssh connection to allow user changes to affect ansible user
   ansible.builtin.meta:
@@ -222,7 +218,7 @@
 - name: Check if cockpit is installed
   command:
     which cockpit-bridge
-  register: cockpit_status
+  register: debian_hardening_cockpit_status
   ignore_errors: true
   changed_when: false
 
@@ -230,13 +226,13 @@
   copy:
     src: sudoers/cockpit
     dest: /etc/sudoers.d/cockpit
-  when: not revert and cockpit_status.rc == 0
+  when: not revert and debian_hardening_cockpit_status.rc == 0
 
 - name: Remove cockpit sudo configuration
   ansible.builtin.file:
     path: /etc/sudoers.d/cockpit
     state: absent
-  when: revert and cockpit_status.rc == 0
+  when: revert and debian_hardening_cockpit_status.rc == 0
 
 - name: Configure sudo to be run only users member of the privileged group
   file:

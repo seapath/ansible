@@ -61,7 +61,6 @@
       mode: '0644'
       owner: root
       group: root
-    register: snmpd_conf
   - name: SNMP PASS AGENT script run by net-snmp for seapath tree
     copy:
       src: exposeseapathsnmp.pl

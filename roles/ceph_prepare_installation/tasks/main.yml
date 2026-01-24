@@ -19,11 +19,11 @@
         group: ceph
         mode: "0770"
         state: directory
-    register: new_ceph_installation
+    register: ceph_prepare_installation_new_ceph_installation
 
 - name: Prepare OSD disk # noqa: no-handler
   when:
-    - new_ceph_installation.changed | default(false) or is_using_cephadm | default(false)
+    - ceph_prepare_installation_new_ceph_installation.changed | default(false) or is_using_cephadm | default(false)
   block:
     - name: Refresh LVM VG
       command:
@@ -44,10 +44,10 @@
       block:
         - name: Get real path for OSD disk
           command: "realpath {{ ceph_osd_disk }}" # Get the resolved path of the disk given initialy by the "/dev/disk/by-path/" for ceph purposes
-          register: ceph_osd_realdisk
+          register: ceph_prepare_installation_ceph_osd_realdisk
           changed_when: false
         - name: Cleanup Ceph OSD disks with ceph-volume
-          command: "ceph-volume lvm zap {{ ceph_osd_realdisk.stdout }} --destroy" # Zapping the disk and destroying any vgs or lvs present
+          command: "ceph-volume lvm zap {{ ceph_prepare_installation_ceph_osd_realdisk.stdout }} --destroy" # Zapping the disk and destroying any vgs or lvs present
           when:
             - lvm_volumes is not defined or lvm_volumes[0].device_number == 1 # The disk must not be zapped in the case of a single disk for linux and ceph
             - not (is_using_cephadm | default(false))
@@ -64,74 +64,74 @@
           block:
             - name: Get partition info
               community.general.parted:
-                device: "{{ ceph_osd_realdisk.stdout }}"
+                device: "{{ ceph_prepare_installation_ceph_osd_realdisk.stdout }}"
                 unit: MiB
                 state: info
-              register: parted_info
+              register: ceph_prepare_installation_parted_info
 
             - name: Check if current partition exists
               set_fact:
-                current_exists: >-
-                  {{ parted_info.partitions
+                ceph_prepare_installation_current_exists: >-
+                  {{ ceph_prepare_installation_parted_info.partitions
                      | selectattr('num', 'equalto', lvm_volumes[0].device_number)
                      | list | length > 0 }}
 
             - name: Check if previous partition exists
               set_fact:
-                previous_exists: >-
+                ceph_prepare_installation_previous_exists: >-
                   {{ lvm_volumes[0].device_number > 1 and (
-                       parted_info.partitions
+                       ceph_prepare_installation_parted_info.partitions
                        | selectattr('num', 'equalto', lvm_volumes[0].device_number - 1)
                        | list | length > 0 ) }}
 
-            - name: Set prev_end based on previous partition or zero
+            - name: Set ceph_prepare_installation_prev_end based on previous partition or zero
               set_fact:
-                prev_end: >-
+                ceph_prepare_installation_prev_end: >-
                   {{ (
-                        parted_info.partitions
+                        ceph_prepare_installation_parted_info.partitions
                         | selectattr('num', 'equalto', lvm_volumes[0].device_number - 1)
                         | map(attribute='end')
                         | first
-                      ) | float if previous_exists else 0.0 }}
+                      ) | float if ceph_prepare_installation_previous_exists else 0.0 }}
 
             - debug:
-                var: prev_end
+                var: ceph_prepare_installation_prev_end
             - debug:
                 var: lvm_volumes[0].device_size
             - debug:
-                msg: "{{ ((prev_end | float) + (lvm_volumes[0].device_size | float)) | round(2) }}"
+                msg: "{{ ((ceph_prepare_installation_prev_end | float) + (lvm_volumes[0].device_size | float)) | round(2) }}"
 
             - name: Calculate partition boundaries
               set_fact:
-                part_start: "{{ '0%' if (prev_end | float) == 0 else (prev_end | float | round(2)) ~ 'MiB' }}"
-                part_end: "{{ ((prev_end | float) + (lvm_volumes[0].device_size | float) | float) | round(2) }}MiB"
-              when: previous_exists or lvm_volumes[0].device_number == 1
+                ceph_prepare_installation_part_start: "{{ '0%' if (ceph_prepare_installation_prev_end | float) == 0 else (ceph_prepare_installation_prev_end | float | round(2)) ~ 'MiB' }}"
+                ceph_prepare_installation_part_end: "{{ ((ceph_prepare_installation_prev_end | float) + (lvm_volumes[0].device_size | float) | float) | round(2) }}MiB"
+              when: ceph_prepare_installation_previous_exists or lvm_volumes[0].device_number == 1
 
             - name: Create partition, VG and LV
               when:
-                - not current_exists
-                - previous_exists or lvm_volumes[0].device_number == 1
+                - not ceph_prepare_installation_current_exists
+                - ceph_prepare_installation_previous_exists or lvm_volumes[0].device_number == 1
               block:
                 - name: Create partition using parted module
                   community.general.parted:
-                    device: "{{ ceph_osd_realdisk.stdout }}"
+                    device: "{{ ceph_prepare_installation_ceph_osd_realdisk.stdout }}"
                     number: "{{ lvm_volumes[0].device_number }}"
                     label: gpt
                     name: ""
-                    part_start: "{{ part_start }}"
-                    part_end: "{{ part_end }}"
+                    ceph_prepare_installation_part_start: "{{ ceph_prepare_installation_part_start }}"
+                    ceph_prepare_installation_part_end: "{{ ceph_prepare_installation_part_end }}"
                     flags:
                       - lvm
                     state: present
-                  register: ceph_osd_result
+                  register: ceph_prepare_installation_ceph_osd_result
                 - name: Get disk/by-path of OSD disk
-                  command: "/usr/bin/find -L /dev/disk/by-path -samefile {{ ceph_osd_result.disk.dev }} -print -quit"
-                  register: ceph_osd_finddisk
+                  command: "/usr/bin/find -L /dev/disk/by-path -samefile {{ ceph_prepare_installation_ceph_osd_result.disk.dev }} -print -quit"
+                  register: ceph_prepare_installation_ceph_osd_finddisk
                   changed_when: false
                 - name: Create volume group on the partition
                   community.general.lvg:
                     vg: "{{ lvm_volumes[0].data_vg }}"
-                    pvs: "{{ ceph_osd_finddisk.stdout }}-part{{ lvm_volumes[0].device_number }}"
+                    pvs: "{{ ceph_prepare_installation_ceph_osd_finddisk.stdout }}-part{{ lvm_volumes[0].device_number }}"
                 - name: Create logical volume in the VG
                   community.general.lvol:
                     vg: "{{ lvm_volumes[0].data_vg }}"

@@ -9,20 +9,20 @@
     src: ovs_configuration.json.j2
     dest: /etc/ovs_configuration.json
     validate: "{{ network_configovs_setup_ovs_command_path }} -v -c -f %s"
-  register: ovs_conf
+  register: network_configovs_ovs_conf
 - name: Restart seapath-config_ovs
   ansible.builtin.systemd:
     name: seapath-config_ovs
     state: restarted
   when:
     - network_configovs_apply_config
-    - ovs_conf.changed
+    - network_configovs_ovs_conf.changed
 - name: Register reboot
   set_fact:
-    need_reboot: true
+    need_reboot: true # noqa: var-naming[no-role-prefix]
   when:
     - not network_configovs_apply_config
-    - ovs_conf.changed
+    - network_configovs_ovs_conf.changed
 
 - name: Run extra ovs-vsctl configuration commands
   command: "/usr/bin/ovs-vsctl {{ item }}"

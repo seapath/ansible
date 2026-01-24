@@ -20,9 +20,9 @@
 
 - name: Check if hacluster user exists
   command: getent passwd hacluster
-  register: hacluster_check
+  register: ci_cleanup_varlog_hacluster_check
   changed_when: false
-  failed_when: hacluster_check.rc not in [0, 2]
+  failed_when: ci_cleanup_varlog_hacluster_check.rc not in [0, 2]
 
 - name: Recreate useful folders /var/log/crmsh/ (2)
   file:
@@ -31,4 +31,4 @@
     mode: 0755
     owner: hacluster
     group: haclient
-  when: hacluster_check.rc == 0
+  when: ci_cleanup_varlog_hacluster_check.rc == 0

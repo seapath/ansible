@@ -25,11 +25,11 @@
     state: unmounted
 - name: Get overlay mounts
   command: awk '$3 == "overlay" {print $2}' /proc/mounts
-  register: overlay_mounts
+  register: ci_yocto_overlay_mounts
   changed_when: false
 - name: Unmount overlays
   command: umount -l {{ item }}
-  with_items: "{{ overlay_mounts.stdout_lines }}"
+  with_items: "{{ ci_yocto_overlay_mounts.stdout_lines }}"
   changed_when: true
 - name: Remove persistent data
   file:

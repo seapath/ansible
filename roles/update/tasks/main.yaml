@@ -5,20 +5,20 @@
 
 - name: Check if the system have swupdate
   command: swupdate -v
-  register: swupdate_version
+  register: update_swupdate_version
   ignore_errors: yes
   changed_when: false
 - fail:
     msg: "Only Swupdate update is supported"
-  when: swupdate_version.rc != 0
+  when: update_swupdate_version.rc != 0
 
 
 - name: Check the SEAPATH mode, cluster or standalone
   stat:
     path: /etc/corosync/corosync.conf
-  register: corosync_conf
+  register: update_corosync_conf
 
-- when: corosync_conf.stat.exists
+- when: update_corosync_conf.stat.exists
   block:
     - name: Set hypervisor in maintenance mode
       command: crm node standby "{{ inventory_hostname }}"
@@ -28,8 +28,8 @@
         cmd: set -o pipefail && crm status|grep "Migrating"|wc -l
         executable: /bin/bash
       changed_when: false
-      register: check_migration
-      until: check_migration.stdout == '0'
+      register: update_check_migration
+      until: update_check_migration.stdout == '0'
       retries: 10
 
 - name: Copy SWU file on machine
@@ -58,7 +58,7 @@
 
 - name: Unset maintenance mode for hypervisor
   command: crm node online "{{ inventory_hostname }}"
-  when: corosync_conf.stat.exists
+  when: update_corosync_conf.stat.exists
   changed_when: true
 
 - name: Check if update has succeed

@@ -7,46 +7,46 @@
   shell:
     cmd: set -o pipefail && virsh secret-list |grep "ceph" |grep -oE '[a-f0-9]+-[a-f0-9]+-[a-f0-9]+-[a-f0-9]+-[a-f0-9]+'
     executable: /bin/bash
-  register: secret_defined
-  failed_when: secret_defined.rc > 1
+  register: configure_libvirt_rdb_secret_secret_defined
+  failed_when: configure_libvirt_rdb_secret_secret_defined.rc > 1
   changed_when: false
 - debug:
-    var: secret_defined
+    var: configure_libvirt_rdb_secret_secret_defined
 
 - name: Check if a secret pool has to be created
   set_fact:
-    create_secret_pool: "{% if hostvars[item]['secret_defined'].stdout == '' %}true{% else %}{{ create_secret_pool | default(false) }}{% endif %}"
+    configure_libvirt_rdb_secret_create_secret_pool: "{% if hostvars[item]['configure_libvirt_rdb_secret_secret_defined'].stdout == '' %}true{% else %}{{ configure_libvirt_rdb_secret_create_secret_pool | default(false) }}{% endif %}"
   loop: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) }}"
 
-- when: create_secret_pool
+- when: configure_libvirt_rdb_secret_create_secret_pool
   block:
     - name: Check if the secret is already defined
       set_fact:
-        libvirt_uuid_rbd: "{% if hostvars[item]['secret_defined'].stdout != '' %}{{ hostvars[item]['secret_defined'].stdout }}{% else %}{{ libvirt_uuid_rbd | default('') }}{% endif %}"
+        configure_libvirt_rdb_secret_libvirt_uuid_rbd: "{% if hostvars[item]['configure_libvirt_rdb_secret_secret_defined'].stdout != '' %}{{ hostvars[item]['configure_libvirt_rdb_secret_secret_defined'].stdout }}{% else %}{{ configure_libvirt_rdb_secret_libvirt_uuid_rbd | default('') }}{% endif %}"
       loop: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) }}"
     - debug:
-        msg: "Found UUID {{ libvirt_uuid_rbd }}"
-      when: libvirt_uuid_rbd | length > 0
+        msg: "Found UUID {{ configure_libvirt_rdb_secret_libvirt_uuid_rbd }}"
+      when: configure_libvirt_rdb_secret_libvirt_uuid_rbd | length > 0
       run_once: true
     - name: Generate secret uuid
       command: uuidgen
       changed_when: false
-      register: raw_uuid
+      register: configure_libvirt_rdb_secret_raw_uuid
       run_once: true
-      when: libvirt_uuid_rbd | length == 0
+      when: configure_libvirt_rdb_secret_libvirt_uuid_rbd | length == 0
     - name: Register uuid
       set_fact:
-        libvirt_uuid_rbd: "{{ raw_uuid.stdout }}"
-      when: libvirt_uuid_rbd | length == 0
+        configure_libvirt_rdb_secret_libvirt_uuid_rbd: "{{ configure_libvirt_rdb_secret_raw_uuid.stdout }}"
+      when: configure_libvirt_rdb_secret_libvirt_uuid_rbd | length == 0
     - name: Get Ceph libvirt client key
       command: ceph auth get-key client.libvirt
       changed_when: false
-      register: ceph_key
+      register: configure_libvirt_rdb_secret_ceph_key
       run_once: true
 
 - when:
-    - create_secret_pool
-    - secret_defined.stdout == ''
+    - configure_libvirt_rdb_secret_create_secret_pool
+    - configure_libvirt_rdb_secret_secret_defined.stdout == ''
   block:
   - name: Copy libvirt xml secret file
     template:
@@ -54,12 +54,12 @@
         dest: /tmp/secret.xml
   - name: Create libvirt rbd secret
     command: virsh secret-define /tmp/secret.xml
-    when: not secret_defined.failed
+    when: not configure_libvirt_rdb_secret_secret_defined.failed
     changed_when: true
   - name: Remove temporary file
     file:
         path: /tmp/secret.xml
         state: absent
   - name: Set key in libvirt secret
-    command: 'virsh secret-set-value --secret "{{ libvirt_uuid_rbd }}" --base64 "{{ ceph_key.stdout }}"'
+    command: 'virsh secret-set-value --secret "{{ configure_libvirt_rdb_secret_libvirt_uuid_rbd }}" --base64 "{{ configure_libvirt_rdb_secret_ceph_key.stdout }}"'
     changed_when: true
