@@ -6,9 +6,9 @@
   cluster_vm:
     command: status
     name: "{{ item }}"
-  register: presencevm
+  register: deploy_vms_cluster_presencevm
 - debug:
-    var: presencevm
+    var: deploy_vms_cluster_presencevm
     verbosity: 2
 
 - name: Check tmp folder permission
@@ -22,7 +22,7 @@
     - deploy_vms_cluster_qcow2tmpuploadfolder is defined
     - deploy_vms_cluster_qcow2tmpuploadfolder != "/tmp"
 
-- when: presencevm.status == "Undefined" or (hostvars[item].force is defined and hostvars[item].force)
+- when: deploy_vms_cluster_presencevm.status == "Undefined" or (hostvars[item].force is defined and hostvars[item].force)
   vars:
     vm_file: "{{ hostvars[item].vm_disk | default( deploy_vms_cluster_vms_disks_directory ~ '/' ~ item ~ '.qcow2') }}"
     vm_file_dest: "{{ deploy_vms_cluster_qcow2tmpuploadfolder + '/os.qcow2' }}"

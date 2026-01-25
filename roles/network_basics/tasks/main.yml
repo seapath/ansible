@@ -8,12 +8,12 @@
     find:
       paths: ["/etc/systemd/network/", "/etc/netplan"]
       patterns: "*"
-    register: network_files_to_delete
+    register: network_basics_network_files_to_delete
   - name: Wipe the network directory content 2/2, remove files
     file:
       path: "{{ item.path }}"
       state: absent
-    with_items: "{{ network_files_to_delete.files }}"
+    with_items: "{{ network_basics_network_files_to_delete.files }}"
 - name: Remove installation network configuration
   file:
     path: "/etc/systemd/network/{{ item }}.network"

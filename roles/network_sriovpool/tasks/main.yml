@@ -8,10 +8,10 @@
   shell:
     cmd: set -o pipefail && virsh -q net-list --all | awk '{ print $1 }' | grep -q "{{ network_sriovpool_sriov_network_pool_name }}"
     executable: /bin/bash
-  register: pool_defined
-  failed_when: pool_defined.rc > 1
+  register: network_sriovpool_pool_defined
+  failed_when: network_sriovpool_pool_defined.rc > 1
   changed_when: false
-- when: pool_defined.rc != 0
+- when: network_sriovpool_pool_defined.rc != 0
   block:
     - name: Copy libvirt xml SRIOV network pool file
       template:

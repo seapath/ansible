@@ -7,47 +7,47 @@
   block:
     - name: Set fact unit, new_pv_size, list_pvs
       set_fact:
-        new_pv_size: "{{ (lvm_volumes[0].device_size | regex_replace('[A-Za-z]*', '') | int) }}"
-        list_pvs: "{{ ansible_lvm['pvs'] | dict2items | community.general.json_query(query) }}"
-        unit: "kib"
+        ceph_expansion_vg_new_pv_size: "{{ (lvm_volumes[0].device_size | regex_replace('[A-Za-z]*', '') | int) }}"
+        ceph_expansion_vg_list_pvs: "{{ ansible_lvm['pvs'] | dict2items | community.general.json_query(query) }}"
+        ceph_expansion_vg_unit: "kib"
       vars:
         query: "[?value.vg=='{{ lvm_volumes[0].data_vg }}'].key"
     - name: Get parted info for SD devices
       community.general.parted:
         # Get the name of the device by escaping the partition number
         device: "{{ item | regex_replace('(p?\\d+)$', '') }}"
-      loop: "{{ list_pvs }}"
-      register: parted_info
+      loop: "{{ ceph_expansion_vg_list_pvs }}"
+      register: ceph_expansion_vg_parted_info
     - debug:
-        var: parted_info
+        var: ceph_expansion_vg_parted_info
       when: ansible_verbosity >= 3
-    - name: Set fact part_info
+    - name: Set fact ceph_expansion_vg_part_info
       set_fact:
-        part_info: "{{ parted_info.results | community.general.json_query(query) | first | first }}"
+        ceph_expansion_vg_part_info: "{{ ceph_expansion_vg_parted_info.results | community.general.json_query(query) | first | first }}"
       vars:
         # The regex gets the number of the partition (Ex: /dev/nvme0n1p3 -> 3)
-        query: "[?item=='{{ item }}'] | [].partitions[?num==`{{ item | regex_search('[0-9.]*$') }}`].{oldsize: size, end: end, newsize: `{{ new_pv_size | int * 1024 }}` }"
-      register: parts
-      loop: "{{ list_pvs }}"
+        query: "[?item=='{{ item }}'] | [].partitions[?num==`{{ item | regex_search('[0-9.]*$') }}`].{oldsize: size, end: end, newsize: `{{ ceph_expansion_vg_new_pv_size | int * 1024 }}` }"
+      register: ceph_expansion_vg_parts
+      loop: "{{ ceph_expansion_vg_list_pvs }}"
     - debug:
         var: lvm_volumes[0].device_size
       when: ansible_verbosity >= 3
     - debug:
-        msg: item.ansible_facts.part_info.newsize|int
-      loop: "{{ parts.results }}"
+        msg: item.ansible_facts.ceph_expansion_vg_part_info.newsize|int
+      loop: "{{ ceph_expansion_vg_parts.results }}"
       when: ansible_verbosity >= 3
     - debug:
-        msg: item.ansible_facts.part_info.oldsize|int
-      loop: "{{ parts.results }}"
+        msg: item.ansible_facts.ceph_expansion_vg_part_info.oldsize|int
+      loop: "{{ ceph_expansion_vg_parts.results }}"
       when: ansible_verbosity >= 3
 
     - name: Extend partitions
       command:
-        cmd: "/usr/sbin/parted -s {{ item.item | regex_replace('(p?\\d+)$', '') }} resizepart  {{ item.item | regex_search('[0-9.]*$') }} {{ item.ansible_facts.part_info.end + (item.ansible_facts.part_info.newsize | int) - (item.ansible_facts.part_info.oldsize | int) }}{{ unit }}"
-      loop: "{{ parts.results }}"
-      when: (item.ansible_facts.part_info.newsize|int) > (item.ansible_facts.part_info.oldsize|int)
+        cmd: "/usr/sbin/parted -s {{ item.item | regex_replace('(p?\\d+)$', '') }} resizepart  {{ item.item | regex_search('[0-9.]*$') }} {{ item.ansible_facts.ceph_expansion_vg_part_info.end + (item.ansible_facts.ceph_expansion_vg_part_info.newsize | int) - (item.ansible_facts.ceph_expansion_vg_part_info.oldsize | int) }}{{ ceph_expansion_vg_unit }}"
+      loop: "{{ ceph_expansion_vg_parts.results }}"
+      when: (item.ansible_facts.ceph_expansion_vg_part_info.newsize|int) > (item.ansible_facts.ceph_expansion_vg_part_info.oldsize|int)
       changed_when: true
     - name: Resize PVs
       command: "pvresize {{ item }}"
-      loop: "{{ list_pvs }}"
+      loop: "{{ ceph_expansion_vg_list_pvs }}"
       changed_when: true

@@ -58,7 +58,6 @@
     owner: root
     group: root
     mode: '0644'
-  register: chronywait
   notify: Trigger daemon-reload
 - name: Enable chrony-wait.service
   ansible.builtin.systemd:
@@ -80,21 +79,21 @@
     group: root
     mode: 0644
   notify: Trigger daemon-reload
-  register: pacemaker_corosync
+  register: centos_physical_machine_pacemaker_corosync
 - name: Get Pacemaker service Status
   ansible.builtin.systemd:
     name: "pacemaker.service"
-  register: pacemaker_service_status
+  register: centos_physical_machine_pacemaker_service_status
 - name: Disable pacemaker (reinstall step 1/2)
   ansible.builtin.systemd:
     name: pacemaker.service
     enabled: no
-  when: pacemaker_corosync.changed and pacemaker_service_status.status.UnitFileState == "enabled"
+  when: centos_physical_machine_pacemaker_corosync.changed and centos_physical_machine_pacemaker_service_status.status.UnitFileState == "enabled"
 - name: Enable pacemaker (reinstall step 2/2)
   ansible.builtin.systemd:
     name: pacemaker.service
     enabled: yes
-  when: pacemaker_corosync.changed and pacemaker_service_status.status.UnitFileState == "enabled"
+  when: centos_physical_machine_pacemaker_corosync.changed and centos_physical_machine_pacemaker_service_status.status.UnitFileState == "enabled"
 
 - name: Add extra modules to the kernel
   block:
@@ -170,21 +169,21 @@
 
 - name: Get the /var/log/ device
   command: "findmnt -n -o SOURCE --target /var/log"
-  register: varlog_dev
+  register: centos_physical_machine_varlog_dev
   changed_when: false
 
 - name: Set_fact /var/log/ device
   set_fact:
-    lvm_rebooter_log_device: "{{ varlog_dev.stdout }}"
+    centos_physical_machine_lvm_rebooter_log_device: "{{ centos_physical_machine_varlog_dev.stdout }}"
 
 - name: Get the /var/log/ relative path
   shell: "realpath --relative-to=$(findmnt -n -o TARGET --target /var/log/) /var/log"
-  register: varlog_path
+  register: centos_physical_machine_varlog_path
   changed_when: false
 
 - name: Set_fact /var/log/ relative path
   set_fact:
-    lvm_rebooter_log_path: "{{ varlog_path.stdout }}"
+    centos_physical_machine_lvm_rebooter_log_path: "{{ centos_physical_machine_varlog_path.stdout }}"
 
 - name: Copy rebooter.conf
   template:

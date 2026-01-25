@@ -11,14 +11,14 @@
     mode: 0644
   when:
     - configure_libvirt_allow_non_root_libvirt_socket_access or livemigration_user is defined
-  register: libvirtd_conf_changed
+  register: configure_libvirt_libvirtd_conf
 
 # Restart libvirtd if configuration changed
 - name: Restart libvirtd
   ansible.builtin.systemd:
     name: libvirtd
     state: restarted
-  when: libvirtd_conf_changed.changed
+  when: configure_libvirt_libvirtd_conf.changed # noqa: no-handler
 
 # OracleLinux specific
 - name: Enable and start virtsecretd.socket

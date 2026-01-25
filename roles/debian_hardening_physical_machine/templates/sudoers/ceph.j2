@@ -11,5 +11,5 @@
 # for the file to be properly parsed.
 
 {% if ceph_osd_disk is defined %}
-ceph ALL=NOPASSWD: /usr/sbin/smartctl -a --json=o {{ ceph_osd_disk_stat.stat.lnk_source }}
+ceph ALL=NOPASSWD: /usr/sbin/smartctl -a --json=o {{ debian_hardening_physical_machine_ceph_osd_disk_stat.stat.lnk_source }}
 {% endif %}

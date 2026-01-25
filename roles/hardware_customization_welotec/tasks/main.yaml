@@ -5,46 +5,46 @@
   shell:
     cmd: "set -o pipefail && cat /sys/class/net/*/address|grep 78:70|sort|uniq"
     executable: "/bin/bash"
-  register: mac_addresses
+  register: hardware_customization_welotec_mac_addresses
   changed_when: false
   failed_when: false
-  when: mac_address_prp is not defined
+  when: hardware_customization_welotec_mac_address_prp is not defined
 - name: Gather PRP-HSR interfaces MAC addresses
   shell:
     cmd: "set -o pipefail && cat /sys/class/net/*/address|grep 70:f8:e7*|sort|uniq"
     executable: "/bin/bash"
-  register: mac_addresses_hsr_prp
+  register: hardware_customization_welotec_mac_addresses_hsr_prp
   changed_when: false
   failed_when: false
 - name: Map MAC addresses to interfaces
   set_fact:
-    mac_address_map: >-
+    hardware_customization_welotec_mac_address_map: >-
       {{
         dict(
           [
-                ('lan5', mac_addresses.stdout_lines[0]),
-                ('lan6', mac_addresses.stdout_lines[1]),
-                ('lan7', mac_addresses.stdout_lines[2]),
-                ('lan8', mac_addresses.stdout_lines[3]),
-                ('lan1', mac_addresses.stdout_lines[4]),
-                ('lan2', mac_addresses.stdout_lines[5]),
-                ('lan3', mac_addresses.stdout_lines[6]),
-                ('lan4', mac_addresses.stdout_lines[7]),
+                ('lan5', hardware_customization_welotec_mac_addresses.stdout_lines[0]),
+                ('lan6', hardware_customization_welotec_mac_addresses.stdout_lines[1]),
+                ('lan7', hardware_customization_welotec_mac_addresses.stdout_lines[2]),
+                ('lan8', hardware_customization_welotec_mac_addresses.stdout_lines[3]),
+                ('lan1', hardware_customization_welotec_mac_addresses.stdout_lines[4]),
+                ('lan2', hardware_customization_welotec_mac_addresses.stdout_lines[5]),
+                ('lan3', hardware_customization_welotec_mac_addresses.stdout_lines[6]),
+                ('lan4', hardware_customization_welotec_mac_addresses.stdout_lines[7]),
           ]
         )
       }}
-  when: mac_address_map is not defined and mac_addresses.rc == 0
+  when: hardware_customization_welotec_mac_address_map is not defined and hardware_customization_welotec_mac_addresses.rc == 0
 - name: Define PRP-HSR MAC address to interface
   set_fact:
-    mac_address_prp: "{{ mac_addresses_hsr_prp.stdout_lines[0] }}"
-  when: mac_address_prp is not defined and mac_addresses_hsr_prp.rc == 0
+    hardware_customization_welotec_mac_address_prp: "{{ hardware_customization_welotec_mac_addresses_hsr_prp.stdout_lines[0] }}"
+  when: hardware_customization_welotec_mac_address_prp is not defined and hardware_customization_welotec_mac_addresses_hsr_prp.rc == 0
 
 - name: Copy PRP-HSR network configuration
   copy:
     src: 20_welotec_lan_prp.network
     dest: /etc/systemd/network/20_welotec_lan_prp.network
     mode: '0644'
-  when: mac_address_prp is defined
+  when: hardware_customization_welotec_mac_address_prp is defined
   notify: reload systemd-networkd
 
 - name: Copy interface link configuration for lan_hsr-prp
@@ -53,8 +53,8 @@
     dest: /etc/systemd/network/20_welotec_lan_hsr-prp.link
     mode: '0644'
   vars:
-    mac_address: "{{ mac_address_prp }}"
-  when: mac_address_prp is defined
+    hardware_customization_welotec_mac_address: "{{ hardware_customization_welotec_mac_address_prp }}"
+  when: hardware_customization_welotec_mac_address_prp is defined
   notify: reload systemd-networkd
 
 - name: Copy interface link configurations for lan2-lan8
@@ -63,7 +63,7 @@
     dest: "/etc/systemd/network/20_welotec_{{ item }}.link"
     mode: '0644'
   vars:
-    mac_address: "{{ mac_address_map[item] }}"
+    hardware_customization_welotec_mac_address: "{{ hardware_customization_welotec_mac_address_map[item] }}"
   loop:
     - lan2
     - lan3
@@ -72,7 +72,7 @@
     - lan6
     - lan7
     - lan8
-  when: mac_address_map is defined
+  when: hardware_customization_welotec_mac_address_map is defined
   notify: reload systemd-networkd
 
 - name: Copy interface link configuration for lan1
@@ -81,6 +81,6 @@
     dest: /etc/systemd/network/20_welotec_lan1.link
     mode: '0644'
   vars:
-    mac_address: "{{ mac_address_map['lan1'] }}"
-  when: mac_address_map is defined
+    hardware_customization_welotec_mac_address: "{{ hardware_customization_welotec_mac_address_map['lan1'] }}"
+  when: hardware_customization_welotec_mac_address_map is defined
   notify: reload systemd-networkd

@@ -19,7 +19,7 @@
 - name: Get ceph disk stats
   stat:
     path: "{{ ceph_osd_disk }}"
-  register: ceph_osd_disk_stat
+  register: debian_hardening_physical_machine_ceph_osd_disk_stat
   when: ceph_osd_disk is defined
 - name: Restrict ceph sudoers file
   template:

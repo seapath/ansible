@@ -7,12 +7,12 @@
 - name: Create temporary test directory
   tempfile:
     state: directory
-  register: tmp_test_dir
+  register: ci_yocto_tmp_test_dir
 - name: Execute script
-  script: get_system_info.py '{{ tmp_test_dir.path }}/system_info.adoc'
+  script: get_system_info.py '{{ ci_yocto_tmp_test_dir.path }}/system_info.adoc'
 - name: Fetch results
   fetch:
-    src: '{{ tmp_test_dir.path }}/system_info.adoc'
+    src: '{{ ci_yocto_tmp_test_dir.path }}/system_info.adoc'
     dest: "{{ cukinia_test_prefix | default('..') }}/system_info_{{ inventory_hostname }}.adoc"
     flat: yes
 ...

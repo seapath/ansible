@@ -7,7 +7,7 @@
 - name: Create temporary test directory
   tempfile:
     state: directory
-  register: tmp_test_dir
+  register: ci_centos_tmp_test_dir
 
 - name: Remove /usr/share/testdata/cukinia.conf
   become: yes
@@ -44,11 +44,11 @@
   shell:
     cmd: >-
       MACHINENAME={{ cukinia_namespace | default(inventory_hostname) }}
-      cukinia -f junitxml -o {{ tmp_test_dir.path }}/cukinia.xml
+      cukinia -f junitxml -o {{ ci_centos_tmp_test_dir.path }}/cukinia.xml
       /usr/share/testdata/cukinia.conf || true
   changed_when: true
 - name: Fetch result
   fetch:
-    src: '{{ tmp_test_dir.path }}/cukinia.xml'
+    src: '{{ ci_centos_tmp_test_dir.path }}/cukinia.xml'
     dest: ../cukinia_{{ inventory_hostname }}.xml
     flat: yes

@@ -1,5 +1,5 @@
 diff --git a/infrastructure-playbooks/purge-cluster.yml b/infrastructure-playbooks/purge-cluster.yml
-index 109a25697..3afab0460 100644
+index d1a4114f9..ddfa39550 100644
 --- a/infrastructure-playbooks/purge-cluster.yml
 +++ b/infrastructure-playbooks/purge-cluster.yml
 @@ -42,6 +42,9 @@
@@ -10,17 +10,17 @@ index 109a25697..3afab0460 100644
 +  roles:
 +    - detect_seapath_distro
    tasks:
-     - debug:
-         msg: "gather facts on all Ceph hosts for following reference"
-@@ -106,6 +109,7 @@
+     - name: Gather facts on all Ceph hosts for following reference
+       ansible.builtin.debug:
+@@ -110,6 +113,7 @@
          - rbd
          - ceph
          - libceph
 +      when: seapath_distro != "Yocto"
  
  
- - name: purge ceph nfs cluster
-@@ -545,6 +549,16 @@
+ - name: Purge ceph nfs cluster
+@@ -551,6 +555,16 @@
        when:
          - containerized_deployment | bool
            or ceph_volume_present.rc == 0
@@ -35,5 +35,5 @@ index 109a25697..3afab0460 100644
 +      command: "ceph-volume lvm zap {{ ceph_osd_realdisk.stdout }} --destroy"
 +      when: seapath_distro == "Yocto"
  
-     - name: get ceph block partitions
-       shell: |
+     - name: Zap and destroy osds created by ceph-volume with devices
+       ceph_volume:
