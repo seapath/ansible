@@ -57,7 +57,7 @@ You can use default SEAPATH playbooks or write your own.
 - `ceph_prepare_installation`: Prepare the disk or LVM volume for Ceph
 - `ceph_expansion_lv`: Expand the logical volume used by Ceph OSD
 - `ceph_expansion_vg`: Expand the volume group used by Ceph OSD
-- `add_livemigration_user`: Configure the user that will perform VM live migration
+- `add_libvirtadmin_user`: Configure the user that will perform VM live migration and console access
 - `cephadm`: Deploy Ceph on the cluster using cephadm
 - `configure_ha`: Configure pacemaker and Corosync
 - `configure_libvirt`: Create an RBD pool for Libvirt, to be used by the VMs
@@ -170,7 +170,7 @@ The other playbooks can be called alone to re-configure a specific part, when yo
 - `cluster_setup_cephadm.yaml`: Configure Ceph using cephadm
 - `cluster_setup_ha.yaml`: Configure Corosync and Pacemaker et Corosync
 - `cluster_setup_libvirt.yaml`: Create a Ceph RBD pool for libvirt
-- `cluster_setup_users.yaml`: Setup admin and livemigration users over the cluster
+- `cluster_setup_users.yaml`: Setup libvirtadmin user over the cluster
 
 ## VM deployement
 
