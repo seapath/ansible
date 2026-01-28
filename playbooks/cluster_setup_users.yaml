@@ -2,14 +2,16 @@
 # Copyright (C) 2024-2025 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-# This playbook adds and configures the livemigration user.
-# It is used by libvirt to migrate VM from a host to an other without halting it.
+# This playbook adds and configures the Libvirt administration user.
+# It is used
+# - to migrate VM from a host to an other without halting it.
+# - to access the console of a VM over the cluster
 
 ---
-- name: Create livemigration user
+- name: Create libvirtadmin user
   hosts: hypervisors:&cluster_machines
   gather_facts: true
   become: true
   roles:
     - detect_seapath_distro
-    - add_livemigration_user
+    - add_libvirtadmin_user
