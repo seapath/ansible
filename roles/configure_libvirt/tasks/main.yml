@@ -10,7 +10,7 @@
     group: root
     mode: 0644
   when:
-    - configure_libvirt_allow_non_root_libvirt_socket_access or livemigration_user is defined
+    - configure_libvirt_allow_non_root_libvirt_socket_access
   register: configure_libvirt_libvirtd_conf
 
 # Restart libvirtd if configuration changed
