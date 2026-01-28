@@ -56,7 +56,7 @@ hypervisors:
     node3:
   vars:
     isolcpus: "4-N" # The list of CPUs to isolate. TODO
-    livemigration_user: livemigration
+    livemigration_user: libvirtadmin
 
 # Three hypervisors setup. The observer group is empty.
 observers:

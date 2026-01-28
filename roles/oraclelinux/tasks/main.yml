@@ -75,29 +75,29 @@
 
 - name: Retrieve user information for UID 1000
   ansible.builtin.command: getent passwd 1000
-  register: user_info
+  register: oraclelinux_user_info
   changed_when: false
 - name: Extract username from the result
   ansible.builtin.set_fact:
-    old_admin_user: "{{ user_info.stdout.split(':')[0] }}"
+    oraclelinux_old_admin_user: "{{ oraclelinux_user_info.stdout.split(':')[0] }}"
 
 - name: Removing or not the old admin user created by the iso
-  when: admin_user != old_admin_user
+  when: admin_user != oraclelinux_old_admin_user
   block:
     - name: Remove old admin user from sudoers file
       lineinfile:
         dest: /etc/sudoers
         state: absent
-        regexp: "^{{ old_admin_user }}"
+        regexp: "^{{ oraclelinux_old_admin_user }}"
         validate: visudo -cf %s
     - name: Remove the old admin user
       ansible.builtin.user:
-        name: "{{ old_admin_user }}"
+        name: "{{ oraclelinux_old_admin_user }}"
         state: absent
         remove: yes
     - name: Remove the old admin group
       ansible.builtin.group:
-        name: "{{ old_admin_user }}"
+        name: "{{ oraclelinux_old_admin_user }}"
         state: absent
 
 - name: Copy journald conf file
@@ -191,8 +191,8 @@
     line: '\1 \2'
     state: present
     backrefs: yes
-  register: doublespace
-  until: not doublespace.changed
+  register: oraclelinux_doublespace
+  until: not oraclelinux_doublespace.changed
   delay: 1
   retries: 10
 
@@ -203,14 +203,14 @@
     state: absent
   check_mode: true
   changed_when: false
-  register: check_grub_cmdline_linux
+  register: oraclelinux_check_grub_cmdline_linux
 
 - name: Make sure GRUB_CMDLINE_LINUX exists 2/2
   lineinfile:
     path: /etc/default/grub
     state: present
     line: "GRUB_CMDLINE_LINUX=\" \""
-  when: check_grub_cmdline_linux.found == 0
+  when: oraclelinux_check_grub_cmdline_linux.found == 0
 
 - name: Make sure GRUB_CMDLINE_LINUX starts with a space
   lineinfile:

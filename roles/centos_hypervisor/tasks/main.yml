@@ -33,7 +33,6 @@
     mode: '0644'
   with_items: "{{ sriov | dict2items }}"
   when: sriov is defined
-  register: sriov_tmpfiles
 
 - name: Setup irqbalance conf
   lineinfile:

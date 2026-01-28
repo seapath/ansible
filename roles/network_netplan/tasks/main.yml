@@ -22,4 +22,4 @@
       notify: Apply Netplan configuration
     - name: Avoid reboot for netplan
       set_fact:
-        need_reboot: false
+        need_reboot: false # noqa: var-naming[no-role-prefix]

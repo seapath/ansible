@@ -15,7 +15,7 @@
     name: corosync
     state: started
   check_mode: true
-  register: corosync_service_status
+  register: configure_ha_corosync_service_status
 - name: Create a group with unconfigured_machines # noqa: no-handler
   add_host:
     name: "{{ item }}"
@@ -23,7 +23,7 @@
   run_once: true
   loop: "{{ groups['cluster_machines'] }}"
   changed_when: false
-  when: hostvars[item].corosync_service_status.changed
+  when: hostvars[item].configure_ha_corosync_service_status.changed
 - name: Create a group with valid_machines # noqa: no-handler
   add_host:
     name: "{{ item }}"
@@ -31,7 +31,7 @@
   run_once: true
   loop: "{{ groups['cluster_machines'] }}"
   changed_when: false
-  when: not hostvars[item].corosync_service_status.changed
+  when: not hostvars[item].configure_ha_corosync_service_status.changed
 
 # Setup Corosync from scratch
 - name: Setup Corosync from scratch
@@ -51,11 +51,11 @@
     - name: Fetching /etc/corosync/authkey
       slurp:
         src: '/etc/corosync/authkey'
-      register: tmp_authkey
+      register: configure_ha_tmp_authkey
       when: inventory_hostname == play_hosts[0]
     - name: Synchronizing /etc/corosync/authkey everywhere
       copy:
-        content: "{{ hostvars[play_hosts[0]].tmp_authkey['content'] | b64decode }}"
+        content: "{{ hostvars[play_hosts[0]].configure_ha_tmp_authkey['content'] | b64decode }}"
         dest: /etc/corosync/authkey
         mode: 0400
       when: inventory_hostname != play_hosts[0]
@@ -64,13 +64,13 @@
       template:
         src: corosync.conf.j2
         dest: /etc/corosync/corosync.conf
-      register: corosync_conf
+      register: configure_ha_corosync_conf
     - name: Restart Corosync # noqa: no-handler
       ansible.builtin.systemd:
         name: corosync
         state: restarted
         enabled: yes
-      when: corosync_conf.changed
+      when: configure_ha_corosync_conf.changed
 
 - when:
     - groups['valid_machine'] is defined
@@ -93,7 +93,6 @@
       template:
         src: corosync.conf.j2
         dest: /etc/corosync/corosync.conf
-      register: corosync_conf
     - name: Install corosync key
       copy:
         src: "{{ configure_ha_tmpdir }}/authkey"
@@ -118,8 +117,8 @@
           enabled: true
     - name: Wait for pacemaker
       command: "{{ configure_ha_crm_command_path }} status"
-      register: result
-      until: result.rc == 0
+      register: configure_ha_result
+      until: configure_ha_result.rc == 0
       retries: 3
       delay: 1
       changed_when: false
@@ -128,12 +127,12 @@
         {{ configure_ha_crm_command_path }} configure property stonith-enabled=false;
         sleep 1;
         {{ configure_ha_crm_command_path }} configure show;
-      register: stonith_check
+      register: configure_ha_stonith_check
       changed_when: true
       when:
         - groups['valid_machine'] is undefined
         - configure_ha_disable_stonith
-      until: "'stonith-enabled=false' in stonith_check.stdout"
+      until: "'stonith-enabled=false' in configure_ha_stonith_check.stdout"
       retries: 5
       delay: 1
       run_once: true
@@ -151,5 +150,5 @@
     stdin: "{{ extra_crm_cmd_to_run }}"
   when: extra_crm_cmd_to_run is defined
   run_once: true
-  register: extra_crm_cmd_to_run_task
-  changed_when: "'CIB commit successful' in extra_crm_cmd_to_run_task.stdout"
+  register: configure_ha_extra_crm_cmd_to_run_task
+  changed_when: "'CIB commit successful' in configure_ha_extra_crm_cmd_to_run_task.stdout"
