@@ -9,4 +9,5 @@
   hosts: hypervisors
   become: true
   roles:
+    - detect_seapath_distro
     - configure_libvirt
