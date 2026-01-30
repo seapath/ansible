@@ -2,4 +2,4 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-configure_libvirt_allow_non_root_libvirt_socket_access: false
+configure_libvirt_allow_non_root_libvirt_socket_access: true
