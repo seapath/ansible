@@ -18,7 +18,7 @@ passwd=" \
     ceph \
     hacluster \
 {% endif %}
-{% if inventory_hostname in groups.get('cluster_machines', []) and force_cephadm is defined and force_cephadm is true %}
+{% if inventory_hostname in groups.get('cluster_machines', []) and (is_using_cephadm | default(false)) %}
     containerized-ceph \
     cephadm \
 {% endif %}
