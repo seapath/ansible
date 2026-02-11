@@ -69,26 +69,6 @@
   changed_when: true
   when: cephadm_installcommon is true
 
-#- name: Disable ceph-crash non-containerized service
-#  ansible.builtin.systemd:
-#    name: ceph-crash.service
-#    enabled: false
-#    state: stopped
-
-#- name: Create /usr/local/bin/ceph with 755 permissions
-#  copy:
-#    dest: /usr/local/bin/ceph
-#    content: |
-#      #!/bin/bash
-#      if [ $# -eq 0 ]; then
-#        exec cephadm shell
-#      else
-#        exec cephadm shell -- ceph "$@"
-#      fi
-#    mode: '0755'
-#    owner: root
-#    group: root
-
 - name: Check if host is part of a Ceph cluster
   command: "ceph -s"
   register: cephadm_ceph_status
