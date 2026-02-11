@@ -1,3 +1,22 @@
 [global]
 public_network = {{ cephadm_network }}
 cluster_network = {{ cephadm_network }}
+{# Merge 'global' overrides into the existing [global] block #}
+{% if ceph_conf_overrides.global is defined %}
+{% for key, value in ceph_conf_overrides.global.items() %}
+{{ key }} = {{ value }}
+{% endfor %}
+{% endif %}
+
+{# Iterate over all other sections (mon, osd, mds, etc.), skipping 'global' #}
+{% if ceph_conf_overrides is defined %}
+{% for section, settings in ceph_conf_overrides.items() %}
+{% if section != 'global' %}
+[{{ section }}]
+{% for key, value in settings.items() %}
+{{ key }} = {{ value }}
+{% endfor %}
+
+{% endif %}
+{% endfor %}
+{% endif %}
