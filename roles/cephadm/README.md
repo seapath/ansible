@@ -10,6 +10,7 @@ no requirement.
 
 | Variable               | Required | Type   | Default      | Comments                                                                              |
 |------------------------|----------|--------|--------------|---------------------------------------------------------------------------------------|
+| seapath_distro         | No       | String | Not set      | SEAPATH distribution                                                                  |
 | cephadm_release        | No       | String | "20.2.0"     | Version of the cephadm binary to install                                              |
 | cephadm_release_name   | No       | String | "tentacle"   | Name of the ceph release, needed for repo installation                                |
 | cephadm_downloadbinary | No       | String | false        | whether we install the cephadm by downloading it to /tmp/cephadm                      |
