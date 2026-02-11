@@ -10,6 +10,7 @@
     name: cephadm
     gid: 1001
     state: present
+  when: seapath_distro != "Yocto"
 
 - name: Ensure user "cephadm" exists
   user:
@@ -17,6 +18,7 @@
     uid: 1001
     group: cephadm
     create_home: yes
+  when: seapath_distro != "Yocto"
 
 - name: Ensure group "containerized-ceph" exists
   group:
@@ -25,7 +27,7 @@
     state: present
   when: seapath_distro == "Debian"
 
-- name: Ensure user "containerized-ceph" exists with nologin (already exists on centos/oraclelinux)
+- name: Ensure user "containerized-ceph" exists with nologin (already exists on centos/oraclelinux/Yocto)
   user:
     name: containerized-ceph
     uid: 167
@@ -38,6 +40,7 @@
   copy:
     src: cephadm_sudoers
     dest: /etc/sudoers.d/cephadm
+  when: seapath_distro != "Yocto"
 
 - name: Download cephadm
   get_url:
