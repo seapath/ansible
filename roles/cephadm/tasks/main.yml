@@ -315,7 +315,7 @@
   run_once: true
 - name: Set list of nodes that need OSDs
   set_fact:
-    cephadm_nodes_needing_osds: "{{ groups['cluster_machines'] | map('extract', hostvars, 'hostname') | difference(cephadm_existing_osd_hosts) }}"
+    cephadm_nodes_needing_osds: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) | map('extract', hostvars, 'hostname') | difference(cephadm_existing_osd_hosts) }}"
   run_once: true
 - name: Debug nodes needing OSDs
   debug:
@@ -327,7 +327,7 @@
   delegate_to: "{{ item }}"
   run_once: true
   when: hostvars[item]['hostname'] in cephadm_nodes_needing_osds
-  loop: "{{ groups['cluster_machines'] }}"
+  loop: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) }}"
   changed_when: true
 
 - name: Copy ceph orch spec file
