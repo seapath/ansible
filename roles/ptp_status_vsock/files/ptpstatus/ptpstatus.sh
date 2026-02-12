@@ -496,6 +496,7 @@ function resetState() {
 ##############################################################################
 
 function getPtpStatus() {
+  set +u
   local -n _resultVar="$1"
 
   # Reset state to default
@@ -521,10 +522,10 @@ function getPtpStatus() {
   echo "$_pmcOutput" > "$PTP_DETAILS_FILE"
 
   # Determine whether a GM clock is present
+  # We extract gmPresent and ensure we only get one clean value
   STATE_PTP_GM_PRESENT="$( \
     echo "$_pmcOutput" | \
-    awk '{ if ((NF == 2) && (tolower($1) == "gmpresent")) print tolower($NF) }' 2> /dev/null \
-  )"
+    awk '/gmPresent/ {print tolower($2); exit}' | tr -d '\r\n[:space:]')"
   STATE_PTP_GM_PRESENT="${STATE_PTP_GM_PRESENT:-$STATE_PTP_GM_PRESENT_DEFAULT}"
 
   if [[ "$STATE_PTP_GM_PRESENT" != "true" ]]; then
@@ -536,17 +537,16 @@ function getPtpStatus() {
   # A GM clock is present
 
   # Determine the GM clock class
-  _STATE_PTP_CLOCK_CLASS=$( \
+  # We extract gmPresent and ensure we only get one clean value
+  local _STATE_PTP_CLOCK_CLASS="$( \
     echo "$_pmcOutput" | \
-    awk '{ if ((NF == 2) && (tolower($1) == "gm.clockclass")) print tolower($NF) }' 2> /dev/null \
-  )
+    awk '/gmPresent/ {print tolower($2); exit}' | tr -d '\r\n[:space:]')"
   STATE_PTP_CLOCK_CLASS=${_STATE_PTP_CLOCK_CLASS:-$STATE_PTP_CLOCK_CLASS_DEFAULT}
 
   # Determine the GM clock accuracy
   local _STATE_PTP_CLOCK_ACCURACY=$( \
     echo "$_pmcOutput" | \
-    awk '{ if ((NF == 2) && (tolower($1) == "gm.clockaccuracy")) print tolower($NF) }' 2> /dev/null \
-  )
+    awk '/gm.clockAccuracy/ {print $2; exit}' | tr -d '\r\n[:space:]')
   STATE_PTP_CLOCK_ACCURACY=${_STATE_PTP_CLOCK_ACCURACY:-$STATE_PTP_CLOCK_ACCURACY_DEFAULT}
 
   # Determine if the clock class is global
