@@ -9,6 +9,7 @@
     name: cephadm
     gid: 1001
     state: present
+  when: seapath_distro != "Yocto"
 
 - name: Ensure user "cephadm" exists
   user:
@@ -16,6 +17,7 @@
     uid: 1001
     group: cephadm
     create_home: yes
+  when: seapath_distro != "Yocto"
 
 - name: Ensure group "containerized-ceph" exists
   group:
@@ -24,7 +26,7 @@
     state: present
   when: seapath_distro == "Debian"
 
-- name: Ensure user "containerized-ceph" exists with nologin (already exists on centos/oraclelinux)
+- name: Ensure user "containerized-ceph" exists with nologin (already exists on centos/oraclelinux/Yocto)
   user:
     name: containerized-ceph
     uid: 167
@@ -37,6 +39,7 @@
   copy:
     src: cephadm_sudoers
     dest: /etc/sudoers.d/cephadm
+  when: seapath_distro != "Yocto"
 
 - name: Download cephadm
   get_url:
@@ -67,26 +70,6 @@
   command: cephadm install ceph-common
   changed_when: true
   when: cephadm_installcommon is true
-
-#- name: Disable ceph-crash non-containerized service
-#  ansible.builtin.systemd:
-#    name: ceph-crash.service
-#    enabled: false
-#    state: stopped
-
-#- name: Create /usr/local/bin/ceph with 755 permissions
-#  copy:
-#    dest: /usr/local/bin/ceph
-#    content: |
-#      #!/bin/bash
-#      if [ $# -eq 0 ]; then
-#        exec cephadm shell
-#      else
-#        exec cephadm shell -- ceph "$@"
-#      fi
-#    mode: '0755'
-#    owner: root
-#    group: root
 
 - name: Check if host is part of a Ceph cluster
   command: "ceph -s"
@@ -331,7 +314,7 @@
   run_once: true
 - name: Set list of nodes that need OSDs
   set_fact:
-    cephadm_nodes_needing_osds: "{{ groups['cluster_machines'] | map('extract', hostvars, 'hostname') | difference(cephadm_existing_osd_hosts) }}"
+    cephadm_nodes_needing_osds: "{{ groups['osds'] | map('extract', hostvars, 'hostname') | difference(cephadm_existing_osd_hosts) }}"
   run_once: true
 - name: Debug nodes needing OSDs
   debug:
@@ -343,7 +326,7 @@
   delegate_to: "{{ item }}"
   run_once: true
   when: hostvars[item]['hostname'] in cephadm_nodes_needing_osds
-  loop: "{{ groups['cluster_machines'] }}"
+  loop: "{{ groups['osds'] }}"
   changed_when: true
 
 - name: Copy ceph orch spec file
