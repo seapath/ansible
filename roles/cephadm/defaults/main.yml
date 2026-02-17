@@ -9,3 +9,8 @@ cephadm_installbinary: false
 cephadm_installrepo: false
 cephadm_installcommon: false
 cephadm_pullimages: false
+
+# Registry configuration (for disconnected mode)
+cephadm_registry_url: ""
+cephadm_registry_username: ""
+cephadm_registry_password: ""

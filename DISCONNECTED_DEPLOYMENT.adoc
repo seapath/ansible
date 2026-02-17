@@ -1,0 +1,270 @@
+// Copyright (C) 2025 RTE
+// SPDX-License-Identifier: Apache-2.0
+
+= SEAPATH Disconnected Deployment Guide
+
+This guide explains how to deploy SEAPATH in disconnected environments where the control machine and cluster nodes have no internet access.
+
+== Overview
+
+The disconnected deployment uses a control machine that hosts a local container registry containing all necessary images. This registry serves the cluster nodes during deployment, eliminating the need for internet connectivity.
+
+The implementation uses native `cephadm` commands for Ceph cluster management and registry authentication. When the official `cephadm-ansible` collection becomes available on Ansible Galaxy, it can be integrated for enhanced functionality.
+
+== Architecture
+
+[plantuml, architecture-diagram, svg]
+....
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│  Control Node   │    │  Hypervisor 1   │    │  Hypervisor 2   │
+│                 │    │                 │    │                 │
+│ ┌─────────────┐ │    │ ┌─────────────┐ │    │ ┌─────────────┐ │
+│ │   Registry  │ │◄───┤ │   Cephadm   │ │    │ │   Cephadm   │ │
+│ │ (Port 5000) │ │    │ │             │ │    │ │             │ │
+│ └─────────────┘ │    │ └─────────────┘ │    │ └─────────────┘ │
+│                 │    │                 │    │                 │
+│ ┌─────────────┐ │    │ ┌─────────────┐ │    │ ┌─────────────┐ │
+│ │   Images    │ │    │ │    OSD      │ │    │ │    OSD      │ │
+│ │   Storage   │ │    │ │             │ │    │ │             │ │
+│ └─────────────┘ │    │ └─────────────┘ │    │ └─────────────┘ │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+....
+
+== Prerequisites
+
+=== Control Machine Requirements
+
+* Ansible 2.10+
+* Podman or Docker
+* Python modules: `netaddr`, `six`
+* `rsync` package
+* SSH access to cluster nodes
+* Sufficient disk space for container images (~2-3 GB)
+
+=== Cluster Node Requirements
+
+* SSH access enabled
+* User accounts: `ansible` (Debian) or `admin` (Yocto)
+* Network connectivity to control machine
+* Pre-installed SEAPATH images
+
+== Security Configuration
+
+The disconnected deployment supports several security features:
+
+=== Registry Authentication
+
+Enable HTTP Basic Authentication for the registry:
+
+[source,yaml]
+----
+registry_auth_enabled: true
+registry_username: "admin"
+registry_password: "secure_password"
+----
+
+=== TLS Encryption
+
+TLS is enabled by default (`registry_tls_enabled: true`). When no certificate paths are provided, the registry role automatically generates a self-signed CA and server certificate. The CA certificate is then distributed to all cluster nodes so they trust the registry without insecure flags.
+
+To use auto-generated certificates (default):
+
+[source,yaml]
+----
+registry_tls_enabled: true
+----
+
+To use your own certificates:
+
+[source,yaml]
+----
+registry_tls_enabled: true
+registry_tls_cert: "/path/to/server.crt"
+registry_tls_key: "/path/to/server.key"
+registry_tls_ca: "/path/to/ca.crt"
+----
+
+To disable TLS and use plain HTTP (not recommended):
+
+[source,yaml]
+----
+registry_tls_enabled: false
+----
+
+== Deployment Steps
+
+=== Phase 1: Prepare Control Machine
+
+. **Setup Control Registry**
++
+[source,bash]
+----
+ansible-playbook -i inventories/examples/seapath-cluster-disconnected.yaml \
+  playbooks/setup_control_registry.yaml
+----
+
+. **Export Images for Offline Use**
++
+[source,bash]
+----
+# Images will be exported to /opt/seapath/registry/images/
+/opt/seapath/registry/export_images.sh
+----
+
+=== Phase 2: Deploy SEAPATH Cluster
+
+. **Deploy SEAPATH with Disconnected Cephadm**
++
+[source,bash]
+----
+ansible-playbook -i inventories/examples/seapath-cluster-disconnected.yaml \
+  playbooks/seapath_setup_disconnected.yaml
+----
+
+== Configuration
+
+=== Inventory Variables
+
+Key variables for disconnected deployment:
+
+[source,yaml]
+----
+# Registry configuration
+registry_url: "192.168.200.100:5000"  # Control machine IP
+registry_host: "192.168.200.100"      # Control machine IP
+disconnected_mode: true                # Enable offline mode
+
+# Force cephadm usage
+force_cephadm: true
+----
+
+=== Registry Management
+
+The control registry provides several management scripts:
+
+* **`export_images.sh`**: Export images as tar files for offline use
+* **`import_images.sh`**: Import images from tar files
+* **`backup_registry.sh`**: Backup registry data and images
+* **`restore_registry.sh`**: Restore registry from backup
+
+== Offline Image Management
+
+=== Pre-staging Images
+
+For completely offline environments, pre-stage images on the control machine:
+
+[source,bash]
+----
+# On a machine with internet access
+podman pull docker.io/library/registry:2
+podman pull quay.io/ceph/ceph:v20.2.0
+
+# Save images to tar files
+podman save -o registry-2.tar registry:2
+podman save -o ceph-v20.2.0.tar quay.io/ceph/ceph:v20.2.0
+
+# Transfer to control machine
+scp *.tar control-machine:/opt/seapath/registry/images/
+----
+
+=== Loading Pre-staged Images
+
+[source,bash]
+----
+# On control machine
+/opt/seapath/registry/import_images.sh
+----
+
+== Registry Persistence
+
+The registry data is stored in `/opt/seapath/registry/data/` and persists across reboots. The registry container is configured with `restart_policy: always`.
+
+=== Backup and Restore
+
+[source,bash]
+----
+# Create backup
+/opt/seapath/registry/backup_registry.sh
+
+# Restore from backup
+/opt/seapath/registry/restore_registry.sh backup_20250101_120000
+----
+
+== Troubleshooting
+
+=== Registry Not Accessible
+
+. Check if registry container is running:
++
+[source,bash]
+----
+podman ps | grep seapath-registry
+----
+
+. Check registry logs:
++
+[source,bash]
+----
+podman logs seapath-registry
+----
+
+. Verify registry connectivity (use `https` if TLS is enabled, `http` otherwise):
++
+[source,bash]
+----
+curl -k https://localhost:5000/v2/
+----
+
+=== Image Pull Failures
+
+. Verify images are available in registry:
++
+[source,bash]
+----
+curl -k https://localhost:5000/v2/_catalog
+----
+
+. Check image tags:
++
+[source,bash]
+----
+curl -k https://localhost:5000/v2/ceph/tags/list
+----
+
+=== Network Connectivity Issues
+
+. Ensure cluster nodes can reach control machine on port 5000
+. Check firewall rules
+. Verify DNS resolution
+
+== Security Considerations
+
+* The registry runs in privileged mode for simplicity
+* TLS is enabled by default with auto-generated self-signed certificates
+* For production deployments, provide your own CA-signed certificates via `registry_tls_cert`, `registry_tls_key`, and `registry_tls_ca`
+* Implement proper authentication if needed
+* Regular backup of registry data
+
+== Performance Optimization
+
+* Use SSD storage for registry data directory
+* Consider registry caching for large deployments
+* Monitor disk space usage
+* Implement registry garbage collection
+
+== Migration from Online to Offline
+
+To migrate an existing online deployment to offline:
+
+. Export current images from online registry
+. Setup control registry with exported images
+. Update inventory to use control registry
+. Redeploy with disconnected playbook
+
+== Support
+
+For issues with disconnected deployment:
+
+* Check SEAPATH Wiki: https://lf-energy.atlassian.net/wiki/spaces/SEAP/
+* Create issue in GitHub repository
+* Contact SEAPATH team

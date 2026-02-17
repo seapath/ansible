@@ -1,0 +1,56 @@
+#!/bin/bash
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+# Export script for registry images
+# This script exports all images from the registry as tar files for offline deployment
+
+set -euo pipefail
+
+REGISTRY_PATH="{{ registry_path }}"
+IMAGES_PATH="{{ registry_images_path }}"
+{% if registry_tls_enabled | default(false) %}
+REGISTRY_URL="{{ ansible_default_ipv4.address }}:{{ registry_port }}"
+{% else %}
+REGISTRY_URL="localhost:{{ registry_port }}"
+{% endif %}
+
+echo "Starting image export at $(date)"
+
+# Create images directory
+mkdir -p "${IMAGES_PATH}"
+
+# Export registry image
+echo "Exporting registry image..."
+podman save -o "${IMAGES_PATH}/registry-2.tar" registry:2
+
+# Export Ceph image
+echo "Exporting Ceph image..."
+podman save -o "${IMAGES_PATH}/ceph-v{{ cephadm_release }}.tar" quay.io/ceph/ceph:v{{ cephadm_release }}
+
+# Create export manifest
+cat > "${IMAGES_PATH}/export_manifest.json" << EOF
+{
+  "export_timestamp": "$(date -Iseconds)",
+  "ceph_version": "{{ cephadm_release }}",
+  "registry_version": "2",
+  "registry_url": "${REGISTRY_URL}",
+  "images": [
+    {
+      "name": "registry:2",
+      "file": "registry-2.tar",
+      "source": "docker.io/library/registry:2"
+    },
+    {
+      "name": "ceph:v{{ cephadm_release }}",
+      "file": "ceph-v{{ cephadm_release }}.tar",
+      "source": "quay.io/ceph/ceph:v{{ cephadm_release }}"
+    }
+  ]
+}
+EOF
+
+echo "Image export completed successfully at $(date)"
+echo "Images exported to: ${IMAGES_PATH}"
+echo "Files created:"
+ls -la "${IMAGES_PATH}"

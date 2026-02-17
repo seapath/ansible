@@ -240,6 +240,65 @@
     line: "        types = [ \"rbd\", 1024 ]"
     state: present
 
+- name: Configure registry mirroring
+  when: registry_mirror_url is defined and registry_mirror_url != ''
+  block:
+    - name: Create podman certs.d directory for registry
+      ansible.builtin.file:
+        path: "/etc/containers/certs.d/{{ registry_mirror_url }}"
+        state: directory
+        mode: '0755'
+      when: registry_tls_enabled | default(false)
+
+    - name: Copy registry CA certificate for podman
+      ansible.builtin.copy:
+        src: /tmp/registry-ca.crt
+        dest: "/etc/containers/certs.d/{{ registry_mirror_url }}/ca.crt"
+        mode: '0644'
+      when: registry_tls_enabled | default(false)
+
+    - name: Create docker certs.d directory for registry
+      ansible.builtin.file:
+        path: "/etc/docker/certs.d/{{ registry_mirror_url }}"
+        state: directory
+        mode: '0755'
+      when: registry_tls_enabled | default(false)
+
+    - name: Copy registry CA certificate for docker
+      ansible.builtin.copy:
+        src: /tmp/registry-ca.crt
+        dest: "/etc/docker/certs.d/{{ registry_mirror_url }}/ca.crt"
+        mode: '0644'
+      when: registry_tls_enabled | default(false)
+
+    - name: Configure podman registry mirroring
+      ansible.builtin.blockinfile:
+        path: /etc/containers/registries.conf
+        marker: "# {mark} ANSIBLE MANAGED BLOCK for registry mirroring"
+        block: |
+          [[registry]]
+          location = "docker.io"
+          insecure = {{ 'false' if registry_tls_enabled | default(false) else 'true' }}
+          [[registry.mirror]]
+          location = "{{ registry_mirror_url }}"
+          insecure = {{ 'false' if registry_tls_enabled | default(false) else 'true' }}
+
+          [[registry]]
+          location = "quay.io"
+          insecure = {{ 'false' if registry_tls_enabled | default(false) else 'true' }}
+          [[registry.mirror]]
+          location = "{{ registry_mirror_url }}"
+          insecure = {{ 'false' if registry_tls_enabled | default(false) else 'true' }}
+
+    - name: Configure docker registry mirroring
+      ansible.builtin.copy:
+        content: |
+          {
+            "registry-mirrors": ["{{ 'https' if registry_tls_enabled | default(false) else 'http' }}://{{ registry_mirror_url }}"]
+          }
+        dest: /etc/docker/daemon.json
+        mode: '0644'
+
 - name: Create ovs-vswitchd.service.d directory
   file:
     path: /etc/systemd/system/ovs-vswitchd.service.d/

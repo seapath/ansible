@@ -1,0 +1,58 @@
+#!/bin/bash
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+# Backup script for control registry
+# This script creates a backup of the registry data and exports images as tar files
+
+set -euo pipefail
+
+REGISTRY_PATH="{{ registry_path }}"
+BACKUP_PATH="{{ registry_backup_path }}"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+BACKUP_DIR="${BACKUP_PATH}/backup_${TIMESTAMP}"
+
+echo "Starting registry backup at $(date)"
+
+# Create backup directory
+mkdir -p "${BACKUP_DIR}"
+
+# Stop registry container
+echo "Stopping registry container..."
+podman stop {{ registry_container_name }} || true
+
+# Backup registry data
+echo "Backing up registry data..."
+tar -czf "${BACKUP_DIR}/registry_data.tar.gz" -C "${REGISTRY_PATH}/data" .
+
+# Export images
+echo "Exporting images..."
+mkdir -p "${BACKUP_DIR}/images"
+
+# Export registry image
+podman save -o "${BACKUP_DIR}/images/registry-2.tar" registry:2
+
+# Export Ceph image
+podman save -o "${BACKUP_DIR}/images/ceph-v{{ cephadm_release }}.tar" quay.io/ceph/ceph:v{{ cephadm_release }}
+
+# Create backup manifest
+cat > "${BACKUP_DIR}/backup_manifest.json" << EOF
+{
+  "timestamp": "${TIMESTAMP}",
+  "ceph_version": "{{ cephadm_release }}",
+  "registry_version": "2",
+  "backup_type": "full",
+  "files": [
+    "registry_data.tar.gz",
+    "images/registry-2.tar",
+    "images/ceph-v{{ cephadm_release }}.tar"
+  ]
+}
+EOF
+
+# Restart registry container
+echo "Restarting registry container..."
+podman start {{ registry_container_name }}
+
+echo "Backup completed successfully at $(date)"
+echo "Backup location: ${BACKUP_DIR}"
