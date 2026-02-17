@@ -137,54 +137,6 @@
       nonceph_nodes = {{ groups['nonceph_nodes'] | default([]) }}
   run_once: true
 
-- name: Ensure insecure registry localhost:5000 is in /etc/containers/registries.conf
-  ansible.builtin.blockinfile:
-    path: /etc/containers/registries.conf
-    marker: "# {mark} ANSIBLE MANAGED BLOCK for insecure registries"
-    block: |
-        [[registry]]
-        insecure = true
-        location = "localhost"
-
-- name: Ensure /var/lib/registry exists
-  ansible.builtin.file:
-    path: /var/lib/registry
-    state: directory
-    owner: root
-    group: root
-    mode: '0755'
-
-- name: Pull needed Docker images
-  containers.podman.podman_image:
-    name: "{{ item }}"
-  when: cephadm_pullimages
-  loop:
-    - "docker.io/library/registry:2"
-    - "quay.io/ceph/ceph:v{{ cephadm_release }}"
-
-- name: Run local container registry using Podman
-  containers.podman.podman_container:
-    name: registry
-    image: registry:2
-    state: started
-    detach: true
-    privileged: true
-    ports:
-      - "5000:5000"
-    volume:
-      - /var/lib/registry:/var/lib/registry
-    restart_policy: always
-
-- name: Tag ceph image for local registry
-  command: >
-    podman tag quay.io/ceph/ceph:v{{ cephadm_release }} localhost:5000/ceph:v{{ cephadm_release }}
-  changed_when: true
-
-- name: Push ceph image to local registry
-  command: >
-    podman push localhost:5000/ceph:v{{ cephadm_release }}
-  changed_when: true
-
 # === Bootstrap if currently no ceph nodes ===
 - name: Upload file ceph.conf needed for bootstrapping
   template:
@@ -206,11 +158,23 @@
   set_fact:
     cephadm_bin: "{{ cephadm_path.stdout if cephadm_path.rc == 0 else '/usr/local/bin/cephadm' }}"
 
+- name: Login to container registry
+  command: >
+    {{ cephadm_bin }} registry-login
+    --registry-url {{ cephadm_registry_url }}
+    --registry-username {{ cephadm_registry_username }}
+    --registry-password {{ cephadm_registry_password }}
+  when:
+    - cephadm_registry_url | default('') != ''
+    - cephadm_registry_username | default('') != ''
+    - cephadm_registry_password | default('') != ''
+  no_log: true
+
 - name: Show bootstrap command
   ansible.builtin.debug:
     msg: >-
       {{ cephadm_bin }}
-      --image localhost:5000/ceph:v{{ cephadm_release }}
+      --image quay.io/ceph/ceph:v{{ cephadm_release }}
       bootstrap
       --skip-monitoring-stack
       --skip-dashboard
@@ -222,7 +186,7 @@
 - name: Bootstrap Ceph cluster
   command: >-
       {{ cephadm_bin }}
-      --image localhost:5000/ceph:v{{ cephadm_release }}
+      --image quay.io/ceph/ceph:v{{ cephadm_release }}
       bootstrap
       --skip-monitoring-stack
       --skip-dashboard
@@ -339,7 +303,7 @@
   run_once: true
 
 - name: Zap the volume on nodes that need OSDs
-  command: "{{ cephadm_bin }} --image localhost:5000/ceph:v{{ cephadm_release }} ceph-volume lvm zap vg_ceph/lv_ceph"
+  command: "{{ cephadm_bin }} --image quay.io/ceph/ceph:v{{ cephadm_release }} ceph-volume lvm zap vg_ceph/lv_ceph"
   delegate_to: "{{ item }}"
   run_once: true
   when: hostvars[item]['hostname'] in cephadm_nodes_needing_osds
@@ -355,7 +319,7 @@
   delegate_to: "{{ cephadm_first_node }}"
 
 - name: Add OSD daemon on nodes that need OSDs
-  command: "{{ cephadm_bin }} --image localhost:5000/ceph:v{{ cephadm_release }} shell -v /tmp/t.yaml:/tmp/t.yaml:ro -- ceph orch apply -i /tmp/t.yaml"
+  command: "{{ cephadm_bin }} --image quay.io/ceph/ceph:v{{ cephadm_release }} shell -v /tmp/t.yaml:/tmp/t.yaml:ro -- ceph orch apply -i /tmp/t.yaml"
   delegate_to: "{{ cephadm_first_node }}"
   run_once: true
   changed_when: true
@@ -421,7 +385,3 @@
 #    regexp: '^/var/log/ceph/\*.log'
 #    replace: '/var/log/ceph/!(cephadm).log'
 
-- name: Stop and remove Podman registry container
-  containers.podman.podman_container:
-    name: registry
-    state: absent

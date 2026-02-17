@@ -41,3 +41,5 @@
     - detect_seapath_distro
     - cephadm
     - deploy_cephfs
+  vars:
+    cephadm_registry_url: "{{ registry_url | default('') }}"

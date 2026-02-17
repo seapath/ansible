@@ -1,0 +1,364 @@
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Ensure registry directory exists
+  ansible.builtin.file:
+    path: "{{ registry_path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Ensure registry data directory exists
+  ansible.builtin.file:
+    path: "{{ registry_data_path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Ensure registry images directory exists
+  ansible.builtin.file:
+    path: "{{ registry_images_path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Check if registry images already exist
+  ansible.builtin.stat:
+    path: "{{ registry_data_path }}/docker/registry/v2/repositories"
+  register: registry_images_exist
+
+- name: Pull images from public registries if not in offline mode
+  containers.podman.podman_image:
+    name: "{{ item.source }}:{{ item.tag }}"
+    state: present
+  loop: "{{ registry_images }}"
+  when:
+    - not registry_offline_mode | default(false)
+    - not registry_images_exist.stat.exists
+    - registry_images | length > 0
+
+- name: Check for offline image tar files
+  ansible.builtin.stat:
+    path: "{{ registry_images_path }}/{{ item.tar_file }}"
+  loop: "{{ registry_images }}"
+  register: registry_offline_tar_files
+  when:
+    - registry_offline_mode | default(false)
+    - registry_images | length > 0
+
+- name: Load images from tar files if in offline mode
+  containers.podman.podman_image:
+    name: "{{ item.item.source }}:{{ item.item.tag }}"
+    load: "{{ registry_images_path }}/{{ item.item.tar_file }}"
+    state: present
+  loop: "{{ registry_offline_tar_files.results }}"
+  when:
+    - registry_offline_mode | default(false)
+    - registry_images | length > 0
+    - item.stat is defined
+    - item.stat.exists
+
+- name: Generate htpasswd file for registry authentication
+  ansible.builtin.command: htpasswd -Bbn "{{ registry_username }}" "{{ registry_password }}"
+  register: htpasswd_output
+  changed_when: true
+  when: registry_auth_enabled | default(false)
+
+- name: Create htpasswd file
+  ansible.builtin.copy:
+    content: "{{ htpasswd_output.stdout }}"
+    dest: "{{ registry_path }}/htpasswd"
+    mode: '0600'
+  when: registry_auth_enabled | default(false)
+
+- name: TLS certificate setup
+  when: registry_tls_enabled | default(false)
+  block:
+    - name: Create registry certs directory
+      ansible.builtin.file:
+        path: "{{ registry_path }}/certs"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Generate self-signed CA and server certificate
+      when: registry_tls_cert == '' or registry_tls_key == ''
+      block:
+        - name: Generate CA private key
+          ansible.builtin.command:
+            cmd: openssl genrsa -out {{ registry_path }}/certs/ca.key 4096
+            creates: "{{ registry_path }}/certs/ca.key"
+
+        - name: Generate CA certificate
+          ansible.builtin.command:
+            cmd: >
+              openssl req -x509 -new -nodes
+              -key {{ registry_path }}/certs/ca.key
+              -sha256 -days 3650
+              -out {{ registry_path }}/certs/ca.crt
+              -subj "/CN=SEAPATH Registry CA"
+            creates: "{{ registry_path }}/certs/ca.crt"
+
+        - name: Generate server private key
+          ansible.builtin.command:
+            cmd: openssl genrsa -out {{ registry_path }}/certs/server.key 4096
+            creates: "{{ registry_path }}/certs/server.key"
+
+        - name: Create OpenSSL config for SAN
+          ansible.builtin.copy:
+            content: |
+              [req]
+              distinguished_name = req_dn
+              req_extensions = v3_req
+              prompt = no
+              [req_dn]
+              CN = {{ inventory_hostname }}
+              [v3_req]
+              subjectAltName = IP:{{ ansible_default_ipv4.address }},DNS:{{ inventory_hostname }},IP:127.0.0.1
+            dest: "{{ registry_path }}/certs/openssl.cnf"
+            mode: '0644'
+
+        - name: Generate server CSR
+          ansible.builtin.command:
+            cmd: >
+              openssl req -new
+              -key {{ registry_path }}/certs/server.key
+              -out {{ registry_path }}/certs/server.csr
+              -config {{ registry_path }}/certs/openssl.cnf
+            creates: "{{ registry_path }}/certs/server.csr"
+
+        - name: Sign server certificate with CA
+          ansible.builtin.command:
+            cmd: >
+              openssl x509 -req
+              -in {{ registry_path }}/certs/server.csr
+              -CA {{ registry_path }}/certs/ca.crt
+              -CAkey {{ registry_path }}/certs/ca.key
+              -CAcreateserial
+              -out {{ registry_path }}/certs/server.crt
+              -days 3650 -sha256
+              -extensions v3_req
+              -extfile {{ registry_path }}/certs/openssl.cnf
+            creates: "{{ registry_path }}/certs/server.crt"
+
+        - name: Set generated cert paths
+          ansible.builtin.set_fact:
+            registry_tls_cert: "{{ registry_path }}/certs/server.crt"
+            registry_tls_key: "{{ registry_path }}/certs/server.key"
+            registry_tls_ca: "{{ registry_path }}/certs/ca.crt"
+
+    - name: Copy user-provided certificates
+      when: registry_tls_cert != '' and registry_tls_key != ''
+      block:
+        - name: Copy TLS certificate
+          ansible.builtin.copy:
+            src: "{{ registry_tls_cert }}"
+            dest: "{{ registry_path }}/certs/server.crt"
+            mode: '0644'
+
+        - name: Copy TLS private key
+          ansible.builtin.copy:
+            src: "{{ registry_tls_key }}"
+            dest: "{{ registry_path }}/certs/server.key"
+            mode: '0600'
+
+        - name: Copy CA certificate
+          ansible.builtin.copy:
+            src: "{{ registry_tls_ca }}"
+            dest: "{{ registry_path }}/certs/ca.crt"
+            mode: '0644'
+          when: registry_tls_ca != ''
+
+    - name: Set key file permissions
+      ansible.builtin.file:
+        path: "{{ registry_path }}/certs/{{ item }}"
+        mode: '0600'
+      loop:
+        - server.key
+        - ca.key
+      failed_when: false
+
+    - name: Fetch CA certificate to Ansible controller
+      ansible.builtin.fetch:
+        src: "{{ registry_path }}/certs/ca.crt"
+        dest: /tmp/registry-ca.crt
+        flat: true
+
+    - name: Create local podman certs.d directory
+      ansible.builtin.file:
+        path: "/etc/containers/certs.d/{{ ansible_default_ipv4.address }}:{{ registry_port }}"
+        state: directory
+        mode: '0755'
+
+    - name: Install CA certificate for local podman
+      ansible.builtin.copy:
+        src: "{{ registry_path }}/certs/ca.crt"
+        dest: "/etc/containers/certs.d/{{ ansible_default_ipv4.address }}:{{ registry_port }}/ca.crt"
+        remote_src: true
+        mode: '0644'
+
+- name: Create registry configuration
+  ansible.builtin.template:
+    src: registry_config.yml.j2
+    dest: "{{ registry_path }}/config.yml"
+    mode: '0644'
+
+- name: Start registry container
+  containers.podman.podman_container:
+    name: "{{ registry_container_name }}"
+    image: registry:2
+    state: started
+    detach: true
+    privileged: true
+    ports:
+      - "{{ registry_port }}:5000"
+    volume: "{{ _base_volumes + _tls_volumes }}"
+    restart_policy: always
+  vars:
+    _base_volumes:
+      - "{{ registry_data_path }}:/var/lib/registry"
+      - "{{ registry_path }}/config.yml:/etc/docker/registry/config.yml:ro"
+      - "{{ registry_path }}/htpasswd:/auth/htpasswd:ro"
+    _tls_volumes: "{{ [registry_path + '/certs:/certs:ro'] if registry_tls_enabled | default(false) else [] }}"
+
+- name: Wait for registry to be ready
+  ansible.builtin.uri:
+    url: "{{ 'https' if registry_tls_enabled | default(false) else 'http' }}://localhost:{{ registry_port }}/v2/"
+    validate_certs: false
+    method: GET
+    status_code: 200
+  retries: 30
+  delay: 2
+  register: registry_ready
+  until: registry_ready.status == 200
+
+- name: Set registry push address
+  ansible.builtin.set_fact:
+    _registry_push_address: >-
+      {{ (ansible_default_ipv4.address + ':' + (registry_port | string))
+         if registry_tls_enabled | default(false)
+         else 'localhost:' + (registry_port | string) }}
+
+- name: Tag images for local registry
+  ansible.builtin.command: >
+    podman tag {{ item.source }}:{{ item.tag }}
+    {{ _registry_push_address }}/{{ item.name }}:{{ item.tag }}
+  loop: "{{ registry_images }}"
+  when: registry_images | length > 0
+  changed_when: true
+
+- name: Push images to local registry
+  ansible.builtin.command: >
+    podman push {{ _registry_push_address }}/{{ item.name }}:{{ item.tag }}
+  loop: "{{ registry_images }}"
+  when: registry_images | length > 0
+  changed_when: true
+
+- name: Create registry backup script
+  ansible.builtin.template:
+    src: backup_registry.sh.j2
+    dest: "{{ registry_path }}/backup_registry.sh"
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Create registry restore script
+  ansible.builtin.template:
+    src: restore_registry.sh.j2
+    dest: "{{ registry_path }}/restore_registry.sh"
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Create image export script
+  ansible.builtin.template:
+    src: export_images.sh.j2
+    dest: "{{ registry_path }}/export_images.sh"
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Create image import script
+  ansible.builtin.template:
+    src: import_images.sh.j2
+    dest: "{{ registry_path }}/import_images.sh"
+    mode: '0755'
+    owner: root
+    group: root
+
+# =============================================================================
+# Image Export Tasks (Ansible-based)
+# =============================================================================
+- name: Export images to tar files
+  ansible.builtin.command: >
+    podman save -o {{ registry_images_path }}/{{ item.tar_file }}
+    {{ item.source }}:{{ item.tag }}
+  loop: "{{ registry_images }}"
+  when: registry_images | length > 0
+  changed_when: true
+
+- name: Create export manifest
+  ansible.builtin.copy:
+    content: |
+      {
+        "export_timestamp": "{{ ansible_date_time.iso8601 }}",
+        "registry_url": "{{ _registry_push_address }}",
+        "images": [
+          {% for item in registry_images %}
+          {
+            "name": "{{ item.name }}:{{ item.tag }}",
+            "file": "{{ item.tar_file }}",
+            "source": "{{ item.source }}:{{ item.tag }}"
+          }{% if not loop.last %},{% endif %}
+          {% endfor %}
+        ]
+      }
+    dest: "{{ registry_images_path }}/export_manifest.json"
+    mode: '0644'
+  when: registry_images | length > 0
+
+# =============================================================================
+# Image Import Tasks (Ansible-based)
+# =============================================================================
+- name: Validate image tar files exist
+  ansible.builtin.stat:
+    path: "{{ registry_images_path }}/{{ item.tar_file }}"
+  loop: "{{ registry_images }}"
+  register: image_files
+  when: registry_images | length > 0
+
+- name: Fail if required images are missing
+  ansible.builtin.fail:
+    msg: "Missing required image: {{ item.item.tar_file }}"
+  loop: "{{ image_files.results }}"
+  when:
+    - registry_images | length > 0
+    - not item.stat.exists
+
+- name: Load images from tar files
+  containers.podman.podman_image:
+    name: "{{ item.source }}:{{ item.tag }}"
+    load: "{{ registry_images_path }}/{{ item.tar_file }}"
+    state: present
+  loop: "{{ registry_images }}"
+  when: registry_images | length > 0
+
+- name: Tag imported images for local registry
+  ansible.builtin.command: >
+    podman tag {{ item.source }}:{{ item.tag }}
+    {{ _registry_push_address }}/{{ item.name }}:{{ item.tag }}
+  loop: "{{ registry_images }}"
+  when: registry_images | length > 0
+  changed_when: true
+
+- name: Push imported images to registry
+  ansible.builtin.command: >
+    podman push {{ _registry_push_address }}/{{ item.name }}:{{ item.tag }}
+  loop: "{{ registry_images }}"
+  when: registry_images | length > 0
+  changed_when: true

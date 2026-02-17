@@ -96,6 +96,11 @@ mons:
     node2:
     node3:
   vars:
+    # For external registry (disconnected mode), uncomment these:
+    # disconnected_mode: true
+    # registry_url: "192.168.200.100"       # Control machine IP
+    # registry_host: "192.168.200.100"      # Control machine IP
+    # registry_tls_enabled: true            # TLS with auto-generated certs (port 443)
     ceph_origin: distro
     cluster_network: "192.168.55.0/24" # IP range of your cluster. TODO
     public_network: "{{ cluster_network }}"
