@@ -1,0 +1,56 @@
+#!/bin/bash
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+# Import script for registry images
+# This script imports images from tar files for offline deployment
+
+set -euo pipefail
+
+IMAGES_PATH="{{ registry_images_path }}"
+{% if registry_tls_enabled | default(false) %}
+REGISTRY_URL="{{ ansible_default_ipv4.address }}:{{ registry_port }}"
+{% else %}
+REGISTRY_URL="localhost:{{ registry_port }}"
+{% endif %}
+
+echo "Starting image import at $(date)"
+
+if [ ! -d "${IMAGES_PATH}" ]; then
+    echo "Error: Images directory ${IMAGES_PATH} does not exist"
+    exit 1
+fi
+
+# Check if manifest exists
+if [ ! -f "${IMAGES_PATH}/export_manifest.json" ]; then
+    echo "Warning: No export manifest found, proceeding with available files"
+fi
+
+# Import registry image
+if [ -f "${IMAGES_PATH}/registry-2.tar" ]; then
+    echo "Importing registry image..."
+    podman load -i "${IMAGES_PATH}/registry-2.tar"
+else
+    echo "Warning: registry-2.tar not found"
+fi
+
+# Import Ceph image
+if [ -f "${IMAGES_PATH}/ceph-v{{ cephadm_release }}.tar" ]; then
+    echo "Importing Ceph image..."
+    podman load -i "${IMAGES_PATH}/ceph-v{{ cephadm_release }}.tar"
+else
+    echo "Error: ceph-v{{ cephadm_release }}.tar not found"
+    exit 1
+fi
+
+# Tag images for local registry
+echo "Tagging images for local registry..."
+podman tag registry:2 "${REGISTRY_URL}/registry:2"
+podman tag quay.io/ceph/ceph:v{{ cephadm_release }} "${REGISTRY_URL}/ceph:v{{ cephadm_release }}"
+
+# Push images to registry
+echo "Pushing images to registry..."
+podman push "${REGISTRY_URL}/registry:2"
+podman push "${REGISTRY_URL}/ceph:v{{ cephadm_release }}"
+
+echo "Image import completed successfully at $(date)"
