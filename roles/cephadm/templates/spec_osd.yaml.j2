@@ -1,0 +1,11 @@
+service_type: osd
+service_id: {{ 'osd' ~ (osd_index | string) }}
+service_name: osd.{{ 'osd' ~ (osd_index | string) }}
+placement:
+  host_pattern: {{ hostvars[osd_host]['hostname'] }}
+spec:
+  data_devices:
+    paths:
+    - /dev/vg_ceph/lv_ceph
+  filter_logic: AND
+  objectstore: bluestore

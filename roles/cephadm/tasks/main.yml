@@ -4,90 +4,11 @@
 ---
 - include_vars: "{{ seapath_distro }}.yml"
 
-- name: Ensure group "cephadm" exists
-  group:
-    name: cephadm
-    gid: 1001
-    state: present
+# === User/Group setup (SEAPATH-specific) ===
+- name: Set up cephadm user and group
+  include_tasks: setup_user.yml
 
-- name: Ensure user "cephadm" exists
-  user:
-    name: cephadm
-    uid: 1001
-    group: cephadm
-    create_home: yes
-
-- name: Ensure group "containerized-ceph" exists
-  group:
-    name: containerized-ceph
-    gid: 167
-    state: present
-  when: seapath_distro == "Debian"
-
-- name: Ensure user "containerized-ceph" exists with nologin (already exists on centos/oraclelinux)
-  user:
-    name: containerized-ceph
-    uid: 167
-    group: containerized-ceph
-    create_home: no
-    shell: /sbin/nologin
-  when: seapath_distro == "Debian"
-
-- name: Set cephadm user sudo permissions
-  copy:
-    src: cephadm_sudoers
-    dest: /etc/sudoers.d/cephadm
-
-- name: Download cephadm
-  get_url:
-    url: "https://download.ceph.com/rpm-{{ cephadm_release }}/el9/noarch/cephadm"
-    dest: "/tmp/cephadm"
-    mode: '0755'
-  when: cephadm_downloadbinary is true
-
-- name: Copy cephadm to /usr/local/bin
-  copy:
-    src: "/tmp/cephadm"
-    dest: "/usr/local/bin/cephadm"
-    mode: '0755'
-    remote_src: yes
-  when: cephadm_installbinary is true
-
-- name: Install cephadm repository
-  command: "{{ '/tmp/cephadm' if not cephadm_installbinary else 'cephadm' }} add-repo --release {{ cephadm_release_name }}"
-  changed_when: true
-  when: cephadm_installrepo is true
-
-- name: Install cephadm
-  command: /tmp/cephadm install
-  changed_when: true
-  when: cephadm_installpackage is true
-
-- name: Install ceph-common package
-  command: cephadm install ceph-common
-  changed_when: true
-  when: cephadm_installcommon is true
-
-#- name: Disable ceph-crash non-containerized service
-#  ansible.builtin.systemd:
-#    name: ceph-crash.service
-#    enabled: false
-#    state: stopped
-
-#- name: Create /usr/local/bin/ceph with 755 permissions
-#  copy:
-#    dest: /usr/local/bin/ceph
-#    content: |
-#      #!/bin/bash
-#      if [ $# -eq 0 ]; then
-#        exec cephadm shell
-#      else
-#        exec cephadm shell -- ceph "$@"
-#      fi
-#    mode: '0755'
-#    owner: root
-#    group: root
-
+# === Cluster detection ===
 - name: Check if host is part of a Ceph cluster
   command: "ceph -s"
   register: cephadm_ceph_status
@@ -137,6 +58,18 @@
       nonceph_nodes = {{ groups['nonceph_nodes'] | default([]) }}
   run_once: true
 
+# === Registry login ===
+- name: Login to container registry
+  ceph.cephadm.cephadm_registry_login:
+    registry_url: "{{ cephadm_registry_url }}"
+    registry_username: "{{ cephadm_registry_username }}"
+    registry_password: "{{ cephadm_registry_password }}"
+  when:
+    - cephadm_registry_url | default('') != ''
+    - cephadm_registry_username | default('') != ''
+    - cephadm_registry_password | default('') != ''
+  no_log: true
+
 # === Bootstrap if currently no ceph nodes ===
 - name: Upload file ceph.conf needed for bootstrapping
   template:
@@ -146,101 +79,42 @@
   delegate_to: "{{ cephadm_first_node }}"
   when: cephadm_do_bootstrap | bool
 
-- name: Find cephadm location
-  command: which cephadm
-  register: cephadm_path
-  failed_when: false
-  changed_when: false
-  environment:
-    PATH: "{{ ansible_env.PATH }}:/usr/local/bin"
-
-- name: Set cephadm binary path
-  set_fact:
-    cephadm_bin: "{{ cephadm_path.stdout if cephadm_path.rc == 0 else '/usr/local/bin/cephadm' }}"
-
-- name: Login to container registry
-  command: >
-    {{ cephadm_bin }} registry-login
-    --registry-url {{ cephadm_registry_url }}
-    --registry-username {{ cephadm_registry_username }}
-    --registry-password {{ cephadm_registry_password }}
-  when:
-    - cephadm_registry_url | default('') != ''
-    - cephadm_registry_username | default('') != ''
-    - cephadm_registry_password | default('') != ''
-  no_log: true
-
-- name: Show bootstrap command
-  ansible.builtin.debug:
-    msg: >-
-      {{ cephadm_bin }}
-      --image quay.io/ceph/ceph:v{{ cephadm_release }}
-      bootstrap
-      --skip-monitoring-stack
-      --skip-dashboard
-      --skip-firewalld
-      --config /tmp/ceph.conf
-      --ssh-user cephadm
-      --mon-ip {{ hostvars[cephadm_first_node]['cluster_ip_addr'] }}
-
 - name: Bootstrap Ceph cluster
-  command: >-
-      {{ cephadm_bin }}
-      --image quay.io/ceph/ceph:v{{ cephadm_release }}
-      bootstrap
-      --skip-monitoring-stack
-      --skip-dashboard
-      --skip-firewalld
-      --config /tmp/ceph.conf
-      --ssh-user cephadm
-      --mon-ip {{ hostvars[cephadm_first_node]['cluster_ip_addr'] }}
-  changed_when: true
-  failed_when: false
-  run_once: true
+  ceph.cephadm.cephadm_bootstrap:
+    mon_ip: "{{ hostvars[cephadm_first_node]['cluster_ip_addr'] }}"
+    image: "{{ cephadm_image }}"
+    skip_dashboard: true
+    skip_monitoring_stack: true
+    skip_firewalld: true
+    config: /tmp/ceph.conf
+    ssh_user: cephadm
+    cluster_network: "{{ cluster_network | default(omit) }}"
+    allow_overwrite: false
   delegate_to: "{{ cephadm_first_node }}"
-  register: cephadm_ceph_bootstrap_result
+  run_once: true
   when: cephadm_do_bootstrap | bool
 
-- name: Show bootstrap result
-  ansible.builtin.debug:
-    var: cephadm_ceph_bootstrap_result
+# === Apply ceph_conf_overrides ===
+- name: Apply ceph_conf_overrides
+  include_tasks: apply_ceph_conf_section.yml
+  loop: "{{ ceph_conf_overrides | dict2items }}"
+  loop_control:
+    loop_var: ceph_conf_section
+    label: "{{ ceph_conf_section.key }}"
+  when: ceph_conf_overrides is defined
 
-# === adding cephadm key on other nodes ===
-- name: Check if /etc/ceph/ceph.pub exists on first_node
-  stat:
-    path: /etc/ceph/ceph.pub
-  register: cephadm_ceph_pub_stat
-  run_once: true
+# === SSH key distribution ===
+- name: Get ceph public key from cluster
+  command: cephadm shell -- ceph cephadm get-pub-key
+  register: cephadm_pub_key_result
   delegate_to: "{{ cephadm_first_node }}"
+  run_once: true
+  changed_when: false
   when: cephadm_mon_nodes_to_add | length > 0
 
-- name: Get cephadm user entry
-  getent:
-    database: passwd
-    key: cephadm
-  delegate_to: "{{ cephadm_first_node }}"
-  run_once: true
-
-- name: Fetch the ceph keyfile if it exists, otherwise fetch authorized_keys
-  fetch:
-    src: >-
-      {{
-        cephadm_ceph_pub_stat.stat.exists
-        | ternary(
-            '/etc/ceph/ceph.pub',
-            getent_passwd['cephadm'][4] ~ '/.ssh/authorized_keys'
-          )
-      }}
-    dest: "/tmp/ceph.pub"
-    flat: true
-  delegate_to: "{{ cephadm_first_node }}"
-  run_once: true
-  when: cephadm_mon_nodes_to_add | length > 0
-
-- name: Read the key from the local file
+- name: Set ceph public key fact
   set_fact:
-    cephadm_ceph_pubkey: "{{ lookup('file', '/tmp/ceph.pub') }}"
-  delegate_to: localhost
+    cephadm_ceph_pubkey: "{{ cephadm_pub_key_result.stdout }}"
   run_once: true
   when: cephadm_mon_nodes_to_add | length > 0
 
@@ -256,14 +130,16 @@
   run_once: true
   when: cephadm_mon_nodes_to_add | length > 0
 
-# === adding monitor on other nodes ===
-- name: Add hosts to Ceph orchestrator with _admin label
-  command: "ceph orch host add {{ hostvars[item]['hostname'] }} --labels _admin"
+# === Add hosts to Ceph orchestrator ===
+- name: Add hosts to Ceph orchestrator
+  ceph.cephadm.ceph_orch_host:
+    name: "{{ hostvars[item]['hostname'] }}"
+    address: "{{ hostvars[item]['cluster_ip_addr'] }}"
+    set_admin_label: true
+    state: present
   loop: "{{ cephadm_mon_nodes_to_add }}"
-  changed_when: true
-  failed_when: false
-  run_once: true
   delegate_to: "{{ cephadm_first_node }}"
+  run_once: true
   when: cephadm_mon_nodes_to_add | length > 0
 
 - name: Confirm monitors are in monmap
@@ -278,53 +154,79 @@
   loop: "{{ cephadm_mon_nodes_to_add }}"
   when: cephadm_mon_nodes_to_add | length > 0
 
-# === OSDs now ===
+# === OSDs ===
 - name: Get list of current OSD daemons and their hosts
   command: ceph orch ps --daemon-type=osd --format json
   register: cephadm_osd_ps
   delegate_to: "{{ cephadm_first_node }}"
   run_once: true
   changed_when: false
+
 - name: Set fact for existing OSD hosts
   set_fact:
     cephadm_existing_osd_hosts: "{{ cephadm_osd_ps.stdout | from_json | map(attribute='hostname') | list | unique }}"
   run_once: true
+
 - name: Debug cephadm_existing_osd_hosts
   debug:
     msg: "Nodes with existing OSDs: {{ cephadm_existing_osd_hosts }}"
   run_once: true
+
 - name: Set list of nodes that need OSDs
   set_fact:
     cephadm_nodes_needing_osds: "{{ groups['cluster_machines'] | map('extract', hostvars, 'hostname') | difference(cephadm_existing_osd_hosts) }}"
   run_once: true
+
 - name: Debug nodes needing OSDs
   debug:
     msg: "Nodes that need OSDs: {{ cephadm_nodes_needing_osds }}"
   run_once: true
 
+- name: Find cephadm location
+  command: which cephadm
+  register: cephadm_path
+  failed_when: false
+  changed_when: false
+  environment:
+    PATH: "{{ ansible_env.PATH }}:/usr/local/bin"
+
+- name: Set cephadm binary path
+  set_fact:
+    cephadm_bin: "{{ cephadm_path.stdout if cephadm_path.rc == 0 else '/usr/local/bin/cephadm' }}"
+
 - name: Zap the volume on nodes that need OSDs
-  command: "{{ cephadm_bin }} --image quay.io/ceph/ceph:v{{ cephadm_release }} ceph-volume lvm zap vg_ceph/lv_ceph"
+  command: "{{ cephadm_bin }} --image {{ cephadm_image }} ceph-volume lvm zap vg_ceph/lv_ceph"
   delegate_to: "{{ item }}"
   run_once: true
   when: hostvars[item]['hostname'] in cephadm_nodes_needing_osds
   loop: "{{ groups['cluster_machines'] }}"
   changed_when: true
 
-- name: Copy ceph orch spec file
-  template:
-    src: "{{ cephadm_spec_path | default('spec.yaml.j2') }}"
-    dest: /tmp/t.yaml
-    mode: 0644
-  run_once: true
-  delegate_to: "{{ cephadm_first_node }}"
-
-- name: Add OSD daemon on nodes that need OSDs
-  command: "{{ cephadm_bin }} --image quay.io/ceph/ceph:v{{ cephadm_release }} shell -v /tmp/t.yaml:/tmp/t.yaml:ro -- ceph orch apply -i /tmp/t.yaml"
+# === Apply service specs ===
+- name: Apply service specs
+  ceph.cephadm.ceph_orch_apply:
+    spec: "{{ lookup('template', item) }}"
+  loop:
+    - spec_crash.yaml.j2
+    - spec_mgr.yaml.j2
+    - spec_mon.yaml.j2
   delegate_to: "{{ cephadm_first_node }}"
   run_once: true
-  changed_when: true
-  failed_when: false
 
+- name: Apply OSD service specs
+  ceph.cephadm.ceph_orch_apply:
+    spec: "{{ lookup('template', 'spec_osd.yaml.j2') }}"
+  vars:
+    osd_host: "{{ item }}"
+    osd_index: "{{ idx + 1 }}"
+  loop: "{{ groups['osds'] }}"
+  loop_control:
+    index_var: idx
+  delegate_to: "{{ cephadm_first_node }}"
+  run_once: true
+  when: hostvars[item]['hostname'] in cephadm_nodes_needing_osds
+
+# === Health check ===
 - name: Confirm cluster is ok
   command: ceph status --format=json
   register: cephadm_cephs
@@ -335,6 +237,7 @@
   delegate_to: "{{ cephadm_first_node }}"
   until: cephadm_cephs.stdout | from_json | community.general.json_query('health.status') == "HEALTH_OK"
 
+# === RBD pool and CephX user (SEAPATH-specific) ===
 - name: Check if RBD pool exists
   shell:
     cmd: set -o pipefail && ceph osd lspools | grep -w rbd
@@ -378,10 +281,3 @@
     osd 'allow class-read object_prefix rbd_children, profile rbd pool=rbd'
   when: cephadm_cephx_user_check.rc == 0
   changed_when: true
-
-#- name: Update logrotate configuration for Ceph
-#  replace:
-#    path: "{{ cephadm_logrorateceph_path }}"
-#    regexp: '^/var/log/ceph/\*.log'
-#    replace: '/var/log/ceph/!(cephadm).log'
-

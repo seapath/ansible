@@ -1,0 +1,18 @@
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+# Apply config options for a single ceph.conf section.
+# Expected variable: ceph_conf_section (from dict2items, with .key and .value)
+
+---
+- name: "Apply config options for [{{ ceph_conf_section.key }}]"
+  ceph.cephadm.ceph_config:
+    action: set
+    who: "{{ ceph_conf_section.key }}"
+    option: "{{ item.key }}"
+    value: "{{ item.value | string }}"
+  loop: "{{ ceph_conf_section.value | dict2items }}"
+  loop_control:
+    label: "{{ ceph_conf_section.key }}/{{ item.key }}"
+  delegate_to: "{{ cephadm_first_node }}"
+  run_once: true

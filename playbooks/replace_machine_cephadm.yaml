@@ -1,0 +1,159 @@
+# Copyright (C) 2025, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# Complete machine replacement workflow using cephadm-ansible modules.
+# Drains all Ceph daemons from the old host, removes it, adds the new host,
+# and applies OSD specs.
+#
+# Required extra vars:
+#   machine_to_remove: inventory name of the host to remove
+#   machine_to_add: inventory name of the new host to add
+
+---
+- name: Sanity check
+  hosts: localhost
+  tasks:
+    - name: Exit playbook if no machine_to_remove was given
+      fail:
+        msg: "machine_to_remove must be declared"
+      when: machine_to_remove is undefined
+
+    - name: Exit playbook if no machine_to_add was given
+      fail:
+        msg: "machine_to_add must be declared"
+      when: machine_to_add is undefined
+
+- name: Prepare new machine
+  hosts: "{{ machine_to_add }}"
+  become: true
+  gather_facts: yes
+  roles:
+    - detect_seapath_distro
+  tasks:
+    - name: Set up cephadm user on new host
+      include_role:
+        name: cephadm
+        tasks_from: setup_user.yml
+
+- name: Replace machine in Ceph cluster
+  hosts: cluster_machines
+  become: true
+  vars:
+    cephadm_release: "20.2.0"
+    cephadm_image: "{{ (cephadm_registry_url + '/ceph:v' + cephadm_release) if cephadm_registry_url | default('') != '' else 'quay.io/ceph/ceph:v' + cephadm_release }}"
+    cephadm_registry_url: ""
+  tasks:
+    - name: Set facts for replacement
+      set_fact:
+        machine_to_remove_hostname: "{{ hostvars[machine_to_remove]['hostname'] }}"
+        machine_to_add_hostname: "{{ hostvars[machine_to_add]['hostname'] }}"
+        cephadm_online_node: "{{ (groups['cluster_machines'] | difference([machine_to_remove]))[0] }}"
+      run_once: true
+
+    # === Phase 1: Drain old host ===
+    - name: Drain host gracefully
+      ceph.cephadm.ceph_orch_host:
+        name: "{{ machine_to_remove_hostname }}"
+        state: drain
+      delegate_to: "{{ cephadm_online_node }}"
+      run_once: true
+
+    - name: Wait for all daemons to be drained
+      command: ceph orch ps {{ machine_to_remove_hostname }} --format json
+      register: drain_ps_check
+      until: (drain_ps_check.stdout | from_json | length) == 0
+      retries: 60
+      delay: 10
+      delegate_to: "{{ cephadm_online_node }}"
+      run_once: true
+      changed_when: false
+
+    # === Phase 2: Remove old host ===
+    - name: Remove host from Ceph orchestrator
+      ceph.cephadm.ceph_orch_host:
+        name: "{{ machine_to_remove_hostname }}"
+        state: absent
+      delegate_to: "{{ cephadm_online_node }}"
+      run_once: true
+
+    - name: Remove node from pacemaker # noqa: run-once[task]
+      command: "crm_node -R {{ machine_to_remove }} --force"
+      delegate_to: "{{ cephadm_online_node }}"
+      run_once: true
+      changed_when: true
+
+    # === Phase 3: SSH key distribution to new host ===
+    - name: Get ceph public key from cluster
+      command: cephadm shell -- ceph cephadm get-pub-key
+      register: cephadm_pub_key_result
+      delegate_to: "{{ cephadm_online_node }}"
+      run_once: true
+      changed_when: false
+
+    - name: Add ceph pubkey to new host
+      ansible.posix.authorized_key:
+        user: cephadm
+        state: present
+        key: "{{ cephadm_pub_key_result.stdout }}"
+      delegate_to: "{{ machine_to_add }}"
+      run_once: true
+
+    # === Phase 4: Add new host to cluster ===
+    - name: Add new host to Ceph orchestrator
+      ceph.cephadm.ceph_orch_host:
+        name: "{{ machine_to_add_hostname }}"
+        address: "{{ hostvars[machine_to_add]['cluster_ip_addr'] }}"
+        set_admin_label: true
+        state: present
+      delegate_to: "{{ cephadm_online_node }}"
+      run_once: true
+
+    # === Phase 5: Apply OSD spec for new host ===
+    - name: Find cephadm location on new host
+      command: which cephadm
+      register: cephadm_path
+      failed_when: false
+      changed_when: false
+      delegate_to: "{{ machine_to_add }}"
+      run_once: true
+      environment:
+        PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+    - name: Set cephadm binary path
+      set_fact:
+        cephadm_bin: "{{ cephadm_path.stdout if cephadm_path.rc == 0 else '/usr/local/bin/cephadm' }}"
+      run_once: true
+
+    - name: Zap volumes on new host
+      command: "{{ cephadm_bin }} --image {{ cephadm_image }} ceph-volume lvm zap vg_ceph/lv_ceph"
+      delegate_to: "{{ machine_to_add }}"
+      run_once: true
+      changed_when: true
+      when: machine_to_add in groups['osds']
+
+    - name: Determine OSD index for new host
+      set_fact:
+        new_osd_index: "{{ groups['osds'].index(machine_to_add) + 1 }}"
+      run_once: true
+      when: machine_to_add in groups['osds']
+
+    - name: Apply OSD service spec for new host
+      ceph.cephadm.ceph_orch_apply:
+        spec: "{{ lookup('template', '../roles/cephadm/templates/spec_osd.yaml.j2') }}"
+      vars:
+        osd_host: "{{ machine_to_add }}"
+        osd_index: "{{ new_osd_index }}"
+      delegate_to: "{{ cephadm_online_node }}"
+      run_once: true
+      when: machine_to_add in groups['osds']
+
+    # === Phase 6: Wait for cluster health ===
+    - name: Confirm cluster is ok
+      command: ceph status --format=json
+      register: cephadm_cephs
+      retries: 60
+      delay: 10
+      changed_when: false
+      run_once: true
+      delegate_to: "{{ cephadm_online_node }}"
+      until: cephadm_cephs.stdout | from_json | community.general.json_query('health.status') == "HEALTH_OK"

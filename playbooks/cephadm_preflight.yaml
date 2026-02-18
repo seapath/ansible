@@ -1,0 +1,118 @@
+# Copyright (C) 2025, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# SEAPATH-specific cephadm preflight playbook.
+# Prepares hosts for Ceph deployment: installs cephadm, ceph-common,
+# and prerequisites. Supports Debian, CentOS/OracleLinux, and Yocto.
+
+---
+- name: Cephadm preflight
+  hosts: cluster_machines
+  become: true
+  gather_facts: yes
+  vars:
+    cephadm_release: "20.2.0"
+    cephadm_release_name: "tentacle"
+    cephadm_downloadbinary: false
+    cephadm_installbinary: false
+    cephadm_installrepo: false
+    cephadm_installpackage: false
+    cephadm_installcommon: false
+  tasks:
+    - name: Include distro detection
+      include_role:
+        name: detect_seapath_distro
+
+    # === RedHat / CentOS / OracleLinux ===
+    - name: Install Ceph packages (RedHat family)
+      block:
+        - name: Add Ceph repository
+          command: >
+            {{ '/tmp/cephadm' if not cephadm_installbinary else 'cephadm' }}
+            add-repo --release {{ cephadm_release_name }}
+          changed_when: true
+          when: cephadm_installrepo | bool
+
+        - name: Install cephadm package
+          command: /tmp/cephadm install
+          changed_when: true
+          when: cephadm_installpackage | bool
+
+        - name: Install ceph-common package
+          command: cephadm install ceph-common
+          changed_when: true
+          when: cephadm_installcommon | bool
+
+        - name: Install prerequisite packages (RedHat family)
+          dnf:
+            name:
+              - podman
+              - lvm2
+              - chrony
+            state: present
+      when: seapath_distro in ["CentOS", "OracleLinux"]
+
+    # === Debian ===
+    - name: Install Ceph packages (Debian)
+      block:
+        - name: Install prerequisite packages (Debian)
+          apt:
+            name:
+              - podman
+              - lvm2
+              - chrony
+              - gpg
+            state: present
+            update_cache: yes
+
+        - name: Ensure keyrings directory exists
+          file:
+            path: /etc/apt/keyrings
+            state: directory
+            mode: '0755'
+
+        - name: Download Ceph GPG key
+          get_url:
+            url: "https://download.ceph.com/keys/release.asc"
+            dest: /etc/apt/keyrings/ceph-release.asc
+            mode: '0644'
+          when: cephadm_installrepo | bool
+
+        - name: Add Ceph repository (Debian)
+          apt_repository:
+            repo: "deb [signed-by=/etc/apt/keyrings/ceph-release.asc] https://download.ceph.com/debian-{{ cephadm_release_name }}/ {{ ansible_distribution_release }} main"
+            state: present
+            filename: ceph
+          when: cephadm_installrepo | bool
+
+        - name: Install cephadm (Debian)
+          apt:
+            name: cephadm
+            state: present
+          when: cephadm_installpackage | bool
+
+        - name: Install ceph-common (Debian)
+          apt:
+            name: ceph-common
+            state: present
+          when: cephadm_installcommon | bool
+      when: seapath_distro == "Debian"
+
+    # === Yocto ===
+    - name: Install cephadm binary (Yocto)
+      block:
+        - name: Download cephadm binary
+          get_url:
+            url: "https://download.ceph.com/rpm-{{ cephadm_release }}/el9/noarch/cephadm"
+            dest: "/tmp/cephadm"
+            mode: '0755'
+          when: cephadm_downloadbinary | bool
+
+        - name: Copy cephadm to /usr/local/bin
+          copy:
+            src: "/tmp/cephadm"
+            dest: "/usr/local/bin/cephadm"
+            mode: '0755'
+            remote_src: yes
+          when: cephadm_installbinary | bool
+      when: seapath_distro == "Yocto"
