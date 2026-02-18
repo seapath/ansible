@@ -1,0 +1,92 @@
+# Copyright (C) 2024 Red Hat, Inc.
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+- name: Prerequis machine redhat
+  gather_facts: true
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  become: true
+  roles:
+    - redhat
+- name: Prerequis physical machine redhat
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  become: true
+  roles:
+    - redhat_physical_machine
+- name: Prerequis physical machine backup/restore
+  hosts:
+    - cluster_machines
+  become: true
+  roles:
+    - backup_restore
+- name: Prerequis hypervisor redhat
+  hosts:
+    - hypervisors
+    - standalone_machine
+  become: true
+  roles:
+    - redhat_hypervisor
+
+- name: Add admin user to haclient group
+  hosts:
+    - cluster_machines
+  become: true
+  tasks:
+    - name: Add admin user to haclient group
+      user:
+        name: "{{ admin_user }}"
+        groups: haclient
+        append: yes
+
+- name: Disable libvirt-guests.service
+  hosts:
+    - cluster_machines
+  become: true
+  tasks:
+    - name: Disable libvirt-guests.service
+      ansible.builtin.systemd:
+        name: libvirt-guests.service
+        enabled: no
+        state: stopped
+
+- name: Upload extra files
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  become: true
+  tasks:
+    - name: Upload extra files
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: "{{ item.owner | default('root') }}"
+        group: "{{ item.group | default('root') }}"
+        mode: "{{ item.mode | default('0644') }}"
+        backup: yes
+      with_items: "{{ upload_files }}"
+      when:
+        - upload_files is defined
+        - item.extract is not defined or item.extract is false
+    - name: Upload extra files and extract them
+      unarchive:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: "{{ item.owner | default('root') }}"
+        group: "{{ item.group | default('root') }}"
+        mode: "{{ item.mode | default('0644') }}"
+      with_items: "{{ upload_files }}"
+      when:
+        - upload_files is defined
+        - item.extract is defined and item.extract is true
+    - name: Run extra commands after upload
+      shell: "{{ item }}"
+      tags:
+        - skip_ansible_lint
+      loop: "{{ commands_to_run_after_upload }}"
+      when: commands_to_run_after_upload is defined

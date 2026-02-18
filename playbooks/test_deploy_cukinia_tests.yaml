@@ -23,5 +23,5 @@
   roles:
     - role: debian_tests
       when: seapath_distro == "Debian"
-    - role: oraclelinux_tests
-      when: seapath_distro == "OracleLinux"
+    - role: redhat_tests
+      when: ansible_os_family == "RedHat"

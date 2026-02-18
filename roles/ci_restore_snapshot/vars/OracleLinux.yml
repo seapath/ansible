@@ -1,5 +1,0 @@
-# Copyright (C) 2025, RTE
-# SPDX-License-Identifier: Apache-2.0
-
----
-ci_restore_snapshot_grub_update_command: "grub2-mkconfig -o /boot/grub2/grub.cfg"

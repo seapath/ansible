@@ -20,22 +20,22 @@
     state: restarted
   when: configure_libvirt_libvirtd_conf.changed # noqa: no-handler
 
-# OracleLinux specific
+# RedHat-family specific
 - name: Enable and start virtsecretd.socket
   ansible.builtin.systemd:
     name: virtsecretd.socket
     state: started
     enabled: true
-  when: seapath_distro == "OracleLinux"
+  when: ansible_os_family == "RedHat"
 - name: Enable and start virtqemud.socket
   ansible.builtin.systemd:
     name: virtqemud.socket
     state: started
     enabled: true
-  when: seapath_distro == "OracleLinux"
+  when: ansible_os_family == "RedHat"
 - name: Enable and start virtstoraged.socket
   ansible.builtin.systemd:
     name: virtstoraged.socket
     state: started
     enabled: true
-  when: seapath_distro == "OracleLinux"
+  when: ansible_os_family == "RedHat"

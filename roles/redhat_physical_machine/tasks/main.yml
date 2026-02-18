@@ -1,0 +1,352 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2024 Red Hat, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Populate service facts
+  service_facts:
+
+- name: Copy sysctl rules
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: /etc/sysctl.d/{{ item }}
+    mode: '0644'
+  with_items:
+    - 00-bridge_nf_call.conf
+  notify: Restart systemd-sysctl
+
+- name: Add sysctl conf from inventory (extra_sysctl_physical_machines)
+  ansible.builtin.copy:
+    dest: /etc/sysctl.d/00-seapathextra_physicalmachines.conf
+    mode: '0644'
+    content: "{{ extra_sysctl_physical_machines }}"
+  when: extra_sysctl_physical_machines is defined
+  notify: Restart systemd-sysctl
+
+- name: Create src folder on hosts
+  file:
+    path: /tmp/src
+    state: directory
+    mode: '0755'
+
+- name: Temp fix for synchronize to force evaluate variables
+  set_fact:
+    ansible_host: "{{ ansible_host }}"
+
+- name: Deploy vm_manager
+  include_role:
+    name: deploy_vm_manager
+
+- name: Deploy python3-setup-ovs
+  include_role:
+    name: deploy_python3_setup_ovs
+
+- name: Create /usr/lib/ocf/resource.d/seapath on hosts
+  file:
+    path: /usr/lib/ocf/resource.d/seapath
+    state: directory
+    mode: '0755'
+
+- name: Copy Pacemaker Seapath Resource-Agent files
+  ansible.posix.synchronize:
+    src: pacemaker_ra/
+    dest: /usr/lib/ocf/resource.d/seapath/
+    rsync_opts:
+    - "--chmod=F755"
+    - "--chown=root:root"
+  when:
+    - "'cluster_machines' in group_names"
+
+- name: Copy chrony-wait.service
+  template:
+    src: chrony-wait.service.j2
+    dest: /etc/systemd/system/chrony-wait.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Trigger daemon-reload
+- name: Enable chrony-wait.service
+  ansible.builtin.systemd:
+    name: chrony-wait.service
+    enabled: yes
+
+- when:
+    - services['pacemaker.service'] is defined
+  block:
+    - name: Create pacemaker.service.d directory
+      file:
+        path: /etc/systemd/system/pacemaker.service.d/
+        state: directory
+        owner: root
+        group: root
+        mode: 0755
+    - name: Copy pacemaker.service drop-in
+      template:
+        src: pacemaker_override.conf.j2
+        dest: /etc/systemd/system/pacemaker.service.d/override.conf
+        owner: root
+        group: root
+        mode: 0644
+      notify: Trigger daemon-reload
+      register: redhat_physical_machine_pacemaker_corosync
+    - name: Get Pacemaker service Status
+      ansible.builtin.systemd:
+        name: "pacemaker.service"
+      register: redhat_physical_machine_pacemaker_service_status
+    - name: Disable pacemaker (reinstall step 1/2)
+      ansible.builtin.systemd:
+        name: pacemaker.service
+        enabled: no
+      when: redhat_physical_machine_pacemaker_corosync.changed and redhat_physical_machine_pacemaker_service_status.status.UnitFileState == "enabled"
+    - name: Enable pacemaker (reinstall step 2/2)
+      ansible.builtin.systemd:
+        name: pacemaker.service
+        enabled: yes
+      when: redhat_physical_machine_pacemaker_corosync.changed and redhat_physical_machine_pacemaker_service_status.status.UnitFileState == "enabled"
+
+- name: Add extra modules to the kernel
+  block:
+    - name: Create extra modules conf file
+      ansible.builtin.file:
+        path: /etc/modules-load.d/extra_modules.conf
+        owner: root
+        group: root
+        mode: 0751
+        state: touch
+    - name: Add extra modules to conf file
+      lineinfile:
+        dest: /etc/modules-load.d/extra_modules.conf
+        state: present
+        regexp: "^{{ item }}$"
+        line: "{{ item }}"
+      with_items: "{{ extra_kernel_modules | default([]) }}"
+
+- name: Add br_netfilter to /etc/modules-load.d
+  ansible.builtin.copy:
+    src: modules/netfilter.conf
+    dest: /etc/modules-load.d/netfilter.conf
+    owner: root
+    group: root
+    mode: 0751
+- name: Add raid6_pq to /etc/modules-load.d
+  ansible.builtin.copy:
+    src: modules/raid6_pq.conf
+    dest: /etc/modules-load.d/raid6_pq.conf
+    owner: root
+    group: root
+    mode: 0751
+
+- name: Lineinfile in hosts file for logstash-seapath
+  lineinfile:
+    dest: /etc/hosts
+    regexp: '.* logstash-seapath$'
+    line: "{{ logstash_server_ip }} logstash-seapath"
+    state: present
+  when: logstash_server_ip is defined
+
+- name: Make libvirt use the "machine-id" way to determine host UUID
+  lineinfile:
+    dest: /etc/libvirt/libvirtd.conf
+    regexp: "^#?host_uuid_source ="
+    line: "host_uuid_source = \"machine-id\""
+    state: present
+- name: Restart libvirtd
+  ansible.builtin.systemd:
+    name: libvirtd.service
+    state: restarted
+
+- name: "Add initramfs-tools scripts: script file (LVM rebooter and log handling)"
+  ansible.builtin.copy:
+    src: initramfs-tools/scripts/
+    dest: /etc/initramfs-tools/scripts/
+    mode: '0755'
+  notify: Rebuild initramfs if necessary
+
+- name: Get the /var/log/ device
+  command: "findmnt -n -o SOURCE --target /var/log"
+  register: redhat_physical_machine_varlog_dev
+  changed_when: false
+
+- name: Set_fact /var/log/ device
+  set_fact:
+    redhat_physical_machine_lvm_rebooter_log_device: "{{ redhat_physical_machine_varlog_dev.stdout }}"
+
+- name: Get the /var/log/ relative path
+  shell: "realpath --relative-to=$(findmnt -n -o TARGET --target /var/log/) /var/log"
+  register: redhat_physical_machine_varlog_path
+  changed_when: false
+
+- name: Set_fact /var/log/ relative path
+  set_fact:
+    redhat_physical_machine_lvm_rebooter_log_path: "{{ redhat_physical_machine_varlog_path.stdout }}"
+
+- name: Copy rebooter.conf
+  template:
+    src: initramfs-tools/conf.d/rebooter.conf.j2
+    dest: /etc/dracut.conf.d/rebooter.conf
+
+- name: Configure initramfs-tools to use busybox
+  lineinfile:
+    dest: /etc/dracut.conf
+    regexp: "^#?BUSYBOX="
+    line: "BUSYBOX=y"
+    state: present
+  notify: Rebuild initramfs if necessary
+
+- name: Add rbd type to lvm.conf
+  ansible.builtin.lineinfile:
+    path: /etc/lvm/lvm.conf
+    insertafter: 'devices {'
+    line: "        types = [ \"rbd\", 1024 ]"
+    state: present
+- name: Disable lvm use_devicesfile
+  ansible.builtin.lineinfile:
+    path: /etc/lvm/lvm.conf
+    regexp: "^\\s*#?\\s*use_devicesfile\\s*=\\s*"
+    line: "        use_devicesfile = 0"
+    state: present
+
+- name: Configure firewalld for ceph
+  block:
+    - name: "Configure firewalld for ceph monitor"
+      ansible.posix.firewalld:
+        port: 3300/tcp
+        permanent: true
+        state: enabled
+    - name: "Configure firewalld for ceph monitor legacy v1 port"
+      ansible.posix.firewalld:
+        port: 6789/tcp
+        permanent: true
+        state: enabled
+    - name: "Configure firewalld for ceph OSD"
+      ansible.posix.firewalld:
+        port: 6800-7300/tcp
+        permanent: true
+        state: enabled
+
+- name: Configure firewalld for high-availability services
+  ansible.posix.firewalld:
+    service: high-availability
+    permanent: true
+    state: enabled
+
+- name: Configure registry mirroring
+  when: registry_mirror_url is defined and registry_mirror_url != ''
+  block:
+    - name: Create podman certs.d directory for registry
+      ansible.builtin.file:
+        path: "/etc/containers/certs.d/{{ registry_mirror_url }}"
+        state: directory
+        mode: '0755'
+      when: registry_tls_enabled | default(false)
+
+    - name: Copy registry CA certificate for podman
+      ansible.builtin.copy:
+        src: /tmp/registry-ca.crt
+        dest: "/etc/containers/certs.d/{{ registry_mirror_url }}/ca.crt"
+        mode: '0644'
+      when: registry_tls_enabled | default(false)
+
+    - name: Create docker certs.d directory for registry
+      ansible.builtin.file:
+        path: "/etc/docker/certs.d/{{ registry_mirror_url }}"
+        state: directory
+        mode: '0755'
+      when: registry_tls_enabled | default(false)
+
+    - name: Copy registry CA certificate for docker
+      ansible.builtin.copy:
+        src: /tmp/registry-ca.crt
+        dest: "/etc/docker/certs.d/{{ registry_mirror_url }}/ca.crt"
+        mode: '0644'
+      when: registry_tls_enabled | default(false)
+
+    - name: Configure podman registry mirroring
+      ansible.builtin.blockinfile:
+        path: /etc/containers/registries.conf
+        marker: "# {mark} ANSIBLE MANAGED BLOCK for registry mirroring"
+        block: |
+          [[registry]]
+          location = "docker.io"
+          insecure = {{ 'false' if registry_tls_enabled | default(false) else 'true' }}
+          [[registry.mirror]]
+          location = "{{ registry_mirror_url }}"
+          insecure = {{ 'false' if registry_tls_enabled | default(false) else 'true' }}
+
+          [[registry]]
+          location = "quay.io"
+          insecure = {{ 'false' if registry_tls_enabled | default(false) else 'true' }}
+          [[registry.mirror]]
+          location = "{{ registry_mirror_url }}"
+          insecure = {{ 'false' if registry_tls_enabled | default(false) else 'true' }}
+
+    - name: Configure docker registry mirroring
+      ansible.builtin.copy:
+        content: |
+          {
+            "registry-mirrors": ["{{ 'https' if registry_tls_enabled | default(false) else 'http' }}://{{ registry_mirror_url }}"]
+          }
+        dest: /etc/docker/daemon.json
+        mode: '0644'
+
+- name: Create a symbolic link for qemu-kvm/x86-64
+  ansible.builtin.file:
+    src: /usr/libexec/qemu-kvm
+    dest: /usr/bin/qemu-system-x86_64
+    state: link
+
+- name: Enable and start virtsecretd.socket
+  ansible.builtin.systemd:
+    name: virtsecretd.socket
+    state: started
+    enabled: true
+- name: Enable and start virtqemud.socket
+  ansible.builtin.systemd:
+    name: virtqemud.socket
+    state: started
+    enabled: true
+- name: Enable and start virtstoraged.socket
+  ansible.builtin.systemd:
+    name: virtstoraged.socket
+    state: started
+    enabled: true
+
+- name: Ensure group www-data exists with GID 1033
+  group:
+    name: www-data
+    gid: 1033
+    state: present
+
+- name: Ensure user www-data exists with UID 1033 and GID 1033
+  user:
+    name: www-data
+    uid: 1033
+    group: www-data
+    shell: /bin/bash
+
+- name: Create ovs-vswitchd.service.d directory
+  file:
+    path: /etc/systemd/system/ovs-vswitchd.service.d/
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+  notify: Restart ovs-vswitchd
+- name: Create ovs-vswitchd.service drop-in
+  template:
+    src: ovs-vswitchd_override.conf.j2
+    dest: /etc/systemd/system/ovs-vswitchd.service.d/override.conf
+    owner: root
+    group: root
+    mode: 0644
+  when: team0_0 is defined and team0_1 is defined
+  notify: Restart ovs-vswitchd
+- name: Copy team0_x@.service file
+  ansible.builtin.copy:
+    src: team0_x@.service
+    dest: /etc/systemd/system/team0_x@.service
+    owner: root
+    group: root
+    mode: 0644
+  when: team0_0 is defined and team0_1 is defined
+  notify: Restart ovs-vswitchd

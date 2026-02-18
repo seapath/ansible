@@ -50,7 +50,7 @@
               - lvm2
               - chrony
             state: present
-      when: seapath_distro in ["CentOS", "OracleLinux"]
+      when: ansible_os_family == "RedHat"
 
     # === Debian ===
     - name: Install Ceph packages (Debian)

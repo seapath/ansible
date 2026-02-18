@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- include_vars: "{{ seapath_distro }}.yml"
+- include_vars: "{{ ansible_os_family }}.yml"
 
 - name: Grub conf
   lineinfile:

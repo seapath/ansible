@@ -1,0 +1,14 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2024 Red Hat, Inc.
+# SPDX-License-Identifier: Apache-2.0
+---
+galaxy_info:
+  author: "Seapath"
+  description: Prerequisite for all RedHat-family machines
+  min_ansible_version: 2.9.10
+  license: Apache-2.0
+  platforms:
+  - name: EL
+    versions:
+    - all
+dependencies: []

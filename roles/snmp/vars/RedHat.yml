@@ -1,0 +1,5 @@
+# Copyright (C) 2024 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+snmp_user_name: "{{ {'CentOS': 'Centos-snmp', 'OracleLinux': 'oraclelinux-snmp'}.get(seapath_distro, seapath_distro | lower ~ '-snmp') }}"

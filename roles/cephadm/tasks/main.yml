@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- include_vars: "{{ seapath_distro }}.yml"
+- include_vars: "{{ ansible_os_family }}.yml"
 
 # === User/Group setup (SEAPATH-specific) ===
 - name: Set up cephadm user and group
