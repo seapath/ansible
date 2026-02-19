@@ -10,6 +10,8 @@ Before=systemd-networkd.service
 [Service]
 Type=oneshot
 RemainAfterExit=true
+ExecStartPre=/bin/mkdir -p /var/run/openvswitch/vm-sockets
+ExecStartPre=/bin/chown libvirt-qemu:root /var/run/openvswitch/vm-sockets
 ExecStart=/usr/local/bin/setup_ovs
 
 [Install]
