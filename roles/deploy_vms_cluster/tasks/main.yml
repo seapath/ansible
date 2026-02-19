@@ -2,6 +2,40 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+- name: Query if current node is in Pacemaker standby
+  ansible.builtin.command:
+    cmd: crm_attribute --node {{ inventory_hostname }} --name standby -q
+  register: deploy_vms_cluster_standby_check
+  changed_when: false
+  failed_when: false
+
+- name: Fail if current node is in Pacemaker standby
+  ansible.builtin.fail:
+    msg: >-
+      Node '{{ inventory_hostname }}' is in Pacemaker standby mode.
+      Cannot deploy VM '{{ item }}' on a standby node.
+      Bring the node online first: crm node online {{ inventory_hostname }}
+  when:
+    - deploy_vms_cluster_standby_check.stdout is defined
+    - "'on' == deploy_vms_cluster_standby_check.stdout"
+
+- name: Query if current node is in Pacemaker maintenance
+  ansible.builtin.command:
+    cmd: crm_attribute --node {{ inventory_hostname }} --name maintenance -q
+  register: deploy_vms_cluster_maintenance_check
+  changed_when: false
+  failed_when: false
+
+- name: Fail if current node is in Pacemaker maintenance
+  ansible.builtin.fail:
+    msg: >-
+      Node '{{ inventory_hostname }}' is in Pacemaker maintenance mode.
+      Cannot deploy VM '{{ item }}' on this node.
+      Bring the node online first: crm_attribute --node {{ inventory_hostname }} --name maintenance --delete
+  when:
+    - deploy_vms_cluster_maintenance_check.stdout is defined
+    - "'true' == deploy_vms_cluster_maintenance_check.stdout"
+
 - name: Check presence of vm before copy
   cluster_vm:
     command: status
