@@ -54,6 +54,7 @@ Below is a list of the VMs member variables that can be used with this XML file.
 |-----------------|------------------|-----------------|---------|--------------------------------------------------------------------------------------------------------------------|
 | uuid            |                  | Integer         | random  | Libvirt UUID of the VM                                                                                             |
 | description     |                  | String          | Test VM | Libvirt description of the VM                                                                                      |
+| autostart       |                  | Bool            | true    | Set the VM to autostart on hypervisor boot                                                                         |
 | memory          |                  | Integer         | 2048    | RAM of the VM in MiB                                                                                               |
 | additional_disk |                  | List of strings |         | Additional disks to give to the VM. The main disk is given by the vm_disk variable                                 |
 | vm_features     |                  | List of strings |         | List of vm features to enable. Possible values are "rt", "isolated", "secure-boot", "dpdk", "membaloon"            |
