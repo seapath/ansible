@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <!--  Copyright (C) 2024 Savoir-faire Linux, Inc-->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 
@@ -86,7 +85,7 @@
     {% if vm.bridges is defined %}
     {% for bridge in vm.bridges %}
     <interface type="bridge">
-    <source bridge="{{ bridge.name }}"/>
+        <source bridge="{{ bridge.name }}"/>
         <mac address="{{ bridge.mac_address }}"/>
         <model type="virtio"/>
     </interface>
@@ -101,13 +100,14 @@
     </interface>
     {% endfor %}
     {% endif %}
-    {% if vm.sv_interfaces is defined %}
-    {% for interface in vm.sv_interfaces %}
-    <interface type="direct" trustGuestRxFilters="yes">
-        <mac address="{{ interface.mac_address }}"/>
-        <source dev="{{ interface.name }}" mode="{{ interface.mode }}"/>
-        <model type="virtio"/>
-    </interface>
+    {% if vm.pci_passthrough is defined %}
+    {% for pci in vm.pci_passthrough %}
+    <hostdev mode="subsystem" type="pci" managed="yes">
+        <source>
+            <!-- The source is the NIC PIC address -->
+            <address domain="{{ pci.domain }}" bus="{{ pci.bus }}" slot="{{ pci.slot }}" function="{{ pci.function }}"/>
+        </source>
+    </hostdev>
     {% endfor %}
     {% endif %}
     <console type='pty'>
