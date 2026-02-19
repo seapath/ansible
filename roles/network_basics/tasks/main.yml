@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- when: Remove_all_network_config is defined and remove_all_network_config is true
+- when: remove_all_network_config is defined and remove_all_network_config is true
   block:
   - name: Wipe the network directory content 1/2, list files
     find:
