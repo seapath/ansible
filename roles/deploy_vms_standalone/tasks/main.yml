@@ -109,5 +109,7 @@
   community.libvirt.virt:
     name: "{{ item }}"
     state: running
+    autostart: "{{ hostvars[item].autostart | default(true) }}"
   loop: "{{ groups['VMs'] }}"
   when: hostvars[item].enable | default(true)
+
