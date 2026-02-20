@@ -8,15 +8,15 @@
 - name: Debug LVM volume details when verbosity is 3+
   when: ansible_verbosity >= 3
   block:
-    - debug:
+    - debug:  # noqa: name[missing]
         msg: "data_size: {{ lvm_volumes[0].data_size }}"
-    - debug:
+    - debug:  # noqa: name[missing]
         msg: "ansible_lvm: {{ ansible_lvm }}"
-    - debug:
+    - debug:  # noqa: name[missing]
         msg: "lvm_volumes[0].data: {{ ansible_lvm['lvs'][lvm_volumes[0].data] }}"
-    - debug:
+    - debug:  # noqa: name[missing]
         msg: "size_g: {{ ansible_lvm['lvs'][lvm_volumes[0].data]['size_g'] }}"
-    - debug:
+    - debug:  # noqa: name[missing]
         msg: "size_m: {{ (ansible_lvm['lvs'][lvm_volumes[0].data]['size_g'] | float * 1024) | round(2) }}"
 - name: Check if lv_ceph has to be expanded
   set_fact:

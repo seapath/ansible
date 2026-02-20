@@ -41,7 +41,7 @@
     command: status
     name: "{{ item }}"
   register: deploy_vms_cluster_presencevm
-- debug:
+- debug:  # noqa: name[missing]
     var: deploy_vms_cluster_presencevm
     verbosity: 2
 

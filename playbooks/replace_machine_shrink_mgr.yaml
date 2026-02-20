@@ -25,7 +25,7 @@
   tasks:
     - name: "Gather facts"
       gather_facts:
-    - debug:
+    - debug:  # noqa: name[missing]
         msg: gather facts on all Ceph hosts for following reference
 
 - name: Confirm if user really meant to remove manager from the ceph cluster

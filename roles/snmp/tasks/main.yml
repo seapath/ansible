@@ -17,7 +17,7 @@
     getent:
       database: group
       key: "{{ snmp_user_name }}"
-  - debug:
+  - debug:  # noqa: name[missing]
       msg:
         - "user id {{ getent_passwd[snmp_user_name][1] }}"
         - "group id {{ getent_group[snmp_user_name][1] }}"

@@ -21,14 +21,14 @@
       script: "../scripts/get_osd.py {{ hostvars[machine_to_remove].get('hostname', machine_to_remove) }}"
       register: raw_osd
       delegate_to: "{{ groups['mon_host'][0] }}"
-    - debug:
+    - debug:  # noqa: name[missing]
         var: raw_osd
     - name: Register OSD
       set_fact:
         osd_to_kill: "{{ raw_osd.stdout_lines[0] }}"
       when: raw_osd.stdout
       delegate_to: "{{ groups['mon_host'][0] }}"
-    - debug:
+    - debug:  # noqa: name[missing]
         var: osd_to_kill
 
 - name: Import replace_machine_shrink_osd playbook

@@ -10,7 +10,7 @@
   register: configure_libvirt_rdb_secret_secret_defined
   failed_when: configure_libvirt_rdb_secret_secret_defined.rc > 1
   changed_when: false
-- debug:
+- debug:  # noqa: name[missing]
     var: configure_libvirt_rdb_secret_secret_defined
 
 - name: Check if a secret pool has to be created
@@ -24,7 +24,7 @@
       set_fact:
         configure_libvirt_rdb_secret_libvirt_uuid_rbd: "{% if hostvars[item]['configure_libvirt_rdb_secret_secret_defined'].stdout != '' %}{{ hostvars[item]['configure_libvirt_rdb_secret_secret_defined'].stdout }}{% else %}{{ configure_libvirt_rdb_secret_libvirt_uuid_rbd | default('') }}{% endif %}"
       loop: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) }}"
-    - debug:
+    - debug:  # noqa: name[missing]
         msg: "Found UUID {{ configure_libvirt_rdb_secret_libvirt_uuid_rbd }}"
       when: configure_libvirt_rdb_secret_libvirt_uuid_rbd | length > 0
       run_once: true

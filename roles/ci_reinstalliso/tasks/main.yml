@@ -58,13 +58,13 @@
   ansible.builtin.set_fact:
     ci_reinstalliso_delta: "{{ (ci_reinstalliso_current_time | to_datetime('%Y-%m-%d %H:%M:%S') - ci_reinstalliso_fs_creation_time | to_datetime('%Y-%m-%d %H:%M:%S')).total_seconds() }}"
 
-- debug:
+- debug:  # noqa: name[missing]
     var: ci_reinstalliso_fs_creation
-- debug:
+- debug:  # noqa: name[missing]
     var: ci_reinstalliso_fs_creation_time
-- debug:
+- debug:  # noqa: name[missing]
     var: ci_reinstalliso_current_time
-- debug:
+- debug:  # noqa: name[missing]
     var: ci_reinstalliso_delta
 
 - name: Fail if system was installed more than 15 minutes ago

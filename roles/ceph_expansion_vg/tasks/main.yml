@@ -18,7 +18,7 @@
         device: "{{ item | regex_replace('(p?\\d+)$', '') }}"
       loop: "{{ ceph_expansion_vg_list_pvs }}"
       register: ceph_expansion_vg_parted_info
-    - debug:
+    - debug:  # noqa: name[missing]
         var: ceph_expansion_vg_parted_info
       when: ansible_verbosity >= 3
     - name: Set fact ceph_expansion_vg_part_info
@@ -29,14 +29,14 @@
         query: "[?item=='{{ item }}'] | [].partitions[?num==`{{ item | regex_search('[0-9.]*$') }}`].{oldsize: size, end: end, newsize: `{{ ceph_expansion_vg_new_pv_size | int * 1024 }}` }"
       register: ceph_expansion_vg_parts
       loop: "{{ ceph_expansion_vg_list_pvs }}"
-    - debug:
+    - debug:  # noqa: name[missing]
         var: lvm_volumes[0].device_size
       when: ansible_verbosity >= 3
-    - debug:
+    - debug:  # noqa: name[missing]
         msg: item.ansible_facts.ceph_expansion_vg_part_info.newsize|int
       loop: "{{ ceph_expansion_vg_parts.results }}"
       when: ansible_verbosity >= 3
-    - debug:
+    - debug:  # noqa: name[missing]
         msg: item.ansible_facts.ceph_expansion_vg_part_info.oldsize|int
       loop: "{{ ceph_expansion_vg_parts.results }}"
       when: ansible_verbosity >= 3
