@@ -4,8 +4,11 @@
 ---
 cephadm_release: "20.2.0"
 cephadm_release_name: "tentacle"
-cephadm_downloadbinary: false
-cephadm_installbinary: false
-cephadm_installrepo: false
-cephadm_installcommon: false
-cephadm_pullimages: false
+
+# Registry configuration (for disconnected mode)
+cephadm_registry_url: ""
+cephadm_registry_username: ""
+cephadm_registry_password: ""
+
+# Container image (auto-constructed from registry_url and release)
+cephadm_image: "{{ (cephadm_registry_url + '/ceph:v' + cephadm_release) if cephadm_registry_url | default('') != '' else 'quay.io/ceph/ceph:v' + cephadm_release }}"

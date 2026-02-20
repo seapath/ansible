@@ -5,6 +5,7 @@ ansible.log
 # Ignore user defined playbooks and inventory
 playbooks/*
 !playbooks/README.adoc
+!playbooks/cephadm_preflight.yaml
 !playbooks/cluster_setup_*.yaml
 !playbooks/ci_*.yaml
 !playbooks/replace_machine_*.yaml

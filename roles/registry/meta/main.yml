@@ -1,0 +1,31 @@
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+galaxy_info:
+  author: SEAPATH Team
+  description: Control node registry management for disconnected environments
+  company: RTE
+  license: Apache-2.0
+  min_ansible_version: "2.10"
+  platforms:
+    - name: EL
+      versions:
+        - 8
+        - 9
+    - name: Ubuntu
+      versions:
+        - 20.04
+        - 22.04
+    - name: Debian
+      versions:
+        - 11
+        - 12
+  galaxy_tags:
+    - seapath
+    - registry
+    - containers
+    - offline
+    - disconnected
+
+dependencies: []

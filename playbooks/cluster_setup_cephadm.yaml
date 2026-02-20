@@ -33,6 +33,9 @@
     - role: ceph_expansion_lv
       when: lvm_volumes is defined
 
+- name: Cephadm preflight
+  import_playbook: cephadm_preflight.yaml
+
 - name: Cephadm
   hosts:
       cluster_machines
@@ -41,3 +44,7 @@
     - detect_seapath_distro
     - cephadm
     - deploy_cephfs
+  vars:
+    cephadm_registry_url: "{{ registry_url | default('') }}"
+    cephadm_registry_username: "{{ registry_username | default('') }}"
+    cephadm_registry_password: "{{ registry_password | default('') }}"

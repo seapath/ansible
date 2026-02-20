@@ -1,0 +1,40 @@
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+# Sets up the cephadm user, group, and sudoers entry.
+# Can be included independently from the full cephadm role.
+
+---
+- name: Ensure group "cephadm" exists
+  group:
+    name: cephadm
+    gid: 1001
+    state: present
+
+- name: Ensure user "cephadm" exists
+  user:
+    name: cephadm
+    uid: 1001
+    group: cephadm
+    create_home: yes
+
+- name: Ensure group "containerized-ceph" exists
+  group:
+    name: containerized-ceph
+    gid: 167
+    state: present
+  when: seapath_distro | default('') == "Debian"
+
+- name: Ensure user "containerized-ceph" exists with nologin (already exists on centos/oraclelinux)
+  user:
+    name: containerized-ceph
+    uid: 167
+    group: containerized-ceph
+    create_home: no
+    shell: /sbin/nologin
+  when: seapath_distro | default('') == "Debian"
+
+- name: Set cephadm user sudo permissions
+  copy:
+    src: cephadm_sudoers
+    dest: /etc/sudoers.d/cephadm
