@@ -86,7 +86,8 @@
     - standalone_machine
   become: true
   tasks:
-    - when:
+    - name: Reboot system to apply network configuration
+      when:
         - need_reboot is defined and need_reboot
         - skip_reboot_setup_network is not defined or not skip_reboot_setup_network
       block:

@@ -13,7 +13,8 @@
   roles:
     - detect_seapath_distro
   tasks:
-  - include_vars: "../vars/{{ seapath_distro }}_paths.yml"
+  - name: Load distribution-specific variables
+    include_vars: "../vars/{{ seapath_distro }}_paths.yml"
 
 - name: Cukinia tests
   hosts:
