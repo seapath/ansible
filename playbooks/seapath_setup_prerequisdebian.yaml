@@ -1,6 +1,14 @@
 # Copyright (C) 2023, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
+
+- name: Detect Seapath distribution
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  roles:
+    - detect_seapath_distro
 - name: Prerequis machine debian
   gather_facts: true
   hosts:
