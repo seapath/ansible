@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- debug:
+- debug:  # noqa: name[missing]
     var: item.value
   with_items: "{{ interfaces_on_br0 | dict2items }}"
   when: interfaces_on_br0 is defined

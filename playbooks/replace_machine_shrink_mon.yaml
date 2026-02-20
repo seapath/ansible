@@ -37,7 +37,7 @@
   hosts: "{{ mon_group_name|default('mons') }}"
   become: true
   tasks:
-    - debug:
+    - debug:  # noqa: name[missing]
         var: machine_up
     - name: Gather facts
       gather_facts:

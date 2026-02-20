@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- debug:
+- debug:  # noqa: name[missing]
     msg: "the network pool name is {{ network_sriovpool_sriov_network_pool_name }}"
 - name: Try to get sriov network pool
   shell:

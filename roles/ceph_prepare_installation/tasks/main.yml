@@ -94,11 +94,11 @@
                         | first
                       ) | float if ceph_prepare_installation_previous_exists else 0.0 }}
 
-            - debug:
+            - debug:  # noqa: name[missing]
                 var: ceph_prepare_installation_prev_end
-            - debug:
+            - debug:  # noqa: name[missing]
                 var: lvm_volumes[0].device_size
-            - debug:
+            - debug:  # noqa: name[missing]
                 msg: "{{ ((ceph_prepare_installation_prev_end | float) + (lvm_volumes[0].device_size | float)) | round(2) }}"
 
             - name: Calculate partition boundaries
