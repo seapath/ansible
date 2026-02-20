@@ -30,7 +30,9 @@
     dest: /etc/syslog-ng/syslog-ng.conf
     mode: '0644'
   notify: Restart syslog-ng
-- when:
+
+- name: Configure syslog-ng TLS client certificates if needed 
+  when:
     - syslog_tls_ca is defined
     - syslog_tls_key is defined
     - syslog_tls_server_ca is defined
@@ -169,12 +171,14 @@
     group: "{{ admin_user }}"
     mode: '0644'
 
-- when: apt_repo is defined
+- name: Configure APT repositories 
+  when: apt_repo is defined
   block:
     - name: Detect apt_repo type
       set_fact:
         debian_apt_repo_is_dict: "{{ apt_repo is not none and apt_repo | selectattr('name', 'defined') | list | length > 0 }}"
-    - when: debian_apt_repo_is_dict
+    - name: Configure apt_repo from config 
+      when: debian_apt_repo_is_dict
       block:
         - name: Remove file /etc/apt/sources.list
           file:
@@ -189,7 +193,8 @@
             components: "{{ item.components }}"
             signed_by: "{{ item.signed_by }}"
           loop: "{{ apt_repo }}"
-    - when: not debian_apt_repo_is_dict
+    - name: Configure default apt repositories
+      when: not debian_apt_repo_is_dict
       block:
         - name: Remove all files in /etc/apt/sources.list.d
           file:

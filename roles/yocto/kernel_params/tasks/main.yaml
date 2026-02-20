@@ -19,7 +19,8 @@
     - yocto_extra_kernel_parameters is defined
     - yocto_extra_param_raw.rc == 1
 
-- when: yocto_extra_param_needed is defined
+- name: Update Yocto extra kernel parameters if needed
+  when: yocto_extra_param_needed is defined
   block:
     - name: Mount the boot partition if needed
       command: /usr/share/update/mount_boot.sh
@@ -33,7 +34,8 @@
     - name: Umount the boot partition
       command: /usr/share/update/mount_boot.sh umount
       changed_when: true
-    - include_tasks: soft_restart_machine.yaml
+    - name: Perform soft restart if kernel parameters changed
+      include_tasks: soft_restart_machine.yaml
       when:
         - kernel_parameters_restart is defined
         - kernel_parameters_restart

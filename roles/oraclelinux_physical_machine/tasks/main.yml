@@ -69,7 +69,8 @@
     name: chrony-wait.service
     enabled: yes
 
-- when:
+- name: Setup pacemaker service if needed
+  when:
     - services['pacemaker.service'] is defined
   block:
     - name: Create pacemaker.service.d directory

@@ -31,7 +31,8 @@
     dest: /etc/syslog-ng/syslog-ng.conf
     mode: '0644'
   notify: Restart syslog-ng
-- when:
+- name: Configure syslog-ng TLS client certificates if needed
+  when:
     - syslog_tls_ca is defined
     - syslog_tls_key is defined
     - syslog_tls_server_ca is defined

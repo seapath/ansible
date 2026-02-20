@@ -11,7 +11,7 @@
         ceph_expansion_vg_list_pvs: "{{ ansible_lvm['pvs'] | dict2items | community.general.json_query(query) }}"
         ceph_expansion_vg_unit: "kib"
       vars:
-        query: "[?value.vg=='{{ lvm_volumes[0].data_vg }}'].key"
+        query: "[?value.vg=='{{ lvm_volumes[0].data_vg }}'].key"  # noqa: var-naming[no-reserved]
     - name: Get parted info for SD devices
       community.general.parted:
         # Get the name of the device by escaping the partition number
@@ -26,7 +26,7 @@
         ceph_expansion_vg_part_info: "{{ ceph_expansion_vg_parted_info.results | community.general.json_query(query) | first | first }}"
       vars:
         # The regex gets the number of the partition (Ex: /dev/nvme0n1p3 -> 3)
-        query: "[?item=='{{ item }}'] | [].partitions[?num==`{{ item | regex_search('[0-9.]*$') }}`].{oldsize: size, end: end, newsize: `{{ ceph_expansion_vg_new_pv_size | int * 1024 }}` }"
+        query: "[?item=='{{ item }}'] | [].partitions[?num==`{{ item | regex_search('[0-9.]*$') }}`].{oldsize: size, end: end, newsize: `{{ ceph_expansion_vg_new_pv_size | int * 1024 }}` }"  # noqa: var-naming[no-reserved]
       register: ceph_expansion_vg_parts
       loop: "{{ ceph_expansion_vg_list_pvs }}"
     - debug:  # noqa: name[missing]

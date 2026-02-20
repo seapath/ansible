@@ -56,7 +56,8 @@
     - deploy_vms_cluster_qcow2tmpuploadfolder is defined
     - deploy_vms_cluster_qcow2tmpuploadfolder != "/tmp"
 
-- when: deploy_vms_cluster_presencevm.status == "Undefined" or (hostvars[item].force is defined and hostvars[item].force)
+- name: Provision cluster VM (create if missing or forced)
+  when: deploy_vms_cluster_presencevm.status == "Undefined" or (hostvars[item].force is defined and hostvars[item].force)
   vars:
     vm_file: "{{ hostvars[item].vm_disk | default( deploy_vms_cluster_vms_disks_directory ~ '/' ~ item ~ '.qcow2') }}"
     vm_file_dest: "{{ deploy_vms_cluster_qcow2tmpuploadfolder + '/os.qcow2' }}"

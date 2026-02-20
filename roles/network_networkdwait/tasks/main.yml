@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- when: netplan_configurations is not defined
+- name: Configure systemd-networkd wait-online service (without netplan)
+  when: netplan_configurations is not defined
   block:
     - name: Create systemd-networkd-wait-online.service.d directory
       file:

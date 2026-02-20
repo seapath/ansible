@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- when:
+- name: Configure systemd-resolved DNS settings (no netplan)
+  when:
   - dns_servers is defined
   - netplan_configurations is not defined
   block:
