@@ -1,0 +1,98 @@
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+# This playbook setup SEAPATH in disconnected environments
+# The control machine must have the registry and images pre-staged
+
+---
+- name: Setup registry for disconnected deployment
+  hosts: localhost
+  become: true
+  gather_facts: true
+  roles:
+    - registry
+  vars:
+    registry_offline_mode: "{{ disconnected_mode | default(false) }}"
+    registry_images:
+      - name: "ceph"
+        tag: "v{{ cephadm_release }}"
+        source: "quay.io/ceph/ceph"
+        tar_file: "ceph-v{{ cephadm_release }}.tar"
+      - name: "registry"
+        tag: "2"
+        source: "docker.io/library/registry"
+        tar_file: "registry-2.tar"
+
+- name: Detect Seapath distribution
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  roles:
+    - detect_seapath_distro
+
+- name: Import seapath_setup_prerequiscentos playbook
+  import_playbook: seapath_setup_prerequiscentos.yaml
+  when: seapath_distro == "CentOS"
+
+- name: Import seapath_setup_prerequisoraclelinux playbook
+  import_playbook: seapath_setup_prerequisoraclelinux.yaml
+  when: seapath_distro == "OracleLinux"
+
+- name: Import seapath_setup_prerequisdebian playbook
+  import_playbook: seapath_setup_prerequisdebian.yaml
+  when: seapath_distro == "Debian"
+
+- name: Import seapath_setup_cockpit_plugins playbook
+  import_playbook: seapath_setup_cockpit_plugins.yaml
+  when: seapath_distro != "Yocto"
+
+- name: Import seapath_setup_prerequisyocto playbook
+  import_playbook: seapath_setup_prerequisyocto.yaml
+  when: seapath_distro == "Yocto"
+
+- name: Import seapath_setup_network playbook
+  import_playbook: seapath_setup_network.yaml
+
+- name: Import seapath_setup_timemaster playbook
+  import_playbook: seapath_setup_timemaster.yaml
+
+- name: Import seapath_setup_libvirt playbook
+  import_playbook: seapath_setup_libvirt.yaml
+
+- name: Import seapath_setup_snmp playbook
+  import_playbook: seapath_setup_snmp.yaml
+
+- name: Import cluster_setup_ceph playbook
+  import_playbook: cluster_setup_ceph.yaml
+  when: not is_using_cephadm | bool
+
+- name: Import cluster_setup_cephadm playbook
+  import_playbook: cluster_setup_cephadm.yaml
+  when: is_using_cephadm | bool
+
+- name: Import cluster_setup_libvirt playbook
+  import_playbook: cluster_setup_libvirt.yaml
+
+- name: Import cluster_setup_users playbook
+  import_playbook: cluster_setup_users.yaml
+
+- name: Import cluster_setup_ha playbook
+  import_playbook: cluster_setup_ha.yaml
+
+- name: Import seapath_setup_vmmgrapi playbook
+  import_playbook: seapath_setup_vmmgrapi.yaml
+
+- name: Restart all hosts
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  become: true
+  tasks:
+    - name: Restart to configure SEAPATH
+      reboot:
+      when:
+        - skip_reboot_setup is not defined or not skip_reboot_setup
+    - name: Wait for host to be online
+      wait_for_connection:
+        timeout: 300
