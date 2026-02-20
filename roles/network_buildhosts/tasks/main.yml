@@ -45,7 +45,8 @@
         path: "{{ hosts_path }}"
       register: network_buildhosts_hosts_file_exists
       become: false
-    - when: network_buildhosts_hosts_file_exists.stat.exists
+    - name: Apply custom hosts file content to /etc/hosts
+      when: network_buildhosts_hosts_file_exists.stat.exists
       block:
         - name: Read the hosts file content if it exists
           delegate_to: localhost

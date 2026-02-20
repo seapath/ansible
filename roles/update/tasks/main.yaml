@@ -8,7 +8,8 @@
   register: update_swupdate_version
   ignore_errors: yes
   changed_when: false
-- fail:
+- name: Fail if swupdate is not available
+  fail:
     msg: "Only Swupdate update is supported"
   when: update_swupdate_version.rc != 0
 
@@ -18,7 +19,8 @@
     path: /etc/corosync/corosync.conf
   register: update_corosync_conf
 
-- when: update_corosync_conf.stat.exists
+- name: Perform corosync ressource migration if cluster mode 
+  when: update_corosync_conf.stat.exists
   block:
     - name: Set hypervisor in maintenance mode
       command: crm node standby "{{ inventory_hostname }}"

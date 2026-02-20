@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- include_vars: "{{ seapath_distro }}.yml"
+- name: Load distribution-specific variables
+  include_vars: "{{ seapath_distro }}.yml"
 
 - name: Create OVS configuration
   template:

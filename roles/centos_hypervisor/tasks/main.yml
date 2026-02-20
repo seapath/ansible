@@ -65,7 +65,8 @@
     line: "RebootWatchdogSec=5min"
     state: present
 
-- when:
+- name: Configure CPU allocation for systemd slices
+  when:
     - cpusystem is defined
     - cpuuser is defined
     - cpumachines is defined

@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- include_vars: "{{ seapath_distro }}.yml"
+- name: Load distribution-specific variables
+  include_vars: "{{ seapath_distro }}.yml"
 
 - name: Synchronization of src vm_manager on the control machine to dest on the remote hosts
   ansible.posix.synchronize:

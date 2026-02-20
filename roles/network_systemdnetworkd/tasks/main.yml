@@ -19,7 +19,8 @@
     network_systemdnetworkd_service_name_udev: systemd-udev-trigger
   when: '"systemd-udev-trigger.service" in services'
 
-- import_tasks: profiles.yml
+- name: Import link/netdev/networks profiles
+  import_tasks: profiles.yml
 
 - name: Enable systemd-networkd
   ansible.builtin.service:

@@ -11,7 +11,8 @@
   register: network_sriovpool_pool_defined
   failed_when: network_sriovpool_pool_defined.rc > 1
   changed_when: false
-- when: network_sriovpool_pool_defined.rc != 0
+- name: Configure SRIOV network pool if needed
+  when: network_sriovpool_pool_defined.rc != 0
   block:
     - name: Copy libvirt xml SRIOV network pool file
       template:

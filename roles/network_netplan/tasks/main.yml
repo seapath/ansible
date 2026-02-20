@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- when: netplan_configurations is defined
+- name: Configure netplan if needed
+  when: netplan_configurations is defined
   block:
     - name: Create /etc/netplan directory
       file:

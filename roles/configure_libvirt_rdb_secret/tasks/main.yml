@@ -44,7 +44,8 @@
       register: configure_libvirt_rdb_secret_ceph_key
       run_once: true
 
-- when:
+- name: Create libvirt RBD secret
+  when:
     - configure_libvirt_rdb_secret_create_secret_pool
     - configure_libvirt_rdb_secret_secret_defined.stdout == ''
   block:

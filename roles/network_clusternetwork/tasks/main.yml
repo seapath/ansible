@@ -4,7 +4,8 @@
 ---
 - name: Populate service facts
   service_facts:
-- when:
+- name: Configure OVS team0 bridge for non-HSR mode
+  when:
     - cluster_protocol is not defined or cluster_protocol != "HSR" or hsr_mac_address is not defined
     - skip_recreate_team0_config is not defined or skip_recreate_team0_config is not true
   block:
@@ -38,7 +39,9 @@
       state: restarted
     when: conntrackd_ignore_ip_list is defined
     failed_when: false
-- when: cluster_protocol is defined and cluster_protocol == "HSR" and hsr_mac_address is defined
+
+- name: Configure HSR support for the cluster
+  when: cluster_protocol is defined and cluster_protocol == "HSR" and hsr_mac_address is defined
   block:
   - name: Copy hsr.sh script
     template:
