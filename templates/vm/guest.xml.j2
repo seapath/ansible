@@ -146,7 +146,7 @@
 {% if vm.direct_interfaces is defined %}
 {%     for interface in vm.direct_interfaces %}
         <interface type="direct" {% if interface.trustGuestRxFilters is defined and interface.trustGuestRxFilters %} trustGuestRxFilters="yes" {% endif %} >
-            <source dev="{{ interface.source }} {% if interface.mode  is defined %} mode="{{ interface.mode }}" {% endif %} "/>
+            <source dev="{{ interface.source }}" {% if interface.mode  is defined %} mode="{{ interface.mode }}" {% endif %}/>
             <mac address="{{ interface.mac_address }}"/>
             <model type="virtio"/>
         </interface>
