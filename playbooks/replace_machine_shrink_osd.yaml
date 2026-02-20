@@ -57,10 +57,12 @@
     offline_host: "{{ groups['offline_host'] is defined }}"
 
   tasks:
-    - import_role:
+    - name: Import default ceph role
+      import_role:
         name: ceph-defaults
 
-    - import_role:
+    - name: Import ceph facts role
+      import_role:
         name: ceph-facts
         tasks_from: container_binary
 
