@@ -1,0 +1,60 @@
+---
+- name: Verify default behavior
+  hosts: all
+  gather_facts: false
+  vars:
+    network_basics_unwanted:
+      - /etc/systemd/network/01-init.network
+      - /etc/systemd/network/00-init-dhcp.network
+      - /etc/systemd/network/00-init.network
+      - /etc/systemd/network/01-installer.network
+
+  tasks:
+    - name: Check unwanted files are absent
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop: "{{ network_basics_unwanted }}"
+      register: network_basics_unwanted_stats
+
+    - name: Assert unwanted files absent
+      ansible.builtin.assert:
+        that:
+          - not item.stat.exists
+        fail_msg: "{{ item.item }} should have been removed"
+      loop: "{{ network_basics_unwanted_stats.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Check required file exists
+      ansible.builtin.stat:
+        path: /etc/systemd/network/80-wired.network
+      register: network_basics_wired
+
+    - name: Assert required file exists + perms/owner/group
+      ansible.builtin.assert:
+        that:
+          - network_basics_wired.stat.exists
+          - network_basics_wired.stat.mode == "0640"
+          - network_basics_wired.stat.pw_name == "root"
+          - network_basics_wired.stat.gr_name == "systemd-network"
+        fail_msg: "80-wired.network missing or wrong permissions/ownership"
+
+    - name: Ensure keep file still exists (no wipe)
+      ansible.builtin.stat:
+        path: /etc/systemd/network/99-keep.network
+      register: network_basics_keep
+
+    - name: Assert keep file still exists
+      ansible.builtin.assert:
+        that:
+          - network_basics_keep.stat.exists
+
+    - name: Ensure netplan file still exists (no wipe)
+      ansible.builtin.stat:
+        path: /etc/netplan/50-cloud-init.yaml
+      register: network_basics_netplan
+
+    - name: Assert netplan still exists
+      ansible.builtin.assert:
+        that:
+          - network_basics_netplan.stat.exists
