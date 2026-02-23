@@ -1,0 +1,8 @@
+---
+- name: Converge
+  hosts: all
+  gather_facts: false
+  roles:
+    - role: network_basics
+  vars:
+    remove_all_network_config: true

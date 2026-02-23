@@ -22,3 +22,14 @@ provisioner:
 
 verifier:
   name: ansible
+
+scenario:
+  test_sequence:
+    - destroy
+    - create
+    - prepare
+    - converge
+    # - idempotence 
+    # Disable idempotence test: wipe a directory and deploy a file in it, does not produce idempotent action.
+    - verify
+    - destroy
