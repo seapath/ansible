@@ -1,0 +1,41 @@
+---
+- name: Prepare
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Ensure group systemd-network exists
+      ansible.builtin.group:
+        name: systemd-network
+        state: present
+
+    - name: Ensure directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - /etc/systemd/network
+        - /etc/netplan
+
+    - name: Create installer network files that role must remove
+      ansible.builtin.copy:
+        dest: "/etc/systemd/network/{{ item }}.network"
+        content: "dummy\n"
+        mode: "0644"
+      loop:
+        - 01-init
+        - 00-init-dhcp
+        - 00-init
+        - 01-installer
+
+    - name: Create a file that should remain in default mode
+      ansible.builtin.copy:
+        dest: /etc/systemd/network/99-keep.network
+        content: "keep\n"
+        mode: "0644"
+
+    - name: Create a netplan file (should remain in default mode)
+      ansible.builtin.copy:
+        dest: /etc/netplan/50-cloud-init.yaml
+        content: "network: {}\n"
+        mode: "0644"
