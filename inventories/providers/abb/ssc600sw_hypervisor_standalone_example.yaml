@@ -6,7 +6,7 @@ standalone_machine:
   children:
     hypervisors:
       hosts:
-        abb-demoHyp:
+        hypervisor:
           ansible_host: "192.168.216.78" # Change to your hypervisor IP
           network_interface: "enp0s20f0u7" # Change to your management interface
 
@@ -14,7 +14,7 @@ standalone_machine:
 
           nics_affinity:
           - enp88s0: 3  # Change to your NICs
-          upload_files: # This file is given with the ssc600 sw package
+          upload_files: # This file is given with the ssc600sw package
             - src: '../files/qemu.hook'
               dest: '/etc/libvirt/hooks/'
               mode: "0744"

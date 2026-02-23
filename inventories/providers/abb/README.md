@@ -10,24 +10,24 @@ https://techdoc.relays.protection-control.abb/r/SSC600-and-SSC600-SW-Engineering
 
 ## Structure
 
-- `ssc600_hypervisor_standalone_example.yaml`: The inventory for a standalone hypervisor
-- `ssc600_vm_example.yaml`: The inventory for the SSC600 VM
+- `ssc600sw_hypervisor_standalone_example.yaml`: The inventory for a standalone hypervisor
+- `ssc600sw_vm_example.yaml`: The inventory for the SSC600 VM
 
 ## Files needed
 
 Some files provided by ABB are needed to use these inventories:
 
-- ssc600\_disk.img.gz
+- ssc600sw\_disk.img.gz
 - qemu.hook
 
 To use them, they can be copied in the `files` directory at the root of ansible.
 
-> The raw image disk ssc600\_disk.img.gz has to be converted to qcow2 format to work on SEAPATH.
+> The raw image disk ssc600sw_disk.img.gz has to be converted to qcow2 format to work on SEAPATH.
 
 This can be done with the following commands:
 
 - `pigz -d ssc600sw_disk.img.gz`
-- `qemu-img convert -f raw -O qcow2 ssc600_disk.img ssc600_disk.qcow2`
+- `qemu-img convert -f raw -O qcow2 ssc600sw_disk.img ssc600sw_disk.qcow2`
 
 *Warning: Both the img.gz and the qcow2 files are less than 1Gib. However, the intermediate `ssc600sw_disk.img` file is 30GiB*
 
@@ -49,7 +49,7 @@ The example inventories have been created to run the SSC600 VM using 3 interface
 - enps0s2: "Process bus" interface
 - enps0s3: "Protection communication" interface
 
-![architecture](ssc600-example-architecture.png)
+![architecture](ssc600sw-example-architecture.png)
 
 ## Hypervisor setup
 
@@ -66,11 +66,11 @@ The example inventories have been created to run the SSC600 VM using 3 interface
 > On Debian add `grub_append: "default_hugepagesz=1G hugepagesz=1G hugepages=6"` on Yocto it can be configured at build time or
 with the Ansible variable `yocto_hugepages: 6`.
 
-The file `inventories/providers/abb/ssc600_hypervisor_standalone_example.yaml` can be used as hypervisor Ansible inventory example.
+The file `inventories/providers/abb/ssc600sw_hypervisor_standalone_example.yaml` can be used as hypervisor Ansible inventory example.
 
 ## SSC600 SW Ansible inventory
 
-You can use the `inventories/providers/abb/ssc600_vm_example.yaml` file as an example to create your custom VM inventory.
+You can use the `inventories/providers/abb/ssc600sw_vm_example.yaml` file as an example to create your custom VM inventory.
 
 Below is a list of all the variables that are supported by this inventory :
 * description: The libvirt description of the virtual machine.
