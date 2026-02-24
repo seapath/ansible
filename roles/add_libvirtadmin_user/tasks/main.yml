@@ -3,6 +3,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+- name: Define buffer directory
+  ansible.builtin.set_fact:
+    add_libvirtadmin_user_buffer_dir: "buffer"
+  run_once: true
+
 - name: Create Libvirt administration user
   user:
     name: "libvirtadmin"
@@ -10,11 +15,13 @@
     system: true
     group: libvirt
     create_home: true
+
 - name: Unlock the user
   replace:
       path: /etc/shadow
       regexp: '^libvirtadmin:!:'
       replace: 'libvirtadmin:*:'
+
 - name: Generate root SSH key
   user:
     name: "root"
@@ -30,25 +37,40 @@
     executable: /bin/bash
   register: add_libvirtadmin_user_root_home_dir
   changed_when: true
-- name: Fetch the root keyfile
-  fetch:
+
+- name: Compute cluster nodes list
+  ansible.builtin.set_fact:
+    add_libvirtadmin_user_cluster_nodes: >-
+      {{ (groups.get('hypervisors', []) | intersect(groups.get('cluster_machines', []))) }}
+
+- name: Fetch the root public key to controller 
+  ansible.builtin.fetch:
     src: "{{ add_libvirtadmin_user_root_home_dir.stdout }}/.ssh/id_rsa.pub"
-    dest: "buffer/{{ inventory_hostname }}-id_rsa.pub"
-    flat: true
-- name: Copy the key add to authorized_keys using Ansible module
+    dest: "{{ add_libvirtadmin_user_buffer_dir }}/"
+    flat: false
+
+- name: Fetch the SSH host ed25519 public key to controller
+  ansible.builtin.fetch:
+    src: "/etc/ssh/ssh_host_ed25519_key.pub"
+    dest: "{{ add_libvirtadmin_user_buffer_dir }}/"
+    flat: false
+
+- name: Copy cluster root keys into libvirtadmin authorized_keys
   ansible.posix.authorized_key:
     user: "libvirtadmin"
     state: present
-    key: "{{ lookup('file', 'buffer/' + item + '-id_rsa.pub') }}"
-  loop: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) }}"
-- name: Fetch the ssh keyfile
-  fetch:
-    src: "/etc/ssh/ssh_host_ed25519_key.pub"
-    dest: "buffer/{{ inventory_hostname }}-ssh_host_ed25519_key.pub"
-    flat: true
-- name: Populate the known_hosts files
-  known_hosts:
+    key: "{{ lookup('file', add_libvirtadmin_user_buffer_dir ~ '/' ~ item ~ '/root/.ssh/id_rsa.pub') }}"
+  loop: "{{ add_libvirtadmin_user_cluster_nodes }}"
+  loop_control:
+    label: "{{ item }}"
+  when: add_libvirtadmin_user_cluster_nodes | length > 0
+
+- name: Populate root known_hosts with cluster host keys
+  ansible.builtin.known_hosts:
     path: "{{ add_libvirtadmin_user_root_home_dir.stdout }}/.ssh/known_hosts"
     name: "{{ item }}"
-    key: "{{ item }} {{ lookup('file', 'buffer/' + item + '-ssh_host_ed25519_key.pub') }}"
-  loop: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) }}"
+    key: "{{ item }} {{ (lookup('file', add_libvirtadmin_user_buffer_dir ~ '/' ~ item ~ '/etc/ssh/ssh_host_ed25519_key.pub') | trim) }}"
+  loop: "{{ add_libvirtadmin_user_cluster_nodes }}"
+  loop_control:
+    label: "{{ item }}"
+  when: add_libvirtadmin_user_cluster_nodes | length > 0
