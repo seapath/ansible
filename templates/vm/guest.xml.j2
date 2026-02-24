@@ -116,17 +116,17 @@
 {% endif %}
 {% if vm.standalone_main_disk is defined %}
         <disk type="file" device="disk">
-           <driver name="qemu" type="{{ 'raw' if vm.disk_extract is defined and vm.disk_extract | bool is defined else 'qcow2' }}"/>
+           <driver name="qemu" type="{{ 'raw' if vm.disk_extract is defined and vm.disk_extract | bool else 'qcow2' }}"/>
            <source file="/var/lib/libvirt/images/{{ vm.standalone_main_disk }}"/>
            <target dev="vda" bus="virtio"/>
         </disk>
 {% endif %}
-{% if vm.additional_disk is defined %}
-{%     for disk in vm.additional_disk %}
+{% if vm.additional_disk is defined and vm.standalone_main_disk is defined %}
+{%     for file in vm.additional_disk %}
         <disk type="file" device="disk">
-           <driver name="qemu" type="{{ 'raw' if vm.disk_extract is defined and vm.disk_extract | bool is defined else 'qcow2' }}"/>
-           <source file="/var/lib/libvirt/images/{{ disk.disk_file }}"/>
-           <target dev="vda" bus="virtio"/>
+           <driver name="qemu" type="{{ 'raw' if vm.disk_extract is defined and vm.disk_extract | bool else 'qcow2' }}"/>
+           <source file="/var/lib/libvirt/images/{{ file }}"/>
+           <target dev="vd{{ 'bcdefghijklmnop'[loop.index0] }}" bus="virtio"/>
         </disk>
 {%     endfor %}
 {% endif %}

@@ -69,6 +69,18 @@
       vars:
         ansible_remote_tmp: "{{ deploy_vms_cluster_qcow2tmpuploadfolder | default(omit) }}"
       when: deploy_vms_cluster_disk_copy | bool
+    - name: "Copy additional disk on target for {{ item }}"
+      copy:
+        src: "{{ add_disk }}"
+        dest: "{{ deploy_vms_cluster_qcow2tmpuploadfolder }}/additional_{{ add_disk_idx }}.qcow2"
+        mode: "0644"
+      vars:
+        ansible_remote_tmp: "{{ deploy_vms_cluster_qcow2tmpuploadfolder | default(omit) }}"
+      loop: "{{ hostvars[item].additional_disk | default([]) }}"
+      loop_control:
+        loop_var: add_disk
+        index_var: add_disk_idx
+      when: deploy_vms_cluster_disk_copy | bool
     - name: "Create {{ item }}"
       cluster_vm:
         name: "{{ item }}"
@@ -86,6 +98,7 @@
         preferred_host: "{{ hostvars[item].preferred_host | default(omit) }}"
         crm_config_cmd: "{{ hostvars[item].crm_config_cmd | default(omit) }}"
         disk_bus: "{{ hostvars[item].disk_bus | default(omit) }}"
+        additional_disks: "{{ range(hostvars[item].additional_disk | default([]) | length) | map('string') | map('regex_replace', '^(.+)$', deploy_vms_cluster_qcow2tmpuploadfolder ~ '/additional_\\1.qcow2') | list }}"
         xml: >-
           {{ lookup('file', hostvars[item].xml_path)
                if hostvars[item].xml_path is defined
@@ -93,10 +106,18 @@
                if hostvars[item].vm_template is defined
              else lookup('file',deploy_vms_cluster_vms_disks_directory + '/' + item + '.xml')
              | replace('\n', '') }}
-    - name: Remove temporary file
+    - name: Remove temporary system disk file
       ansible.builtin.file:
         path: "{{ vm_file_dest }}"
         state: absent
+    - name: "Remove temporary additional disk files for {{ item }}"
+      file:
+        path: "{{ deploy_vms_cluster_qcow2tmpuploadfolder }}/additional_{{ add_disk_idx }}.qcow2"
+        state: absent
+      loop: "{{ hostvars[item].additional_disk | default([]) }}"
+      loop_control:
+        loop_var: add_disk
+        index_var: add_disk_idx
     - name: Wait for VM connections
       ansible.builtin.wait_for_connection:
       delegate_to: "{{ item }}"
