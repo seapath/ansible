@@ -201,6 +201,14 @@ options:
       - Optional parameter relevant only if I(command) is C(clone)
     type: bool
     default: false
+  additional_disks:
+    description:
+      - Dictionary mapping device names to qcow2 file paths for additional disks
+      - Each key is a device name (e.g. "vdb", "vdc") and each value is a path
+        to a qcow2 file to import
+      - Optional parameter relevant only if I(command) is C(create)
+    type: dict
+    default: {}
   disk_bus:
     description:
       - Disk bus type to use for the VM's disk (virtio, scsi, ide, etc.)
@@ -548,7 +556,7 @@ def run_module():
         command=dict(type="str", required=True, choices=commands_list),
         name=dict(type="str", required=False, aliases=["guest"]),
         xml=dict(type="str", required=False),
-        data_disk=dict(type="str", required=False),
+        additional_disks=dict(type="dict", required=False, default={}),
         force=dict(type="bool", required=False, default=False),
         enable=dict(type="bool", required=False, default=True),
         system_image=dict(type="str", required=False),
@@ -668,6 +676,7 @@ def run_module():
         "clear_pacemaker_utilization", False
     )
     disk_bus = args.get("disk_bus", "virtio")
+    additional_disks = args.get("additional_disks", {})
 
     vm_name_command_list = commands_list.copy()
     vm_name_command_list.remove("list_vms")
@@ -689,6 +698,13 @@ def run_module():
                 module.fail_json(
                     msg="`system_image` doesn't exist or is not a file`"
                 )
+            for dev, filepath in additional_disks.items():
+                if not os.path.isfile(filepath):
+                    module.fail_json(
+                        msg="additional_disks[{}] '{}' doesn't exist or is not a file".format(
+                            dev, filepath
+                        )
+                    )
             vm_options = {
                 "name": vm_name,
                 "base_xml": vm_config,
@@ -710,6 +726,7 @@ def run_module():
                 "pacemaker_params": pacemaker_params,
                 "pacemaker_utilization": pacemaker_utilization,
                 "disk_bus": disk_bus,
+                "additional_disks": additional_disks,
             }
             vm_manager.create(vm_options)
         elif command == "clone":
