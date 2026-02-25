@@ -9,6 +9,7 @@
     rsync_opts:
       - "--chown=root:root"
       - "--exclude=*.j2"
+
 - name: Copy backup-restore templates
   template:
     src: "{{ item }}"
@@ -16,6 +17,16 @@
     mode: '0755'
   with_fileglob:
     - scripts/*.j2
+
+- name: Ensure deployed scripts are owned by root
+  ansible.builtin.file:
+    path: /usr/local/bin/{{ item | basename | regex_replace('\.j2$', '') }}
+    owner: root
+    group: root
+  loop: "{{ lookup('ansible.builtin.fileglob', role_path ~ '/files/scripts/*', wantlist=True) }}"
+  loop_control:
+    label: "{{ item | basename }}"
+
 - name: Create /etc/backup-restore.conf file
   file:
     path: "/etc/backup-restore.conf"
