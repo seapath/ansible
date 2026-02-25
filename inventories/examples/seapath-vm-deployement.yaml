@@ -43,6 +43,10 @@ VMs:
       # Configuration part. These variables only work with the guest.xml.j2 template
       vm_features: ["secure-boot"] # features for non real-time VM with secure boot enabled
       nb_cpu: 1 # TODO : Number of vCPU of your VM
+      # Additional disks (optional). Keys are device names, values are qcow2
+      # file paths. In cluster mode, imported into Ceph as data_<vmname>_<dev>.
+      additional_disk:
+        vdb: "../files/data.qcow2" # TODO: Replace with your disk image
       bridges:
         - name: "br0"
           mac_address: "52:54:00:e4:ff:03" # TODO

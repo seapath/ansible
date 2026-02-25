@@ -319,6 +319,16 @@ EXAMPLES = r"""
         cpu: 4
         memory: 2048
 
+# Create a VM with additional disks
+- name: Create guest0 with an extra data disk
+  cluster_vm:
+    name: guest0
+    command: create
+    system_image: my_disk.qcow2
+    xml: "{{ lookup('template', 'my_vm_config.xml.j2') }}"
+    additional_disks:
+        vdb: /tmp/additional_vdb.qcow2
+
 # Remove a VM
 - name: Remove guest0
   cluster_vm:
