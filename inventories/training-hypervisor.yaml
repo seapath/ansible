@@ -8,7 +8,7 @@ standalone_machine:
       hosts:
         hypervisor:
           # Admin network settings
-          ansible_host: 192.168.2.31
+          ansible_host: 192.168.2.32
           network_interface: enp3s0
 
           # PTP configuration.
@@ -53,10 +53,9 @@ cluster_machines:
 
 all:
   vars:
-    ansible_ssh_private_key_file: ~/.ssh/seapath-training-key
     ansible_connection: ssh
     ansible_python_interpreter: /usr/bin/python3
     ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
-    ansible_ssh_private_key_file: /home/seapath/seapath/labs/seapath-training-key
+    ansible_ssh_private_key_file: ~/.ssh/seapath-training-key
 
 ...

@@ -158,8 +158,10 @@ clients:
     rbd:
       name: "rbd"
       application: "rbd"
-      pg_autoscale_mode: on
+      pg_autoscale_mode: off
       target_size_ratio: 1
+      pg_num: 128
+      pgp_num: 128
     pools:
       - "{{ rbd }}"
     keys:
@@ -189,5 +191,4 @@ all:
     ansible_connection: ssh
     ansible_python_interpreter: /usr/bin/python3
     ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
-    ansible_ssh_private_key_file: /home/seapath/seapath/labs/seapath-training-key
 ...
