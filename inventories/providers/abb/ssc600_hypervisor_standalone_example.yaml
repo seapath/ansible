@@ -26,7 +26,7 @@ standalone_machine:
     ansible_user: admin # Change to `ansible` if using seapath debian
 
     gateway_addr: "192.168.216.1" # Change to your gateway IP
-    dns_serverts: "192.168.216.1" # Change to your DNS IP. Remove if not needed.
+    dns_servers: "192.168.216.1" # Change to your DNS IP. Remove if not needed.
     ip_addr: "{{ ansible_host }}"
     apply_network_config: true
 
