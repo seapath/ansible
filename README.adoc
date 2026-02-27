@@ -298,6 +298,23 @@ For advanced SEAPATH scenarios and configuration, refer to :
 * The https://lf-energy.atlassian.net/wiki/spaces/SEAP/overview?homepageId=31817739[SEAPATH Wiki] explaining the use cases and the scenarios
 * The seapath.ansible collection documentation on https://galaxy.ansible.com/ui/repo/published/seapath/ansible/[ansible galaxy] describing all the roles and variables.
 
+
+== Run molecule test
+https://docs.ansible.com/projects/molecule/[Molecule] is used to perform role unittest. It can be run from specific role directory with:
+```
+molecule test --scenario-name default  --report --command-borders
+```
+
+All test can be triggered from the seapath-ansible root directory:
+```
+tox - e molecule
+```
+It requires tox, that can be installed with:
+```
+python3 -m pip install tox
+```
+
+
 == Contributing to SEAPATH
 
 === Continuous integration
