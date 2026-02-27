@@ -115,6 +115,7 @@
     uid: 1000
     password: "{{ admin_passwd | default(omit) }}"
     append: no
+  no_log: true
 - name: Add authorized keys to admin user
   ansible.posix.authorized_key:
     user: "{{ admin_user }}"

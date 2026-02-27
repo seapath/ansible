@@ -43,6 +43,7 @@
       changed_when: false
       register: configure_libvirt_rdb_secret_ceph_key
       run_once: true
+      no_log: true
 
 - name: Create libvirt RBD secret
   when:
@@ -64,3 +65,4 @@
   - name: Set key in libvirt secret
     command: 'virsh secret-set-value --secret "{{ configure_libvirt_rdb_secret_libvirt_uuid_rbd }}" --base64 "{{ configure_libvirt_rdb_secret_ceph_key.stdout }}"'
     changed_when: true
+    no_log: true
