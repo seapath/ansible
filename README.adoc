@@ -108,12 +108,12 @@ NOTE: Later you must prefix all ansible command with `cqfd run`.
 === Use Ansible without cqfd
 
 Without `cqfd` you need to install the dependencies manually.
-The client machine that is going to run Ansible must have Ansible 2.10 installed
-an Inventory file and playbook files to play. To install Ansible 2.10 on this
+The client machine that is going to run Ansible must have Ansible 2.16 installed
+an Inventory file and playbook files to play. To install Ansible 2.16 on this
 machine please refer to the Ansible documentation at
 https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html.
 
-*Warning:* Currently only the Ansible version 2.10 is supported. Other versions
+*Warning:* Currently only the Ansible version 2.16 is supported. Other versions
 will not work.
 
 Also you must also install the `netaddr` and `six` python3 module as well as the `rsync` package.
