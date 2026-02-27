@@ -25,6 +25,7 @@ echo "Test Ansible version is 2.16"
 if ! ansible --version | grep -q 'core 2.16' ; then
     echo "Error: Installed version of ansible must match 2.16" 1>&2
     echo "See README.adoc for instructions" 1>&2
+    exit 1
 fi
 
 echo "Test ansible-galaxy is installed"
