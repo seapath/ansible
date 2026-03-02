@@ -14,6 +14,15 @@
          | selectattr('type', 'in', ['dpdk', 'dpdkvhostuserclient'])
          | list | length > 0 }}
   when: seapath_distro == "Debian"
+
+- name: Load vfio-pci module for DPDK
+  community.general.modprobe:
+    name: vfio-pci
+    state: present
+    persistent: present
+  when:
+    - dpdk_enabled | bool
+
 - name: Switch to OVS with DPDK support
   community.general.alternatives:
     name: ovs-vswitchd
@@ -21,6 +30,7 @@
   when:
     - seapath_distro == "Debian"
     - dpdk_enabled | bool
+
 - name: Switch to OVS without DPDK support
   community.general.alternatives:
     name: ovs-vswitchd
