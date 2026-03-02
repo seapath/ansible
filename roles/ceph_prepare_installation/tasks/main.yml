@@ -118,8 +118,8 @@
                     number: "{{ lvm_volumes[0].device_number }}"
                     label: gpt
                     name: ""
-                    ceph_prepare_installation_part_start: "{{ ceph_prepare_installation_part_start }}"
-                    ceph_prepare_installation_part_end: "{{ ceph_prepare_installation_part_end }}"
+                    part_start: "{{ ceph_prepare_installation_part_start }}"
+                    part_end: "{{ ceph_prepare_installation_part_end }}"
                     flags:
                       - lvm
                     state: present
