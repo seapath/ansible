@@ -1,0 +1,34 @@
+version: 0.1
+log:
+  level: info
+  fields:
+    service: registry
+storage:
+  filesystem:
+    rootdirectory: /var/lib/registry
+  cache:
+    blobdescriptor: inmemory
+  delete:
+    enabled: true
+http:
+  addr: 0.0.0.0:5000
+  headers:
+    X-Content-Type-Options: [nosniff]
+    X-Frame-Options: [DENY]
+    X-XSS-Protection: [1; mode=block]
+{% if registry_tls_enabled | default(false) %}
+  tls:
+    certificate: /certs/server.crt
+    key: /certs/server.key
+{% endif %}
+{% if registry_auth_enabled | default(false) %}
+auth:
+  htpasswd:
+    realm: Registry Realm
+    path: /auth/htpasswd
+{% endif %}
+health:
+  storagedriver:
+    enabled: true
+    interval: 10s
+    threshold: 3

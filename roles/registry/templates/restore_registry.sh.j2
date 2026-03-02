@@ -1,0 +1,70 @@
+#!/bin/bash
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+# Restore script for registry
+# This script restores registry data and imports images from tar files
+
+set -euo pipefail
+
+REGISTRY_PATH="{{ registry_path }}"
+BACKUP_PATH="{{ registry_backup_path }}"
+
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 <backup_directory>"
+    echo "Available backups:"
+    ls -la "${BACKUP_PATH}" | grep backup_ || echo "No backups found"
+    exit 1
+fi
+
+BACKUP_DIR="${BACKUP_PATH}/$1"
+
+if [ ! -d "${BACKUP_DIR}" ]; then
+    echo "Error: Backup directory ${BACKUP_DIR} does not exist"
+    exit 1
+fi
+
+echo "Starting registry restore from ${BACKUP_DIR} at $(date)"
+
+# Stop registry container
+echo "Stopping registry container..."
+podman stop {{ registry_container_name }} || true
+
+# Clean existing data
+echo "Cleaning existing registry data..."
+rm -rf "${REGISTRY_PATH}/data"/*
+
+# Restore registry data
+echo "Restoring registry data..."
+tar -xzf "${BACKUP_DIR}/registry_data.tar.gz" -C "${REGISTRY_PATH}/data"
+
+# Load images
+echo "Loading images..."
+if [ -f "${BACKUP_DIR}/images/registry-2.tar" ]; then
+    podman load -i "${BACKUP_DIR}/images/registry-2.tar"
+fi
+
+if [ -f "${BACKUP_DIR}/images/ceph-v{{ cephadm_release }}.tar" ]; then
+    podman load -i "${BACKUP_DIR}/images/ceph-v{{ cephadm_release }}.tar"
+fi
+
+# Restart registry container
+echo "Restarting registry container..."
+podman start {{ registry_container_name }}
+
+# Wait for registry to be ready
+echo "Waiting for registry to be ready..."
+for i in {1..30}; do
+{% if registry_tls_enabled | default(false) %}
+    if curl -sk https://localhost:{{ registry_port }}/v2/ > /dev/null; then
+{% else %}
+    if curl -s http://localhost:{{ registry_port }}/v2/ > /dev/null; then
+{% endif %}
+        echo "Registry is ready"
+        break
+    fi
+    echo "Waiting for registry... (${i}/30)"
+    sleep 2
+done
+
+echo "Restore completed successfully at $(date)"
