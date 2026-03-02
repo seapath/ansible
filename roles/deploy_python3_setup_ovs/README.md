@@ -8,7 +8,9 @@ No requirement.
 
 ## Role Variables
 
-No variable.
+| Variable                             | Default | Description                                                                                                            |
+|--------------------------------------|---------|------------------------------------------------------------------------------------------------------------------------|
+| `deploy_python3_setup_ovs_qemu_user` | `qemu`  | System user that runs QEMU guests. Used for ownership of the OVS VM socket directory. Set to `libvirt-qemu` on Debian. |
 
 ## Example Playbook
 

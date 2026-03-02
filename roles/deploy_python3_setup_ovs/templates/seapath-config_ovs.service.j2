@@ -10,6 +10,9 @@ Before=systemd-networkd.service
 [Service]
 Type=oneshot
 RemainAfterExit=true
+ExecStartPre=/bin/mkdir -p /var/run/openvswitch/vm-sockets
+ExecStartPre=/bin/chown {{ deploy_python3_setup_ovs_qemu_user }}:root /var/run/openvswitch/vm-sockets
+ExecStartPre=/bin/chmod 0750 /var/run/openvswitch/vm-sockets
 ExecStart=/usr/local/bin/setup_ovs
 
 [Install]
