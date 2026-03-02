@@ -3,3 +3,4 @@
 # SPDX-License-Identifier: Apache-2.0
 
 deploy_python3_setup_ovs_pip_options: "--root-user-action=ignore --no-build-isolation --prefix=/usr/"
+deploy_python3_setup_ovs_qemu_user: libvirt-qemu

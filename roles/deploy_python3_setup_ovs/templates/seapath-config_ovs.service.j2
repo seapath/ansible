@@ -10,8 +10,11 @@ Before=systemd-networkd.service
 [Service]
 Type=oneshot
 RemainAfterExit=true
+{% if 'hypervisors' in group_names and deploy_python3_setup_ovs_qemu_user is defined %}
 ExecStartPre=/bin/mkdir -p /var/run/openvswitch/vm-sockets
-ExecStartPre=/bin/chown libvirt-qemu:root /var/run/openvswitch/vm-sockets
+ExecStartPre=/bin/chown {{ deploy_python3_setup_ovs_qemu_user }}:root /var/run/openvswitch/vm-sockets
+ExecStartPre=/bin/chmod 0750 /var/run/openvswitch/vm-sockets
+{% endif %}
 ExecStart=/usr/local/bin/setup_ovs
 
 [Install]
