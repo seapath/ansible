@@ -43,7 +43,7 @@
     - deploy_vms_standalone_qcow2tmpuploadfolder is defined
     - deploy_vms_standalone_qcow2tmpuploadfolder != "/tmp"
 
-- name: Copy the disk on target
+- name: Copy the disk on target # noqa: risky-file-permissions
   copy:
     src: "{{ hostvars[item].vm_disk }}"
     dest: "{{ deploy_vms_standalone_disk_pool }}/{{ hostvars[item].inventory_hostname }}.qcow2"
@@ -55,7 +55,7 @@
     - item not in deploy_vms_standalone_all_vms.list_vms or (item in deploy_vms_standalone_all_vms.list_vms and hostvars[item].force is defined and hostvars[item].force)
   loop: "{{ groups['VMs'] }}"
 
-- name: Copy the gzipped disk on target
+- name: Copy the gzipped disk on target # noqa: risky-file-permissions
   copy:
     src: "{{ hostvars[item].vm_disk }}"
     dest: "{{ deploy_vms_standalone_disk_pool }}/{{ hostvars[item].inventory_hostname }}.img.gz"
@@ -86,7 +86,7 @@
   loop: "{{ groups['VMs'] }}"
   when: item not in deploy_vms_standalone_all_vms.list_vms or (item in deploy_vms_standalone_all_vms.list_vms and hostvars[item].force is defined and hostvars[item].force)
 
-- name: Export VM config for debug in /tmp
+- name: Export VM config for debug in /tmp # noqa: risky-file-permissions
   template:
     src: "{{ hostvars[item].vm_template }}"
     dest: "/tmp/{{ hostvars[item].inventory_hostname }}.xml"

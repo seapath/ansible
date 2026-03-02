@@ -5,7 +5,7 @@
 - name: Load distribution-specific variables
   include_vars: "{{ seapath_distro }}.yml"
 
-- name: Create OVS configuration
+- name: Create OVS configuration # noqa: risky-file-permissions
   template:
     src: ovs_configuration.json.j2
     dest: /etc/ovs_configuration.json

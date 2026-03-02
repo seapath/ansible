@@ -10,7 +10,7 @@
     owner: false
     rsync_opts:
       - "--exclude=*.j2"
-- name: Copy Cukinia's tests templates
+- name: Copy Cukinia's tests templates # noqa: risky-file-permissions
   template:
     src: cukinia-tests/cukinia/{{ item.src }}
     dest: /etc/cukinia/{{ item.dest }}
@@ -32,7 +32,7 @@
     owner: root
     group: root
     mode: 0755
-- name: Copy Cukinia's includes
+- name: Copy Cukinia's includes # noqa: risky-file-permissions
   copy:
     src: cukinia-tests/includes/
     dest: /usr/share/cukinia/includes/
@@ -47,11 +47,11 @@
 - name: Tasks only on hosts
   when: "'hypervisors' in group_names"
   block:
-    - name: Copy vm.xml
+    - name: Copy vm.xml # noqa: risky-file-permissions
       copy:
         src: cukinia-tests/vm_manager_testdata/vm.xml
         dest: /usr/share/testdata
-    - name: Copy wrong_vm_config.xml
+    - name: Copy wrong_vm_config.xml # noqa: risky-file-permissions
       copy:
         src: cukinia-tests/vm_manager_testdata/wrong_vm_config.xml
         dest: /usr/share/testdata

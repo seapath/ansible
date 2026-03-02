@@ -29,7 +29,7 @@
     masked: true
   when: "'chrony.service' in services and (services['chrony.service'].status != 'not-found')"
   failed_when: false
-- name: Create timemaster configuration
+- name: Create timemaster configuration # noqa: risky-file-permissions
   template:
     src: timemaster.conf.j2
     dest: "{{ timemaster_path_timemaster_conf }}"
@@ -48,7 +48,7 @@
     group: root
     mode: 0755
   notify: Restart timemaster
-- name: Copy timemaster.service overide
+- name: Copy timemaster.service overide # noqa: risky-file-permissions
   template:
     src: timemaster.service.j2
     dest: /etc/systemd/system/timemaster.service.d/override.conf

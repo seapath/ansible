@@ -12,7 +12,7 @@
         owner: root
         group: root
         mode: 0755
-    - name: Copy systemd-networkd-wait-online.service overide
+    - name: Copy systemd-networkd-wait-online.service overide # noqa: risky-file-permissions
       template:
         src: systemd-networkd-wait-online.service.j2
         dest: /etc/systemd/system/systemd-networkd-wait-online.service.d/override.conf

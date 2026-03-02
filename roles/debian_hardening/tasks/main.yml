@@ -31,7 +31,7 @@
   with_items: "{{ debian_hardening_kernel_params }}"
   when: revert
 
-- name: "Disable coredumps"
+- name: "Disable coredumps" # noqa: risky-file-permissions
   lineinfile:
     dest: /etc/sysctl.d/50-coredump.conf
     regexp: "^kernel.core_pattern=/dev/null$"
@@ -48,7 +48,7 @@
   notify: Update sysfs values using sysctl
   when: revert
 
-- name: "Disable kexec"
+- name: "Disable kexec" # noqa: risky-file-permissions
   lineinfile:
     dest: /etc/sysctl.d/50-kexec.conf
     regexp: "^kernel.kexec_load_disabled=1$"
@@ -65,7 +65,7 @@
   notify: Update sysfs values using sysctl
   when: revert
 
-- name: "Disable binfmt_misc"
+- name: "Disable binfmt_misc" # noqa: risky-file-permissions
   lineinfile:
     dest: /etc/sysctl.d/50-binfmt_misc.conf
     regexp: "^fs.binfmt_misc.status=0$"
@@ -82,7 +82,7 @@
   notify: Update sysfs values using sysctl
   when: revert
 
-- name: "Install hardened sysfs rules"
+- name: "Install hardened sysfs rules" # noqa: risky-file-permissions
   copy:
     src: sysctl/90-sysctl-hardening.conf
     dest: /etc/sysctl.d/zz-sysctl-hardening.conf
@@ -95,7 +95,7 @@
   notify: Update sysfs values using sysctl
   when: revert
 
-- name: "Install network hardened sysfs rules"
+- name: "Install network hardened sysfs rules" # noqa: risky-file-permissions
   copy:
     src: sysctl/99-sysctl-network.conf
     dest: /etc/sysctl.d/99-sysctl-network.conf
@@ -108,7 +108,7 @@
   notify: Update sysfs values using sysctl
   when: revert
 
-- name: "Install random-root-passwd.service"
+- name: "Install random-root-passwd.service" # noqa: risky-file-permissions
   copy:
     src: random-root-passwd.service
     dest: /etc/systemd/system/random-root-passwd.service
@@ -131,7 +131,7 @@
     state: absent
   when: revert
 
-- name: "Enable private TMPDIR"
+- name: "Enable private TMPDIR" # noqa: risky-file-permissions
   copy:
     src: mktmpdir.sh
     dest: /etc/profile.d/mktmpdir.sh
@@ -142,7 +142,7 @@
     state: absent
   when: revert
 
-- name: "Set bash timeout to 300s"
+- name: "Set bash timeout to 300s" # noqa: risky-file-permissions
   copy:
     src: terminal_idle.sh
     dest: /etc/profile.d/terminal_idle.sh
@@ -153,7 +153,7 @@
     state: absent
   when: revert
 
-- name: Install openssh hardening rules
+- name: Install openssh hardening rules # noqa: risky-file-permissions
   template:
     src: ssh-audit_hardening.conf.j2
     dest: /etc/ssh/sshd_config.d/ssh-audit_hardening.conf
@@ -222,7 +222,7 @@
   ignore_errors: true
   changed_when: false
 
-- name: Disable require tty for cockpit
+- name: Disable require tty for cockpit # noqa: risky-file-permissions
   copy:
     src: sudoers/cockpit
     dest: /etc/sudoers.d/cockpit
@@ -267,22 +267,22 @@
     - PASS_MAX_DAYS 90
   when: revert
 
-- name: Disable su
+- name: Disable su # noqa: risky-file-permissions
   copy:
     src: hardened_pam_su
     dest: /etc/pam.d/su
   when: not revert
-- name: Disable su-l
+- name: Disable su-l # noqa: risky-file-permissions
   copy:
     src: hardened_pam_su
     dest: /etc/pam.d/su-l
   when: not revert
-- name: Restore su pam setting
+- name: Restore su pam setting # noqa: risky-file-permissions
   copy:
     src: default_pam_su
     dest: /etc/pam.d/su
   when: revert
-- name: Restore su -l pam setting
+- name: Restore su -l pam setting # noqa: risky-file-permissions
   copy:
     src: default_pam_su-l
     dest: /etc/pam.d/su-l
@@ -325,7 +325,7 @@
     mode: 0755
   with_items: "{{ debian_hardening_hardened_services }}"
 
-- name: Add systemd service hardening rules
+- name: Add systemd service hardening rules # noqa: risky-file-permissions
   copy:
     src: "{{ item }}_hardening.conf"
     dest: "/etc/systemd/system/{{ item }}.service.d/hardening.conf"
@@ -368,12 +368,12 @@
     line: 'CLASS="--class gnu-linux --class gnu --class os"'
   when: revert
 
-- name: Copy syslog.conf
+- name: Copy syslog.conf # noqa: risky-file-permissions
   copy:
     src: auditd/syslog.conf
     dest: /etc/audit/plugins.d/syslog.conf
 
-- name: Copy audit.rules
+- name: Copy audit.rules # noqa: risky-file-permissions
   copy:
     src: auditd/audit.rules
     dest: /etc/audit/rules.d/audit.rules

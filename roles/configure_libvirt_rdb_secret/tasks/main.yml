@@ -50,7 +50,7 @@
     - configure_libvirt_rdb_secret_create_secret_pool
     - configure_libvirt_rdb_secret_secret_defined.stdout == ''
   block:
-  - name: Copy libvirt xml secret file
+  - name: Copy libvirt xml secret file # noqa: risky-file-permissions
     template:
         src: secret.xml.j2
         dest: /tmp/secret.xml

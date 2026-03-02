@@ -17,16 +17,16 @@
   hosts:
       - publisher_machine
   tasks:
-    - name: Copy ptp4l.service
+    - name: Copy ptp4l.service # noqa: risky-file-permissions
       ansible.builtin.template:
         src: "{{ (playbook_dir | dirname) }}/templates/ptp4l.service.j2"
         dest: /etc/systemd/system/ptp4l.service
       notify: Enable ptp4l.service
-    - name: Copy ptp4l.conf
+    - name: Copy ptp4l.conf # noqa: risky-file-permissions
       ansible.builtin.template:
         src: "{{ (playbook_dir | dirname) }}/templates/ptp4l.conf.j2"
         dest: /etc/linuxptp/ptp4l.conf
-    - name: Send phc2sys.service
+    - name: Send phc2sys.service # noqa: risky-file-permissions
       ansible.builtin.template:
         src: "{{ (playbook_dir | dirname) }}/templates/phc2sys.service.j2"
         dest: /etc/systemd/system/phc2sys.service

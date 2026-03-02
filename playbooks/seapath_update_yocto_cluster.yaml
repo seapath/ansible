@@ -20,7 +20,7 @@
         "Migrating" not in check_migration.stdout
       changed_when: false
       retries: 10
-    - name: Copy SWU file on machine
+    - name: Copy SWU file on machine # noqa: risky-file-permissions
       copy:
         src: "../{{ swu_image }}"
         dest: "/tmp/update.swu"

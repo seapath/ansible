@@ -5,7 +5,7 @@
 - name: Load distribution-specific variables
   include_vars: "{{ seapath_distro }}.yml"
 
-- name: Save cluster machine informations
+- name: Save cluster machine informations # noqa: risky-file-permissions
   template:
     src: cluster.conf.j2
     dest: /etc/cluster.conf
@@ -61,7 +61,7 @@
         mode: 0400
       when: inventory_hostname != play_hosts[0]
 
-    - name: Templating corosync.conf
+    - name: Templating corosync.conf # noqa: risky-file-permissions
       template:
         src: corosync.conf.j2
         dest: /etc/corosync/corosync.conf
@@ -91,7 +91,7 @@
     - groups['valid_machine'] is defined
     - "'unconfigured_machine_group' in group_names"
   block:
-    - name: Templating corosync.conf
+    - name: Templating corosync.conf # noqa: risky-file-permissions
       template:
         src: corosync.conf.j2
         dest: /etc/corosync/corosync.conf

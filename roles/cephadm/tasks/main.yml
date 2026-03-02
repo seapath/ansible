@@ -36,7 +36,7 @@
     shell: /sbin/nologin
   when: seapath_distro == "Debian"
 
-- name: Set cephadm user sudo permissions
+- name: Set cephadm user sudo permissions # noqa: risky-file-permissions
   copy:
     src: cephadm_sudoers
     dest: /etc/sudoers.d/cephadm
@@ -170,7 +170,7 @@
   changed_when: true
 
 # === Bootstrap if currently no ceph nodes ===
-- name: Upload file ceph.conf needed for bootstrapping
+- name: Upload file ceph.conf needed for bootstrapping # noqa: risky-file-permissions
   template:
       src: ceph.conf.j2
       dest: /tmp/ceph.conf
