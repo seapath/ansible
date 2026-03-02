@@ -1,0 +1,54 @@
+# Copyright (C) 2025, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+name: CI
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ansible-lint:
+    name: Ansible Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install dependencies
+        run: |
+          pip install ansible-core~=2.16.0 ansible-lint
+          ansible-galaxy collection install -r ansible-requirements.yaml
+
+      - name: Setup Ansible environment
+        run: |
+          sudo mkdir -p /etc/ansible/hosts /etc/ansible/roles
+          sudo cp inventories/examples/seapath-cluster.yaml /etc/ansible/hosts/hosts.yaml
+          sudo cp -r ceph-ansible/roles/* /etc/ansible/roles/
+          cp src/ceph-ansible-site.yaml ceph-ansible/site.yml
+
+      - name: Run ansible-lint
+        run: ansible-lint -c ansible-lint.conf
+
+  ci-debian:
+    needs: ansible-lint
+    uses: ./.github/workflows/ci-debian.yml
+
+  ci-oraclelinux:
+    needs: ansible-lint
+    uses: ./.github/workflows/ci-oraclelinux.yml
+
+  ci-yocto:
+    needs: ansible-lint
+    uses: ./.github/workflows/ci-yocto.yml
+
+  ci-centos:
+    needs: ansible-lint
+    uses: ./.github/workflows/ci-centos.yml
