@@ -69,7 +69,7 @@
 - name: Extract the gzipped disk on target
   command:
     cmd: "gzip -d -f {{ deploy_vms_standalone_disk_pool }}/{{ hostvars[item].inventory_hostname }}.img.gz"
-    creates: "{{ hostvars[item].inventory_hostname }}.img"
+    creates: "{{ deploy_vms_standalone_disk_pool }}/{{ hostvars[item].inventory_hostname }}.img"
   when:
     - deploy_vms_standalone_disk_copy | bool
     - hostvars[item].disk_extract is defined
