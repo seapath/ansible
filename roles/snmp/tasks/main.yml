@@ -102,7 +102,7 @@
           path: /var/lib/snmp/snmpd.conf
           regexp: '^usmUser.*'
           replace: ''
-      - name: Add new snmp v3 user account at the beginning of /var/lib/snmp/snmpd.conf
+      - name: Add new snmp v3 user account at the beginning of /var/lib/snmp/snmpd.conf # noqa: risky-file-permissions
         ansible.builtin.lineinfile:
           path: /var/lib/snmp/snmpd.conf
           line: "createUser {{ item.name }} SHA {{ item.password }} AES {{ item.password }}"

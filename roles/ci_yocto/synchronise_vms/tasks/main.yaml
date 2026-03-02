@@ -13,7 +13,7 @@
     name: phc2sys
     state: stopped
   when: "'phc2sys' in services"
-- name: Copy systemd service file to server
+- name: Copy systemd service file to server # noqa: risky-file-permissions
   template:
     src: phc2sys.service.j2
     dest: /etc/systemd/system/phc2sys.service

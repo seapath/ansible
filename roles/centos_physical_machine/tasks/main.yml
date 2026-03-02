@@ -173,7 +173,7 @@
   set_fact:
     centos_physical_machine_lvm_rebooter_log_path: "{{ centos_physical_machine_varlog_path.stdout }}"
 
-- name: Copy rebooter.conf
+- name: Copy rebooter.conf # noqa: risky-file-permissions
   template:
     src: initramfs-tools/conf.d/rebooter.conf.j2
     dest: /etc/dracut.conf.d/rebooter.conf

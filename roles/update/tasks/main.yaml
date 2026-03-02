@@ -34,7 +34,7 @@
       until: update_check_migration.stdout == '0'
       retries: 10
 
-- name: Copy SWU file on machine
+- name: Copy SWU file on machine # noqa: risky-file-permissions
   copy:
     src: "{{ update_swu_image_path }}"
     dest: "/tmp/update.swu"

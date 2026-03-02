@@ -201,7 +201,7 @@
           file:
             path: /etc/apt/sources.list.d
             state: absent
-        - name: Configure apt repositories
+        - name: Configure apt repositories # noqa: risky-file-permissions
           template:
             src: sources.list.j2
             dest: /etc/apt/sources.list

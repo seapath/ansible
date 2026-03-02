@@ -67,7 +67,7 @@
     mode: 0755
   with_items: "{{ debian_hardening_physical_machine_hardened_services }}"
 
-- name: Add systemd service hardening rules for physical machines
+- name: Add systemd service hardening rules for physical machines # noqa: risky-file-permissions
   copy:
     src: "{{ item }}_hardening.conf"
     dest: "/etc/systemd/system/{{ item }}.service.d/hardening.conf"

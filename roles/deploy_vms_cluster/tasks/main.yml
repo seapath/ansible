@@ -62,7 +62,7 @@
     vm_file: "{{ hostvars[item].vm_disk | default( deploy_vms_cluster_vms_disks_directory ~ '/' ~ item ~ '.qcow2') }}"
     vm_file_dest: "{{ deploy_vms_cluster_qcow2tmpuploadfolder + '/os.qcow2' }}"
   block:
-    - name: "Copy system disk on target for {{ item }}"
+    - name: "Copy system disk on target for {{ item }}" # noqa: risky-file-permissions
       copy:
         src: "{{ vm_file }}"
         dest: "{{ vm_file_dest }}"

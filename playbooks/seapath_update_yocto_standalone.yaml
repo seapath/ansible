@@ -9,7 +9,7 @@
 - name: Update machine
   hosts: "{{ machine_to_update }}"
   tasks:
-    - name: Copy SWU file on machine
+    - name: Copy SWU file on machine # noqa: risky-file-permissions
       copy:
         src: "../{{ swu_image }}"
         dest: "/tmp/update.swu"

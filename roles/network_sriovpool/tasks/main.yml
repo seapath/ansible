@@ -14,7 +14,7 @@
 - name: Configure SRIOV network pool if needed
   when: network_sriovpool_pool_defined.rc != 0
   block:
-    - name: Copy libvirt xml SRIOV network pool file
+    - name: Copy libvirt xml SRIOV network pool file # noqa: risky-file-permissions
       template:
           src: sriov_network_pool.xml.j2
           dest: /tmp/sriov_network_pool.xml

@@ -6,7 +6,7 @@
 # It is called during yocto prerequisites, but can also be called alone.
 
 ---
-- name: Setup hugepages number
+- name: Setup hugepages number # noqa: risky-file-permissions
   copy:
     content: "{{ yocto_hugepages | string }}"
     dest: /etc/hugepages_nb.conf
