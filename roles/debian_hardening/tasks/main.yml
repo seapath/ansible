@@ -164,11 +164,23 @@
     state: absent
   when: revert
 
+- name: Set default SSH service file path
+  set_fact:
+    ssh_service_path: "/lib/systemd/system/ssh.service"
+    ssh_service_newline: "After=network.target auditd.service network-online.target"
+  when: seapath_distro != "CentOS"
+
+- name: Set SSH service file path for CentOS
+  set_fact:
+    ssh_service_path: "/lib/systemd/system/sshd.service"
+    ssh_service_newline: "After=network.target network-online.target"
+  when: seapath_distro == "CentOS"
+
 - name: Wait for DHCP for SSH
   lineinfile:
-    dest: /lib/systemd/system/ssh.service
+    dest: "{{ ssh_service_path }}"
     regexp: "^After="
-    line: "After=network.target auditd.service network-online.target"
+    line: "{{ ssh_service_newline }}"
     state: present
   when: not revert
 
