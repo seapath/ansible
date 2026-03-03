@@ -15,7 +15,7 @@ permissions:
   checks: write
 
 jobs:
-  CI:
+  Integration-tests:
     runs-on: [self-hosted, runner-RedHat-Centos9]
     steps:
 
