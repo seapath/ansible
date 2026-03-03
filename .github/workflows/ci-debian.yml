@@ -15,7 +15,7 @@ permissions:
   checks: write
 
 jobs:
-  CI:
+  Integration-tests:
     runs-on: [self-hosted, runner-RTE-13]
     steps:
 

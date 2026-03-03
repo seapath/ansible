@@ -23,7 +23,7 @@ permissions:
   checks: write
 
 jobs:
-  CI:
+  Integration-tests:
     runs-on: [self-hosted, runner-SFL]
     env:
       PCAP_LOOP: ${{ inputs.pcap_loop == '' && '60' || inputs.pcap_loop  }}
