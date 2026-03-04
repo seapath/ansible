@@ -1,16 +1,13 @@
 # Copyright (C) 2025, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
-name: CI
+name: QA
 
 on:
-  pull_request:
-    types: [opened, reopened, synchronize]
-    branches: [main]
+  workflow_call:
   workflow_dispatch:
 
 permissions:
-  checks: write
   contents: read
 
 jobs:
@@ -37,19 +34,3 @@ jobs:
 
       - name: Run ansible-lint
         run: ansible-lint -c ansible-lint.conf
-
-  ci-debian:
-    needs: ansible-lint
-    uses: ./.github/workflows/ci-debian.yml
-
-  ci-oraclelinux:
-    needs: ansible-lint
-    uses: ./.github/workflows/ci-oraclelinux.yml
-
-  ci-yocto:
-    needs: ansible-lint
-    uses: ./.github/workflows/ci-yocto.yml
-
-  ci-centos:
-    needs: ansible-lint
-    uses: ./.github/workflows/ci-centos.yml
