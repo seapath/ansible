@@ -85,6 +85,7 @@
         pinned_host: "{{ hostvars[item].pinned_host | default(omit) }}"
         preferred_host: "{{ hostvars[item].preferred_host | default(omit) }}"
         crm_config_cmd: "{{ hostvars[item].crm_config_cmd | default(omit) }}"
+        disk_bus: "{{ hostvars[item].disk_bus | default(omit) }}"
         xml: >-
           {{ lookup('file', hostvars[item].xml_path)
                if hostvars[item].xml_path is defined
