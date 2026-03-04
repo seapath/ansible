@@ -1,0 +1,34 @@
+# Copyright (C) 2025, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+name: CI
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  checks: write
+  contents: read
+
+jobs:
+  ci-qa:
+    uses: ./.github/workflows/ci-qa.yml
+
+  ci-debian:
+    needs: ci-qa
+    uses: ./.github/workflows/ci-debian.yml
+
+  ci-oraclelinux:
+    needs: ci-qa
+    uses: ./.github/workflows/ci-oraclelinux.yml
+
+  ci-yocto:
+    needs: ci-qa
+    uses: ./.github/workflows/ci-yocto.yml
+
+  ci-centos:
+    needs: ci-qa
+    uses: ./.github/workflows/ci-centos.yml
