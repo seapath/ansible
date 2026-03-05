@@ -1,0 +1,32 @@
+# Copyright (C) 2025, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+name: Molecule
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  molecule:
+    name: Molecule Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install Podman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
+
+      - name: Install Python dependencies
+        run: pip install -r molecule_requirements.txt
+
+      - name: Run Molecule tests
+        run: bash scripts/run-molecule-roles.sh
