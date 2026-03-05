@@ -1,0 +1,116 @@
+---
+- name: Verify libvirtadmin cluster setup (hv1 + hv2)
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Check libvirtadmin exists
+      ansible.builtin.getent:
+        database: passwd
+        key: libvirtadmin
+
+    - name: Ensure root pubkey exists
+      ansible.builtin.stat:
+        path: /root/.ssh/id_rsa.pub
+      register: add_libvirtadmin_user_root_pub_stat
+
+    - name: Assert root pubkey exists and is non-empty
+      ansible.builtin.assert:
+        that:
+          - add_libvirtadmin_user_root_pub_stat.stat.exists
+          - add_libvirtadmin_user_root_pub_stat.stat.size | int > 0
+
+    - name: Read root pubkey content
+      ansible.builtin.slurp:
+        path: /root/.ssh/id_rsa.pub
+      register: add_libvirtadmin_user_root_pub
+
+    - name: Read local ssh host ed25519 public key content
+      ansible.builtin.slurp:
+        path: /etc/ssh/ssh_host_ed25519_key.pub
+      register: add_libvirtadmin_user_host_ed25519_pub
+
+    - name: Read libvirtadmin authorized_keys
+      ansible.builtin.slurp:
+        path: /home/libvirtadmin/.ssh/authorized_keys
+      register: add_libvirtadmin_user_auth_keys
+
+    - name: Read root known_hosts
+      ansible.builtin.slurp:
+        path: /root/.ssh/known_hosts
+      register: add_libvirtadmin_user_known_hosts
+
+    - name: Build list of cluster nodes
+      ansible.builtin.set_fact:
+        add_libvirtadmin_user_cluster_nodes: >-
+          {{ (groups.get('hypervisors', []) | intersect(groups.get('cluster_machines', []))) }}
+
+    - name: Assert we are in a 2-node cluster for this scenario
+      ansible.builtin.assert:
+        that:
+          - add_libvirtadmin_user_cluster_nodes | length == 2
+          - "'hv1' in add_libvirtadmin_user_cluster_nodes"
+          - "'hv2' in add_libvirtadmin_user_cluster_nodes"
+        fail_msg: >-
+          Expected cluster_nodes to be ['hv1','hv2'] but got {{ add_libvirtadmin_user_cluster_nodes }}
+
+    - name: Decode local files
+      ansible.builtin.set_fact:
+        add_libvirtadmin_user_auth_keys_txt: "{{ add_libvirtadmin_user_auth_keys.content | b64decode }}"
+        add_libvirtadmin_user_known_hosts_txt: "{{ add_libvirtadmin_user_known_hosts.content | b64decode }}"
+        add_libvirtadmin_user_my_root_pub_txt: "{{ add_libvirtadmin_user_root_pub.content | b64decode }}"
+        add_libvirtadmin_user_my_hostkey_txt: "{{ add_libvirtadmin_user_host_ed25519_pub.content | b64decode | trim }}"
+
+    # --- authorized_keys must contain BOTH hv1 and hv2 root pubkeys on each host ---
+    - name: Assert authorized_keys contains every node root pubkey (hv1 + hv2)
+      ansible.builtin.assert:
+        that:
+          - (hostvars[item].add_libvirtadmin_user_root_pub.content | b64decode) in add_libvirtadmin_user_auth_keys_txt
+        fail_msg: "authorized_keys on {{ inventory_hostname }} missing root pubkey from {{ item }}"
+      loop: "{{ add_libvirtadmin_user_cluster_nodes }}"
+      loop_control:
+        label: "{{ item }}"
+
+    # --- known_hosts must contain BOTH hv1 and hv2 host keys on each host ---
+    # We check presence of a line containing "hvX <ed25519_pubkey>"
+    - name: Assert known_hosts contains every node ed25519 host key (hv1 + hv2)
+      ansible.builtin.assert:
+        that:
+          - >-
+            (item ~ " " ~ ((hostvars[item].add_libvirtadmin_user_host_ed25519_pub.content
+            | b64decode) | trim)) in add_libvirtadmin_user_known_hosts_txt
+        fail_msg: "known_hosts on {{ inventory_hostname }} missing host key entry for {{ item }}"
+      loop: "{{ add_libvirtadmin_user_cluster_nodes }}"
+      loop_control:
+        label: "{{ item }}"
+
+    - name: Debug - Read libvirtadmin authorized_keys
+      ansible.builtin.slurp:
+        path: /home/libvirtadmin/.ssh/authorized_keys
+      register: add_libvirtadmin_user_authorized_keys_file
+      ignore_errors: true
+
+    - name: Debug authorized_keys content
+      ansible.builtin.debug:
+        msg: |
+          ===== authorized_keys on {{ inventory_hostname }} =====
+          {{ add_libvirtadmin_user_authorized_keys_file.content | b64decode }}
+      when: >-
+        add_libvirtadmin_user_authorized_keys_file is defined
+        and add_libvirtadmin_user_authorized_keys_file.content is defined
+
+    - name: Debug - Read root known_hosts
+      ansible.builtin.slurp:
+        path: /root/.ssh/known_hosts
+      register: add_libvirtadmin_user_known_hosts_file
+      ignore_errors: true
+
+    - name: Debug known_hosts content
+      ansible.builtin.debug:
+        msg: |
+          ===== known_hosts on {{ inventory_hostname }} =====
+          {{ add_libvirtadmin_user_known_hosts_file.content | b64decode }}
+      when: >-
+        add_libvirtadmin_user_known_hosts_file is defined
+        and add_libvirtadmin_user_known_hosts_file.content is defined

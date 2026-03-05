@@ -1,0 +1,13 @@
+---
+- name: Destroy instances
+  hosts: all
+  gather_facts: false
+
+- name: Cleanup controller artifacts
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Remove buffer directory (scenario local)
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/buffer"
+        state: absent
