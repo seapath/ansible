@@ -35,4 +35,5 @@
         - /var/lib/ceph/bootstrap-osd
         - /var/lib/ceph/bootstrap-rbd
         - /var/lib/ceph/bootstrap-rbd-mirror
-        - /var/run/ceph /var/log/ceph
+        - /var/run/ceph 
+        - /var/log/ceph
