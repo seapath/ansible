@@ -17,18 +17,22 @@ jobs:
   ci-qa:
     uses: ./.github/workflows/ci-qa.yml
 
-  ci-debian:
+  ci-molecule:
     needs: ci-qa
+    uses: ./.github/workflows/ci-molecule.yml
+
+  ci-debian:
+    needs: ci-molecule
     uses: ./.github/workflows/ci-debian.yml
 
   ci-oraclelinux:
-    needs: ci-qa
+    needs: ci-molecule
     uses: ./.github/workflows/ci-oraclelinux.yml
 
   ci-yocto:
-    needs: ci-qa
+    needs: ci-molecule
     uses: ./.github/workflows/ci-yocto.yml
 
   ci-centos:
-    needs: ci-qa
+    needs: ci-molecule
     uses: ./.github/workflows/ci-centos.yml
