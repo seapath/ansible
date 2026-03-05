@@ -40,6 +40,7 @@ The Ansible member inventory host name will be used as VM name.
 | crm_config_cmd     | No       | String list |                                       | List of `crm config` to run when enabling this guest                  |
 | colocated_vms      | No       | String list |                                       | VM list to be be colocated with the new VM                            |
 | strong_colocation  | No       | Bool        | false                                 | Enable strong colocation on colocated_vms. The VM will will not be started when the constraint is not fulfilled |
+| disk_bus           | No       | String      |                                       | Disk bus type to use for the VM's disk (virtio, sata, scsi, ide, etc.) |
 
 Here is an example of the structure for the VM inventory:
 
