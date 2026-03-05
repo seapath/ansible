@@ -101,9 +101,10 @@
     dest: /etc/sysctl.d/99-sysctl-network.conf
   notify: Update sysfs values using sysctl
   when: not revert
+
 - name: "Uninstall network hardened sysfs rules"
   file:
-    path: /etc/sysctl.d/sysctl/99-sysctl-network.conf
+    path: /etc/sysctl.d/99-sysctl-network.conf
     state: absent
   notify: Update sysfs values using sysctl
   when: revert
