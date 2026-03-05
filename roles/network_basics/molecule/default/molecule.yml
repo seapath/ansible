@@ -3,11 +3,11 @@ dependency:
   name: galaxy
 
 driver:
-  name: docker
+  name: podman
 
 platforms:
   - name: instance
-    image: geerlingguy/docker-debian12-ansible:latest
+    image: docker.io/geerlingguy/docker-debian12-ansible:latest
     privileged: true
 
 provisioner:
