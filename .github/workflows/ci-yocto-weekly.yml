@@ -20,5 +20,5 @@ jobs:
   call-workflow:
     uses: ./.github/workflows/ci-yocto.yml
     with:
-      pcap_loop: 900 # 15 min
+      pcap_loop: 18000 # 5 hours
       weekly: true
