@@ -1,0 +1,63 @@
+---
+- name: Prepare test environment (Debian 12)
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Ensure libvirt group exists
+      ansible.builtin.group:
+        name: libvirt
+        state: present
+
+    - name: Install openssh-server
+      ansible.builtin.apt:
+        name:
+          - openssh-server
+          - openssh-client
+        state: present
+        update_cache: true
+
+    - name: Ensure /etc/ssh exists
+      ansible.builtin.file:
+        path: /etc/ssh
+        state: directory
+        mode: "0755"
+
+    - name: Generate SSH host keys if missing
+      ansible.builtin.command: ssh-keygen -A
+      changed_when: false
+
+    - name: Assert ed25519 host public key exists (what role fetches)
+      ansible.builtin.stat:
+        path: /etc/ssh/ssh_host_ed25519_key.pub
+      register: add_libvirtadmin_user_ed25519_pub
+
+    - name: Fail if ed25519 host key is still missing
+      ansible.builtin.assert:
+        that:
+          - add_libvirtadmin_user_ed25519_pub.stat.exists
+          - add_libvirtadmin_user_ed25519_pub.stat.size | int > 0
+
+    - name: Ensure root .ssh directory exists
+      ansible.builtin.file:
+        path: /root/.ssh
+        state: directory
+        mode: "0700"
+
+    - name: Ensure known_hosts file exists
+      ansible.builtin.file:
+        path: /root/.ssh/known_hosts
+        state: touch
+        mode: "0600"
+
+
+- name: Prepare controller buffer
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Create buffer directory
+      ansible.builtin.file:
+        path: buffer
+        state: directory
+        mode: "0755"
