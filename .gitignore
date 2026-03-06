@@ -15,6 +15,7 @@ playbooks/*
 !playbooks/seapath_setup_*.yaml
 !playbooks/purge_ceph.yaml
 !playbooks/seapath_update_*.yaml
+!playbooks/molecule/
 inventories/*
 !inventories/README.adoc
 !inventories/examples

@@ -1,0 +1,123 @@
+---
+- name: Verify cluster_setup_users playbook
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    # --- Verify libvirtadmin user ---
+
+    - name: Get libvirtadmin user info
+      ansible.builtin.getent:
+        database: passwd
+        key: libvirtadmin
+      register: user_info
+
+    - name: Assert libvirtadmin user exists
+      ansible.builtin.assert:
+        that: "'libvirtadmin' in getent_passwd"
+        fail_msg: "libvirtadmin user was not created"
+
+    - name: Assert libvirtadmin has correct shell
+      ansible.builtin.assert:
+        that: "getent_passwd['libvirtadmin'][5] == '/bin/bash'"
+        fail_msg: "libvirtadmin shell is not /bin/bash"
+
+    - name: Get libvirtadmin group membership
+      ansible.builtin.command:
+        cmd: id -gn libvirtadmin
+      register: user_group
+      changed_when: false
+
+    - name: Assert libvirtadmin primary group is libvirt
+      ansible.builtin.assert:
+        that: "user_group.stdout == 'libvirt'"
+        fail_msg: "libvirtadmin primary group is {{ user_group.stdout }}, expected libvirt"
+
+    # --- Verify user is unlocked ---
+
+    - name: Read shadow entry for libvirtadmin
+      ansible.builtin.command:
+        cmd: getent shadow libvirtadmin
+      register: shadow_entry
+      changed_when: false
+
+    - name: Assert libvirtadmin account is unlocked
+      ansible.builtin.assert:
+        that: "'libvirtadmin:!:' not in shadow_entry.stdout"
+        fail_msg: "libvirtadmin account is still locked"
+
+    # --- Verify root SSH key ---
+
+    - name: Check root SSH private key exists
+      ansible.builtin.stat:
+        path: /root/.ssh/id_rsa
+      register: root_privkey
+
+    - name: Assert root SSH private key was generated
+      ansible.builtin.assert:
+        that: root_privkey.stat.exists
+        fail_msg: "Root SSH private key was not generated"
+
+    - name: Check root SSH public key exists
+      ansible.builtin.stat:
+        path: /root/.ssh/id_rsa.pub
+      register: root_pubkey
+
+    - name: Assert root SSH public key was generated
+      ansible.builtin.assert:
+        that: root_pubkey.stat.exists
+        fail_msg: "Root SSH public key was not generated"
+
+    # --- Verify authorized_keys contains peer keys ---
+
+    - name: Check libvirtadmin authorized_keys exists
+      ansible.builtin.stat:
+        path: /home/libvirtadmin/.ssh/authorized_keys
+      register: auth_keys_file
+
+    - name: Assert authorized_keys file exists
+      ansible.builtin.assert:
+        that: auth_keys_file.stat.exists
+        fail_msg: "libvirtadmin authorized_keys not found"
+
+    - name: Read authorized_keys content
+      ansible.builtin.slurp:
+        src: /home/libvirtadmin/.ssh/authorized_keys
+      register: auth_keys_content
+
+    - name: Read node1 root public key
+      ansible.builtin.slurp:
+        src: /root/.ssh/id_rsa.pub
+      register: local_root_pubkey
+
+    - name: Assert authorized_keys contains at least one key
+      ansible.builtin.assert:
+        that: "(auth_keys_content.content | b64decode).strip() | length > 0"
+        fail_msg: "authorized_keys is empty"
+
+    # --- Verify known_hosts contains peer host keys ---
+
+    - name: Check root known_hosts exists
+      ansible.builtin.stat:
+        path: /root/.ssh/known_hosts
+      register: known_hosts_file
+
+    - name: Assert known_hosts file exists
+      ansible.builtin.assert:
+        that: known_hosts_file.stat.exists
+        fail_msg: "Root known_hosts not found"
+
+    - name: Read known_hosts content
+      ansible.builtin.slurp:
+        src: /root/.ssh/known_hosts
+      register: known_hosts_content
+
+    - name: Decode known_hosts
+      ansible.builtin.set_fact:
+        known_hosts_text: "{{ known_hosts_content.content | b64decode }}"
+
+    - name: Assert known_hosts contains peer node entries
+      ansible.builtin.assert:
+        that:
+          - "'node1' in known_hosts_text or 'node2' in known_hosts_text"
+        fail_msg: "known_hosts does not contain any peer node entries"
