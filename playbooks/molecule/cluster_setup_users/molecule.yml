@@ -1,0 +1,47 @@
+---
+dependency:
+  name: galaxy
+
+driver:
+  name: podman 
+
+platforms:
+  - name: node1
+    image: docker.io/geerlingguy/docker-debian12-ansible:latest
+    privileged: true
+    groups:
+      - cluster_machines
+      - hypervisors
+  - name: node2
+    image: docker.io/geerlingguy/docker-debian12-ansible:latest
+    privileged: true
+    groups:
+      - cluster_machines
+      - hypervisors
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      roles_path: "${MOLECULE_PROJECT_DIRECTORY}/../roles"
+  playbooks:
+    prepare: prepare.yml
+    converge: converge.yml
+    verify: verify.yml
+
+scenario:
+  test_sequence:
+    - dependency
+    - cleanup
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+    - idempotence
+    - verify
+    - cleanup
+    - destroy
+
+verifier:
+  name: ansible

@@ -1,0 +1,23 @@
+---
+- name: Prepare nodes for cluster_setup_users playbook
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Install required packages
+      ansible.builtin.apt:
+        name:
+          - openssh-server
+          - openssh-client
+        state: present
+        update_cache: true
+
+    - name: Create libvirt group
+      ansible.builtin.group:
+        name: libvirt
+        state: present
+
+    - name: Generate SSH host ed25519 key
+      ansible.builtin.command:
+        cmd: ssh-keygen -t ed25519 -f /etc/ssh/ssh_host_ed25519_key -N ""
+        creates: /etc/ssh/ssh_host_ed25519_key

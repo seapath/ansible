@@ -1,0 +1,3 @@
+---
+- name: Converge - run the cluster_setup_users playbook
+  ansible.builtin.import_playbook: ../../cluster_setup_users.yaml
