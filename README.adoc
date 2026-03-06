@@ -307,8 +307,22 @@ molecule test --scenario-name default  --report --command-borders
 
 All test can be triggered from the seapath-ansible root directory:
 ```
-tox -e molecule
+tox -m  molecule
 ```
+
+Test only roles:
+
+```
+tox -ie molecule-roles
+```
+
+Test only Playbooks
+
+```
+tox -e molecule-playbooks
+```
+ 
+
 It requires tox, that can be installed with:
 ```
 python3 -m pip install tox
