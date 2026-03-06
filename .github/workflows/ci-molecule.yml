@@ -11,8 +11,8 @@ permissions:
   contents: read
 
 jobs:
-  molecule:
-    name: Molecule Tests
+  molecule-role:
+    name: Molecule Role Tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -28,5 +28,26 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r molecule_requirements.txt
 
-      - name: Run Molecule tests
+      - name: Run Molecule Roles tests
         run: bash scripts/run-molecule-roles.sh
+
+  molecule-playbooks:
+    name: Molecule Playbook Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install Podman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
+
+      - name: Install Python dependencies
+        run: pip install -r molecule_requirements.txt
+
+      - name: Run Molecule Playbook tests
+        working-directory: playbooks
+        run: molecule test --all
