@@ -106,7 +106,7 @@
     <devices>
         <emulator>/usr/bin/qemu-system-x86_64</emulator>
 {% if "graphic-console" in vm_features %}
-        <graphics type="{{ vm.graphics_type | default('vnc') }}" port="-1" autoport="yes" listen="{{ vm.graphics_listen | default('127.0.0.1') }}">
+        <graphics type="vnc" port="-1" autoport="yes" listen="{{ vm.graphics_listen | default('127.0.0.1') }}">
             <listen type="address" address="{{ vm.graphics_listen | default('127.0.0.1') }}"/>
         </graphics>
         <video>
