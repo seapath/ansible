@@ -71,7 +71,8 @@ Below is a list of the VMs member variables that can be used with this XML file.
 | uuid            |                  | Integer         | random  | Libvirt UUID of the VM                                                                                             |
 | description     |                  | String          | Test VM | Libvirt description of the VM                                                                                      |
 | memory          |                  | Integer         | 2048    | RAM of the VM in MiB                                                                                               |
-| additional_disk |                  | List of strings |         | Additional disks to give to the VM. The main disk is given by the vm_disk variable                                 |
+| additional_disk |                  | Dict            |         | Additional disks to give to the VM. Each key is a device name, each value a qcow2 file path:                      |
+|                 | *\<dev\>*        | String          |         | Path to the qcow2 disk image. The key (e.g. "vdb") is used as device name in the VM                               |
 | vm_features     |                  | List of strings |         | List of vm features to enable. Possible values are "rt", "isolated", "secure-boot", "dpdk", "membaloon"            |
 |                 | rt               |                 |         | Enable real time tweaks (priority, cgroup, scheduler, etc ...). Depends on `cpuset`                                |
 |                 | isolated         |                 |         | Pin vCPU to hypervisor CPUs. Depends on `cpuset`                                                                   |
