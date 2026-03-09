@@ -2,41 +2,51 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+all:
+  hosts:
+    seapath-machine:
+
+      # Admin network settings
+      ansible_host: "192.168.216.78" # Change to your hypervisor IP.
+      network_interface: "enp0s20f0u7" # Change to your management interface.
+      gateway_addr: "192.168.216.1" # Change to your gateway IP.
+      dns_servers: "192.168.216.1" # Change to your DNS IP. Remove if not needed.
+      ip_addr: "{{ ansible_host }}"
+      apply_network_config: true
+
+      # Time synchronization
+      ptp_interface: "enp7s0" # Change to your PTP interface.
+      ntp_servers: "192.168.216.1" # Change to your ntp server. Remove if not needed.
+
+      nics_affinity:
+      - enp88s0: 3  # Change to your NICs
+      upload_files: # This file is given with the ssc600sw package
+        - src: '../files/qemu.hook'
+          dest: '/etc/libvirt/hooks/'
+          mode: "0744"
+
+      # Debian required variables
+      admin_user: admin
+      grub_append: "default_hugepagesz=1G hugepagesz=1G hugepages=6"
+
+      # Yocto required variables
+      extra_kernel_parameters : "hugepages=6"
+      bootloader_config_file: /boot/EFI/BOOT/grub.cfg
+
+      # Ansible variables
+      ansible_connection: ssh
+      ansible_python_interpreter: /usr/bin/python3
+      ansible_remote_tmp: /tmp/.ansible/tmp
+      ansible_user: ansible
+
+# The machine is standalone
 standalone_machine:
-  children:
-    hypervisors:
-      hosts:
-        hypervisor:
-          ansible_host: "192.168.216.78" # Change to your hypervisor IP
-          network_interface: "enp0s20f0u7" # Change to your management interface
+  hosts:
+    seapath-machine:
 
-          ptp_interface: "enp7s0" # Change to your PTP interface
-
-          nics_affinity:
-          - enp88s0: 3  # Change to your NICs
-          upload_files: # This file is given with the ssc600sw package
-            - src: '../files/qemu.hook'
-              dest: '/etc/libvirt/hooks/'
-              mode: "0744"
-
+# The machine is an hypervisor
+hypervisors:
+  hosts:
+    seapath-machine:
   vars:
-    ansible_connection: ssh
-    ansible_python_interpreter: /usr/bin/python3
-    ansible_remote_tmp: /tmp/.ansible/tmp
-    ansible_user: admin # Change to `ansible` if using seapath debian
-
-    gateway_addr: "192.168.216.1" # Change to your gateway IP
-    dns_servers: "192.168.216.1" # Change to your DNS IP. Remove if not needed.
-    ip_addr: "{{ ansible_host }}"
-    apply_network_config: true
-
-    ntp_servers: "192.168.216.1" # Change to your ntp server. Remove if not needed.
-
-    # Debian required variables
-    admin_user: admin
-    isolcpus: "4-N"
-    grub_append: "default_hugepagesz=1G hugepagesz=1G hugepages=6"
-
-    # Yocto required variables
-    extra_kernel_parameters : "hugepages=6"
-    bootloader_config_file: /boot/EFI/BOOT/grub.cfg
+    isolcpus: "4-N" # List of CPUs to isolate (Debian only).
