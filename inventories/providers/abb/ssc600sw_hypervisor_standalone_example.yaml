@@ -18,12 +18,13 @@ all:
       ptp_interface: "enp7s0" # Change to your PTP interface.
       ntp_servers: "192.168.216.1" # Change to your ntp server. Remove if not needed.
 
-      nics_affinity:
-      - enp88s0: 3  # Change to your NICs
       upload_files: # This file is given with the ssc600sw package
         - src: '../files/qemu.hook'
           dest: '/etc/libvirt/hooks/'
           mode: "0744"
+      nics_affinity:
+      - enp88s0: 3  # Change to your NIC receiving Sampled Values
+                    # Change for the same core as VM's emulatorpin
 
       # Debian required variables
       admin_user: admin

@@ -66,6 +66,10 @@ The example inventories have been created to run the SSC600 VM using 3 interface
 > On Debian add `grub_append: "default_hugepagesz=1G hugepagesz=1G hugepages=6"` on Yocto it can be configured at build time or
 with the Ansible variable `yocto_hugepages: 6`.
 
+* Network Card affinity must be defined (only necessary when not using PCI passthrough)
+
+> The `nics_affinity` variable must define the network card receiving Sampled Values and the core number that will schedule VM emulatorpin.
+
 The file `inventories/providers/abb/ssc600sw_hypervisor_standalone_example.yaml` can be used as hypervisor Ansible inventory example.
 
 ## SSC600 SW Ansible inventory

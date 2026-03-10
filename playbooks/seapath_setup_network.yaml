@@ -80,6 +80,13 @@
     - role: conntrackd
       when: conntrackd_ignore_ip_list is defined
 
+- name: Configure NICs IRQs affinity
+  hosts: hypervisors
+  gather_facts: false
+  become: true
+  roles:
+    - configure_nic_irq_affinity
+
 - name: Restart machine if needed
   hosts:
     - cluster_machines
