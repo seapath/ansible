@@ -31,12 +31,13 @@
     ssh_key_file: .ssh/id_rsa
     ssh_key_passphrase: ""
     force: false
+
 - name: Get root user's home directory
   shell:
     cmd: set -o pipefail && getent passwd root | cut -d ':' -f6
     executable: /bin/bash
   register: add_libvirtadmin_user_root_home_dir
-  changed_when: true
+  changed_when: false
 
 - name: Compute cluster nodes list
   ansible.builtin.set_fact:
