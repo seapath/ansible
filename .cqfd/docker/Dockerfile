@@ -15,6 +15,7 @@ RUN set -x \
         libarchive-tools \
         locales \
         git \
+        podman \
         python3-full \
         python3-matplotlib \
         rstcheck \
@@ -27,6 +28,8 @@ RUN set -x \
     && /env/bin/pip install \
         ansible-core~=2.16.0 \
         ansible-lint \
+        molecule \
+        molecule-plugins[podman] \
         yamllint \
         six \
         netaddr \
