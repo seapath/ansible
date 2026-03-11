@@ -11,7 +11,7 @@ No requirement.
 
 | Variable                | Required | Type       | Comments                                                           |
 |-------------------------|----------|----------- |--------------------------------------------------------------------|
-| nics_affinity           | no       | Dict array | Array of dictionnaries, nic / affinity (e.g. "eth0": "3-4"). Affinity can be a single core, or a range seperate by *-*. Multiple values can be set separate by a coma. |
+| nics_affinity           | Yes      | Dict array | Array of dictionnaries, nic / affinity (e.g. "eth0": "3-4"). Affinity can be a single core, or a range seperate by *-*. Multiple values can be set separate by a coma. |
 
 ## Example Playbook
 
