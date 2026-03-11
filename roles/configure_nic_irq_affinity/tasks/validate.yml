@@ -1,0 +1,9 @@
+# Copyright (C) 2026 Savoir-faire Linux, Inc
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Verify nics_affinity variable
+  assert:
+    that:
+      - nics_affinity is not none
+    fail_msg: "nics_affinity must be defined to use this role"
