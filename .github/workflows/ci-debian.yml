@@ -47,7 +47,7 @@ jobs:
 
       - name: Upload test report
         if: ${{ always() && steps.conf.conclusion == 'success' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
             name: seapath-test-report-debian-cluster
             path: ${{ env.WORK_DIR }}/seapath-test-report.pdf
