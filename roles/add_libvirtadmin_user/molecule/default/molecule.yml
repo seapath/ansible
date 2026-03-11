@@ -6,10 +6,10 @@ driver:
 
 platforms:
   - name: hv1
-    image: docker.io/geerlingguy/docker-debian12-ansible:latest
+    image: docker.io/geerlingguy/docker-debian13-ansible:latest
     privileged: true
   - name: hv2
-    image: docker.io/geerlingguy/docker-debian12-ansible:latest
+    image: docker.io/geerlingguy/docker-debian13-ansible:latest
     privileged: true
 
 provisioner:

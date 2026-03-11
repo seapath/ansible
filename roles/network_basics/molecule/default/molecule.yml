@@ -7,7 +7,7 @@ driver:
 
 platforms:
   - name: instance
-    image: docker.io/geerlingguy/docker-debian12-ansible:latest
+    image: docker.io/geerlingguy/docker-debian13-ansible:latest
     privileged: true
 
 provisioner:
