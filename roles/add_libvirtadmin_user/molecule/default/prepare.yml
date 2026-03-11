@@ -1,5 +1,5 @@
 ---
-- name: Prepare test environment (Debian 12)
+- name: Prepare test environment (Debian 13)
   hosts: all
   become: true
   gather_facts: false
