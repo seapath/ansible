@@ -1,0 +1,62 @@
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Verify TLS behavior
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Read registries.conf
+      ansible.builtin.slurp:
+        path: /etc/containers/registries.conf
+      register: podman_registry_mirror_registries_conf
+
+    - name: Assert registry mirror block configured in TLS mode
+      ansible.builtin.assert:
+        that:
+          - "'unqualified-search-registries = [\"docker.io\"]' in registries_conf"
+          - "'location = \"docker.io\"' in registries_conf"
+          - "'location = \"quay.io\"' in registries_conf"
+          - "'location = \"registry.internal.local:5000\"' in registries_conf"
+          - "registries_conf.count('insecure = false') == 4"
+        fail_msg: "registries.conf does not contain the expected TLS registry mirror configuration"
+      vars:
+        registries_conf: "{{ podman_registry_mirror_registries_conf.content | b64decode }}"
+
+    - name: Check TLS certificate directory exists
+      ansible.builtin.stat:
+        path: /etc/containers/certs.d/registry.internal.local:5000
+      register: podman_registry_mirror_certs_dir
+
+    - name: Assert TLS certificate directory exists with expected mode
+      ansible.builtin.assert:
+        that:
+          - podman_registry_mirror_certs_dir.stat.exists
+          - podman_registry_mirror_certs_dir.stat.isdir
+          - podman_registry_mirror_certs_dir.stat.mode == "0755"
+        fail_msg: "TLS certificate directory was not created with the expected properties"
+
+    - name: Check TLS CA certificate exists
+      ansible.builtin.stat:
+        path: /etc/containers/certs.d/registry.internal.local:5000/ca.crt
+      register: podman_registry_mirror_ca_cert
+
+    - name: Assert TLS CA certificate exists with expected mode
+      ansible.builtin.assert:
+        that:
+          - podman_registry_mirror_ca_cert.stat.exists
+          - podman_registry_mirror_ca_cert.stat.mode == "0644"
+        fail_msg: "TLS CA certificate was not copied with the expected properties"
+
+    - name: Read copied TLS CA certificate
+      ansible.builtin.slurp:
+        path: /etc/containers/certs.d/registry.internal.local:5000/ca.crt
+      register: podman_registry_mirror_ca_cert_content
+
+    - name: Assert copied TLS CA certificate content matches source
+      ansible.builtin.assert:
+        that:
+          - "'dummy-tls-ca' in (podman_registry_mirror_ca_cert_content.content | b64decode)"
+        fail_msg: "TLS CA certificate content does not match the prepared source file"
+
+...

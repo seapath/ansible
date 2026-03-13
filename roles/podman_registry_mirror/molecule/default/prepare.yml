@@ -1,0 +1,35 @@
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Prepare controller inputs
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Create dummy CA certificate file on controller
+      ansible.builtin.copy:
+        dest: /tmp/podman-registry-mirror-default-ca.crt
+        content: |
+          -----BEGIN CERTIFICATE-----
+          dummy-default-ca
+          -----END CERTIFICATE-----
+        mode: "0644"
+
+- name: Prepare
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Ensure containers configuration directory exists
+      ansible.builtin.file:
+        path: /etc/containers
+        state: directory
+        mode: "0755"
+
+    - name: Seed registries.conf with baseline content
+      ansible.builtin.copy:
+        dest: /etc/containers/registries.conf
+        content: |
+          unqualified-search-registries = ["docker.io"]
+        mode: "0644"
+
+...

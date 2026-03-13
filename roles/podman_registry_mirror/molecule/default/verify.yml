@@ -1,0 +1,37 @@
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Verify default behavior
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Read registries.conf
+      ansible.builtin.slurp:
+        path: /etc/containers/registries.conf
+      register: podman_registry_mirror_registries_conf
+
+    - name: Assert registry mirror block configured in insecure mode
+      ansible.builtin.assert:
+        that:
+          - "'unqualified-search-registries = [\"docker.io\"]' in registries_conf"
+          - "'location = \"docker.io\"' in registries_conf"
+          - "'location = \"quay.io\"' in registries_conf"
+          - "'location = \"registry.internal.local:5000\"' in registries_conf"
+          - "registries_conf.count('insecure = true') == 4"
+        fail_msg: "registries.conf does not contain the expected insecure registry mirror configuration"
+      vars:
+        registries_conf: "{{ podman_registry_mirror_registries_conf.content | b64decode }}"
+
+    - name: Check TLS certificate directory is absent when TLS is disabled
+      ansible.builtin.stat:
+        path: /etc/containers/certs.d/registry.internal.local:5000
+      register: podman_registry_mirror_certs_dir
+
+    - name: Assert TLS certificate directory is absent
+      ansible.builtin.assert:
+        that:
+          - not podman_registry_mirror_certs_dir.stat.exists
+        fail_msg: "TLS certificate directory should not be created when TLS is disabled"
+
+...
