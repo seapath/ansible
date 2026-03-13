@@ -48,6 +48,7 @@
       command: crm node online "{{ machine_to_update }}"
       changed_when: true
     - name: Check if update has succeed
+      become: true
       shell:
         cmd: set -o pipefail && journalctl -u swupdate_check.service -b |grep "Update have failed"|wc -l
         executable: /bin/bash
