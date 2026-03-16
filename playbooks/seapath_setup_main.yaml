@@ -1,6 +1,6 @@
 # Copyright (C) 2024 Red Hat, Inc.
 # Copyright (C) 2021-2024, RTE (http://www.rte-france.com)
-# Copyright (C) 2024 Savoir-faire Linux, Inc.
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 # This playbook setup SEAPATH on both debian and CentOS machines
@@ -9,6 +9,7 @@
 # This playbooks can also configure VMs created with build_debian_iso
 # This playbook also configures Yocto standalone machine (no cluster)
 
+---
 - name: Detect Seapath distribution
   hosts:
     - cluster_machines
@@ -49,11 +50,14 @@
 - name: Import seapath_setup_snmp playbook
   import_playbook: seapath_setup_snmp.yaml
 
+- name: Import seapath_setup_podman_registry_mirror playbook
+  import_playbook: seapath_setup_podman_registry_mirror.yaml
+
 - name: Import cluster_setup_ceph playbook
   import_playbook: cluster_setup_ceph.yaml
   when: not is_using_cephadm | bool
 
-- name: Import cluster_setup_cephdm playbook
+- name: Import cluster_setup_cephadm playbook
   import_playbook: cluster_setup_cephadm.yaml
   when: is_using_cephadm | bool
 
