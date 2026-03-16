@@ -1,0 +1,15 @@
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Verify required host variables are defined
+  ansible.builtin.assert:
+    that:
+      - hostname is defined
+      - hostname | length > 0
+      - cluster_ip_addr is defined
+      - cluster_ip_addr | length > 0
+      - cephadm_network is defined
+      - cephadm_network | length > 0
+    fail_msg: "hostname, cluster_ip_addr and cephadm_network must be set for each host in the cluster"
+

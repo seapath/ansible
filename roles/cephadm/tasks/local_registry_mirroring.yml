@@ -1,0 +1,53 @@
+# Copyright (C) 2025 RTE
+# Copyright (C) 2026 Savoir-faire Linux Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Ensure insecure registry localhost:5000 is in /etc/containers/registries.conf
+  ansible.builtin.blockinfile:
+    path: /etc/containers/registries.conf
+    marker: "# {mark} ANSIBLE MANAGED BLOCK for insecure registries"
+    block: |
+        [[registry]]
+        insecure = true
+        location = "localhost"
+
+- name: Ensure /var/lib/registry exists
+  ansible.builtin.file:
+    path: /var/lib/registry
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Pull needed Docker images
+  containers.podman.podman_image:
+    name: "{{ item }}"
+  when: cephadm_pullimages
+  loop:
+    - "docker.io/library/registry:2"
+    - "quay.io/ceph/ceph:v{{ cephadm_release }}"
+
+- name: Run local container registry using Podman
+  containers.podman.podman_container:
+    name: registry
+    image: registry:2
+    state: started
+    detach: true
+    privileged: true
+    ports:
+      - "5000:5000"
+    volume:
+      - /var/lib/registry:/var/lib/registry
+    restart_policy: always
+
+- name: Tag ceph image for local registry
+  command: >
+    podman tag quay.io/ceph/ceph:v{{ cephadm_release }} localhost:5000/ceph:v{{ cephadm_release }}
+  changed_when: true
+
+- name: Push ceph image to local registry
+  command: >
+    podman push localhost:5000/ceph:v{{ cephadm_release }}
+  changed_when: true
+...
