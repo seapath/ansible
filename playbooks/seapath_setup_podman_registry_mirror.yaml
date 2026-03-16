@@ -1,0 +1,14 @@
+# Copyright (C) 2024 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Setup registry mirroring on cluster machines
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  become: true
+  roles:
+    - role: podman_registry_mirror
+      when:
+        - podman_registry_mirror_url is defined
+        - podman_registry_mirror_url is not none
