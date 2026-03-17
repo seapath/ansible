@@ -4,7 +4,9 @@ This role configures syslog-ng to export logs from systemd-journald to a remote 
 
 ## Requirements
 
-No requirement.
+To enable TLS encryption, all three `syslog_tls_ca`, `syslog_tls_key` and `syslog_tls_server_ca`
+variables must be provided.
+If not, TLS encryption is deactivated.
 
 ## Role Variables
 
