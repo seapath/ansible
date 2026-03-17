@@ -27,7 +27,9 @@ source s_local_journal {
 ########################
 # Destinations
 ########################
+{% if syslog_local is defined %}
 destination d_syslog { file("/var/log/syslog-ng/syslog.local"); };
+{% endif %}
 
 {% if syslog_server_ip is defined %}
 # Network destination
