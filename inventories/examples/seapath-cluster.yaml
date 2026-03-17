@@ -88,14 +88,21 @@ cluster_machines:
       br_rstp_priority: 12288 # Do not modify, used by RSTP
 
 # Ceph monitor. All machines in the cluster must be part of mons groups
-# Note : By default SEAPATH uses ceph-ansible to configure Ceph.
-# You can also switch to cephadm deployment by setting force_cephadm to true (Only available on Debian for now)
+# Note : By default SEAPATH uses cephadm to configure Ceph.
+# You can also switch to ceph-ansible deployment by setting force_cephadm to false
 mons:
   hosts:
     node1:
     node2:
     node3:
   vars:
+    # Registry for ceph container image on ansible machine
+    # You can remove thoses two variables if you are on Debian. It will fallback to ceph image embedded in SEAPATH Debian iso.
+    ceph_registry_url: "192.168.200.100" # IP address of the ansible machine. TODO
+    podman_registry_mirror_url: "{{ ceph_registry_url }}"
+
+    # Ceph configuration
+    force_cephadm: true
     ceph_origin: distro
     cluster_network: "192.168.55.0/24" # IP range of your cluster. TODO
     public_network: "{{ cluster_network }}"
