@@ -1,0 +1,10 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+---
+galaxy_info:
+  author: "Seapath"
+  description: Configures syslog-ng client machines exporting logs to a remote syslog-ng server.
+  min_ansible_version: 2.9.10
+  license: Apache-2.0
+dependencies: []

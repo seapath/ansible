@@ -1,0 +1,55 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+
+- name: Create /var/log/syslog-ng folder on hosts
+  file:
+    path: /var/log/syslog-ng
+    state: directory
+    mode: '0755'
+
+- name: Copy syslog-ng conf file
+  template:
+    src: syslog-ng.conf.j2
+    dest: /etc/syslog-ng/syslog-ng.conf
+    mode: '0644'
+  notify: Restart syslog-ng
+
+- name: Configure syslog-ng TLS client certificates if needed
+  when:
+    - syslog_tls_ca is defined
+    - syslog_tls_key is defined
+    - syslog_tls_server_ca is defined
+  block:
+    - name: Create /etc/syslog-ng/cert.d
+      file:
+        path: /etc/syslog-ng/cert.d
+        state: directory
+        mode: '0755'
+      notify: Restart syslog-ng
+    - name: Create /etc/syslog-ng/ca.d
+      file:
+        path: /etc/syslog-ng/ca.d/
+        state: directory
+        mode: '0755'
+      notify: Restart syslog-ng
+    - name: Copy syslog client certificate
+      copy:
+        src: "{{ syslog_tls_ca }}"
+        dest: /etc/syslog-ng/cert.d/clientcert.pem
+        mode: '0644'
+      notify: Restart syslog-ng
+    - name: Copy syslog key
+      copy:
+        src: "{{ syslog_tls_key }}"
+        dest: /etc/syslog-ng/cert.d/clientkey.pem
+        mode: '0400'
+      notify: Restart syslog-ng
+    - name: Copy syslog server ca
+      copy:
+        src: "{{ syslog_tls_server_ca }}"
+        dest: /etc/syslog-ng/ca.d/serverca.pem
+        mode: '0644'
+      notify: Restart syslog-ng
