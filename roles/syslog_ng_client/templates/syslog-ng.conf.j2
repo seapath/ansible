@@ -32,9 +32,6 @@ destination d_syslog { file("/var/log/syslog-ng/syslog.local"); };
 {% endif %}
 
 {% if syslog_server_ip is defined %}
-# Network destination
-# mem-buff-size is set to 163840000 ~= 156MB (default value)
-# disk-buf-size is set to 1073741824 = 1GB
 destination d_net {
         network(
                 "{{ syslog_server_ip }}"
@@ -51,12 +48,6 @@ destination d_net {
                 transport("tcp")
 {% endif %}
                 time_zone("UTC")
-                disk-buffer(
-                        mem-buf-size(16384000)
-                        disk-buf-size(107374182)
-                        reliable(yes)
-                        dir("/var/log/syslog-ng")
-                )
         );
 };
 {% endif %}
