@@ -58,7 +58,7 @@ destination d_net {
                         dir("/var/log/syslog-ng")
                 )
         );
- };
+};
 {% endif %}
 
 ########################
@@ -66,18 +66,18 @@ destination d_net {
 ########################
 {% if syslog_local is defined %}
 log {
-    source(s_local_journal);
-    destination(d_syslog);
+        source(s_local_journal);
+        destination(d_syslog);
 };
 {% endif %}
 {% if syslog_server_ip is defined %}
 log {
-    source(s_local_journal);
+        source(s_local_journal);
 {% if ansible_distribution == 'Debian' and ansible_distribution_version | int < 12 %}
-    if (program("libvirtd")) {
-      rewrite { set-facility("daemon"); };
-    };
+        if (program("libvirtd")) {
+                rewrite { set-facility("daemon"); };
+        };
 {% endif %}
-    destination(d_net);
+        destination(d_net);
 };
 {% endif %}
