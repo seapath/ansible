@@ -10,12 +10,13 @@ If not, TLS encryption is deactivated.
 
 ## Role Variables
 
-| Variable             | Required | Type        | Comments                                                           |
-|----------------------|----------|-------------|--------------------------------------------------------------------|
-| syslog_tls_ca        |  No      | String      | Syslog TLS public key                                              |
-| syslog_tls_key       |  No      | String      | Syslog TLS private key                                             |
-| syslog_tls_server_ca |  No      | String      | Syslog TLS CA                                                      |
-| syslog_server_ip     |  No      | String      | IP address of the Syslog server to send logs                       |
+| Variable             | Required | Type        | Default | Comments                                                           |
+|----------------------|----------|-------------|---------|--------------------------------------------------------------------|
+| syslog_conf_template |  No      | String      | Config template provided by the role | Local path to the syslog-ng configuration template.|
+| syslog_tls_ca        |  No      | String      |         | Syslog TLS public key                                              |
+| syslog_tls_key       |  No      | String      |         | Syslog TLS private key                                             |
+| syslog_tls_server_ca |  No      | String      |         | Syslog TLS CA                                                      |
+| syslog_server_ip     |  No      | String      |         | IP address of the Syslog server to send logs                       |
 
 ## Example Playbook
 
