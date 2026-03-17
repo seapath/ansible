@@ -38,7 +38,7 @@ destination d_syslog { file("/var/log/syslog-ng/syslog.local"); };
 destination d_net {
         network(
                 "{{ syslog_server_ip }}"
-{% if syslog_tls_ca is defined and syslog_tls_key is defined %}
+{% if syslog_tls_ca is defined and syslog_tls_key is defined and syslog_tls_server_ca is defined%}
                 port({{ syslog_tls_port | default(6514) }})
                 transport("tls")
                 tls(
