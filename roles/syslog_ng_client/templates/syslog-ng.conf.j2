@@ -20,13 +20,8 @@ options {
 ########################
 # Sources
 ########################
-# This is the default behavior of sysklogd package
-# Logs may come from unix stream, but not from another machine.
-#
-source s_src {
+source s_local_journal {
         systemd_journal();
-        internal();
-        file("/proc/kmsg" program_override("kernel"));
 };
 
 ########################
@@ -69,13 +64,13 @@ destination d_net {
 ########################
 {% if syslog_local is defined %}
 log {
-    source(s_src);
+    source(s_local_journal);
     destination(d_syslog);
 };
 {% endif %}
 {% if syslog_server_ip is defined %}
 log {
-    source(s_src);
+    source(s_local_journal);
 {% if ansible_distribution == 'Debian' and ansible_distribution_version | int < 12 %}
     if (program("libvirtd")) {
       rewrite { set-facility("daemon"); };
