@@ -66,38 +66,38 @@ This templated XML file offers default behaviors and configurations to launch VM
 It can be a good starting point if you plan to deploy your VM on SEAPATH, however, for any production setup, it is recommended to create your own XML file.
 Below is a list of the VMs member variables that can be used with this XML file. None of these variables are required.
 
-| Member variable | Derived variable | Type            | Default   | Comments                                                                                                                    |
-|-----------------|------------------|-----------------|-----------|-----------------------------------------------------------------------------------------------------------------------------|
-| uuid            |                  | Integer         | random    | Libvirt UUID of the VM                                                                                                      |
-| description     |                  | String          | Test VM   | Libvirt description of the VM                                                                                               |
-| memory          |                  | Integer         | 2048      | RAM of the VM in MiB                                                                                                        |
-| additional_disk |                  | List of strings |           | Additional disks to give to the VM. The main disk is given by the vm_disk variable                                          |
-| vm_features     |                  | List of strings |           | List of vm features to enable. Possible values are "rt", "isolated", "secure-boot", "dpdk", "memballoon", "graphic-console" |
-|                 | rt               |                 |           | Enable real time tweaks (priority, cgroup, scheduler, etc ...). Depends on `cpuset`                                         |
-|                 | isolated         |                 |           | Pin vCPU to hypervisor CPUs. Depends on `cpuset`                                                                            |
-|                 | secure-boot      |                 |           | Enable secure boot                                                                                                          |
-|                 | dpdk             |                 |           | Connect the VM to a DPDK OVS bridge port. Depends on `dpdk`                                                                 |
-|                 | memballoon       |                 |           | Enable memory ballooning for the VM.                                                                                        |
-|                 | graphic-console  |                 |           | Add a graphic console (VNC) with video and tablet input to the VM                                                           |
-| graphics_listen |                  | String          | 127.0.0.1 | Address on which the VNC server listens. Depends on `graphic-console` in `vm_features`                                      |
-| cpuset          |                  | List of int     |           | List of hypervisor CPU cores to use in the case of an isolated/RT VM                                                        |
-| emulatorpin     |                  | Integer         |           | Hypervisor CPU on which to pin the QEMU thread running the VM. If not set, the thread is not pinned.                        |
-| nb_cpu          |                  | Integer         | 1         | Number of vCPU for the VM. Fallback to `cpuset` size if defined.                                                            |
-| sriov           |                  | List of strings |           | List of SRIOV pools to use.                                                                                                 |
-| pci_passthrough |                  | List of dict    |           | List of dictionaries defining devices to passthrough to the VM. Each entry must contain:                                    |
-|                 | domain           | Integer         |           | PCI domain of the device                                                                                                    |
-|                 | bus              | Integer         |           | PCI bus of the device                                                                                                       |
-|                 | slot             | Integer         |           | PCI slot of the device                                                                                                      |
-|                 | function         | Integer         |           | PCI function of the device                                                                                                  |
-| bridges         |                  | List of dicts   |           | List of Linux bridges to use. Each entry must define:                                                                       |
-|                 | name             | String          |           | Name of the bridge to connect to                                                                                            |
-|                 | mac_address      | String          |           | Mac address of the virtual NIC of the VM on this bridge                                                                     |
-| ovs             |                  | List of dicts   |           | List of OVS ports to use. Each element must contain:                                                                        |
-|                 | ovs_port         | String          |           | OVS port to use for this interface                                                                                          |
-|                 | mad_address      | String          |           | Mac address of this interface                                                                                               |
-| dpdk            |                  | List of dicts   |           | List of Open vSwitch ports on which to enable dpdk. Depends on `dpdk` in `vm_features`. Each element must contain:          |
-|                 | ovs_port         |                 |           | OVS port on which to enable DPDK                                                                                            |
-|                 | cpu_nb           |                 |           | Hypervisor CPU to use for this port (100% of the cpu time will be used)                                                     |
+| Member variable | Derived variable | Type            | Default   | Comments                                                                                                                                 |
+|-----------------|------------------|-----------------|-----------|------------------------------------------------------------------------------------------------------------------------------------------|
+| uuid            |                  | Integer         | random    | Libvirt UUID of the VM                                                                                                                   |
+| description     |                  | String          | Test VM   | Libvirt description of the VM                                                                                                            |
+| memory          |                  | Integer         | 2048      | RAM of the VM in MiB                                                                                                                     |
+| additional_disk |                  | List of strings |           | Additional disks to give to the VM. Each entry is a path to a qcow2 disk image. Device names (vdb, vdc, ...) are assigned automatically. |
+| vm_features     |                  | List of strings |           | List of vm features to enable. Possible values are "rt", "isolated", "secure-boot", "dpdk", "memballoon", "graphic-console"              |
+|                 | rt               |                 |           | Enable real time tweaks (priority, cgroup, scheduler, etc ...). Depends on `cpuset`                                                      |
+|                 | isolated         |                 |           | Pin vCPU to hypervisor CPUs. Depends on `cpuset`                                                                                         |
+|                 | secure-boot      |                 |           | Enable secure boot                                                                                                                       |
+|                 | dpdk             |                 |           | Connect the VM to a DPDK OVS bridge port. Depends on `dpdk`                                                                              |
+|                 | memballoon       |                 |           | Enable memory ballooning for the VM.                                                                                                     |
+|                 | graphic-console  |                 |           | Add a graphic console (VNC) with video and tablet input to the VM                                                                        |
+| graphics_listen |                  | String          | 127.0.0.1 | Address on which the VNC server listens. Depends on `graphic-console` in `vm_features`                                                   |
+| cpuset          |                  | List of int     |           | List of hypervisor CPU cores to use in the case of an isolated/RT VM                                                                     |
+| emulatorpin     |                  | Integer         |           | Hypervisor CPU on which to pin the QEMU thread running the VM. If not set, the thread is not pinned.                                     |
+| nb_cpu          |                  | Integer         | 1         | Number of vCPU for the VM. Fallback to `cpuset` size if defined.                                                                         |
+| sriov           |                  | List of strings |           | List of SRIOV pools to use.                                                                                                              |
+| pci_passthrough |                  | List of dict    |           | List of dictionaries defining devices to passthrough to the VM. Each entry must contain:                                                 |
+|                 | domain           | Integer         |           | PCI domain of the device                                                                                                                 |
+|                 | bus              | Integer         |           | PCI bus of the device                                                                                                                    |
+|                 | slot             | Integer         |           | PCI slot of the device                                                                                                                   |
+|                 | function         | Integer         |           | PCI function of the device                                                                                                               |
+| bridges         |                  | List of dicts   |           | List of Linux bridges to use. Each entry must define:                                                                                    |
+|                 | name             | String          |           | Name of the bridge to connect to                                                                                                         |
+|                 | mac_address      | String          |           | Mac address of the virtual NIC of the VM on this bridge                                                                                  |
+| ovs             |                  | List of dicts   |           | List of OVS ports to use. Each element must contain:                                                                                     |
+|                 | ovs_port         | String          |           | OVS port to use for this interface                                                                                                       |
+|                 | mad_address      | String          |           | Mac address of this interface                                                                                                            |
+| dpdk            |                  | List of dicts   |           | List of Open vSwitch ports on which to enable dpdk. Depends on `dpdk` in `vm_features`. Each element must contain:                       |
+|                 | ovs_port         |                 |           | OVS port on which to enable DPDK                                                                                                         |
+|                 | cpu_nb           |                 |           | Hypervisor CPU to use for this port (100% of the cpu time will be used)                                                                  |
 
 ## Example Playbook
 
