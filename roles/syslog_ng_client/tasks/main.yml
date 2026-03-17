@@ -12,7 +12,7 @@
 
 - name: Copy syslog-ng conf file
   template:
-    src: syslog-ng.conf.j2
+    src: "{{ syslog_conf_template }}"
     dest: /etc/syslog-ng/syslog-ng.conf
     mode: '0644'
   notify: Restart syslog-ng
