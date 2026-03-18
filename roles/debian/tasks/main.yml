@@ -123,13 +123,13 @@
     group: "{{ admin_user }}"
     mode: '0644'
 
-- name: Configure APT repositories 
+- name: Configure APT repositories
   when: apt_repo is defined
   block:
     - name: Detect apt_repo type
       set_fact:
         debian_apt_repo_is_dict: "{{ apt_repo is not none and apt_repo | selectattr('name', 'defined') | list | length > 0 }}"
-    - name: Configure apt_repo from config 
+    - name: Configure apt_repo from config
       when: debian_apt_repo_is_dict
       block:
         - name: Remove file /etc/apt/sources.list
