@@ -5,6 +5,7 @@
 ---
 
 - name: Restart syslog-ng
+  become: true
   systemd:
     name: syslog-ng
     state: restarted
