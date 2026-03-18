@@ -44,7 +44,7 @@ destination d_net {
                 tls(
                         key-file("/etc/syslog-ng/cert.d/clientkey.pem")
                         cert-file("/etc/syslog-ng/cert.d/clientcert.pem")
-                        ca-dir("/etc/syslog-ng/ca.d")
+                        ca-file("/etc/syslog-ng/ca.d/serverca.pem")
                 )
 {% else %}
                 port({{ syslog_tcp_port | default(601) }})
