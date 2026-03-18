@@ -9,6 +9,7 @@
     - VMs
   become: true
   roles:
+    - syslog_ng_client
     - oraclelinux
 - name: Prerequis physical machine oraclelinux
   hosts:
