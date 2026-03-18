@@ -17,6 +17,7 @@
     - VMs
   become: true
   roles:
+    - syslog_ng_client
     - debian
 - name: Prerequis physical machine debian
   hosts:

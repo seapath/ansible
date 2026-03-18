@@ -9,6 +9,7 @@
     - VMs
   become: true
   roles:
+    - syslog_ng_client
     - centos
 - name: Prerequis physical machine centos
   hosts:

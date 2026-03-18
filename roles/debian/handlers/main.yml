@@ -7,12 +7,6 @@
     name: systemd-journald
     state: restarted
 
-- name: Restart syslog-ng
-  ansible.builtin.systemd:
-    name: syslog-ng
-    state: restarted
-    enabled: yes
-
 - name: Restart sshd
   ansible.builtin.systemd:
     name: sshd
