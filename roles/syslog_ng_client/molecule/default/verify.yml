@@ -1,0 +1,82 @@
+---
+
+- name: Verify syslog-ng client configuration
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Get keys and certificates expected md5sum
+      ansible.builtin.set_fact:
+        syslog_ng_client_clientcert_md5sum: "{{ lookup('ansible.builtin.file', syslog_tls_ca, rstrip=false) | md5 }}"
+        syslog_ng_client_clientkey_md5sum: "{{ lookup('ansible.builtin.file', syslog_tls_key, rstrip=false) | md5 }}"
+        syslog_ng_client_cacert_md5sum: "{{ lookup('ansible.builtin.file', syslog_tls_server_ca, rstrip=false) | md5 }}"
+
+    - name: Ensure /var/log/syslog-ng exists
+      ansible.builtin.stat:
+        path: /var/log/syslog-ng
+      register: syslog_ng_client_var_log_syslog_ng_stat
+
+    - name: Assert /var/log/syslog-ng exists and is non-empty
+      ansible.builtin.assert:
+        that:
+          - syslog_ng_client_var_log_syslog_ng_stat.stat.exists
+
+    - name: Ensure /etc/syslog-ng/syslog-ng.conf exists
+      ansible.builtin.stat:
+        checksum_algorithm: md5
+        path: /etc/syslog-ng/syslog-ng.conf
+      register: syslog_ng_client_conf_stat
+
+    - name: Assert /etc/syslog-ng/syslog-ng.conf exists and has the expected values
+      ansible.builtin.assert:
+        that:
+          - syslog_ng_client_conf_stat.stat.exists
+          - syslog_ng_client_conf_stat.stat.checksum == syslog_ng_client_conf_md5sum
+        fail_msg: >-
+          Expected /etc/syslog-ng/syslog-ng.conf md5sum '{{ syslog_ng_client_conf_md5sum }}' but got
+          '{{ syslog_ng_client_conf_stat.stat.checksum if syslog_ng_client_conf_stat.stat.exists else 'file does not exist' }}'
+
+    - name: Ensure /etc/syslog-ng/cert.d/clientcert.pem exists
+      ansible.builtin.stat:
+        checksum_algorithm: md5
+        path: /etc/syslog-ng/cert.d/clientcert.pem
+      register: syslog_ng_client_clientcert_stat
+
+    - name: Assert /etc/syslog-ng/cert.d/clientcert.pem exists and has the expected values
+      ansible.builtin.assert:
+        that:
+          - syslog_ng_client_clientcert_stat.stat.exists
+          - syslog_ng_client_clientcert_stat.stat.checksum == syslog_ng_client_clientcert_md5sum
+        fail_msg: >-
+          Expected /etc/syslog-ng/cert.d/clientcert.pem md5sum '{{ syslog_ng_client_clientcert_md5sum }}' but got
+          '{{ syslog_ng_client_clientcert_stat.stat.checksum if syslog_ng_client_clientcert_stat.stat.exists else 'file does not exist' }}'
+
+    - name: Ensure /etc/syslog-ng/cert.d/clientkey.pem exists
+      ansible.builtin.stat:
+        checksum_algorithm: md5
+        path: /etc/syslog-ng/cert.d/clientkey.pem
+      register: syslog_ng_client_clientkey_stat
+
+    - name: Assert /etc/syslog-ng/cert.d/clientkey.pem exists and has the expected values
+      ansible.builtin.assert:
+        that:
+          - syslog_ng_client_clientkey_stat.stat.exists
+          - syslog_ng_client_clientkey_stat.stat.checksum == syslog_ng_client_clientkey_md5sum
+        fail_msg: >-
+          Expected /etc/syslog-ng/cert.d/clientkey.pem md5sum '{{ syslog_ng_client_clientkey_md5sum }}' but got
+          '{{ syslog_ng_client_clientkey_stat.stat.checksum if syslog_ng_client_clientkey_stat.stat.exists else 'file does not exist' }}'
+
+    - name: Ensure /etc/syslog-ng/ca.d/serverca.pem exists
+      ansible.builtin.stat:
+        checksum_algorithm: md5
+        path: /etc/syslog-ng/ca.d/serverca.pem
+      register: syslog_ng_client_cacert_stat
+
+    - name: Assert /etc/syslog-ng/ca.d/serverca.pem exists and has the expected values
+      ansible.builtin.assert:
+        that:
+          - syslog_ng_client_cacert_stat.stat.exists
+          - syslog_ng_client_cacert_stat.stat.checksum == syslog_ng_client_cacert_md5sum
+        fail_msg: >-
+          Expected /etc/syslog-ng/ca.d/serverca.pem md5sum '{{ syslog_ng_client_cacert_md5sum }}' but got
+          '{{ syslog_ng_client_cacert_stat.stat.checksum if syslog_ng_client_cacert_stat.stat.exists else 'file does not exist' }}'

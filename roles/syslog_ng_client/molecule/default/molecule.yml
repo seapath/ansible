@@ -1,0 +1,36 @@
+dependency:
+  name: galaxy
+
+driver:
+  name: podman
+
+platforms:
+  - name: hv1
+    image: docker.io/geerlingguy/docker-debian13-ansible:latest
+    privileged: true
+    command: /sbin/init
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      roles_path: "${MOLECULE_PROJECT_DIRECTORY}/.."
+  playbooks:
+    prepare: prepare.yml
+    converge: converge.yml
+    verify: verify.yml
+  inventory:
+    host_vars:
+      hv1:
+        syslog_tls_ca: "${MOLECULE_SCENARIO_DIRECTORY}/files/clientcert.pem"
+        syslog_tls_key: "${MOLECULE_SCENARIO_DIRECTORY}/files/clientkey.pem"
+        syslog_tls_server_ca: "${MOLECULE_SCENARIO_DIRECTORY}/files/cacert.pem"
+        syslog_server_ip: 192.168.123.234
+        syslog_tls_port: 1234
+
+        syslog_ng_client_conf_md5sum: bf693c873a0771a5115ee048b779e116
+
+verifier:
+  name: ansible
