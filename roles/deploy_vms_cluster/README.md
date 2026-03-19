@@ -23,7 +23,7 @@ No requirement.
 The role uses the "VMs" group of the inventory. All members of this group will be deployed according to member's variable described below.
 The Ansible member inventory host name will be used as VM name.
 
-| *item* variables   | Required | Type        | Default                               | Comments                                                              |
+| *item* variables     | Required | Type        | Default                               | Comments                                                              |
 |--------------------|----------|-------------|---------------------------------------|-----------------------------------------------------------------------|
 | vm_disk            | No       | String      | vms_disks_directory + item + ".qcow2" | Path to the VM disk in `qcow2` format on the the Ansible machine      |
 | vm_template        | No       | String      |                                       | Path of the VM Libvirt XML templated file on the ansible machine      |
@@ -41,6 +41,8 @@ The Ansible member inventory host name will be used as VM name.
 | colocated_vms      | No       | String list |                                       | VM list to be be colocated with the new VM                            |
 | strong_colocation  | No       | Bool        | false                                 | Enable strong colocation on colocated_vms. The VM will will not be started when the constraint is not fulfilled |
 | disk_bus           | No       | String      |                                       | Disk bus type to use for the VM's disk (virtio, sata, scsi, ide, etc.) |
+| console            | No       | Bool        | true                                  | Enable serial console                                                 |
+| display            | No       | Bool        | false                                 | Enable graphical console (VNC)                                        |
 
 Here is an example of the structure for the VM inventory:
 
