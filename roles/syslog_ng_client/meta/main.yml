@@ -4,6 +4,7 @@
 ---
 galaxy_info:
   author: "Seapath"
+  namespace: "seapath"
   description: Configures syslog-ng client machines exporting logs to a remote syslog-ng server.
   min_ansible_version: 2.9.10
   license: Apache-2.0
