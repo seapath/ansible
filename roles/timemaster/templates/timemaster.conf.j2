@@ -34,12 +34,14 @@ includefile /etc/ntp.conf
 
 [ptp4l.conf]
 slaveOnly             1
+ptp_minor_version     {{ timemaster_ptp_minor_version }}
 
 # IEC 61850-9-3 Profile
 # (from : https://en.wikipedia.org/wiki/IEC/IEEE_61850-9-3)
 network_transport     {{ timemaster_ptp_network_transport }}
 delay_mechanism       {{ timemaster_ptp_delay_mechanism }}
-domainNumber             0
+domainNumber          {{ timemaster_ptp_domain_number }}
+
 
 # Announce interval: 1s
 logAnnounceInterval      0
@@ -64,6 +66,10 @@ clockClass               248
 # For example, with IGB driver, a kworker (SCHED_OTHER) wakeup is on the critical
 # path and may have to wait a tick to be scheduled.
 tx_timestamp_timeout    10
+
+{% if timemaster_ptp_custom_options is not none %}
+{%- for line in timemaster_ptp_custom_options %}{{ line }}{% endfor %}
+{% endif %}
 
 [chronyd]
 path /usr/sbin/chronyd
