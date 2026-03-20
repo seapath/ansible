@@ -1,0 +1,35 @@
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Verify required variables for podman_registry_mirror
+  ansible.builtin.assert:
+    that:
+      - podman_registry_mirror_url is not none
+      - podman_registry_mirror_url | length > 0
+    fail_msg: "podman_registry_mirror_url must be set"
+
+- name: Verify CA certificate path when TLS is enabled
+  ansible.builtin.assert:
+    that:
+      - podman_registry_mirror_ca_cert_path is not none
+      - podman_registry_mirror_ca_cert_path | length > 0
+    fail_msg: "podman_registry_mirror_ca_cert_path must be set when podman_registry_mirror_tls_enabled is true"
+  when: podman_registry_mirror_tls_enabled
+
+- name: Ensure registry CA certificate exists
+  ansible.builtin.stat:
+    path: "{{ podman_registry_mirror_ca_cert_path }}"
+  register: podman_registry_mirror_ca_cert_stat
+  delegate_to: localhost
+  become: false
+  when: podman_registry_mirror_tls_enabled
+
+- name: Fail when registry CA certificate does not exist
+  ansible.builtin.fail:
+    msg: "Registry CA certificate not found on the Ansible control node at {{ podman_registry_mirror_ca_cert_path }}"
+  when:
+    - podman_registry_mirror_tls_enabled
+    - not podman_registry_mirror_ca_cert_stat.stat.exists
+
+...

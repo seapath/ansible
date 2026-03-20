@@ -44,7 +44,7 @@
         ceph_expansion_lv_osdid: "{{ item.key | regex_search('@(osd\\.[0-9]+)\\.service', '\\1') | list | first }}"
         ceph_expansion_lv_osdid_number: "{{ ((item.key | regex_search('@(osd\\.[0-9]+)\\.service', '\\1') | list).0).split('.')[-1] }}"
       loop: "{{ ansible_facts.services | dict2items }}"
-      when: "'osd' in item.key"
+      when: "'@osd' in item.key"
       loop_control:
         label: "{{ item.key }}"
     - name: Show result

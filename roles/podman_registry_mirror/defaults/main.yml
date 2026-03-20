@@ -1,0 +1,7 @@
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+podman_registry_mirror_url: null
+podman_registry_mirror_ca_cert_path: null
+podman_registry_mirror_tls_enabled: false

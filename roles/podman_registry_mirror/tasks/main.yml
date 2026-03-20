@@ -1,0 +1,42 @@
+# Copyright (C) 2025 RTE
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Verify roles variable are defined
+  ansible.builtin.import_tasks: validate.yml
+
+- name: Create podman certs.d directory for registry
+  ansible.builtin.file:
+    path: "/etc/containers/certs.d/{{ podman_registry_mirror_url }}"
+    state: directory
+    mode: '0755'
+  when: podman_registry_mirror_tls_enabled
+
+- name: Copy registry CA certificate for podman
+  ansible.builtin.copy:
+    src: "{{ podman_registry_mirror_ca_cert_path }}"
+    dest: "/etc/containers/certs.d/{{ podman_registry_mirror_url }}/ca.crt"
+    mode: '0644'
+  when: podman_registry_mirror_tls_enabled
+
+- name: Configure podman registry mirroring
+  ansible.builtin.blockinfile:
+    path: /etc/containers/registries.conf
+    marker: "# {mark} ANSIBLE MANAGED BLOCK for registry mirroring"
+    block: |
+      [[registry]]
+      location = "docker.io"
+      insecure = {{ 'false' if podman_registry_mirror_tls_enabled else 'true' }}
+      [[registry.mirror]]
+      location = "{{ podman_registry_mirror_url }}"
+      insecure = {{ 'false' if podman_registry_mirror_tls_enabled else 'true' }}
+
+      [[registry]]
+      location = "quay.io"
+      insecure = {{ 'false' if podman_registry_mirror_tls_enabled else 'true' }}
+      [[registry.mirror]]
+      location = "{{ podman_registry_mirror_url }}"
+      insecure = {{ 'false' if podman_registry_mirror_tls_enabled else 'true' }}
+
+...
