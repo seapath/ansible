@@ -34,7 +34,9 @@ includefile /etc/ntp.conf
 
 [ptp4l.conf]
 slaveOnly             1
+{% if seapath_distro != "Yocto" %}
 ptp_minor_version     {{ timemaster_ptp_minor_version }}
+{% endif %}
 
 # IEC 61850-9-3 Profile
 # (from : https://en.wikipedia.org/wiki/IEC/IEEE_61850-9-3)
