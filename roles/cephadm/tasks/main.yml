@@ -399,12 +399,6 @@
   when: cephadm_cephx_user_check.rc == 0
   changed_when: true
 
-#- name: Update logrotate configuration for Ceph
-#  replace:
-#    path: "{{ cephadm_logrorateceph_path }}"
-#    regexp: '^/var/log/ceph/\*.log'
-#    replace: '/var/log/ceph/!(cephadm).log'
-
 - name: Stop and remove Podman registry container
   containers.podman.podman_container:
     name: registry
