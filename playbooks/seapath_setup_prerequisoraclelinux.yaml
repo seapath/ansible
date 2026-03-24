@@ -24,13 +24,6 @@
   become: true
   roles:
     - backup_restore
-#- name: Prerequis hypervisor oraclelinux
-#  hosts:
-#    - hypervisors
-#    - standalone_machine
-#  become: true
-#  roles:
-#    - oraclelinux_hypervisor
 
 - name: Add admin user to haclient group
   hosts:
