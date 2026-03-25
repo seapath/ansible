@@ -9,41 +9,41 @@
       ansible.builtin.file:
         path: /var/lib/ptp
         state: directory
-        mode: '0755'
+        mode: "0755"
     - name: Copy ptp_status executable files
       ansible.builtin.copy:
         src: ptpstatus/ptpstatus.sh
         dest: /var/lib/ptp/ptpstatus.sh
-        mode: '0755'
+        mode: "0755"
     - name: Copy ptp_vsock executable files
       ansible.builtin.copy:
         src: ptp_vsock.py
         dest: /var/lib/ptp/ptp_vsock.py
-        mode: '0755'
+        mode: "0755"
 
     - name: Copy ptp_status.service
       ansible.builtin.copy:
         src: ptpstatus/ptpstatus.service
         dest: /etc/systemd/system/ptpstatus.service
-        mode: '0644'
+        mode: "0644"
       register: ptp_status_vsock_ptpstatus
     - name: Copy ptp_vsock.service
       ansible.builtin.copy:
         src: ptp_vsock.service
         dest: /etc/systemd/system/ptp_vsock.service
-        mode: '0644'
+        mode: "0644"
       register: ptp_status_vsock_ptpvsock
     - name: Daemon-reload ptp status
       ansible.builtin.service:
-        daemon_reload: yes
+        daemon_reload: true
       when: ptp_status_vsock_ptpstatus.changed or ptp_status_vsock_ptpvsock.changed
     - name: Enable ptpstatus.service
       ansible.builtin.systemd:
         name: ptpstatus.service
-        enabled: yes
+        enabled: true
         state: started
     - name: Enable ptp_vsock.service
       ansible.builtin.systemd:
         name: ptp_vsock.service
-        enabled: yes
+        enabled: true
         state: started

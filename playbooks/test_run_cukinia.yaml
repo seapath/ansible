@@ -13,8 +13,8 @@
   roles:
     - detect_seapath_distro
   tasks:
-  - name: Load distribution-specific variables
-    include_vars: "../vars/{{ seapath_distro }}_paths.yml"
+    - name: Load distribution-specific variables
+      include_vars: "../vars/{{ seapath_distro }}_paths.yml"
 
 - name: Cukinia tests
   hosts:
@@ -44,7 +44,7 @@
       fetch:
         src: "{{ tmp_cukinia_dir.path }}/{{ tests_result_name }}"
         dest: "{{ cukinia_test_prefix }}/{{ tests_result_name }}"
-        flat: yes
+        flat: true
 
 - name: Cukinia tests
   hosts:
@@ -67,5 +67,5 @@
       fetch:
         src: "{{ tmp_cukinia_dir.path }}/{{ cluster_tests_result_name }}"
         dest: "{{ cukinia_test_prefix }}/{{ cluster_tests_result_name }}"
-        flat: yes
+        flat: true
       run_once: true

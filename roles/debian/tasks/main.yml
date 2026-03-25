@@ -40,7 +40,7 @@
       ansible.builtin.user:
         name: "{{ debian_old_admin_user }}"
         state: absent
-        remove: yes
+        remove: true
     - name: Remove the old admin group
       ansible.builtin.group:
         name: "{{ debian_old_admin_user }}"
@@ -50,7 +50,7 @@
   ansible.builtin.copy:
     src: journald.conf
     dest: /etc/systemd/journald.conf
-    mode: '0644'
+    mode: "0644"
   notify: Restart systemd-journald
 
 - name: Ensure admin group exists
@@ -65,7 +65,7 @@
     group: "{{ admin_user }}"
     uid: 1000
     password: "{{ admin_passwd | default(omit) }}"
-    append: no
+    append: false
   no_log: true
 - name: Add authorized keys to admin user
   ansible.posix.authorized_key:
@@ -80,19 +80,19 @@
     dest: "/etc/sudoers.d/{{ admin_user }}"
     owner: root
     group: root
-    mode: '0440'
+    mode: "0440"
 - name: Remove admin sudoers line created by build_debian_iso
   lineinfile:
     dest: /etc/sudoers
     state: absent
-    regexp: '^{{ admin_user }}'
+    regexp: "^{{ admin_user }}"
     validate: visudo -cf %s
 
 - name: Copy sysctl rules
   ansible.builtin.copy:
     src: "{{ item }}"
     dest: /etc/sysctl.d/{{ item }}
-    mode: '0644'
+    mode: "0644"
   with_items:
     - 00-panicreboot.conf
 
@@ -108,20 +108,20 @@
       HISTFILESIZE: 2000000
       LIBVIRT_DEFAULT_URI: "qemu:///system"
       HISTTIMEFORMAT: '"%F %T "'
-      EDITOR: 'vim'
-      SYSTEMD_EDITOR: 'vim'
+      EDITOR: "vim"
+      SYSTEMD_EDITOR: "vim"
   with_items: "{{ env_list | dict2items }}"
 
 - name: PATH for admin user
   lineinfile:
     dest: "/home/{{ admin_user }}/.bash_profile"
-    regexp: '^export PATH'
+    regexp: "^export PATH"
     line: "export PATH=$PATH:/usr/sbin:/usr/local/sbin:/sbin"
     state: present
-    create: yes
+    create: true
     owner: "{{ admin_user }}"
     group: "{{ admin_user }}"
-    mode: '0644'
+    mode: "0644"
 
 - name: Configure APT repositories
   when: apt_repo is defined
@@ -169,17 +169,17 @@
   lineinfile:
     dest: /etc/default/grub
     regexp: "^(GRUB_CMDLINE_LINUX_DEFAULT=\")(.*?[ ])?quiet([ ].*)?(\")$"
-    line: '\1\2\3\4'
-    backrefs: yes
+    line: "\\1\\2\\3\\4"
+    backrefs: true
   notify: Update-grub
 
 - name: Make sure GRUB_CMDLINE_LINUX_DEFAULT has no double space
   lineinfile:
     dest: /etc/default/grub
     regexp: "^(GRUB_CMDLINE_LINUX_DEFAULT=\".*)[ ][ ](.*\")"
-    line: '\1 \2'
+    line: "\\1 \\2"
     state: present
-    backrefs: yes
+    backrefs: true
   register: debian_doublespace
   until: not debian_doublespace.changed
   delay: 1
@@ -207,15 +207,15 @@
     regexp: "^(GRUB_CMDLINE_LINUX=)\"([ ]*)(.*)\""
     line: '\1" \3"'
     state: present
-    backrefs: yes
+    backrefs: true
 
 - name: Make grub conf
   lineinfile:
     dest: /etc/default/grub
     regexp: "^(GRUB_CMDLINE_LINUX=(?!.* {{ item }})\"[^\"]*)(\".*)"
-    line: '\1 {{ item }}\2'
+    line: "\\1 {{ item }}\\2"
     state: present
-    backrefs: yes
+    backrefs: true
   notify: Update-grub
   with_items:
     - ipv6.disable=1
@@ -227,16 +227,16 @@
 - name: Grub conf osprober
   lineinfile:
     dest: /etc/default/grub
-    regexp: '^#?GRUB_DISABLE_OS_PROBER=.*$'
-    line: 'GRUB_DISABLE_OS_PROBER=true'
+    regexp: "^#?GRUB_DISABLE_OS_PROBER=.*$"
+    line: "GRUB_DISABLE_OS_PROBER=true"
     state: present
   notify: Update-grub
 
 - name: Disable PerSourcePenalties
   lineinfile:
     dest: /etc/ssh/sshd_config
-    regexp: '^#?PerSourcePenalties.*$'
-    line: 'PerSourcePenalties no'
+    regexp: "^#?PerSourcePenalties.*$"
+    line: "PerSourcePenalties no"
     state: present
   notify: Restart sshd
   when: ansible_distribution_release == 'trixie'

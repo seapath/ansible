@@ -76,7 +76,7 @@
     dest: /etc/ceph/volumemount.secret
     owner: root
     group: root
-    mode: '0600'
+    mode: "0600"
 
 - name: Deploy MDS for CephFS volume 'seapathcephfs'
   command: ceph orch apply mds seapathcephfs --placement="count:3"
@@ -89,7 +89,7 @@
   copy:
     src: wait-for-mds.sh
     dest: /usr/local/bin/wait-for-mds.sh
-    mode: '0755'
+    mode: "0755"
     owner: root
     group: root
 
@@ -97,16 +97,16 @@
   copy:
     src: ceph-mds-ready@seapathcephfs.service
     dest: /etc/systemd/system/ceph-mds-ready@seapathcephfs.service
-    mode: '0644'
+    mode: "0644"
     owner: root
     group: root
 
 - name: Enable and start ceph-mds-ready@seapathcephfs.service
   systemd:
     name: ceph-mds-ready@seapathcephfs.service
-    enabled: yes
+    enabled: true
     state: started
-    daemon_reload: yes
+    daemon_reload: true
 
 - name: Build Ceph monitor list for fstab from detected monitors
   set_fact:
@@ -126,7 +126,7 @@
     state: directory
     owner: root
     group: root
-    mode: '0755'
+    mode: "0755"
 
 - name: Ensure CephFS is mounted
   ansible.posix.mount:
@@ -149,9 +149,9 @@
   ansible.posix.synchronize:
     src: "{{ deploy_cephfs_localdirtoupload }}"
     dest: "{{ deploy_cephfs_remotedir }}"
-    archive: yes
-    delete: no
-    recursive: yes
+    archive: true
+    delete: false
+    recursive: true
     rsync_opts:
       - "--chown=root:root"
   run_once: true

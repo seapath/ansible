@@ -6,15 +6,15 @@
   file:
     path: "/etc/cukinia"
     state: directory
-    mode: '0755'
+    mode: "0755"
 
 - name: Copy OracleLinux cukinia tests
   ansible.builtin.copy:
     src: cukinia.conf
     dest: /etc/cukinia/cukinia.conf
-    mode: '0644'
+    mode: "0644"
 - name: Copy OracleLinux cukinia cluster tests
   ansible.builtin.copy:
     src: cukinia-cluster.conf
     dest: /etc/cukinia/cukinia-cluster.conf
-    mode: '0644'
+    mode: "0644"

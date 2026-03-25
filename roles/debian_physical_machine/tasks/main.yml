@@ -9,7 +9,7 @@
   ansible.builtin.copy:
     src: "{{ item }}"
     dest: /etc/sysctl.d/{{ item }}
-    mode: '0644'
+    mode: "0644"
   with_items:
     - 00-bridge_nf_call.conf
   notify: Restart systemd-sysctl
@@ -17,7 +17,7 @@
 - name: Add sysctl conf from inventory (extra_sysctl_physical_machines)
   ansible.builtin.copy:
     dest: /etc/sysctl.d/00-seapathextra_physicalmachines.conf
-    mode: '0644'
+    mode: "0644"
     content: "{{ extra_sysctl_physical_machines }}"
   when: extra_sysctl_physical_machines is defined
   notify: Restart systemd-sysctl
@@ -26,7 +26,7 @@
   file:
     path: /tmp/src
     state: directory
-    mode: '0755'
+    mode: "0755"
 
 - name: Temp fix for synchronize to force evaluate variables
   set_fact:
@@ -44,12 +44,11 @@
   file:
     path: /usr/lib/ocf/resource.d/seapath
     state: directory
-    mode: '0755'
+    mode: "0755"
 
 - name: Configure Pacemaker Seapath resources
   when: "'cluster_machines' in group_names"
   block:
-
     - name: Copy Pacemaker Seapath Resource-Agent files
       ansible.posix.synchronize:
         src: pacemaker_ra/
@@ -60,13 +59,13 @@
 
     - name: Copy VirtualDomain from heartbeat to seapath
       copy:
-        remote_src: yes
+        remote_src: true
         src: /usr/lib/ocf/resource.d/heartbeat/VirtualDomain
         dest: /usr/lib/ocf/resource.d/seapath/VirtualDomain
         owner: root
         group: root
-        mode: '0755'
-        force: yes
+        mode: "0755"
+        force: true
 
     - name: Apply patch to VirtualDomain
       ansible.posix.patch:
@@ -76,13 +75,13 @@
 
     - name: Copy ethmonitor from heartbeat to seapath
       copy:
-        remote_src: yes
+        remote_src: true
         src: /usr/lib/ocf/resource.d/heartbeat/ethmonitor
         dest: /usr/lib/ocf/resource.d/seapath/ethmonitor
         owner: root
         group: root
-        mode: '0755'
-        force: yes
+        mode: "0755"
+        force: true
 
     - name: Apply patch1 to ethmonitor
       ansible.posix.patch:
@@ -102,13 +101,13 @@
     dest: /etc/systemd/system/chrony-wait.service
     owner: root
     group: root
-    mode: '0644'
+    mode: "0644"
   register: debian_physical_machine_chronywait
   notify: Trigger daemon-reload
 - name: Enable chrony-wait.service
   ansible.builtin.systemd:
     name: chrony-wait.service
-    enabled: yes
+    enabled: true
 
 - name: Setup pacemaker service if needed
   when:
@@ -120,14 +119,14 @@
         state: directory
         owner: root
         group: root
-        mode: 0755
+        mode: "0755"
     - name: Copy pacemaker.service drop-in
       template:
         src: pacemaker_override.conf.j2
         dest: /etc/systemd/system/pacemaker.service.d/override.conf
         owner: root
         group: root
-        mode: 0644
+        mode: "0644"
       notify: Trigger daemon-reload
       register: debian_physical_machine_pacemaker_corosync
     - name: Get Pacemaker service Status
@@ -137,12 +136,12 @@
     - name: Disable pacemaker (reinstall step 1/2)
       ansible.builtin.systemd:
         name: pacemaker.service
-        enabled: no
+        enabled: false
       when: debian_physical_machine_pacemaker_corosync.changed and debian_physical_machine_pacemaker_service_status.status.UnitFileState == "enabled"
     - name: Enable pacemaker (reinstall step 2/2)
       ansible.builtin.systemd:
         name: pacemaker.service
-        enabled: yes
+        enabled: true
       when: debian_physical_machine_pacemaker_corosync.changed and debian_physical_machine_pacemaker_service_status.status.UnitFileState == "enabled"
 
 - name: Add extra modules to the kernel
@@ -157,19 +156,19 @@
   lineinfile:
     dest: /etc/modules
     state: present
-    regexp: '^br_netfilter$'
-    line: 'br_netfilter'
+    regexp: "^br_netfilter$"
+    line: "br_netfilter"
 - name: Add raid6_pq to /etc/modules
   lineinfile:
     dest: /etc/modules
     state: present
-    regexp: '^raid6_pq$'
-    line: 'raid6_pq'
+    regexp: "^raid6_pq$"
+    line: "raid6_pq"
 
 - name: Lineinfile in hosts file for logstash-seapath
   lineinfile:
     dest: /etc/hosts
-    regexp: '.* logstash-seapath$'
+    regexp: ".* logstash-seapath$"
     line: "{{ logstash_server_ip }} logstash-seapath"
     state: present
   when: logstash_server_ip is defined
@@ -189,7 +188,7 @@
   ansible.builtin.copy:
     src: initramfs-tools/scripts/
     dest: /etc/initramfs-tools/scripts/
-    mode: '0755'
+    mode: "0755"
   notify: Rebuild initramfs if necessary
 
 - name: Get the /var/log/ device
@@ -227,13 +226,13 @@
   ansible.builtin.copy:
     src: 69-lvm.rules
     dest: /etc/udev/rules.d/69-lvm.rules
-    mode: '0644'
+    mode: "0644"
   when: ansible_distribution == 'Debian' and ansible_distribution_version | int >= 12
 
 - name: Add rbd type to lvm.conf
   ansible.builtin.lineinfile:
     path: /etc/lvm/lvm.conf
-    insertafter: 'devices {'
+    insertafter: "devices {"
     line: "        types = [ \"rbd\", 1024 ]"
     state: present
 
@@ -243,7 +242,7 @@
     state: directory
     owner: root
     group: root
-    mode: 0755
+    mode: "0755"
   notify: Restart ovs-vswitchd
 - name: Create ovs-vswitchd.service drop-in
   template:
@@ -251,7 +250,7 @@
     dest: /etc/systemd/system/ovs-vswitchd.service.d/override.conf
     owner: root
     group: root
-    mode: 0644
+    mode: "0644"
   when: team0_0 is defined and team0_1 is defined
   notify: Restart ovs-vswitchd
 - name: Copy team0_x@.service file
@@ -260,6 +259,6 @@
     dest: /etc/systemd/system/team0_x@.service
     owner: root
     group: root
-    mode: 0644
+    mode: "0644"
   when: team0_0 is defined and team0_1 is defined
   notify: Restart ovs-vswitchd

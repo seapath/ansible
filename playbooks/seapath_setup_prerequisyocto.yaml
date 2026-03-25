@@ -5,6 +5,7 @@
 # This Ansible playbook configures a SEAPATH machine.
 # It launches the Yocto flavor specific tasks
 
+---
 - name: Add kernel parameters
   hosts:
     - cluster_machines
@@ -39,7 +40,7 @@
         owner: "{{ item.owner | default('root') }}"
         group: "{{ item.group | default('root') }}"
         mode: "{{ item.mode | default('0644') }}"
-        backup: yes
+        backup: true
       with_items: "{{ upload_files }}"
       when:
         - upload_files is defined

@@ -36,7 +36,6 @@ all:
 standalone_machine:
   hosts:
     seapath-machine:
-
 # The machine is an hypervisor
 hypervisors:
   hosts:
@@ -55,5 +54,3 @@ rbdmirrors:
 rgwloadbalancers:
 rgws:
 cluster_machines:
-
-...

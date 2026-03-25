@@ -14,7 +14,7 @@
   template:
     src: "{{ item }}"
     dest: /usr/local/bin/{{ item | basename | regex_replace('\.j2$', '') }}
-    mode: '0755'
+    mode: "0755"
   with_fileglob:
     - scripts/*.j2
 
@@ -31,7 +31,7 @@
   file:
     path: "/etc/backup-restore.conf"
     state: touch
-    mode: 0644
+    mode: "0644"
     owner: root
     group: root
 - name: Check configuration of backup-restore.sh tool (remote_shell)

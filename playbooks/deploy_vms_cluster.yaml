@@ -9,7 +9,7 @@
   gather_facts: false
   become: true
   tasks:
-  - name: Deploy VMs on Cluster Role
-    with_items: "{{ groups['VMs'] }}"
-    ansible.builtin.include_role:
-      name: deploy_vms_cluster
+    - name: Deploy VMs on Cluster Role
+      with_items: "{{ groups['VMs'] }}"
+      ansible.builtin.include_role:
+        name: deploy_vms_cluster

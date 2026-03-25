@@ -28,8 +28,8 @@
     - name: Set extra kernel parameters
       replace:
         path: "{{ yocto_config_file }}"
-        regexp: '(root=.*)'
-        replace: '\1 {{ extra_kernel_parameters }}'
+        regexp: "(root=.*)"
+        replace: "\\1 {{ extra_kernel_parameters }}"
       when: yocto_extra_param_needed is defined
     - name: Umount the boot partition
       command: /usr/share/update/mount_boot.sh umount

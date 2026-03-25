@@ -5,21 +5,21 @@
 - name: Check for existing installation (ceph-ansible only)
   when: not (is_using_cephadm | default(false))
   block:
-  - name: Create Ceph log directory
-    file:
+    - name: Create Ceph log directory
+      file:
         path: /var/log/ceph
         owner: ceph
         group: ceph
         mode: "0770"
         state: directory
-  - name: Create Ceph crash directory
-    file:
+    - name: Create Ceph crash directory
+      file:
         path: /var/lib/ceph/crash/posted
         owner: ceph
         group: ceph
         mode: "0770"
         state: directory
-    register: ceph_prepare_installation_new_ceph_installation
+      register: ceph_prepare_installation_new_ceph_installation
 
 - name: Prepare OSD disk # noqa: no-handler
   when:
@@ -27,7 +27,7 @@
   block:
     - name: Refresh LVM VG
       command:
-        cmd:  vgchange --refresh
+        cmd: vgchange --refresh
       changed_when: true
     - name: Cleanup LV if we are in existing LV situation
       when:
@@ -94,11 +94,11 @@
                         | first
                       ) | float if ceph_prepare_installation_previous_exists else 0.0 }}
 
-            - debug:  # noqa: name[missing]
+            - debug: # noqa: name[missing]
                 var: ceph_prepare_installation_prev_end
-            - debug:  # noqa: name[missing]
+            - debug: # noqa: name[missing]
                 var: lvm_volumes[0].device_size
-            - debug:  # noqa: name[missing]
+            - debug: # noqa: name[missing]
                 msg: "{{ ((ceph_prepare_installation_prev_end | float) + (lvm_volumes[0].device_size | float)) | round(2) }}"
 
             - name: Calculate partition boundaries

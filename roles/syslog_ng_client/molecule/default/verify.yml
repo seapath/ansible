@@ -1,5 +1,4 @@
 ---
-
 - name: Verify syslog-ng client configuration
   hosts: all
   become: true

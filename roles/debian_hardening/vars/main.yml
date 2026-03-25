@@ -3,18 +3,18 @@
 ---
 
 debian_hardening_kernel_params:
- - init_on_alloc=1
- - init_on_free=1
- - slab_nomerge
- - pti=on
- - slub_debug=ZF
- - randomize_kstack_offset=on
- - slab_common.usercopy_fallback=N
- - iommu=pt
- - security=yama
- - mce=0
- - rng_core.default_quality=500
- - lsm=apparmor,lockdown,capability,landlock,yama,bpf,integrity
+  - init_on_alloc=1
+  - init_on_free=1
+  - slab_nomerge
+  - pti=on
+  - slub_debug=ZF
+  - randomize_kstack_offset=on
+  - slab_common.usercopy_fallback=N
+  - iommu=pt
+  - security=yama
+  - mce=0
+  - rng_core.default_quality=500
+  - lsm=apparmor,lockdown,capability,landlock,yama,bpf,integrity
 
 debian_hardening_hardened_services:
   - syslog-ng

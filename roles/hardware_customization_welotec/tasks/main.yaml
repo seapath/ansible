@@ -43,7 +43,7 @@
   copy:
     src: 20_welotec_lan_prp.network
     dest: /etc/systemd/network/20_welotec_lan_prp.network
-    mode: '0644'
+    mode: "0644"
   when: hardware_customization_welotec_mac_address_prp is defined
   notify: reload systemd-networkd
 
@@ -51,7 +51,7 @@
   template:
     src: 20_welotec_lan_hsr-prp.link.j2
     dest: /etc/systemd/network/20_welotec_lan_hsr-prp.link
-    mode: '0644'
+    mode: "0644"
   vars:
     hardware_customization_welotec_mac_address: "{{ hardware_customization_welotec_mac_address_prp }}"
   when: hardware_customization_welotec_mac_address_prp is defined
@@ -61,7 +61,7 @@
   template:
     src: 20_welotec_lan.link.j2
     dest: "/etc/systemd/network/20_welotec_{{ item }}.link"
-    mode: '0644'
+    mode: "0644"
   vars:
     hardware_customization_welotec_mac_address: "{{ hardware_customization_welotec_mac_address_map[item] }}"
   loop:
@@ -79,7 +79,7 @@
   template:
     src: 20_welotec_lan1.link.j2
     dest: /etc/systemd/network/20_welotec_lan1.link
-    mode: '0644'
+    mode: "0644"
   vars:
     hardware_customization_welotec_mac_address: "{{ hardware_customization_welotec_mac_address_map['lan1'] }}"
   when: hardware_customization_welotec_mac_address_map is defined

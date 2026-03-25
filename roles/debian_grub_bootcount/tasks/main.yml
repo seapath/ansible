@@ -7,7 +7,7 @@
   ansible.builtin.copy:
     src: initramfs-tools/hooks/seapath
     dest: /etc/initramfs-tools/hooks/seapath
-    mode: '0755'
+    mode: "0755"
   notify: Rebuild initramfs if necessary
   when: not debian_grub_bootcount_revert
 - name: "REVERT Add initramfs-tools SEAPATH hooks"
@@ -43,7 +43,7 @@
   ansible.builtin.copy:
     src: initramfs-tools/scripts/init-premount/bootcount_recovery
     dest: /etc/initramfs-tools/scripts/init-premount/bootcount_recovery
-    mode: '0755'
+    mode: "0755"
   notify: Rebuild initramfs if necessary
   when: not debian_grub_bootcount_revert
 - name: "REVERT Add initramfs-tools script: script file"
@@ -57,17 +57,15 @@
   ansible.builtin.lineinfile:
     insertafter: EOF
     path: /etc/default/grub
-    line: "GRUB_CMDLINE_LINUX_DEFAULT=\
-           \"${GRUB_CMDLINE_LINUX_DEFAULT:+$GRUB_CMDLINE_LINUX_DEFAULT }\
-           \\$seapath_boot_count_params\""
+    line: "GRUB_CMDLINE_LINUX_DEFAULT=\"${GRUB_CMDLINE_LINUX_DEFAULT:+$GRUB_CMDLINE_LINUX_DEFAULT }\\$seapath_boot_count_params\""
     state: present
   notify: Update-grub
   when: not debian_grub_bootcount_revert
 - name: Remove seapath_boot_count_params from GRUB_CMDLINE_LINUX_DEFAULT
   ansible.builtin.replace:
     path: /etc/default/grub
-    regexp: '(\s*\\\$seapath_boot_count_params)'
-    replace: ''
+    regexp: "(\\s*\\\\\\$seapath_boot_count_params)"
+    replace: ""
   when: debian_grub_bootcount_revert
 
 - name: Backup 10_linux before patching
@@ -75,8 +73,8 @@
     src: /etc/grub.d/10_linux
     dest: /etc/grub.d_backup10_linux
     mode: preserve
-    remote_src: yes
-    force: no
+    remote_src: true
+    force: false
   when: not debian_grub_bootcount_revert
 - name: Add hooks to /etc/grub.d/10_linux
   ansible.posix.patch:
@@ -89,7 +87,7 @@
     src: /etc/grub.d_backup10_linux
     dest: /etc/grub.d/10_linux
     mode: preserve
-    remote_src: yes
+    remote_src: true
   notify: Update-grub
   when: debian_grub_bootcount_revert
 - name: Remove backup file /etc/grub.d_backup10_linux

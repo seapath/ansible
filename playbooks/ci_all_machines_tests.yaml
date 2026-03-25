@@ -21,4 +21,3 @@
   gather_facts: false
   roles:
     - ci_yocto/get_system_info
-...

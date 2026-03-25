@@ -8,15 +8,15 @@
 - name: Debug LVM volume details when verbosity is 3+
   when: ansible_verbosity >= 3
   block:
-    - debug:  # noqa: name[missing]
+    - debug: # noqa: name[missing]
         msg: "data_size: {{ lvm_volumes[0].data_size }}"
-    - debug:  # noqa: name[missing]
+    - debug: # noqa: name[missing]
         msg: "ansible_lvm: {{ ansible_lvm }}"
-    - debug:  # noqa: name[missing]
+    - debug: # noqa: name[missing]
         msg: "lvm_volumes[0].data: {{ ansible_lvm['lvs'][lvm_volumes[0].data] }}"
-    - debug:  # noqa: name[missing]
+    - debug: # noqa: name[missing]
         msg: "size_g: {{ ansible_lvm['lvs'][lvm_volumes[0].data]['size_g'] }}"
-    - debug:  # noqa: name[missing]
+    - debug: # noqa: name[missing]
         msg: "size_m: {{ (ansible_lvm['lvs'][lvm_volumes[0].data]['size_g'] | float * 1024) | round(2) }}"
 - name: Check if lv_ceph has to be expanded
   set_fact:
@@ -94,7 +94,7 @@
         paths: /var/lib/ceph/osd/
         file_type: directory
         patterns: "ceph-[0-9]"
-        use_regex: yes
+        use_regex: true
       register: ceph_expansion_lv_ceph_osd_number
     - name: Resize OSDs (ceph-ansible)
       when:
@@ -119,7 +119,7 @@
             name: ceph-osd.target
             state: started
         - name: Wait for cluster to be HEALTH_OK
-          command: '/usr/bin/ceph status --format=json'
+          command: "/usr/bin/ceph status --format=json"
           register: ceph_expansion_lv_osdsdown
           until: ceph_expansion_lv_osdsdown.stdout | from_json | community.general.json_query('health.status') == "HEALTH_OK"
           retries: 20

@@ -1,3 +1,4 @@
+---
 - name: Make sure the debian_grub_bootcount is deployed
   hosts: all
   become: true
@@ -32,9 +33,9 @@
 
     - name: Upgrade the OS (apt-get dist-upgrade)
       ansible.builtin.apt:
-        update_cache: yes
-        install_recommends: no
-        autoremove: yes
+        update_cache: true
+        install_recommends: false
+        autoremove: true
         upgrade: dist
 
     - name: Reboot and hope for the best

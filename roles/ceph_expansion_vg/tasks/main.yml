@@ -11,14 +11,14 @@
         ceph_expansion_vg_list_pvs: "{{ ansible_lvm['pvs'] | dict2items | community.general.json_query(query) }}"
         ceph_expansion_vg_unit: "kib"
       vars:
-        query: "[?value.vg=='{{ lvm_volumes[0].data_vg }}'].key"  # noqa: var-naming[no-reserved]
+        query: "[?value.vg=='{{ lvm_volumes[0].data_vg }}'].key" # noqa: var-naming[no-reserved]
     - name: Get parted info for SD devices
       community.general.parted:
         # Get the name of the device by escaping the partition number
         device: "{{ item | regex_replace('(p?\\d+)$', '') }}"
       loop: "{{ ceph_expansion_vg_list_pvs }}"
       register: ceph_expansion_vg_parted_info
-    - debug:  # noqa: name[missing]
+    - debug: # noqa: name[missing]
         var: ceph_expansion_vg_parted_info
       when: ansible_verbosity >= 3
     - name: Set fact ceph_expansion_vg_part_info
@@ -29,14 +29,14 @@
         query: "[?item=='{{ item }}'] | [].partitions[?num==`{{ item | regex_search('[0-9.]*$') }}`].{oldsize: size, end: end, newsize: `{{ ceph_expansion_vg_new_pv_size | int * 1024 }}` }"  # noqa: var-naming[no-reserved]
       register: ceph_expansion_vg_parts
       loop: "{{ ceph_expansion_vg_list_pvs }}"
-    - debug:  # noqa: name[missing]
+    - debug: # noqa: name[missing]
         var: lvm_volumes[0].device_size
       when: ansible_verbosity >= 3
-    - debug:  # noqa: name[missing]
+    - debug: # noqa: name[missing]
         msg: item.ansible_facts.ceph_expansion_vg_part_info.newsize|int
       loop: "{{ ceph_expansion_vg_parts.results }}"
       when: ansible_verbosity >= 3
-    - debug:  # noqa: name[missing]
+    - debug: # noqa: name[missing]
         msg: item.ansible_facts.ceph_expansion_vg_part_info.oldsize|int
       loop: "{{ ceph_expansion_vg_parts.results }}"
       when: ansible_verbosity >= 3

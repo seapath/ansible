@@ -5,12 +5,12 @@
 # External Ansible roles and collections used by SEAPATH are described here.
 ---
 collections:
-    - name: "community.libvirt"
-    - name: "community.general"
-    - name: "containers.podman"
-    - name: "ansible.posix"
-    - name: "ansible.utils"
-    - name: openstack.config_template
-      source: https://opendev.org/openstack/ansible-config_template
-      type: git
-      version: 2.1.1
+  - name: "community.libvirt"
+  - name: "community.general"
+  - name: "containers.podman"
+  - name: "ansible.posix"
+  - name: "ansible.utils"
+  - name: openstack.config_template
+    source: https://opendev.org/openstack/ansible-config_template
+    type: git
+    version: 2.1.1

@@ -17,7 +17,7 @@
     name: cephadm
     uid: 1001
     group: cephadm
-    create_home: yes
+    create_home: true
   when: seapath_distro != "Yocto"
 
 - name: Ensure group "containerized-ceph" exists
@@ -32,7 +32,7 @@
     name: containerized-ceph
     uid: 167
     group: containerized-ceph
-    create_home: no
+    create_home: false
     shell: /sbin/nologin
   when: seapath_distro == "Debian"
 
@@ -46,15 +46,15 @@
   get_url:
     url: "https://download.ceph.com/rpm-{{ cephadm_release }}/el9/noarch/cephadm"
     dest: "/tmp/cephadm"
-    mode: '0755'
+    mode: "0755"
   when: cephadm_downloadbinary is true
 
 - name: Copy cephadm to /usr/local/bin
   copy:
     src: "/tmp/cephadm"
     dest: "/usr/local/bin/cephadm"
-    mode: '0755'
-    remote_src: yes
+    mode: "0755"
+    remote_src: true
   when: cephadm_installbinary is true
 
 - name: Install cephadm repository
@@ -126,9 +126,9 @@
     path: /etc/containers/registries.conf
     marker: "# {mark} ANSIBLE MANAGED BLOCK for insecure registries"
     block: |
-        [[registry]]
-        insecure = true
-        location = "localhost"
+      [[registry]]
+      insecure = true
+      location = "localhost"
 
 - name: Ensure /var/lib/registry exists
   ansible.builtin.file:
@@ -136,7 +136,7 @@
     state: directory
     owner: root
     group: root
-    mode: '0755'
+    mode: "0755"
 
 - name: Pull needed Docker images
   containers.podman.podman_image:
@@ -172,8 +172,8 @@
 # === Bootstrap if currently no ceph nodes ===
 - name: Upload file ceph.conf needed for bootstrapping # noqa: risky-file-permissions
   template:
-      src: ceph.conf.j2
-      dest: /tmp/ceph.conf
+    src: ceph.conf.j2
+    dest: /tmp/ceph.conf
   run_once: true
   delegate_to: "{{ cephadm_first_node }}"
   when: cephadm_do_bootstrap | bool
@@ -205,15 +205,15 @@
 
 - name: Bootstrap Ceph cluster
   command: >-
-      {{ cephadm_bin }}
-      --image localhost:5000/ceph:v{{ cephadm_release }}
-      bootstrap
-      --skip-monitoring-stack
-      --skip-dashboard
-      --skip-firewalld
-      --config /tmp/ceph.conf
-      --ssh-user cephadm
-      --mon-ip {{ hostvars[cephadm_first_node]['cluster_ip_addr'] }}
+    {{ cephadm_bin }}
+    --image localhost:5000/ceph:v{{ cephadm_release }}
+    bootstrap
+    --skip-monitoring-stack
+    --skip-dashboard
+    --skip-firewalld
+    --config /tmp/ceph.conf
+    --ssh-user cephadm
+    --mon-ip {{ hostvars[cephadm_first_node]['cluster_ip_addr'] }}
   changed_when: true
   failed_when: false
   run_once: true
@@ -334,7 +334,7 @@
   template:
     src: "{{ cephadm_spec_path | default('spec.yaml.j2') }}"
     dest: /tmp/t.yaml
-    mode: 0644
+    mode: "0644"
   run_once: true
   delegate_to: "{{ cephadm_first_node }}"
 

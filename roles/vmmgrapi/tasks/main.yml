@@ -5,7 +5,7 @@
 # We need to restart nginx if it's running and know if gunicorn socket is present
 - name: Populate service facts
   service_facts:
-#- name: Print service facts
+# - name: Print service facts
 #  ansible.builtin.debug:
 #    var: ansible_facts.services
 - name: Install vm-mgr http interface
@@ -17,13 +17,13 @@
       file:
         path: "{{ vmmgrapi_certs_dir }}"
         state: directory
-        mode: 0755
+        mode: "0755"
 
     - name: Upload cert/key if provided
       copy:
         src: "{{ item }}"
         dest: "{{ vmmgrapi_certs_dir }}/{{ item }}"
-        mode: '0644'
+        mode: "0644"
       with_items:
         - "{{ vmmgr_http_tls_crt_path }}"
         - "{{ vmmgr_http_tls_key_path }}"
@@ -42,14 +42,14 @@
     - name: Correct certificates rights
       file:
         path: "{{ vmmgrapi_certs_dir }}/{{ item }}"
-        mode: 0644
+        mode: "0644"
       loop:
         - "seapath.crt"
 
     - name: Correct private keys rights
       file:
         path: "{{ vmmgrapi_certs_dir }}/{{ item }}"
-        mode: 0640
+        mode: "0640"
       loop:
         - "seapath.key"
 
@@ -58,7 +58,7 @@
         path: "{{ vmmgr_http_local_auth_file }}"
         owner: www-data
         group: www-data
-        mode: '0600'
+        mode: "0600"
         state: touch
       when: vmmgr_http_local_auth_file is defined
 
@@ -66,13 +66,13 @@
       template:
         src: nginx.conf.j2
         dest: /etc/nginx/nginx.conf
-        mode: '0600'
+        mode: "0600"
       register: vmmgrapi_nginx_conf
 
     - name: Restart nginx if needed
       ansible.builtin.systemd:
         name: nginx.service
-        enabled: no
+        enabled: false
         state: stopped
       when:
         - vmmgrapi_nginx_conf.changed
@@ -82,7 +82,7 @@
       ansible.builtin.copy:
         src: "{{ item }}"
         dest: /var/local/vmmgrapi/{{ item }}
-        mode: '0644'
+        mode: "0644"
       with_items:
         - wsgi.py
 
@@ -90,7 +90,7 @@
       ansible.builtin.copy:
         src: "{{ item }}"
         dest: /etc/systemd/system/{{ item }}
-        mode: '0644'
+        mode: "0644"
       with_items:
         - gunicorn.socket
         - gunicorn.service
@@ -98,26 +98,26 @@
 
     - name: Daemon-reload vmmgrapi # noqa: no-handler
       ansible.builtin.service:
-        daemon_reload: yes
+        daemon_reload: true
       when: vmmgrapi_systemd.changed
 
     - name: Restart gunicorn.socket if needed # noqa: no-handler
       ansible.builtin.systemd:
         name: gunicorn.socket
-        enabled: yes
+        enabled: true
         state: restarted
       when: vmmgrapi_systemd.changed
 
     - name: Start and enable gunicorn.socket
       ansible.builtin.systemd:
         name: gunicorn.socket
-        enabled: yes
+        enabled: true
         state: started
 
 - name: Disable gunicorn.socket if http flask api is not enabled
   ansible.builtin.systemd:
     name: gunicorn.socket
-    enabled: no
+    enabled: false
     state: stopped
   when:
     - enable_vmmgr_http_api is not defined or enable_vmmgr_http_api is false
@@ -126,14 +126,14 @@
 - name: Disable nginx.service all the time, if it exists
   ansible.builtin.systemd:
     name: nginx.service
-    enabled: no
+    enabled: false
   when:
     - services['nginx.service'] is defined
 
 - name: Disable gunicorn.service all the time, if it exists
   ansible.builtin.systemd:
     name: gunicorn.service
-    enabled: no
+    enabled: false
   when:
     - services['gunicorn.service'] is defined
 

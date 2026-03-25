@@ -20,7 +20,7 @@
         state: directory
         owner: ceph
         group: ceph
-        mode: '0755'
+        mode: "0755"
       with_items:
         - /etc/ceph
         - /var/lib/ceph/
@@ -35,5 +35,5 @@
         - /var/lib/ceph/bootstrap-osd
         - /var/lib/ceph/bootstrap-rbd
         - /var/lib/ceph/bootstrap-rbd-mirror
-        - /var/run/ceph 
+        - /var/run/ceph
         - /var/log/ceph

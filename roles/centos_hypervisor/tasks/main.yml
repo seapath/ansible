@@ -3,14 +3,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-
 - name: Add vhost_vsock to /etc/modules-load.d
   ansible.builtin.copy:
     src: modules/vhost_vsock.conf
     dest: /etc/modules-load.d/vhost_vsock.conf
     owner: root
     group: root
-    mode: 0751
+    mode: "0751"
 
 - name: Add sriov driver to /etc/modules-load.d
   ansible.builtin.copy:
@@ -18,7 +17,7 @@
     dest: /etc/modules-load.d/sriov_driver.conf
     owner: root
     group: root
-    mode: 0751
+    mode: "0751"
   when: sriov_driver is defined
 - name: Load the sriov module
   community.general.modprobe:
@@ -30,7 +29,7 @@
   template:
     src: sriov.conf.j2
     dest: /etc/tmpfiles.d/sriov.conf
-    mode: '0644'
+    mode: "0644"
   with_items: "{{ sriov | dict2items }}"
   when: sriov is defined
 
@@ -45,23 +44,23 @@
 - name: Setup irqbalance conf revert
   lineinfile:
     path: /etc/sysconfig/irqbalance
-    regexp: '^#?IRQBALANCE_BANNED_CPULIST=(.*)$'
-    line: '#IRQBALANCE_BANNED_CPULIST=\1'
+    regexp: "^#?IRQBALANCE_BANNED_CPULIST=(.*)$"
+    line: "#IRQBALANCE_BANNED_CPULIST=\\1"
     state: present
-    backrefs: yes
+    backrefs: true
   notify: Restart irqbalance
   when: isolcpus is not defined
 
 - name: Systemd conf RuntimeWatchdogSec
   lineinfile:
     path: /etc/systemd/system.conf
-    regexp: '^RuntimeWatchdogSec=.*$'
+    regexp: "^RuntimeWatchdogSec=.*$"
     line: "RuntimeWatchdogSec=20"
     state: present
 - name: Systemd conf RebootWatchdogSec
   lineinfile:
     path: /etc/systemd/system.conf
-    regexp: '^RebootWatchdogSec=.*$'
+    regexp: "^RebootWatchdogSec=.*$"
     line: "RebootWatchdogSec=5min"
     state: present
 
@@ -71,28 +70,28 @@
     - cpuuser is defined
     - cpumachines is defined
   block:
-  - name: Create systemd slices override (folder)
-    file:
-      path: /etc/systemd/system.control/{{ item }}.slice.d
-      state: directory
-      owner: root
-      group: root
-      mode: 0755
-    with_items:
-      - "system"
-      - "user"
-      - "machine"
-  - name: Create systemd slices override (files)
-    template:
-      src: systemd_slice_override.j2
-      dest: /etc/systemd/system.control/{{ item.name }}.slice.d/50-AllowedCPUs.conf
-      owner: root
-      group: root
-      mode:  0644
-    with_items:
-      - { name: "system", description: "system slice", allowedcpus: "{{ cpusystem }}" }
-      - { name: "user", description: "user slice", allowedcpus: "{{ cpuuser }}" }
-      - { name: "machine", description: "machine slice", allowedcpus: "{{ cpumachines }}" }
+    - name: Create systemd slices override (folder)
+      file:
+        path: /etc/systemd/system.control/{{ item }}.slice.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      with_items:
+        - "system"
+        - "user"
+        - "machine"
+    - name: Create systemd slices override (files)
+      template:
+        src: systemd_slice_override.j2
+        dest: /etc/systemd/system.control/{{ item.name }}.slice.d/50-AllowedCPUs.conf
+        owner: root
+        group: root
+        mode: "0644"
+      with_items:
+        - { name: "system", description: "system slice", allowedcpus: "{{ cpusystem }}" }
+        - { name: "user", description: "user slice", allowedcpus: "{{ cpuuser }}" }
+        - { name: "machine", description: "machine slice", allowedcpus: "{{ cpumachines }}" }
 
 - name: Create systemd slices override REVERT
   file:
@@ -110,7 +109,7 @@
     dest: /etc/systemd/system/{{ item.name }}.slice
     owner: root
     group: root
-    mode:  0644
+    mode: "0644"
   with_items:
     - { name: "machine-rt", description: "VM rt slice", wants: "machine.slice", allowedcpus: "{{ cpumachinesrt }}" }
     - { name: "machine-nort", description: "VM nonrt slice", wants: "machine.slice", allowedcpus: "{{ cpumachinesnort }}" }
@@ -134,9 +133,9 @@
 - name: Make sure tuned package is installed
   ansible.builtin.dnf:
     name:
-     - tuned
-     - tuned-profiles-nfv
-     - tuned-profiles-realtime
+      - tuned
+      - tuned-profiles-nfv
+      - tuned-profiles-realtime
     state: present
 
 - name: Remove old isolation files
@@ -155,7 +154,7 @@
   file:
     path: /etc/tuned/seapath-rt-host
     state: directory
-    mode: '0755'
+    mode: "0755"
 
 - name: Copy seapath-rt-host tuned profile conf
   template:
@@ -163,19 +162,19 @@
     dest: /etc/tuned/seapath-rt-host/tuned.conf
     group: root
     owner: root
-    mode: '0644'
+    mode: "0644"
 
 - name: Remove tuned dynamic tuning
   lineinfile:
     path: /etc/tuned/tuned-main.conf
     state: present
-    regexp: '^#?dynamic_tuning = .*$'
-    line: 'dynamic_tuning = 0'
+    regexp: "^#?dynamic_tuning = .*$"
+    line: "dynamic_tuning = 0"
 
 - name: Enable tuned.service
   ansible.builtin.systemd:
     name: tuned.service
-    enabled: yes
+    enabled: true
     state: restarted
 
 - name: Load seapath-rt-host tuned profile
@@ -191,7 +190,7 @@
 - name: Enable libvirtd.service
   ansible.builtin.systemd:
     name: libvirtd.service
-    enabled: yes
+    enabled: true
     state: started
 
 - name: Create system alternative for a debian kvm path

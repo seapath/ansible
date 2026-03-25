@@ -5,7 +5,6 @@
 # For now, it only includes ptp configuration
 
 ---
-
 - name: Populate service facts
   service_facts:
 - name: Ensure phc2sys service is stopped
@@ -25,4 +24,3 @@
     enabled: true
     daemon_reload: true
     state: started
-

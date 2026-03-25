@@ -10,7 +10,7 @@
   register: ci_centos_tmp_test_dir
 
 - name: Remove /usr/share/testdata/cukinia.conf
-  become: yes
+  become: true
   file:
     path: /usr/share/testdata/cukinia.conf
     state: absent
@@ -20,7 +20,7 @@
     dest: /usr/share/testdata/cukinia.conf
 
 - name: Create symbolic link for cukinia
-  become: yes
+  become: true
   ansible.builtin.file:
     src: /usr/local/bin/cukinia
     dest: /usr/bin/cukinia
@@ -39,7 +39,7 @@
         dest: /usr/share/testdata/
 
 - name: Launch cukinia tests
-  become: yes
+  become: true
   throttle: 1
   shell:
     cmd: >-
@@ -49,6 +49,6 @@
   changed_when: true
 - name: Fetch result
   fetch:
-    src: '{{ ci_centos_tmp_test_dir.path }}/cukinia.xml'
+    src: "{{ ci_centos_tmp_test_dir.path }}/cukinia.xml"
     dest: ../cukinia_{{ inventory_hostname }}.xml
-    flat: yes
+    flat: true

@@ -38,7 +38,7 @@ network_systemdnetworkd_br0vlan_network:
     - Match:
         - Name: "{{ network_interface }}"
     - Network:
-      - Bridge: "br0"
+        - Bridge: "br0"
     - BridgeVLAN:
         - VLAN: "1-4094"
 
@@ -59,7 +59,7 @@ network_systemdnetworkd_br0_network:
     - Match:
         - Name: "{{ network_interface }}"
     - Network:
-      - Bridge: "br0"
+        - Bridge: "br0"
 
 network_systemdnetworkd_wired_netdev: "{{ network_systemdnetworkd_br0vlan_netdev if br0vlan is defined else network_systemdnetworkd_br0_netdev }}"
 network_systemdnetworkd_wired_network: "{{ network_systemdnetworkd_br0vlan_network if br0vlan is defined else network_systemdnetworkd_br0_network }}"

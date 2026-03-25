@@ -41,7 +41,7 @@
 
 - name: Get filesystem creation time
   ansible.builtin.shell:
-    cmd:  "set -o pipefail && /usr/sbin/tune2fs -l {{ ci_reinstalliso_root_device.stdout }} | grep 'Filesystem created'"
+    cmd: "set -o pipefail && /usr/sbin/tune2fs -l {{ ci_reinstalliso_root_device.stdout }} | grep 'Filesystem created'"
     executable: "/bin/bash"
   register: ci_reinstalliso_fs_creation
   changed_when: false
@@ -58,13 +58,13 @@
   ansible.builtin.set_fact:
     ci_reinstalliso_delta: "{{ (ci_reinstalliso_current_time | to_datetime('%Y-%m-%d %H:%M:%S') - ci_reinstalliso_fs_creation_time | to_datetime('%Y-%m-%d %H:%M:%S')).total_seconds() }}"
 
-- debug:  # noqa: name[missing]
+- debug: # noqa: name[missing]
     var: ci_reinstalliso_fs_creation
-- debug:  # noqa: name[missing]
+- debug: # noqa: name[missing]
     var: ci_reinstalliso_fs_creation_time
-- debug:  # noqa: name[missing]
+- debug: # noqa: name[missing]
     var: ci_reinstalliso_current_time
-- debug:  # noqa: name[missing]
+- debug: # noqa: name[missing]
     var: ci_reinstalliso_delta
 
 - name: Fail if system was installed more than 15 minutes ago
@@ -75,4 +75,3 @@
 - name: Continue if system is recent
   ansible.builtin.debug:
     msg: "System was installed less than 15 minutes ago. Proceeding..."
-

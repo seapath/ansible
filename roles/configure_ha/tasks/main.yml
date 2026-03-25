@@ -38,27 +38,25 @@
 - name: Setup Corosync from scratch
   when: groups['valid_machine'] is undefined
   block:
-
     - name: Generating /etc/corosync/authkey file
-      command:
-        /usr/sbin/corosync-keygen
+      command: /usr/sbin/corosync-keygen
       run_once: true
       changed_when: true
     - name: Waiting for /etc/corosync/authkey file
       wait_for:
-        path: '/etc/corosync/authkey'
+        path: "/etc/corosync/authkey"
         timeout: 30
       when: inventory_hostname == play_hosts[0]
     - name: Fetching /etc/corosync/authkey
       slurp:
-        src: '/etc/corosync/authkey'
+        src: "/etc/corosync/authkey"
       register: configure_ha_tmp_authkey
       when: inventory_hostname == play_hosts[0]
     - name: Synchronizing /etc/corosync/authkey everywhere
       copy:
         content: "{{ hostvars[play_hosts[0]].configure_ha_tmp_authkey['content'] | b64decode }}"
         dest: /etc/corosync/authkey
-        mode: 0400
+        mode: "0400"
       when: inventory_hostname != play_hosts[0]
 
     - name: Templating corosync.conf # noqa: risky-file-permissions
@@ -70,7 +68,7 @@
       ansible.builtin.systemd:
         name: corosync
         state: restarted
-        enabled: yes
+        enabled: true
       when: configure_ha_corosync_conf.changed
 
 - name: Retrieve corosync cluster key
@@ -101,12 +99,12 @@
         dest: /etc/corosync/authkey
         owner: root
         group: root
-        mode: '0400'
+        mode: "0400"
     - name: Start Corosync
       ansible.builtin.systemd:
-          name: corosync
-          state: started
-          enabled: true
+        name: corosync
+        state: started
+        enabled: true
 
 - name: Setup Pacemaker on unconfigured_machine_group
   when:
@@ -114,9 +112,9 @@
   block:
     - name: Start Pacemaker
       ansible.builtin.systemd:
-          name: pacemaker
-          state: started
-          enabled: true
+        name: pacemaker
+        state: started
+        enabled: true
     - name: Wait for pacemaker
       command: "{{ configure_ha_crm_command_path }} status"
       register: configure_ha_result
@@ -143,7 +141,7 @@
   ansible.builtin.systemd:
     name: corosync
     state: started
-    enabled: yes
+    enabled: true
 
 # run extra CRM commands
 - name: Run extra CRM configuration commands

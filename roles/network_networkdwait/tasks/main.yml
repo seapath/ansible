@@ -11,7 +11,7 @@
         state: directory
         owner: root
         group: root
-        mode: 0755
+        mode: "0755"
     - name: Copy systemd-networkd-wait-online.service overide # noqa: risky-file-permissions
       template:
         src: systemd-networkd-wait-online.service.j2
@@ -19,4 +19,4 @@
     - name: Enable systemd-networkd-wait-online.service
       ansible.builtin.systemd:
         name: systemd-networkd-wait-online.service
-        enabled: yes
+        enabled: true

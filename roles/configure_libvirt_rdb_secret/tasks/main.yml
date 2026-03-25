@@ -10,21 +10,23 @@
   register: configure_libvirt_rdb_secret_secret_defined
   failed_when: configure_libvirt_rdb_secret_secret_defined.rc > 1
   changed_when: false
-- debug:  # noqa: name[missing]
+- debug: # noqa: name[missing]
     var: configure_libvirt_rdb_secret_secret_defined
 
 - name: Check if a secret pool has to be created
   set_fact:
-    configure_libvirt_rdb_secret_create_secret_pool: "{% if hostvars[item]['configure_libvirt_rdb_secret_secret_defined'].stdout == '' %}true{% else %}{{ configure_libvirt_rdb_secret_create_secret_pool | default(false) }}{% endif %}"
+    configure_libvirt_rdb_secret_create_secret_pool: "{% if hostvars[item]['configure_libvirt_rdb_secret_secret_defined'].stdout == '' %}true{% else %}{{ configure_libvirt_rdb_secret_create_secret_pool
+      | default(false) }}{% endif %}"
   loop: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) }}"
 
 - when: configure_libvirt_rdb_secret_create_secret_pool
   block:
     - name: Check if the secret is already defined
       set_fact:
-        configure_libvirt_rdb_secret_libvirt_uuid_rbd: "{% if hostvars[item]['configure_libvirt_rdb_secret_secret_defined'].stdout != '' %}{{ hostvars[item]['configure_libvirt_rdb_secret_secret_defined'].stdout }}{% else %}{{ configure_libvirt_rdb_secret_libvirt_uuid_rbd | default('') }}{% endif %}"
+        configure_libvirt_rdb_secret_libvirt_uuid_rbd: "{% if hostvars[item]['configure_libvirt_rdb_secret_secret_defined'].stdout != '' %}{{ hostvars[item]['configure_libvirt_rdb_secret_secret_defined'].stdout
+          }}{% else %}{{ configure_libvirt_rdb_secret_libvirt_uuid_rbd | default('') }}{% endif %}"
       loop: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) }}"
-    - debug:  # noqa: name[missing]
+    - debug: # noqa: name[missing]
         msg: "Found UUID {{ configure_libvirt_rdb_secret_libvirt_uuid_rbd }}"
       when: configure_libvirt_rdb_secret_libvirt_uuid_rbd | length > 0
       run_once: true
@@ -50,19 +52,19 @@
     - configure_libvirt_rdb_secret_create_secret_pool
     - configure_libvirt_rdb_secret_secret_defined.stdout == ''
   block:
-  - name: Copy libvirt xml secret file # noqa: risky-file-permissions
-    template:
+    - name: Copy libvirt xml secret file # noqa: risky-file-permissions
+      template:
         src: secret.xml.j2
         dest: /tmp/secret.xml
-  - name: Create libvirt rbd secret
-    command: virsh secret-define /tmp/secret.xml
-    when: not configure_libvirt_rdb_secret_secret_defined.failed
-    changed_when: true
-  - name: Remove temporary file
-    file:
+    - name: Create libvirt rbd secret
+      command: virsh secret-define /tmp/secret.xml
+      when: not configure_libvirt_rdb_secret_secret_defined.failed
+      changed_when: true
+    - name: Remove temporary file
+      file:
         path: /tmp/secret.xml
         state: absent
-  - name: Set key in libvirt secret
-    command: 'virsh secret-set-value --secret "{{ configure_libvirt_rdb_secret_libvirt_uuid_rbd }}" --base64 "{{ configure_libvirt_rdb_secret_ceph_key.stdout }}"'
-    changed_when: true
-    no_log: true
+    - name: Set key in libvirt secret
+      command: 'virsh secret-set-value --secret "{{ configure_libvirt_rdb_secret_libvirt_uuid_rbd }}" --base64 "{{ configure_libvirt_rdb_secret_ceph_key.stdout }}"'
+      changed_when: true
+      no_log: true

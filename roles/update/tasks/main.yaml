@@ -2,24 +2,22 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-
 - name: Check if the system have swupdate
   command: swupdate -v
   register: update_swupdate_version
-  ignore_errors: yes
+  ignore_errors: true
   changed_when: false
 - name: Fail if swupdate is not available
   fail:
     msg: "Only Swupdate update is supported"
   when: update_swupdate_version.rc != 0
 
-
 - name: Check the SEAPATH mode, cluster or standalone
   stat:
     path: /etc/corosync/corosync.conf
   register: update_corosync_conf
 
-- name: Perform corosync ressource migration if cluster mode 
+- name: Perform corosync ressource migration if cluster mode
   when: update_corosync_conf.stat.exists
   block:
     - name: Set hypervisor in maintenance mode
@@ -56,7 +54,6 @@
   failed_when: system_status.rc != 0 and system_status.rc != 1
   tags:
     - skip_ansible_lint
-
 
 - name: Unset maintenance mode for hypervisor
   command: crm node online "{{ inventory_hostname }}"
