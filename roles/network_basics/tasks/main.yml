@@ -6,17 +6,17 @@
   when: remove_all_network_config is defined and remove_all_network_config is true
   block:
     - name: Wipe the network directory content 1/2, list files
-      find:
+      ansible.builtin.find:
         paths: ["/etc/systemd/network/", "/etc/netplan"]
         patterns: "*"
       register: network_basics_network_files_to_delete
     - name: Wipe the network directory content 2/2, remove files
-      file:
+      ansible.builtin.file:
         path: "{{ item.path }}"
         state: absent
       with_items: "{{ network_basics_network_files_to_delete.files }}"
 - name: Remove installation network configuration
-  file:
+  ansible.builtin.file:
     path: "/etc/systemd/network/{{ item }}.network"
     state: absent
   with_items:

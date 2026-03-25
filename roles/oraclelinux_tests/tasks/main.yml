@@ -3,7 +3,7 @@
 
 ---
 - name: Create /etc/cukinia folder
-  file:
+  ansible.builtin.file:
     path: "/etc/cukinia"
     state: directory
     mode: "0755"

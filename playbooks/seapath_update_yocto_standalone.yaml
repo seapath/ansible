@@ -10,16 +10,16 @@
   hosts: "{{ machine_to_update }}"
   tasks:
     - name: Copy SWU file on machine # noqa: risky-file-permissions
-      copy:
+      ansible.builtin.copy:
         src: "../{{ swu_image }}"
         dest: "/tmp/update.swu"
     - name: Apply update
       become: true
-      command: swupdate -i /tmp/update.swu
+      ansible.builtin.command: swupdate -i /tmp/update.swu
       changed_when: true
     - name: Reboot host
       become: true
-      reboot:
+      ansible.builtin.reboot:
         msg: "Reboot initiated by Ansible"
         connect_timeout: 5
         reboot_timeout: 600
@@ -35,7 +35,7 @@
         - skip_ansible_lint
     - name: Check if update has succeed
       become: true
-      shell:
+      ansible.builtin.shell:
         cmd: set -o pipefail && journalctl -u swupdate_check.service -b |grep "Update have failed"|wc -l
         executable: /bin/bash
       register: update_status

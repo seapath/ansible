@@ -2,17 +2,17 @@
 # handlers for ansible-role-systemd-networkd
 
 - name: Restart udev
-  service:
+  ansible.builtin.service:
     name: "{{ network_systemdnetworkd_service_name_udev }}"
     state: restarted
 
 - name: Reload systemd-networkd
-  service:
+  ansible.builtin.service:
     name: systemd-networkd
     state: reloaded
   when: network_systemdnetworkd_apply_config
 
 - name: Check reboot
-  set_fact:
+  ansible.builtin.set_fact:
     need_reboot: true # noqa: var-naming[no-role-prefix]
   when: not network_systemdnetworkd_apply_config

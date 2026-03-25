@@ -33,7 +33,7 @@
         msg: "There is no Ceph machine available"
       when: groups['online_host'] is undefined
     - name: Register offline machines
-      add_host:
+      ansible.builtin.add_host:
         name: "{{ item }}"
         groups: offline_host
       loop: "{{ groups.get(mon_group_name) }}"

@@ -1,13 +1,12 @@
 ---
 - name: Include network_team0 vars file
-  include_vars: "network_team0.yml"
-
+  ansible.builtin.include_vars: "network_team0.yml"
 - name: Include network_empty vars file
-  include_vars: "network_empty.yml"
+  ansible.builtin.include_vars: "network_empty.yml"
   when: network_simple is defined and network_simple
 
 - name: Include network_defaults vars file
-  include_vars: "network_defaults.yml"
+  ansible.builtin.include_vars: "network_defaults.yml"
   when: network_simple is not defined or not network_simple
 
 - name: Gather service facts to detect udev service
@@ -19,8 +18,7 @@
   when: '"systemd-udev-trigger.service" in services'
 
 - name: Import link/netdev/networks profiles
-  import_tasks: profiles.yml
-
+  ansible.builtin.import_tasks: profiles.yml
 - name: Enable systemd-networkd
   ansible.builtin.service:
     name: systemd-networkd
@@ -33,7 +31,7 @@
     network_systemdnetworkd_netdev is defined and network_systemdnetworkd_netdev | length > 0
 
 - name: Start and enable systemd-resolved
-  service:
+  ansible.builtin.service:
     name: systemd-resolved
     enabled: true
     state: started

@@ -17,10 +17,10 @@
       block:
         - name: Get GID of ceph group
           register: ceph_gid_result
-          command: id -g ceph
+          ansible.builtin.command: id -g ceph
           changed_when: false
         - name: Set ceph_uid
-          set_fact:
+          ansible.builtin.set_fact:
             ceph_uid: "{{ ceph_gid_result.stdout }}"
 
 - name: Ceph Expansion VG

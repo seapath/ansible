@@ -3,11 +3,11 @@
 
 ---
 - name: Set hostname
-  hostname:
+  ansible.builtin.hostname:
     name: "{{ hostname | default(inventory_hostname) }}"
     use: systemd
 - name: Build hosts file (Cluster Network)
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/hosts
     regexp: ".*{{ hostvars[item].hostname | default(item) }}$"
     line: "{{ hostvars[item].cluster_ip_addr }} {{ item }} {{ hostvars[item].hostname | default('') }}"
@@ -17,7 +17,7 @@
 - name: Build hosts file (Public Network)
   # if cluster_ip_addr is not defined, we consider there is no cluster Network.
   # Ceph will use the public network instead.
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/hosts
     regexp: ".*{{ hostvars[item].hostname | default(item) }}$"
     line: "{{ hostvars[item].ip_addr }} {{ item }} {{ hostvars[item].hostname | default('') }}"
@@ -25,13 +25,13 @@
   loop: "{{ groups['cluster_machines'] | default([]) }}"
   when: hostvars[item].cluster_ip_addr is undefined
 - name: Build hosts file for Standalone machines
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/hosts
     line: "{{ ip_addr | default(ansible_host) }} {{ inventory_hostname }} {{ hostname | default('') }}"
     state: present
   when: inventory_hostname in groups['standalone_machine']|default([])
 - name: Remove 'debian' from hosts file
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/hosts
     state: absent
     regexp: "^127.*debian"
@@ -41,7 +41,7 @@
   block:
     - name: Check if the hosts file exists
       delegate_to: localhost
-      stat:
+      ansible.builtin.stat:
         path: "{{ hosts_path }}"
       register: network_buildhosts_hosts_file_exists
       become: false
@@ -50,12 +50,12 @@
       block:
         - name: Read the hosts file content if it exists
           delegate_to: localhost
-          slurp:
+          ansible.builtin.slurp:
             src: "{{ hosts_path }}"
           register: network_buildhosts_hosts_content
           become: false
         - name: Ensure /etc/hosts contains the updated user hosts content
-          blockinfile:
+          ansible.builtin.blockinfile:
             path: /etc/hosts
             block: "{{ network_buildhosts_hosts_content.content | b64decode }}"
             marker: "# {mark} user hosts file"

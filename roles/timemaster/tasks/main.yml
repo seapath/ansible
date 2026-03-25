@@ -3,18 +3,17 @@
 
 ---
 - name: Load distribution-specific variables
-  include_vars: "{{ seapath_distro }}.yml"
-
+  ansible.builtin.include_vars: "{{ seapath_distro }}.yml"
 - name: Populate service facts
-  service_facts:
+  ansible.builtin.service_facts:
 - name: Stop and disable systemd-timesyncd if it exists
-  service:
+  ansible.builtin.service:
     name: "systemd-timesyncd"
     state: stopped
     enabled: false
   when: "'systemd-timesyncd.service' in services and (services['systemd-timesyncd.service'].status != 'not-found')"
 - name: Stop, disable and mask chronyd if it exists
-  systemd:
+  ansible.builtin.systemd:
     name: "chronyd"
     state: stopped
     enabled: false
@@ -22,7 +21,7 @@
   when: "'chronyd.service' in services and (services['chronyd.service'].status != 'not-found')"
   failed_when: false
 - name: Stop, disable and mask chrony if it exists
-  systemd:
+  ansible.builtin.systemd:
     name: "chrony"
     state: stopped
     enabled: false
@@ -30,18 +29,18 @@
   when: "'chrony.service' in services and (services['chrony.service'].status != 'not-found')"
   failed_when: false
 - name: Create timemaster configuration # noqa: risky-file-permissions
-  template:
+  ansible.builtin.template:
     src: timemaster.conf.j2
     dest: "{{ timemaster_path_timemaster_conf }}"
   notify: Restart timemaster
 - name: Comment pool configuration in chrony.conf
-  replace:
+  ansible.builtin.replace:
     path: "{{ timemaster_path_chrony_conf }}"
     regexp: "^(pool .*)"
     replace: "#\\1"
   notify: Restart timemaster
 - name: Create timemaster.service.d directory
-  file:
+  ansible.builtin.file:
     path: /etc/systemd/system/timemaster.service.d/
     state: directory
     owner: root
@@ -49,16 +48,16 @@
     mode: "0755"
   notify: Restart timemaster
 - name: Copy timemaster.service overide # noqa: risky-file-permissions
-  template:
+  ansible.builtin.template:
     src: timemaster.service.j2
     dest: /etc/systemd/system/timemaster.service.d/override.conf
   notify: Restart timemaster
 - name: Enable timemaster
-  service:
+  ansible.builtin.service:
     name: "timemaster"
     enabled: true
 - name: Stop and disable chrony
-  service:
+  ansible.builtin.service:
     name: "{{ timemaster_service_name_chrony }}"
     state: stopped
     enabled: false

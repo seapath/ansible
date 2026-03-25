@@ -11,7 +11,7 @@
       - "--exclude=*.j2"
 
 - name: Copy backup-restore templates
-  template:
+  ansible.builtin.template:
     src: "{{ item }}"
     dest: /usr/local/bin/{{ item | basename | regex_replace('\.j2$', '') }}
     mode: "0755"
@@ -28,18 +28,18 @@
     label: "{{ item | basename }}"
 
 - name: Create /etc/backup-restore.conf file
-  file:
+  ansible.builtin.file:
     path: "/etc/backup-restore.conf"
     state: touch
     mode: "0644"
     owner: root
     group: root
 - name: Check configuration of backup-restore.sh tool (remote_shell)
-  shell: 'grep -c "^remote_shell=" /etc/backup-restore.conf || true'
+  ansible.builtin.shell: 'grep -c "^remote_shell=" /etc/backup-restore.conf || true'
   register: backup_restore_check_remote_shell
   changed_when: true
 - name: Add default configuration of backup-restore.sh tool (remote_shell)
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/backup-restore.conf
     regexp: "^remote_shell="
     line: "remote_shell=\"ssh\""

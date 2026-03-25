@@ -3,7 +3,7 @@
 
 ---
 - name: Create groups
-  group:
+  ansible.builtin.group:
     name: "{{ item }}"
     state: present
   when: not revert
@@ -12,7 +12,7 @@
     - privileged
 
 - name: "Add kernel parameters in grub"
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/default/grub
     regexp: "^(GRUB_CMDLINE_LINUX=(?!.* {{ item }})\"[^\"]*)(\".*)"
     line: "\\1 {{ item }}\\2"
@@ -22,7 +22,7 @@
   when: not revert
 
 - name: "Revert kernel parameters added in grub"
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/default/grub
     regexp: "^(GRUB_CMDLINE_LINUX=\".*)( {{ item }})(.*\")$"
     line: "\\1\\3"
@@ -32,7 +32,7 @@
   when: revert
 
 - name: "Disable coredumps" # noqa: risky-file-permissions
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/sysctl.d/50-coredump.conf
     regexp: "^kernel.core_pattern=/dev/null$"
     line: "kernel.core_pattern=/dev/null"
@@ -41,7 +41,7 @@
   notify: Update sysfs values using sysctl
   when: not revert
 - name: "Revert coredump disabling"
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/sysctl.d/50-coredump.conf
     regexp: "^kernel.core_pattern=/dev/null$"
     state: absent
@@ -49,7 +49,7 @@
   when: revert
 
 - name: "Disable kexec" # noqa: risky-file-permissions
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/sysctl.d/50-kexec.conf
     regexp: "^kernel.kexec_load_disabled=1$"
     line: "kernel.kexec_load_disabled=1"
@@ -58,7 +58,7 @@
   notify: Update sysfs values using sysctl
   when: not revert
 - name: "Revert kexec disabling"
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/sysctl.d/50-kexec.conf
     regexp: "^kernel.kexec_load_disabled=1$"
     state: absent
@@ -66,7 +66,7 @@
   when: revert
 
 - name: "Disable binfmt_misc" # noqa: risky-file-permissions
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/sysctl.d/50-binfmt_misc.conf
     regexp: "^fs.binfmt_misc.status=0$"
     line: "fs.binfmt_misc.status=0"
@@ -75,7 +75,7 @@
   notify: Update sysfs values using sysctl
   when: not revert
 - name: "Revert binfmt_misc disabling"
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/sysctl.d/50-binfmt_misc.conf
     regexp: "^fs.binfmt_misc.status=0$"
     state: absent
@@ -83,34 +83,34 @@
   when: revert
 
 - name: "Install hardened sysfs rules" # noqa: risky-file-permissions
-  copy:
+  ansible.builtin.copy:
     src: sysctl/90-sysctl-hardening.conf
     dest: /etc/sysctl.d/zz-sysctl-hardening.conf
   notify: Update sysfs values using sysctl
   when: not revert
 - name: "Uninstall hardened sysfs rules"
-  file:
+  ansible.builtin.file:
     path: /etc/sysctl.d/zz-sysctl-hardening.conf
     state: absent
   notify: Update sysfs values using sysctl
   when: revert
 
 - name: "Install network hardened sysfs rules" # noqa: risky-file-permissions
-  copy:
+  ansible.builtin.copy:
     src: sysctl/99-sysctl-network.conf
     dest: /etc/sysctl.d/99-sysctl-network.conf
   notify: Update sysfs values using sysctl
   when: not revert
 
 - name: "Uninstall network hardened sysfs rules"
-  file:
+  ansible.builtin.file:
     path: /etc/sysctl.d/99-sysctl-network.conf
     state: absent
   notify: Update sysfs values using sysctl
   when: revert
 
 - name: "Install random-root-passwd.service" # noqa: risky-file-permissions
-  copy:
+  ansible.builtin.copy:
     src: random-root-passwd.service
     dest: /etc/systemd/system/random-root-passwd.service
   when: not revert
@@ -122,51 +122,51 @@
     state: started
   when: not revert and debian_hardening_random_root.changed
 - name: "Disable random-root-passwd.service"
-  file:
+  ansible.builtin.file:
     path: /etc/systemd/system/sysinit.target.wants/random-root-passwd.service
     state: absent
   when: revert
 - name: "Uninstall random-root-passwd.service"
-  file:
+  ansible.builtin.file:
     path: /etc/systemd/system/random-root-passwd.service
     state: absent
   when: revert
 
 - name: "Enable private TMPDIR" # noqa: risky-file-permissions
-  copy:
+  ansible.builtin.copy:
     src: mktmpdir.sh
     dest: /etc/profile.d/mktmpdir.sh
   when: not revert
 - name: "Disable private TMPDIR"
-  file:
+  ansible.builtin.file:
     path: /etc/profile.d/mktmpdir.sh
     state: absent
   when: revert
 
 - name: "Set bash timeout to 300s" # noqa: risky-file-permissions
-  copy:
+  ansible.builtin.copy:
     src: terminal_idle.sh
     dest: /etc/profile.d/terminal_idle.sh
   when: not revert
 - name: "Unset bash timeout"
-  file:
+  ansible.builtin.file:
     path: /etc/profile.d/terminal_idle.sh
     state: absent
   when: revert
 
 - name: Install openssh hardening rules # noqa: risky-file-permissions
-  template:
+  ansible.builtin.template:
     src: ssh-audit_hardening.conf.j2
     dest: /etc/ssh/sshd_config.d/ssh-audit_hardening.conf
   when: not revert
 - name: Uninstall openssh hardening rules
-  file:
+  ansible.builtin.file:
     path: /etc/ssh/sshd_config.d/ssh-audit_hardening.conf
     state: absent
   when: revert
 
 - name: Wait for DHCP for SSH
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /lib/systemd/system/ssh.service
     regexp: "^After="
     line: "After=network.target auditd.service network-online.target"
@@ -174,7 +174,7 @@
   when: not revert
 
 - name: Install sudo special rules following ansi bp28 r39
-  copy:
+  ansible.builtin.copy:
     src: sudoers/security
     dest: /etc/sudoers.d/00-security
     owner: root
@@ -182,19 +182,19 @@
     mode: "0440"
   when: not revert
 - name: Uninstall sudo special rules
-  file:
+  ansible.builtin.file:
     path: /etc/sudoers.d/00-security
     state: absent
   when: revert
 
 - name: Find sudoers files
-  find:
+  ansible.builtin.find:
     paths: /etc/sudoers.d/
     exclude: README
   register: debian_hardening_sudoers_files
   when: not revert
 - name: Fix sudoers.d permission
-  file:
+  ansible.builtin.file:
     path: "{{ item.path }}"
     owner: root
     group: root
@@ -203,7 +203,7 @@
   when: not revert
 
 - name: Adding sudo users to group privileged
-  user:
+  ansible.builtin.user:
     name: "{{ item }}"
     groups: privileged
     append: true
@@ -216,13 +216,13 @@
   ansible.builtin.meta: reset_connection
 
 - name: Check if cockpit is installed
-  command: which cockpit-bridge
+  ansible.builtin.command: which cockpit-bridge
   register: debian_hardening_cockpit_status
   ignore_errors: true
   changed_when: false
 
 - name: Disable require tty for cockpit # noqa: risky-file-permissions
-  copy:
+  ansible.builtin.copy:
     src: sudoers/cockpit
     dest: /etc/sudoers.d/cockpit
   when: not revert and debian_hardening_cockpit_status.rc == 0
@@ -234,14 +234,14 @@
   when: revert and debian_hardening_cockpit_status.rc == 0
 
 - name: Configure sudo to be run only users member of the privileged group
-  file:
+  ansible.builtin.file:
     path: /usr/bin/sudo
     owner: root
     group: privileged
     mode: "4750"
   when: not revert
 - name: Restore sudo permissions
-  file:
+  ansible.builtin.file:
     path: /usr/bin/sudo
     owner: root
     group: root
@@ -249,7 +249,7 @@
   when: revert
 
 - name: "Configure login.defs"
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/login.defs
     regexp: "^{{ item }}$"
     line: "{{ item }}"
@@ -258,7 +258,7 @@
     - PASS_MAX_DAYS 90
   when: not revert
 - name: "Unconfigure login.defs"
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/login.defs
     regexp: "^{{ item }}$"
     state: absent
@@ -267,28 +267,28 @@
   when: revert
 
 - name: Disable su # noqa: risky-file-permissions
-  copy:
+  ansible.builtin.copy:
     src: hardened_pam_su
     dest: /etc/pam.d/su
   when: not revert
 - name: Disable su-l # noqa: risky-file-permissions
-  copy:
+  ansible.builtin.copy:
     src: hardened_pam_su
     dest: /etc/pam.d/su-l
   when: not revert
 - name: Restore su pam setting # noqa: risky-file-permissions
-  copy:
+  ansible.builtin.copy:
     src: default_pam_su
     dest: /etc/pam.d/su
   when: revert
 - name: Restore su -l pam setting # noqa: risky-file-permissions
-  copy:
+  ansible.builtin.copy:
     src: default_pam_su-l
     dest: /etc/pam.d/su-l
   when: revert
 
 - name: Create securetty
-  copy:
+  ansible.builtin.copy:
     content: ""
     dest: /etc/securetty
     force: false
@@ -297,26 +297,26 @@
     mode: "0644"
   when: not revert
 - name: Remove securetty
-  file:
+  ansible.builtin.file:
     path: /etc/securetty
     state: absent
   when: revert
 
 - name: Enable securetty in pam login
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/pam.d/login
     insertafter: "auth       optional   pam_faildelay.so  delay=3000000"
     line: "auth   [success=ok ignore=ignore user_unknown=ignore default=die]    pam_securetty.so"
   when: not revert
 - name: Disable securetty in pam login
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/pam.d/login
     regexp: "^auth    \\[success=ok ignore=ignore user_unknown=ignore default=die\\]    pam_securetty.so"
     state: absent
   when: revert
 
 - name: Create systemd service.d directories
-  file:
+  ansible.builtin.file:
     path: "/etc/systemd/system/{{ item }}.service.d/"
     state: directory
     owner: root
@@ -325,21 +325,21 @@
   with_items: "{{ debian_hardening_hardened_services }}"
 
 - name: Add systemd service hardening rules # noqa: risky-file-permissions
-  copy:
+  ansible.builtin.copy:
     src: "{{ item }}_hardening.conf"
     dest: "/etc/systemd/system/{{ item }}.service.d/hardening.conf"
   with_items: "{{ debian_hardening_hardened_services }}"
   when: not revert
 
 - name: Remove systemd service hardening rules
-  file:
+  ansible.builtin.file:
     path: "/etc/systemd/system/{{ item }}.service.d/hardening.conf"
     state: absent
   with_items: "{{ debian_hardening_hardened_services }}"
   when: revert
 
 - name: Set grub password
-  template:
+  ansible.builtin.template:
     src: "01_password.j2"
     dest: /etc/grub.d/01_password
     group: "root"
@@ -347,20 +347,20 @@
     mode: "0755"
   when: not revert
 - name: Unset grub password
-  file:
+  ansible.builtin.file:
     state: absent
     path: /etc/grub.d/01_password
   when: revert
 
 - name: Add unrestricted in grub.cfg
-  lineinfile:
+  ansible.builtin.lineinfile:
     # CLASS="--class gnu-linux --class gnu --class os --unrestricted"
     path: /etc/grub.d/10_linux
     regexp: "^CLASS="
     line: 'CLASS="--class gnu-linux --class gnu --class os --unrestricted"'
   when: not revert
 - name: Remove unrestricted in grub.cfg
-  lineinfile:
+  ansible.builtin.lineinfile:
     # CLASS="--class gnu-linux --class gnu --class os"
     path: /etc/grub.d/10_linux
     regexp: "^CLASS="
@@ -368,15 +368,15 @@
   when: revert
 
 - name: Copy syslog.conf # noqa: risky-file-permissions
-  copy:
+  ansible.builtin.copy:
     src: auditd/syslog.conf
     dest: /etc/audit/plugins.d/syslog.conf
 
 - name: Copy audit.rules # noqa: risky-file-permissions
-  copy:
+  ansible.builtin.copy:
     src: auditd/audit.rules
     dest: /etc/audit/rules.d/audit.rules
 
 - name: Update grub
-  command: update-grub
+  ansible.builtin.command: update-grub
   changed_when: true

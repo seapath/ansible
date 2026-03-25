@@ -7,11 +7,11 @@
 ---
 - name: Configure the EFI to boot on USB drive
   become: true
-  script: "configure_boot_next_usb_drive.sh"
+  ansible.builtin.script: "configure_boot_next_usb_drive.sh"
   register: ci_yocto_result
   changed_when: ci_yocto_result.rc == 0
   failed_when: ci_yocto_result.rc == 1 or ci_yocto_result.rc > 2
 
 - name: Reboot the system
   become: true
-  reboot:
+  ansible.builtin.reboot:

@@ -2,12 +2,12 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- debug: # noqa: name[missing]
+- ansible.builtin.debug: # noqa: name[missing]
     var: item.value
   with_items: "{{ interfaces_on_br0 | dict2items }}"
   when: interfaces_on_br0 is defined
 - name: Create 00-INTERFACEX.netdev
-  template:
+  ansible.builtin.template:
     src: 00-INTERFACEX.netdev.j2
     dest: /etc/systemd/network/00-{{ item.key }}.netdev
     owner: "root"
@@ -17,7 +17,7 @@
   when: interfaces_on_br0 is defined
   notify: Reload systemd-networkd configuration
 - name: Create 00-INTERFACEX.network
-  template:
+  ansible.builtin.template:
     src: 00-INTERFACEX.network.j2
     dest: /etc/systemd/network/00-{{ item.key }}.network
     owner: "root"

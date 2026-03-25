@@ -18,7 +18,7 @@
   loop: "{{ groups['VMs'] }}"
 
 - name: Undefine VM
-  command: "virsh undefine --nvram {{ item }}"
+  ansible.builtin.command: "virsh undefine --nvram {{ item }}"
   when:
     - item in deploy_vms_standalone_all_vms.list_vms
     - hostvars[item].force is defined
@@ -27,13 +27,13 @@
   changed_when: true
 
 - name: Print info
-  debug:
+  ansible.builtin.debug:
     var: hostvars[item]
     verbosity: 2
   loop: "{{ groups['VMs'] }}"
 
 - name: Check tmp folder permission
-  file:
+  ansible.builtin.file:
     path: "{{ deploy_vms_standalone_qcow2tmpuploadfolder }}"
     state: directory
     owner: "{{ ansible_user }}"
@@ -44,7 +44,7 @@
     - deploy_vms_standalone_qcow2tmpuploadfolder != "/tmp"
 
 - name: Copy the disk on target # noqa: risky-file-permissions
-  copy:
+  ansible.builtin.copy:
     src: "{{ hostvars[item].vm_disk }}"
     dest: "{{ deploy_vms_standalone_disk_pool }}/{{ hostvars[item].inventory_hostname }}.qcow2"
   vars:
@@ -56,7 +56,7 @@
   loop: "{{ groups['VMs'] }}"
 
 - name: Copy the gzipped disk on target # noqa: risky-file-permissions
-  copy:
+  ansible.builtin.copy:
     src: "{{ hostvars[item].vm_disk }}"
     dest: "{{ deploy_vms_standalone_disk_pool }}/{{ hostvars[item].inventory_hostname }}.img.gz"
   when:
@@ -67,7 +67,7 @@
   loop: "{{ groups['VMs'] }}"
 
 - name: Extract the gzipped disk on target
-  command:
+  ansible.builtin.command:
     cmd: "gzip -d -f {{ deploy_vms_standalone_disk_pool }}/{{ hostvars[item].inventory_hostname }}.img.gz"
     creates: "{{ deploy_vms_standalone_disk_pool }}/{{ hostvars[item].inventory_hostname }}.img"
   when:
@@ -79,7 +79,7 @@
 
 - name: Add main disk to disk list
   # This is only done in standalone because the disk is handled by vm-manager in the cluster
-  set_fact:
+  ansible.builtin.set_fact:
     standalone_main_disk: "{{ hostvars[item].inventory_hostname }}.qcow2" # noqa: var-naming[no-role-prefix]
   delegate_to: "{{ item }}"
   delegate_facts: true
@@ -87,7 +87,7 @@
   when: item not in deploy_vms_standalone_all_vms.list_vms or (item in deploy_vms_standalone_all_vms.list_vms and hostvars[item].force is defined and hostvars[item].force)
 
 - name: Export VM config for debug in /tmp # noqa: risky-file-permissions
-  template:
+  ansible.builtin.template:
     src: "{{ hostvars[item].vm_template }}"
     dest: "/tmp/{{ hostvars[item].inventory_hostname }}.xml"
   vars:

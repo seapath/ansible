@@ -46,7 +46,7 @@
   become: true
   tasks:
     - name: Add admin user to haclient group
-      user:
+      ansible.builtin.user:
         name: "{{ admin_user }}"
         groups: haclient
         append: true
@@ -70,7 +70,7 @@
   become: true
   tasks:
     - name: Upload extra files
-      copy:
+      ansible.builtin.copy:
         src: "{{ item.src }}"
         dest: "{{ item.dest }}"
         owner: "{{ item.owner | default('root') }}"
@@ -82,7 +82,7 @@
         - upload_files is defined
         - item.extract is not defined or item.extract is false
     - name: Upload extra files and extract them
-      unarchive:
+      ansible.builtin.unarchive:
         src: "{{ item.src }}"
         dest: "{{ item.dest }}"
         owner: "{{ item.owner | default('root') }}"
@@ -105,7 +105,7 @@
   become: true
   tasks:
     - name: Uninstall apt packages not required after installation (trixie)
-      apt:
+      ansible.builtin.apt:
         name:
           - gcc-12-base
           - libargon2-1
@@ -124,11 +124,11 @@
   become: true
   tasks:
     - name: Create /etc/apt/sources.list.d/ # noqa: risky-file-permissions
-      file:
+      ansible.builtin.file:
         state: directory
         path: /etc/apt/sources.list.d/
     - name: Uninstall ceph packages
-      apt:
+      ansible.builtin.apt:
         name:
           - ceph
           - ceph-base
@@ -141,7 +141,7 @@
         autoremove: true
       when: force_cephadm | default(false)
     - name: Uninstall apt packages not required after installation (all debian version)
-      apt:
+      ansible.builtin.apt:
         name:
           - fdisk
           - ifupdown
@@ -149,7 +149,7 @@
         purge: true
         autoremove: true
     - name: Uninstall apt packages not required after installation (trixie)
-      apt:
+      ansible.builtin.apt:
         name:
           - dhcpcd-base
           - libapt-pkg6.0
@@ -159,7 +159,7 @@
         autoremove: true
       when: ansible_distribution_release == 'trixie'
     - name: Disable unused systemd services
-      systemd:
+      ansible.builtin.systemd:
         unit: "{{ item }}"
         state: stopped
         enabled: false

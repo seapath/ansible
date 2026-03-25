@@ -3,13 +3,12 @@
 
 ---
 - name: Load distribution-specific variables
-  include_vars: "{{ seapath_distro }}.yml"
-
+  ansible.builtin.include_vars: "{{ seapath_distro }}.yml"
 - name: Configure DPDK support
   when: seapath_distro == "Debian"
   block:
     - name: Detect DPDK usage from OVS bridge configuration
-      set_fact:
+      ansible.builtin.set_fact:
         network_configovs_dpdk_enabled: >-
           {{ ovs_bridges | default([])
              | map(attribute='ports', default=[])
@@ -37,7 +36,7 @@
       when: not network_configovs_dpdk_enabled | bool
 
 - name: Create OVS configuration # noqa: risky-file-permissions
-  template:
+  ansible.builtin.template:
     src: ovs_configuration.json.j2
     dest: /etc/ovs_configuration.json
     validate: "{{ network_configovs_setup_ovs_command_path }} -v -c -f %s"
@@ -50,14 +49,14 @@
     - network_configovs_apply_config
     - network_configovs_ovs_conf.changed
 - name: Register reboot
-  set_fact:
+  ansible.builtin.set_fact:
     need_reboot: true # noqa: var-naming[no-role-prefix]
   when:
     - not network_configovs_apply_config
     - network_configovs_ovs_conf.changed
 
 - name: Run extra ovs-vsctl configuration commands
-  command: "/usr/bin/ovs-vsctl {{ item }}"
+  ansible.builtin.command: "/usr/bin/ovs-vsctl {{ item }}"
   when:
     - ovs_vsctl_cmds is defined
   loop: "{{ ovs_vsctl_cmds }}"

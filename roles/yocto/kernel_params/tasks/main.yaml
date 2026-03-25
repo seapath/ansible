@@ -7,13 +7,13 @@
 
 ---
 - name: Check if we need to add extra kernel parameters
-  command: "grep -q '{{ extra_kernel_parameters }}' /proc/cmdline"
+  ansible.builtin.command: "grep -q '{{ extra_kernel_parameters }}' /proc/cmdline"
   register: yocto_extra_param_raw
   failed_when: extra_param_raw.rc > 1
   changed_when: false
   when: yocto_extra_kernel_parameters is defined
 - name: Register result extra kernel parameters check
-  set_fact:
+  ansible.builtin.set_fact:
     yocto_extra_param_needed: true
   when:
     - yocto_extra_kernel_parameters is defined
@@ -23,19 +23,19 @@
   when: yocto_extra_param_needed is defined
   block:
     - name: Mount the boot partition if needed
-      command: /usr/share/update/mount_boot.sh
+      ansible.builtin.command: /usr/share/update/mount_boot.sh
       changed_when: true
     - name: Set extra kernel parameters
-      replace:
+      ansible.builtin.replace:
         path: "{{ yocto_config_file }}"
         regexp: "(root=.*)"
         replace: "\\1 {{ extra_kernel_parameters }}"
       when: yocto_extra_param_needed is defined
     - name: Umount the boot partition
-      command: /usr/share/update/mount_boot.sh umount
+      ansible.builtin.command: /usr/share/update/mount_boot.sh umount
       changed_when: true
     - name: Perform soft restart if kernel parameters changed
-      include_tasks: soft_restart_machine.yaml
+      ansible.builtin.include_tasks: soft_restart_machine.yaml
       when:
         - kernel_parameters_restart is defined
         - kernel_parameters_restart

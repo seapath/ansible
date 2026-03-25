@@ -3,7 +3,7 @@
 
 ---
 - name: Create conntrackd.service.d directory
-  file:
+  ansible.builtin.file:
     path: /etc/systemd/system/conntrackd.service.d/
     state: directory
     owner: root
@@ -28,7 +28,7 @@
   when: conntrackd_ignore_ip_list is defined
   block:
     - name: Copy conntrackd.conf file
-      template:
+      ansible.builtin.template:
         src: conntrackd.conf.j2
         dest: /etc/conntrackd/conntrackd.conf
         group: root

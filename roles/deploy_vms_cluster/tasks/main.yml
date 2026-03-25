@@ -41,12 +41,12 @@
     command: status
     name: "{{ item }}"
   register: deploy_vms_cluster_presencevm
-- debug: # noqa: name[missing]
+- ansible.builtin.debug: # noqa: name[missing]
     var: deploy_vms_cluster_presencevm
     verbosity: 2
 
 - name: Check tmp folder permission
-  file:
+  ansible.builtin.file:
     path: "{{ deploy_vms_cluster_qcow2tmpuploadfolder }}"
     state: directory
     owner: "{{ ansible_user }}"
@@ -63,7 +63,7 @@
     vm_file_dest: "{{ deploy_vms_cluster_qcow2tmpuploadfolder + '/os.qcow2' }}"
   block:
     - name: "Copy system disk on target for {{ item }}" # noqa: risky-file-permissions
-      copy:
+      ansible.builtin.copy:
         src: "{{ vm_file }}"
         dest: "{{ vm_file_dest }}"
       vars:
@@ -94,11 +94,11 @@
              else lookup('file',deploy_vms_cluster_vms_disks_directory + '/' + item + '.xml')
              | replace('\n', '') }}
     - name: Remove temporary file
-      file:
+      ansible.builtin.file:
         path: "{{ vm_file_dest }}"
         state: absent
     - name: Wait for VM connections
-      wait_for_connection:
+      ansible.builtin.wait_for_connection:
       delegate_to: "{{ item }}"
       when:
         - hostvars[item].wait_for_connection is defined

@@ -2,10 +2,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- debug: # noqa: name[missing]
+- ansible.builtin.debug: # noqa: name[missing]
     msg: "the network pool name is {{ network_sriovpool_sriov_network_pool_name }}"
 - name: Try to get sriov network pool
-  shell:
+  ansible.builtin.shell:
     cmd: set -o pipefail && virsh -q net-list --all | awk '{ print $1 }' | grep -q "{{ network_sriovpool_sriov_network_pool_name }}"
     executable: /bin/bash
   register: network_sriovpool_pool_defined
@@ -15,19 +15,19 @@
   when: network_sriovpool_pool_defined.rc != 0
   block:
     - name: Copy libvirt xml SRIOV network pool file # noqa: risky-file-permissions
-      template:
+      ansible.builtin.template:
         src: sriov_network_pool.xml.j2
         dest: /tmp/sriov_network_pool.xml
     - name: Create libvirt SRIOV network pool
-      command: "virsh net-define /tmp/sriov_network_pool.xml"
+      ansible.builtin.command: "virsh net-define /tmp/sriov_network_pool.xml"
       changed_when: true
     - name: AutoStart libvirt SRIOV network pool
-      command: "virsh net-autostart {{ network_sriovpool_sriov_network_pool_name }}"
+      ansible.builtin.command: "virsh net-autostart {{ network_sriovpool_sriov_network_pool_name }}"
       changed_when: true
     - name: Start libvirt SRIOV network pool
-      command: "virsh net-start {{ network_sriovpool_sriov_network_pool_name }}"
+      ansible.builtin.command: "virsh net-start {{ network_sriovpool_sriov_network_pool_name }}"
       changed_when: true
     - name: Remove temporary file
-      file:
+      ansible.builtin.file:
         path: /tmp/sriov_network_pool.xml
         state: absent

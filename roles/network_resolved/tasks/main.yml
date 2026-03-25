@@ -8,21 +8,21 @@
     - netplan_configurations is not defined
   block:
     - name: Configure LLMNR /etc/systemd/resolved.conf
-      lineinfile:
+      ansible.builtin.lineinfile:
         dest: /etc/systemd/resolved.conf
         regexp: "^#?LLMNR="
         line: "LLMNR=no"
         state: present
       notify: Restart systemd-resolved
     - name: Configure DNS /etc/systemd/resolved.conf
-      lineinfile:
+      ansible.builtin.lineinfile:
         dest: /etc/systemd/resolved.conf
         regexp: "^#?DNS="
         line: "DNS={{ dns_servers | join(' ') if dns_servers is not string else dns_servers }}"
         state: present
       notify: Restart systemd-resolved
     - name: Configure MulticastDNS /etc/systemd/resolved.conf
-      lineinfile:
+      ansible.builtin.lineinfile:
         dest: /etc/systemd/resolved.conf
         regexp: "^#?MulticastDNS="
         line: "MulticastDNS=no"

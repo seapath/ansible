@@ -6,14 +6,14 @@
   when: not (is_using_cephadm | default(false))
   block:
     - name: Create Ceph log directory
-      file:
+      ansible.builtin.file:
         path: /var/log/ceph
         owner: ceph
         group: ceph
         mode: "0770"
         state: directory
     - name: Create Ceph crash directory
-      file:
+      ansible.builtin.file:
         path: /var/lib/ceph/crash/posted
         owner: ceph
         group: ceph
@@ -26,7 +26,7 @@
     - ceph_prepare_installation_new_ceph_installation.changed | default(false) or is_using_cephadm | default(false)
   block:
     - name: Refresh LVM VG
-      command:
+      ansible.builtin.command:
         cmd: vgchange --refresh
       changed_when: true
     - name: Cleanup LV if we are in existing LV situation
@@ -36,24 +36,24 @@
         - not (is_using_cephadm | default(false))
       block:
         - name: Cleanup Ceph LV with ceph-volume
-          command: "ceph-volume lvm zap /dev/{{ lvm_volumes[0].data_vg }}/{{ lvm_volumes[0].data }}"
+          ansible.builtin.command: "ceph-volume lvm zap /dev/{{ lvm_volumes[0].data_vg }}/{{ lvm_volumes[0].data }}"
           changed_when: true
     - name: Create VG/LV if they don't exist
       when:
         - lvm_volumes is not defined or ansible_lvm['lvs'][lvm_volumes[0].data] is not defined
       block:
         - name: Get real path for OSD disk
-          command: "realpath {{ ceph_osd_disk }}" # Get the resolved path of the disk given initialy by the "/dev/disk/by-path/" for ceph purposes
+          ansible.builtin.command: "realpath {{ ceph_osd_disk }}"
           register: ceph_prepare_installation_ceph_osd_realdisk
           changed_when: false
         - name: Cleanup Ceph OSD disks with ceph-volume
-          command: "ceph-volume lvm zap {{ ceph_prepare_installation_ceph_osd_realdisk.stdout }} --destroy" # Zapping the disk and destroying any vgs or lvs present
+          ansible.builtin.command: "ceph-volume lvm zap {{ ceph_prepare_installation_ceph_osd_realdisk.stdout }} --destroy"
           when:
             - lvm_volumes is not defined or lvm_volumes[0].device_number == 1 # The disk must not be zapped in the case of a single disk for linux and ceph
             - not (is_using_cephadm | default(false))
           changed_when: true
         - name: Cleanup Ceph lvm's partition with ceph-volume
-          command: "ceph-volume lvm zap /dev/{{ lvm_volumes[0].data_vg }}" # In the case of a single-disk installation, only the Ceph partition is zapped
+          ansible.builtin.command: "ceph-volume lvm zap /dev/{{ lvm_volumes[0].data_vg }}"
           when:
             - lvm_volumes is defined and ansible_lvm['lvs'][lvm_volumes[0].data] is defined
             - not (is_using_cephadm | default(false))
@@ -70,14 +70,14 @@
               register: ceph_prepare_installation_parted_info
 
             - name: Check if current partition exists
-              set_fact:
+              ansible.builtin.set_fact:
                 ceph_prepare_installation_current_exists: >-
                   {{ ceph_prepare_installation_parted_info.partitions
                      | selectattr('num', 'equalto', lvm_volumes[0].device_number)
                      | list | length > 0 }}
 
             - name: Check if previous partition exists
-              set_fact:
+              ansible.builtin.set_fact:
                 ceph_prepare_installation_previous_exists: >-
                   {{ lvm_volumes[0].device_number > 1 and (
                        ceph_prepare_installation_parted_info.partitions
@@ -85,7 +85,7 @@
                        | list | length > 0 ) }}
 
             - name: Set ceph_prepare_installation_prev_end based on previous partition or zero
-              set_fact:
+              ansible.builtin.set_fact:
                 ceph_prepare_installation_prev_end: >-
                   {{ (
                         ceph_prepare_installation_parted_info.partitions
@@ -94,15 +94,15 @@
                         | first
                       ) | float if ceph_prepare_installation_previous_exists else 0.0 }}
 
-            - debug: # noqa: name[missing]
+            - ansible.builtin.debug: # noqa: name[missing]
                 var: ceph_prepare_installation_prev_end
-            - debug: # noqa: name[missing]
+            - ansible.builtin.debug: # noqa: name[missing]
                 var: lvm_volumes[0].device_size
-            - debug: # noqa: name[missing]
+            - ansible.builtin.debug: # noqa: name[missing]
                 msg: "{{ ((ceph_prepare_installation_prev_end | float) + (lvm_volumes[0].device_size | float)) | round(2) }}"
 
             - name: Calculate partition boundaries
-              set_fact:
+              ansible.builtin.set_fact:
                 ceph_prepare_installation_part_start: "{{ '0%' if (ceph_prepare_installation_prev_end | float) == 0 else (ceph_prepare_installation_prev_end | float | round(2)) ~ 'MiB' }}"
                 ceph_prepare_installation_part_end: "{{ ((ceph_prepare_installation_prev_end | float) + (lvm_volumes[0].device_size | float) | float) | round(2) }}MiB"
               when: ceph_prepare_installation_previous_exists or lvm_volumes[0].device_number == 1
@@ -125,7 +125,7 @@
                     state: present
                   register: ceph_prepare_installation_ceph_osd_result
                 - name: Get disk/by-path of OSD disk
-                  command: "/usr/bin/find -L /dev/disk/by-path -samefile {{ ceph_prepare_installation_ceph_osd_result.disk.dev }} -print -quit"
+                  ansible.builtin.command: "/usr/bin/find -L /dev/disk/by-path -samefile {{ ceph_prepare_installation_ceph_osd_result.disk.dev }} -print -quit"
                   register: ceph_prepare_installation_ceph_osd_finddisk
                   changed_when: false
                 - name: Create volume group on the partition

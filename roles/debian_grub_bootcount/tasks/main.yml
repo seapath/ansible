@@ -11,7 +11,7 @@
   notify: Rebuild initramfs if necessary
   when: not debian_grub_bootcount_revert
 - name: "REVERT Add initramfs-tools SEAPATH hooks"
-  file:
+  ansible.builtin.file:
     path: /etc/initramfs-tools/hooks/seapath
     state: absent
   notify: Rebuild initramfs if necessary
@@ -47,7 +47,7 @@
   notify: Rebuild initramfs if necessary
   when: not debian_grub_bootcount_revert
 - name: "REVERT Add initramfs-tools script: script file"
-  file:
+  ansible.builtin.file:
     path: /etc/initramfs-tools/scripts/init-premount/bootcount_recovery
     state: absent
   notify: Rebuild initramfs if necessary
@@ -91,7 +91,7 @@
   notify: Update-grub
   when: debian_grub_bootcount_revert
 - name: Remove backup file /etc/grub.d_backup10_linux
-  file:
+  ansible.builtin.file:
     path: /etc/grub.d_backup10_linux
     state: absent
   when: debian_grub_bootcount_revert
@@ -104,7 +104,7 @@
   notify: Update-grub
   when: not debian_grub_bootcount_revert
 - name: REVERT Add SEAPATH bootcount to grub
-  file:
+  ansible.builtin.file:
     path: /etc/grub.d/11_seapath_boot_count
     state: absent
   notify: Update-grub
@@ -159,7 +159,7 @@
     - "'system_check.service' in ansible_facts.services"
 
 - name: REVERT Add system_check service
-  file:
+  ansible.builtin.file:
     path: /etc/systemd/system/system_check.service
     state: absent
   when: debian_grub_bootcount_revert
@@ -172,7 +172,7 @@
   changed_when: true
   when: not debian_grub_bootcount_revert
 - name: REVERT Create /boot/efi/bootcountenv
-  file:
+  ansible.builtin.file:
     path: /boot/efi/bootcountenv
     state: absent
   when: debian_grub_bootcount_revert

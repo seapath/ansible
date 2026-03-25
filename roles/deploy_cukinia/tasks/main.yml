@@ -3,17 +3,17 @@
 
 ---
 - name: Copy Cukinia script
-  copy:
+  ansible.builtin.copy:
     src: cukinia/cukinia
     dest: /usr/local/bin/cukinia
     mode: "0755"
 - name: Use Bash as Cukinia's shell
-  replace:
+  ansible.builtin.replace:
     path: /usr/local/bin/cukinia
     regexp: "^#!/bin/sh$"
     replace: "#!/usr/bin/env bash"
 - name: "Patch cukinia: CAT"
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /usr/local/bin/cukinia
     line: "local CAT=zcat"
     insertafter: 'local line=""'

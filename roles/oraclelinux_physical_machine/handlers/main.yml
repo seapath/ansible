@@ -12,6 +12,6 @@
     state: restarted
 
 - name: Rebuild initramfs if necessary
-  command:
+  ansible.builtin.command:
     cmd: /usr/sbin/update-initramfs -u
   changed_when: true

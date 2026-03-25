@@ -3,6 +3,6 @@
 # SPDX-Licence-Identifier: Apache-2.0
 
 - name: Reload systemd-networkd
-  service:
+  ansible.builtin.service:
     name: systemd-networkd
     state: reloaded

@@ -50,7 +50,7 @@
   become: true
   tasks:
     - name: Calling sriov network pool creation (with a loop)
-      include_role:
+      ansible.builtin.include_role:
         name: network_sriovpool
       vars:
         network_sriovpool_interface: "{{ item.key }}"
@@ -100,6 +100,6 @@
         - skip_reboot_setup_network is not defined or not skip_reboot_setup_network
       block:
         - name: Restart to configure network
-          reboot:
+          ansible.builtin.reboot:
         - name: Wait for host to be online
-          wait_for_connection:
+          ansible.builtin.wait_for_connection:

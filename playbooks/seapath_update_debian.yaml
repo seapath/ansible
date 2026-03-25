@@ -17,18 +17,18 @@
         size: "{{ snapshot_size | default('21G') }}"
 
     - name: Check if grub is password protected
-      stat:
+      ansible.builtin.stat:
         path: /etc/grub.d/01_password
       register: grub_password
 
     - name: Disable password protection and update-grub
-      shell:
+      ansible.builtin.shell:
         cmd: mv /etc/grub.d/01_password /etc/grub.d_01_password && update-grub
       changed_when: true
       when: grub_password.stat.exists
 
     - name: Enable Grub Boot Count
-      command: /usr/bin/grub-editenv /boot/efi/bootcountenv set bootcount=0
+      ansible.builtin.command: /usr/bin/grub-editenv /boot/efi/bootcountenv set bootcount=0
       changed_when: true
 
     - name: Upgrade the OS (apt-get dist-upgrade)
@@ -39,27 +39,27 @@
         upgrade: dist
 
     - name: Reboot and hope for the best
-      reboot:
+      ansible.builtin.reboot:
     - name: Wait for Connection
-      wait_for_connection:
+      ansible.builtin.wait_for_connection:
 
     - name: Check if snapshot is there
-      command: "lvs --noheadings -o lv_name {{ vg_name | default('vg1') }}"
+      ansible.builtin.command: "lvs --noheadings -o lv_name {{ vg_name | default('vg1') }}"
       register: lvm_snapshot
       changed_when: false
 
     - name: Remove snapshot if success
-      command: "lvremove -y /dev/{{ vg_name | default('vg1') }}/root-snap"
+      ansible.builtin.command: "lvremove -y /dev/{{ vg_name | default('vg1') }}/root-snap"
       when: "'root-snap' in lvm_snapshot.stdout"
       changed_when: true
 
     - name: Do something if not success
-      debug:
+      ansible.builtin.debug:
         msg: "Upgrade has failed, and the system has been rolled back."
       when: "'root-snap' not in lvm_snapshot.stdout"
 
     - name: Enable grub password protection if it was enabled before
-      shell:
+      ansible.builtin.shell:
         cmd: mv /etc/grub.d_01_password /etc/grub.d/01_password && update-grub
       changed_when: true
       when:

@@ -3,19 +3,19 @@
 
 ---
 - name: Disable vim defaults
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/vim/vimrc
     regexp: '^"? *let g:skip_defaults_vim = 1$'
     line: "let g:skip_defaults_vim = 1"
     state: present
 - name: Vim color syntax
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/vim/vimrc
     regexp: '^"? *syntax on$'
     line: "syntax on"
     state: present
 - name: Remove vimrc.local file
-  file:
+  ansible.builtin.file:
     path: /etc/vim/vimrc.local
     state: absent
 
@@ -31,7 +31,7 @@
   when: admin_user != debian_old_admin_user
   block:
     - name: Remove old admin user from sudoers file
-      lineinfile:
+      ansible.builtin.lineinfile:
         dest: /etc/sudoers
         state: absent
         regexp: "^{{ debian_old_admin_user }}"
@@ -59,7 +59,7 @@
     state: present
     gid: 1000
 - name: Adding admin user
-  user:
+  ansible.builtin.user:
     name: "{{ admin_user }}"
     shell: /bin/bash
     group: "{{ admin_user }}"
@@ -74,7 +74,7 @@
   with_items: "{{ admin_ssh_keys }}"
   when: admin_ssh_keys is defined and admin_ssh_keys is iterable
 - name: Install sudo admin user rules
-  copy:
+  ansible.builtin.copy:
     content: |
       {{ admin_user }}   ALL=NOPASSWD:EXEC: ALL
     dest: "/etc/sudoers.d/{{ admin_user }}"
@@ -82,7 +82,7 @@
     group: root
     mode: "0440"
 - name: Remove admin sudoers line created by build_debian_iso
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/sudoers
     state: absent
     regexp: "^{{ admin_user }}"
@@ -113,7 +113,7 @@
   with_items: "{{ env_list | dict2items }}"
 
 - name: PATH for admin user
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: "/home/{{ admin_user }}/.bash_profile"
     regexp: "^export PATH"
     line: "export PATH=$PATH:/usr/sbin:/usr/local/sbin:/sbin"
@@ -127,17 +127,17 @@
   when: apt_repo is defined
   block:
     - name: Detect apt_repo type
-      set_fact:
+      ansible.builtin.set_fact:
         debian_apt_repo_is_dict: "{{ apt_repo is not none and apt_repo | selectattr('name', 'defined') | list | length > 0 }}"
     - name: Configure apt_repo from config
       when: debian_apt_repo_is_dict
       block:
         - name: Remove file /etc/apt/sources.list
-          file:
+          ansible.builtin.file:
             path: /etc/apt/sources.list
             state: absent
         - name: Configure apt repositories
-          deb822_repository:
+          ansible.builtin.deb822_repository:
             name: "{{ item.name }}"
             types: deb
             uris: "{{ item.uris }}"
@@ -149,11 +149,11 @@
       when: not debian_apt_repo_is_dict
       block:
         - name: Remove all files in /etc/apt/sources.list.d
-          file:
+          ansible.builtin.file:
             path: /etc/apt/sources.list.d
             state: absent
         - name: Configure apt repositories # noqa: risky-file-permissions
-          template:
+          ansible.builtin.template:
             src: sources.list.j2
             dest: /etc/apt/sources.list
 
