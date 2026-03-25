@@ -140,7 +140,7 @@ clients:
     rbd:
       name: "rbd"
       application: "rbd"
-      pg_autoscale_mode: on
+      pg_autoscale_mode: "on"
       target_size_ratio: 1
     pools:
       - "{{ rbd }}"

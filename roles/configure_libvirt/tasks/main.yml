@@ -21,7 +21,7 @@
     state: restarted
   when: configure_libvirt_libvirtd_conf.changed # noqa: no-handler
 
-# OracleLinux specific
+# OracleLinux specific
 - name: Enable and start virtsecretd.socket
   ansible.builtin.systemd:
     name: virtsecretd.socket

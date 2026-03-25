@@ -30,14 +30,14 @@ VMs:
 
       # The following interfaces uses PCI passthrough.
       # We need to pass the PCI device address
-      # You can find the PCI address using the command lspci -nn or dpdk-devbind -s
+      # You can find the PCI address using the command lspci -nn or dpdk-devbind -s
       # Please be aware that the interface will not be available to the hypervisor anymore
       pci_passthrough:
         - domain: 0 # Replace by your interface
           bus: 7
           slot: 0
           function: 0
-      # Can be defined multiple times
+      # Can be defined multiple times
 
       # The following interfaces uses a tap interface on an Open vSwitch bridge
       # You need to create the bridge and the tap interface first
@@ -45,4 +45,4 @@ VMs:
       ovs:
         - ovs_port: "my_tap_interface" # Replace by your interface
           mac_address: "52:54:00:c4:ff:02"
-        # Can be defined multiple times
+        # Can be defined multiple times

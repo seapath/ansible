@@ -1,4 +1,3 @@
-
 ---
 - name: Welotec hardware customization
   hosts:
