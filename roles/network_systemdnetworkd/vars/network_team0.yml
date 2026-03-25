@@ -20,5 +20,3 @@ network_systemdnetworkd_team0_network:
         - Name: "{{ team0_1 | default('0') }}"
     - Link:
         - MTUBytes: 1800
-
-...

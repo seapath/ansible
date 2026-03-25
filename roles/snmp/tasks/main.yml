@@ -10,123 +10,123 @@
     - seapath_distro != "Yocto"
     - snmp_admin_ip_addr is defined
   block:
-  - name: Get uid for {{ snmp_user_name }}
-    getent:
-      database: passwd
-      key: "{{ snmp_user_name }}"
-  - name: Get gid for {{ snmp_user_name }}
-    getent:
-      database: group
-      key: "{{ snmp_user_name }}"
-  - debug:  # noqa: name[missing]
-      msg:
-        - "user id {{ getent_passwd[snmp_user_name][1] }}"
-        - "group id {{ getent_group[snmp_user_name][1] }}"
+    - name: Get uid for {{ snmp_user_name }}
+      getent:
+        database: passwd
+        key: "{{ snmp_user_name }}"
+    - name: Get gid for {{ snmp_user_name }}
+      getent:
+        database: group
+        key: "{{ snmp_user_name }}"
+    - debug: # noqa: name[missing]
+        msg:
+          - "user id {{ getent_passwd[snmp_user_name][1] }}"
+          - "group id {{ getent_group[snmp_user_name][1] }}"
 
-  - name: Set correct uid/gid for {{ snmp_user_name }}
-    when:
-      - getent_passwd[snmp_user_name][1] != '902' or getent_group[snmp_user_name][1] != '902'
-      - seapath_distro != "Yocto"
-    block:
-      - name: Stop snmpd if needed
-        ansible.builtin.systemd:
-          name: snmpd.service
-          state: stopped
-      - name: Ensure group exists with correct gid for "{{ snmp_user_name }}"
-        ansible.builtin.group:
-          name: "{{ snmp_user_name }}"
-          state: present
-          gid: 902
-      - name: Ensure user has correct uid and gid for {{ snmp_user_name }}
-        user:
-          name: "{{ snmp_user_name }}"
-          uid: 902
-          group: "{{ snmp_user_name }}"
+    - name: Set correct uid/gid for {{ snmp_user_name }}
+      when:
+        - getent_passwd[snmp_user_name][1] != '902' or getent_group[snmp_user_name][1] != '902'
+        - seapath_distro != "Yocto"
+      block:
+        - name: Stop snmpd if needed
+          ansible.builtin.systemd:
+            name: snmpd.service
+            state: stopped
+        - name: Ensure group exists with correct gid for "{{ snmp_user_name }}"
+          ansible.builtin.group:
+            name: "{{ snmp_user_name }}"
+            state: present
+            gid: 902
+        - name: Ensure user has correct uid and gid for {{ snmp_user_name }}
+          user:
+            name: "{{ snmp_user_name }}"
+            uid: 902
+            group: "{{ snmp_user_name }}"
 
-  - name: Temp fix for synchronize to force evaluate variables
-    set_fact:
-      ansible_host: "{{ ansible_host }}"
+    - name: Temp fix for synchronize to force evaluate variables
+      set_fact:
+        ansible_host: "{{ ansible_host }}"
 
-  - name: Synchronization of snmp_ scripts
-    ansible.posix.synchronize:
-      src: scripts/
-      dest: /usr/local/bin/
-      rsync_opts:
-      - "--include=*"
-      - "--chmod=F755"
-      - "--chown=root:root"
-  - name: Snmp config
-    ansible.builtin.template:
-      src: snmpd.conf.j2
-      dest: /etc/snmp/snmpd.conf
-      mode: '0644'
-      owner: root
-      group: root
-  - name: SNMP PASS AGENT script run by net-snmp for seapath tree
-    copy:
-      src: exposeseapathsnmp.pl
-      dest: "/usr/local/bin/exposeseapathsnmp.pl"
-      mode: '0755'
-  - name: Script run by cron job to generate snmp data
-    copy:
-      src: snmp_getdata.py
-      dest: "/usr/local/sbin/snmp_getdata.py"
-      mode: '0755'
-  - name: Cron job to generate snmp data
-    copy:
-      src: seapathsnmp.cron
-      dest: "/etc/cron.d/seapathsnmp"
-      mode: '0644'
-  - name: Wait for DHCP for SNMP
-    lineinfile:
-      dest: /lib/systemd/system/snmpd.service
-      regexp: "^After="
-      line: "After=network-online.target"
-      state: present
+    - name: Synchronization of snmp_ scripts
+      ansible.posix.synchronize:
+        src: scripts/
+        dest: /usr/local/bin/
+        rsync_opts:
+          - "--include=*"
+          - "--chmod=F755"
+          - "--chown=root:root"
+    - name: Snmp config
+      ansible.builtin.template:
+        src: snmpd.conf.j2
+        dest: /etc/snmp/snmpd.conf
+        mode: "0644"
+        owner: root
+        group: root
+    - name: SNMP PASS AGENT script run by net-snmp for seapath tree
+      copy:
+        src: exposeseapathsnmp.pl
+        dest: "/usr/local/bin/exposeseapathsnmp.pl"
+        mode: "0755"
+    - name: Script run by cron job to generate snmp data
+      copy:
+        src: snmp_getdata.py
+        dest: "/usr/local/sbin/snmp_getdata.py"
+        mode: "0755"
+    - name: Cron job to generate snmp data
+      copy:
+        src: seapathsnmp.cron
+        dest: "/etc/cron.d/seapathsnmp"
+        mode: "0644"
+    - name: Wait for DHCP for SNMP
+      lineinfile:
+        dest: /lib/systemd/system/snmpd.service
+        regexp: "^After="
+        line: "After=network-online.target"
+        state: present
 
-  - name: SNMP V3
-    when: snmp_accounts is defined and snmp_accounts | length > 0 and seapath_distro == "Debian"
-    block:
+    - name: SNMP V3
+      when: snmp_accounts is defined and snmp_accounts | length > 0 and seapath_distro == "Debian"
+      block:
       # restart is needed for /var/lib/snmp/snmpd.conf to exist
-      - name: Restart snmpd
-        ansible.builtin.systemd:
-          name: snmpd.service
-          state: restarted
-          enabled: yes
-      - name: Stop service before snmp v3 related changed
-        ansible.builtin.service:
-          name: snmpd
-          state: stopped
-      - name: Remove usmUser lines in snmpd.conf
-        ansible.builtin.replace:
-          path: /var/lib/snmp/snmpd.conf
-          regexp: '^usmUser.*'
-          replace: ''
-      - name: Add new snmp v3 user account at the beginning of /var/lib/snmp/snmpd.conf # noqa: risky-file-permissions
-        ansible.builtin.lineinfile:
-          path: /var/lib/snmp/snmpd.conf
-          line: "createUser {{ item.name }} SHA {{ item.password }} AES {{ item.password }}"
-          create: yes
-          insertbefore: BOF
-        loop: "{{ snmp_accounts }}"
+        - name: Restart snmpd
+          ansible.builtin.systemd:
+            name: snmpd.service
+            state: restarted
+            enabled: true
+        - name: Stop service before snmp v3 related changed
+          ansible.builtin.service:
+            name: snmpd
+            state: stopped
+        - name: Remove usmUser lines in snmpd.conf
+          ansible.builtin.replace:
+            path: /var/lib/snmp/snmpd.conf
+            regexp: "^usmUser.*"
+            replace: ""
+        - name: Add new snmp v3 user account at the beginning of /var/lib/snmp/snmpd.conf # noqa: risky-file-permissions
+          ansible.builtin.lineinfile:
+            path: /var/lib/snmp/snmpd.conf
+            line: "createUser {{ item.name }} SHA {{ item.password }} AES {{ item.password }}"
+            create: true
+            insertbefore: BOF
+          loop: "{{ snmp_accounts }}"
 
-  - name: Restart snmpd
-    ansible.builtin.systemd:
-      name: snmpd.service
-      state: restarted
-      enabled: yes
+    - name: Restart snmpd
+      ansible.builtin.systemd:
+        name: snmpd.service
+        state: restarted
+        enabled: true
 
-  - name: Install sudo user rules for {{ snmp_user_name }}
-    template:
-      src: sudoers_snmp.j2
-      dest: "/etc/sudoers.d/{{ snmp_user_name }}"
-      owner: root
-      group: root
-      mode: '0440'
+    - name: Install sudo user rules for {{ snmp_user_name }}
+      template:
+        src: sudoers_snmp.j2
+        dest: "/etc/sudoers.d/{{ snmp_user_name }}"
+        owner: root
+        group: root
+        mode: "0440"
 
 - name: Disable snmp if it is not needed
   systemd:
     name: snmpd.service
     state: stopped
-    enabled: no
+    enabled: false
   when: snmp_admin_ip_addr is not defined or seapath_distro == "Yocto"

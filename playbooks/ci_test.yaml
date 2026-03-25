@@ -5,7 +5,6 @@
 # SEAPATH.
 
 ---
-
 - name: Import test_deploy_cukinia_tests playbook
   import_playbook: ./test_deploy_cukinia_tests.yaml
 - name: Import test_run_cukinia playbook

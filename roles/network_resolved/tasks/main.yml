@@ -4,42 +4,42 @@
 ---
 - name: Configure systemd-resolved DNS settings (no netplan)
   when:
-  - dns_servers is defined
-  - netplan_configurations is not defined
+    - dns_servers is defined
+    - netplan_configurations is not defined
   block:
-  - name: Configure LLMNR /etc/systemd/resolved.conf
-    lineinfile:
-      dest: /etc/systemd/resolved.conf
-      regexp: "^#?LLMNR="
-      line: "LLMNR=no"
-      state: present
-    notify: Restart systemd-resolved
-  - name: Configure DNS /etc/systemd/resolved.conf
-    lineinfile:
-      dest: /etc/systemd/resolved.conf
-      regexp: "^#?DNS="
-      line: "DNS={{ dns_servers | join(' ') if dns_servers is not string else dns_servers }}"
-      state: present
-    notify: Restart systemd-resolved
-  - name: Configure MulticastDNS /etc/systemd/resolved.conf
-    lineinfile:
-      dest: /etc/systemd/resolved.conf
-      regexp: "^#?MulticastDNS="
-      line: "MulticastDNS=no"
-      state: present
-    notify: Restart systemd-resolved
-  - name: Create resolv.conf stub link
-    ansible.builtin.file:
-      src: /run/systemd/resolve/resolv.conf
-      dest: /etc/resolv.conf
-      state: link
-      force: true
-    notify: Restart systemd-resolved
-  - name: Enable systemd-resolved
-    ansible.builtin.systemd:
-      name: systemd-resolved
-      state: started
-      enabled: true
+    - name: Configure LLMNR /etc/systemd/resolved.conf
+      lineinfile:
+        dest: /etc/systemd/resolved.conf
+        regexp: "^#?LLMNR="
+        line: "LLMNR=no"
+        state: present
+      notify: Restart systemd-resolved
+    - name: Configure DNS /etc/systemd/resolved.conf
+      lineinfile:
+        dest: /etc/systemd/resolved.conf
+        regexp: "^#?DNS="
+        line: "DNS={{ dns_servers | join(' ') if dns_servers is not string else dns_servers }}"
+        state: present
+      notify: Restart systemd-resolved
+    - name: Configure MulticastDNS /etc/systemd/resolved.conf
+      lineinfile:
+        dest: /etc/systemd/resolved.conf
+        regexp: "^#?MulticastDNS="
+        line: "MulticastDNS=no"
+        state: present
+      notify: Restart systemd-resolved
+    - name: Create resolv.conf stub link
+      ansible.builtin.file:
+        src: /run/systemd/resolve/resolv.conf
+        dest: /etc/resolv.conf
+        state: link
+        force: true
+      notify: Restart systemd-resolved
+    - name: Enable systemd-resolved
+      ansible.builtin.systemd:
+        name: systemd-resolved
+        state: started
+        enabled: true
 
 - name: Disable resolved if no dns server is defined
   ansible.builtin.systemd:

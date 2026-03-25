@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- debug:  # noqa: name[missing]
+- debug: # noqa: name[missing]
     msg: "the network pool name is {{ network_sriovpool_sriov_network_pool_name }}"
 - name: Try to get sriov network pool
   shell:
@@ -16,8 +16,8 @@
   block:
     - name: Copy libvirt xml SRIOV network pool file # noqa: risky-file-permissions
       template:
-          src: sriov_network_pool.xml.j2
-          dest: /tmp/sriov_network_pool.xml
+        src: sriov_network_pool.xml.j2
+        dest: /tmp/sriov_network_pool.xml
     - name: Create libvirt SRIOV network pool
       command: "virsh net-define /tmp/sriov_network_pool.xml"
       changed_when: true
@@ -29,5 +29,5 @@
       changed_when: true
     - name: Remove temporary file
       file:
-          path: /tmp/sriov_network_pool.xml
-          state: absent
+        path: /tmp/sriov_network_pool.xml
+        state: absent

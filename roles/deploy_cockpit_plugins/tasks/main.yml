@@ -2,8 +2,7 @@
 # SPDX-Licence-Identifier: Apache-2.0
 ---
 - name: Check if cockpit is installed
-  command:
-    which cockpit-bridge
+  command: which cockpit-bridge
   register: deploy_cockpit_plugins_cockpit_status
   ignore_errors: true
   changed_when: false
@@ -12,7 +11,7 @@
   file:
     path: "/usr/share/cockpit/{{ item }}"
     state: directory
-    mode: '0755'
+    mode: "0755"
   when: deploy_cockpit_plugins_cockpit_status.rc == 0
   loop:
     - cockpit-cluster-dashboard

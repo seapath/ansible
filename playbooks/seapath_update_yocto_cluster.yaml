@@ -4,7 +4,6 @@
 # This playbook demonstrate how to update an hypervisor.
 
 ---
-
 - name: Prepare machine for update
   hosts: "{{ machine_to_update }}"
   tasks:

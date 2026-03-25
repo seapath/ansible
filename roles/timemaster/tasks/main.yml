@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- name: Load distribution-specific variables 
+- name: Load distribution-specific variables
   include_vars: "{{ seapath_distro }}.yml"
 
 - name: Populate service facts
@@ -37,8 +37,8 @@
 - name: Comment pool configuration in chrony.conf
   replace:
     path: "{{ timemaster_path_chrony_conf }}"
-    regexp: '^(pool .*)'
-    replace: '#\1'
+    regexp: "^(pool .*)"
+    replace: "#\\1"
   notify: Restart timemaster
 - name: Create timemaster.service.d directory
   file:
@@ -46,7 +46,7 @@
     state: directory
     owner: root
     group: root
-    mode: 0755
+    mode: "0755"
   notify: Restart timemaster
 - name: Copy timemaster.service overide # noqa: risky-file-permissions
   template:

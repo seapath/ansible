@@ -1,3 +1,4 @@
+---
 # Copyright (C) 2025 RTE
 # SPDX-License-Identifier: Apache-2.0
 
@@ -34,7 +35,7 @@
       user:
         name: "{{ admin_user }}"
         groups: haclient
-        append: yes
+        append: true
 
 - name: Disable libvirt-guests.service
   hosts:
@@ -44,7 +45,7 @@
     - name: Disable libvirt-guests.service
       ansible.builtin.systemd:
         name: libvirt-guests.service
-        enabled: no
+        enabled: false
         state: stopped
 
 - name: Upload extra files
@@ -61,7 +62,7 @@
         owner: "{{ item.owner | default('root') }}"
         group: "{{ item.group | default('root') }}"
         mode: "{{ item.mode | default('0644') }}"
-        backup: yes
+        backup: true
       with_items: "{{ upload_files }}"
       when:
         - upload_files is defined

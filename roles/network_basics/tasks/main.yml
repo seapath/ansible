@@ -5,16 +5,16 @@
 - name: Wipe network directory content if configured
   when: remove_all_network_config is defined and remove_all_network_config is true
   block:
-  - name: Wipe the network directory content 1/2, list files
-    find:
-      paths: ["/etc/systemd/network/", "/etc/netplan"]
-      patterns: "*"
-    register: network_basics_network_files_to_delete
-  - name: Wipe the network directory content 2/2, remove files
-    file:
-      path: "{{ item.path }}"
-      state: absent
-    with_items: "{{ network_basics_network_files_to_delete.files }}"
+    - name: Wipe the network directory content 1/2, list files
+      find:
+        paths: ["/etc/systemd/network/", "/etc/netplan"]
+        patterns: "*"
+      register: network_basics_network_files_to_delete
+    - name: Wipe the network directory content 2/2, remove files
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      with_items: "{{ network_basics_network_files_to_delete.files }}"
 - name: Remove installation network configuration
   file:
     path: "/etc/systemd/network/{{ item }}.network"
@@ -28,6 +28,6 @@
   ansible.builtin.copy:
     src: 80-wired.network
     dest: /etc/systemd/network/80-wired.network
-    mode: '0640'
+    mode: "0640"
     owner: root
     group: systemd-network

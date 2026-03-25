@@ -19,19 +19,19 @@ all:
       ntp_servers: "192.168.216.1" # Change to your ntp server. Remove if not needed.
 
       upload_files: # This file is given with the ssc600sw package
-        - src: '../files/qemu.hook'
-          dest: '/etc/libvirt/hooks/'
+        - src: "../files/qemu.hook"
+          dest: "/etc/libvirt/hooks/"
           mode: "0744"
       nics_affinity:
-      - enp88s0: 3  # Change to your NIC receiving Sampled Values
-                    # Change for the same core as VM's emulatorpin
+        - enp88s0: 3 # Change to your NIC receiving Sampled Values
+      # Change for the same core as VM's emulatorpin
 
       # Debian required variables
       admin_user: admin
       grub_append: "default_hugepagesz=1G hugepagesz=1G hugepages=6"
 
       # Yocto required variables
-      extra_kernel_parameters : "hugepages=6"
+      extra_kernel_parameters: "hugepages=6"
       bootloader_config_file: /boot/EFI/BOOT/grub.cfg
 
       # Ansible variables
@@ -44,7 +44,6 @@ all:
 standalone_machine:
   hosts:
     seapath-machine:
-
 # The machine is an hypervisor
 hypervisors:
   hosts:

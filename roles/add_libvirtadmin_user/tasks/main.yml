@@ -18,14 +18,14 @@
 
 - name: Unlock the user
   replace:
-      path: /etc/shadow
-      regexp: '^libvirtadmin:!:'
-      replace: 'libvirtadmin:*:'
+    path: /etc/shadow
+    regexp: "^libvirtadmin:!:"
+    replace: "libvirtadmin:*:"
 
 - name: Generate root SSH key
   user:
     name: "root"
-    generate_ssh_key: yes
+    generate_ssh_key: true
     ssh_key_type: rsa
     ssh_key_bits: 4096
     ssh_key_file: .ssh/id_rsa
@@ -44,7 +44,7 @@
     add_libvirtadmin_user_cluster_nodes: >-
       {{ (groups.get('hypervisors', []) | intersect(groups.get('cluster_machines', []))) }}
 
-- name: Fetch the root public key to controller 
+- name: Fetch the root public key to controller
   ansible.builtin.fetch:
     src: "{{ add_libvirtadmin_user_root_home_dir.stdout }}/.ssh/id_rsa.pub"
     dest: "{{ add_libvirtadmin_user_buffer_dir }}/"

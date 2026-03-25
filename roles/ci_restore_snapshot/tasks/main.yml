@@ -9,9 +9,9 @@
   lineinfile:
     dest: /etc/default/grub
     regexp: "^(GRUB_CMDLINE_LINUX=(?!.* {{ item }})\"[^\"]*)(\".*)"
-    line: '\1 {{ item }}\2'
+    line: "\\1 {{ item }}\\2"
     state: present
-    backrefs: yes
+    backrefs: true
   with_items:
     - ipv6.disable=1
     - efi=runtime
@@ -27,7 +27,7 @@
   reboot:
 - name: Refresh LVM
   command:
-    cmd:  lvchange --refresh vg1
+    cmd: lvchange --refresh vg1
   changed_when: true
 
 - name: Wait until snapshot is cleared

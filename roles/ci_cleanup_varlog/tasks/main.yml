@@ -12,7 +12,7 @@
   file:
     path: "{{ item }}"
     state: directory
-    mode: 0755
+    mode: "0755"
   loop:
     - /var/log/audit
     - /var/log/openvswitch
@@ -28,7 +28,7 @@
   file:
     path: /var/log/crmsh/
     state: directory
-    mode: 0755
+    mode: "0755"
     owner: hacluster
     group: haclient
   when: ci_cleanup_varlog_hacluster_check.rc == 0

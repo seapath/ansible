@@ -3,6 +3,7 @@
 
 # Ansible playbook that deploy and set-up ptp on vms for a standalone machine
 
+---
 - name: Import deploy_vms_standalone
   import_playbook: deploy_vms_standalone.yaml
 

@@ -1,9 +1,10 @@
+---
 # Copyright (C) 2024 Red Hat, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 - name: Trigger daemon-reload
   ansible.builtin.service:
-    daemon_reload: yes
+    daemon_reload: true
 
 - name: Restart systemd-sysctl
   ansible.builtin.systemd:
@@ -18,5 +19,5 @@
 - name: Restart ovs-vswitchd
   ansible.builtin.systemd:
     state: restarted
-    daemon_reload: yes
+    daemon_reload: true
     name: ovs-vswitchd

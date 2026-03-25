@@ -19,12 +19,12 @@
       ansible.builtin.lineinfile:
         path: /etc/tuned/tuned-main.conf
         state: present
-        regexp: '^#?dynamic_tuning = .*$'
-        line: 'dynamic_tuning = 0'
+        regexp: "^#?dynamic_tuning = .*$"
+        line: "dynamic_tuning = 0"
     - name: Enable tuned.service
       ansible.builtin.systemd:
         name: tuned.service
-        enabled: yes
+        enabled: true
         state: restarted
     - name: Load realtime-virtual-guest tuned profile
       ansible.builtin.command: tuned-adm profile realtime-virtual-guest

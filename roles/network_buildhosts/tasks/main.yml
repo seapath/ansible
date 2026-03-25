@@ -9,17 +9,17 @@
 - name: Build hosts file (Cluster Network)
   lineinfile:
     dest: /etc/hosts
-    regexp: '.*{{ hostvars[item].hostname | default(item) }}$'
+    regexp: ".*{{ hostvars[item].hostname | default(item) }}$"
     line: "{{ hostvars[item].cluster_ip_addr }} {{ item }} {{ hostvars[item].hostname | default('') }}"
     state: present
   loop: "{{ groups['cluster_machines'] | default([]) }}"
   when: hostvars[item].cluster_ip_addr is defined
-- name: Build hosts file (Public Network) 
+- name: Build hosts file (Public Network)
   # if cluster_ip_addr is not defined, we consider there is no cluster Network.
   # Ceph will use the public network instead.
   lineinfile:
     dest: /etc/hosts
-    regexp: '.*{{ hostvars[item].hostname | default(item) }}$'
+    regexp: ".*{{ hostvars[item].hostname | default(item) }}$"
     line: "{{ hostvars[item].ip_addr }} {{ item }} {{ hostvars[item].hostname | default('') }}"
     state: present
   loop: "{{ groups['cluster_machines'] | default([]) }}"
@@ -34,7 +34,7 @@
   lineinfile:
     dest: /etc/hosts
     state: absent
-    regexp: '^127.*debian'
+    regexp: "^127.*debian"
 
 - name: Push custom host file
   when: hosts_path is defined

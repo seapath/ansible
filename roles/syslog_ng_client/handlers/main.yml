@@ -3,10 +3,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-
 - name: Restart syslog-ng
   become: true
   systemd:
     name: syslog-ng
     state: restarted
-    enabled: yes
+    enabled: true

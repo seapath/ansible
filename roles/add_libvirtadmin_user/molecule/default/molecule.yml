@@ -1,3 +1,4 @@
+---
 dependency:
   name: galaxy
 
@@ -33,6 +34,5 @@ provisioner:
             hosts:
               hv1:
               hv2:
-
 verifier:
   name: ansible

@@ -16,8 +16,6 @@
 # ansible-playbook -e ireallymeanit=yes|no shrink-osd.yml
 #     Overrides the prompt using -e option. Can be used in
 #     automation scripts to avoid interactive prompt.
-
-
 - name: Sanity check
   hosts: localhost
   tasks:
@@ -159,7 +157,7 @@
       service:
         name: ceph-osd@{{ item.2 }}
         state: stopped
-        enabled: no
+        enabled: false
       loop: "{{ _osd_hosts }}"
       delegate_to: "{{ item.0 }}"
       when: offline_host is undefined
@@ -210,7 +208,7 @@
       command: "cryptsetup close {{ ceph_osd_data_json[item.2][item.3]['uuid'] }}"
       with_nested:
         - "{{ _osd_hosts }}"
-        - [ 'block_dmcrypt', 'block.db_dmcrypt', 'block.wal_dmcrypt', 'data', 'journal_dmcrypt' ]
+        - ["block_dmcrypt", "block.db_dmcrypt", "block.wal_dmcrypt", "data", "journal_dmcrypt"]
       delegate_to: "{{ item.0 }}"
       failed_when: false
       register: result
@@ -223,10 +221,11 @@
       changed_when: true
 
     - name: Use ceph-volume lvm zap to destroy all partitions
-      command: "{{ container_run_cmd }} lvm zap --destroy {{ ceph_osd_data_json[item.2]['pkname_data'] if item.3 == 'data' else ceph_osd_data_json[item.2][item.3]['path'] }}"
+      command: "{{ container_run_cmd }} lvm zap --destroy {{ ceph_osd_data_json[item.2]['pkname_data'] if item.3 == 'data' else ceph_osd_data_json[item.2][item.3]['path']
+        }}"
       with_nested:
         - "{{ _osd_hosts }}"
-        - [ 'block', 'block.db', 'block.wal', 'journal', 'data' ]
+        - ["block", "block.db", "block.wal", "journal", "data"]
       delegate_to: "{{ item.0 }}"
       failed_when: false
       register: result

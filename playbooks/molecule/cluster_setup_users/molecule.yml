@@ -3,7 +3,7 @@ dependency:
   name: galaxy
 
 driver:
-  name: podman 
+  name: podman
 
 platforms:
   - name: node1

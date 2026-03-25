@@ -16,8 +16,6 @@
 # ansible-playbook -e ireallymeanit=yes|no shrink-mon.yml
 #     Overrides the prompt using -e option. Can be used in
 #     automation scripts to avoid interactive prompt.
-
-
 - name: Sanity check
   hosts: localhost
   tasks:
@@ -37,7 +35,7 @@
   hosts: "{{ mon_group_name|default('mons') }}"
   become: true
   tasks:
-    - debug:  # noqa: name[missing]
+    - debug: # noqa: name[missing]
         var: machine_up
     - name: Gather facts
       gather_facts:
@@ -97,12 +95,11 @@
         mon_to_kill_hostname: "{{ mon_to_kill }}"
       when: offline_host is defined
 
-
     - name: Stop monitor service(s)
       service:
         name: ceph-mon@{{ mon_to_kill_hostname }}
         state: stopped
-        enabled: no
+        enabled: false
       delegate_to: "{{ mon_to_kill }}"
       failed_when: false
       when: offline_host is undefined
@@ -131,14 +128,13 @@
 
     - name: Please remove the monitor from your ceph configuration file # noqa: run-once[task]
       debug:
-          msg: "The monitor has been successfully removed from the cluster.
-          Please remove the monitor entry from the rest of your ceph configuration files, cluster wide."
+        msg: "The monitor has been successfully removed from the cluster. Please remove the monitor entry from the rest of your ceph configuration files, cluster wide."
       run_once: true
       when: mon_to_kill_hostname not in (result.stdout | from_json)['quorum_names']
 
     - name: Fail if monitor is still part of the cluster # noqa: run-once[task]
       fail:
-          msg: "Monitor appears to still be part of the cluster, please check what happened."
+        msg: "Monitor appears to still be part of the cluster, please check what happened."
       run_once: true
       when: mon_to_kill_hostname in (result.stdout | from_json)['quorum_names']
 

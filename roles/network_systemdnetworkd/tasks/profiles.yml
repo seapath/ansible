@@ -1,12 +1,11 @@
 ---
-
 - name: Copy .link profiles
   template:
     src: "systemd_networkd_profile.j2"
     dest: "/etc/systemd/network/{{ item.key }}.link"
     owner: root
     group: systemd-network
-    mode: 0640
+    mode: "0640"
   loop: "{{ network_systemdnetworkd_link | dict2items }}"
   notify:
     - Reload systemd-networkd
@@ -19,7 +18,7 @@
     dest: "/etc/systemd/network/{{ item.key }}.netdev"
     owner: root
     group: systemd-network
-    mode: 0640
+    mode: "0640"
   loop: "{{ network_systemdnetworkd_netdev | dict2items }}"
   notify:
     - Reload systemd-networkd
@@ -31,7 +30,7 @@
     dest: "/etc/systemd/network/{{ item.key }}.network"
     owner: root
     group: systemd-network
-    mode: 0640
+    mode: "0640"
   loop: "{{ network_systemdnetworkd_network | dict2items }}"
   notify:
     - Reload systemd-networkd

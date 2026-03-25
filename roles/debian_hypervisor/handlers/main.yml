@@ -11,7 +11,7 @@
   ansible.builtin.systemd:
     name: "{{ item }}.slice"
     state: restarted
-    daemon_reload: yes
+    daemon_reload: true
   with_items:
     - "machine-rt"
     - "machine-nort"
@@ -21,7 +21,7 @@
   ansible.builtin.systemd:
     name: "{{ item }}.slice"
     state: stopped
-    daemon_reload: yes
+    daemon_reload: true
   with_items:
     - "machine-rt"
     - "machine-nort"

@@ -38,7 +38,7 @@
     state: directory
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
-    mode: '0755'
+    mode: "0755"
   when:
     - deploy_vms_standalone_qcow2tmpuploadfolder is defined
     - deploy_vms_standalone_qcow2tmpuploadfolder != "/tmp"
@@ -112,4 +112,3 @@
     autostart: "{{ hostvars[item].autostart | default(true) }}"
   loop: "{{ groups['VMs'] }}"
   when: hostvars[item].enable | default(true)
-

@@ -5,4 +5,4 @@
   tasks:
     - name: Apply role under test
       ansible.builtin.include_role:
-        name: add_libvirtadmin_user 
+        name: add_libvirtadmin_user

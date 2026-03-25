@@ -1,7 +1,7 @@
 # Copyright (C) 2023, RTE (http://www.rte-france.com)
 # SPDX-License-Identifier: Apache-2.0
 
-
+---
 - name: Detect Seapath distribution
   hosts:
     - cluster_machines
@@ -49,7 +49,7 @@
       user:
         name: "{{ admin_user }}"
         groups: haclient
-        append: yes
+        append: true
 
 - name: Disable libvirt-guests.service
   hosts:
@@ -59,7 +59,7 @@
     - name: Disable libvirt-guests.service
       ansible.builtin.systemd:
         name: libvirt-guests.service
-        enabled: no
+        enabled: false
         state: stopped
 
 - name: Upload extra files
@@ -76,7 +76,7 @@
         owner: "{{ item.owner | default('root') }}"
         group: "{{ item.group | default('root') }}"
         mode: "{{ item.mode | default('0644') }}"
-        backup: yes
+        backup: true
       with_items: "{{ upload_files }}"
       when:
         - upload_files is defined
@@ -99,7 +99,6 @@
       loop: "{{ commands_to_run_after_upload }}"
       when: commands_to_run_after_upload is defined
 
-
 - name: Remove what is not needed after installation on guests
   hosts:
     - VMs
@@ -113,8 +112,8 @@
           - libfdisk1
           - libunistring2
         state: absent
-        purge: yes
-        autoremove: yes
+        purge: true
+        autoremove: true
       when: ansible_distribution_release == 'trixie'
 
 - name: Remove what is not needed after installation
@@ -138,8 +137,8 @@
           - ceph-osd
           - ceph-volume
         state: absent
-        purge: yes
-        autoremove: yes
+        purge: true
+        autoremove: true
       when: force_cephadm | default(false)
     - name: Uninstall apt packages not required after installation (all debian version)
       apt:
@@ -147,8 +146,8 @@
           - fdisk
           - ifupdown
         state: absent
-        purge: yes
-        autoremove: yes
+        purge: true
+        autoremove: true
     - name: Uninstall apt packages not required after installation (trixie)
       apt:
         name:
@@ -156,15 +155,15 @@
           - libapt-pkg6.0
           - usr-is-merged
         state: absent
-        purge: yes
-        autoremove: yes
+        purge: true
+        autoremove: true
       when: ansible_distribution_release == 'trixie'
     - name: Disable unused systemd services
       systemd:
         unit: "{{ item }}"
         state: stopped
-        enabled: no
-        no_block: yes
+        enabled: false
+        no_block: true
       with_items:
         - apt-daily-upgrade.timer
         - apt-daily.timer

@@ -1,9 +1,10 @@
 # Copyright (C) 2024 Red Hat, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
+---
 - name: Daemon-reload
   ansible.builtin.service:
-    daemon_reload: yes
+    daemon_reload: true
 
 - name: Restart systemd-journald
   ansible.builtin.systemd:

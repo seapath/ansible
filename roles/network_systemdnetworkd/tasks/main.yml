@@ -1,5 +1,4 @@
 ---
-
 - name: Include network_team0 vars file
   include_vars: "network_team0.yml"
 
@@ -36,6 +35,6 @@
 - name: Start and enable systemd-resolved
   service:
     name: systemd-resolved
-    enabled: yes
+    enabled: true
     state: started
   when: network_systemdnetworkd_enable_resolved

@@ -2,10 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-
 - name: Enable and start NIC irq affinity service
   systemd:
     name: setup_nic_irq_affinity.service
-    enabled: yes
+    enabled: true
     state: started
-    daemon_reload: yes
+    daemon_reload: true

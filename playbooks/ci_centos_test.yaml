@@ -12,4 +12,3 @@
   gather_facts: false
   roles:
     - ci_centos
-

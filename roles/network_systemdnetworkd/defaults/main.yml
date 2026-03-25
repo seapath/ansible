@@ -6,7 +6,6 @@ network_systemdnetworkd_apply_config: false
 network_systemdnetworkd_link: {}
 network_systemdnetworkd_netdev: {}
 network_systemdnetworkd_network: {}
-
 network_systemdnetworkd_enable_resolved: true
 
 network_systemdnetworkd_service_name_udev: "systemd-udev"

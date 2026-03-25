@@ -8,7 +8,7 @@
     - standalone_machine
     - VMs
   become: true
-  gather_facts: True
+  gather_facts: true
   roles:
     - deploy_cukinia
     - detect_seapath_distro
@@ -19,7 +19,7 @@
     - standalone_machine
     - VMs
   become: true
-  gather_facts: True
+  gather_facts: true
   roles:
     - role: debian_tests
       when: seapath_distro == "Debian"

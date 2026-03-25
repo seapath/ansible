@@ -15,8 +15,6 @@
 # ansible-playbook -e ireallymeanit=yes|no shrink-mgr.yml
 #     Overrides the prompt using -e option. Can be used in
 #     automation scripts to avoid interactive prompt.
-
-
 - name: Gather facts and check the init system
   hosts:
     - "{{ mon_group_name | default('mons') }}"
@@ -25,7 +23,7 @@
   tasks:
     - name: "Gather facts"
       gather_facts:
-    - debug:  # noqa: name[missing]
+    - debug: # noqa: name[missing]
         msg: gather facts on all Ceph hosts for following reference
 
 - name: Confirm if user really meant to remove manager from the ceph cluster
@@ -98,12 +96,12 @@
           service:
             name: ceph-mgr@{{ mgr_to_kill_hostname }}
             state: stopped
-            enabled: no
+            enabled: false
           delegate_to: "{{ mgr_to_kill }}"
           failed_when: false
 
         - name: Ensure that the mgr is stopped
-          command: "systemctl is-active ceph-mgr@{{ mgr_to_kill_hostname }}"  # noqa command-instead-of-module
+          command: "systemctl is-active ceph-mgr@{{ mgr_to_kill_hostname }}" # noqa command-instead-of-module
           register: mgr_to_kill_status
           failed_when: mgr_to_kill_status.rc == 0
           delegate_to: "{{ mgr_to_kill }}"

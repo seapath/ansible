@@ -9,6 +9,7 @@
 # This playbooks can also configure VMs created with build_debian_iso
 # This playbook also configures Yocto standalone machine (no cluster)
 
+---
 - name: Detect Seapath distribution
   hosts:
     - cluster_machines

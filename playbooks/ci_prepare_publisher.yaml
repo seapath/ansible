@@ -15,7 +15,7 @@
   vars:
     phc_delay: "-37"
   hosts:
-      - publisher_machine
+    - publisher_machine
   tasks:
     - name: Copy ptp4l.service # noqa: risky-file-permissions
       ansible.builtin.template:

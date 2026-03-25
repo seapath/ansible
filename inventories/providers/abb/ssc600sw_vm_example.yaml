@@ -1,3 +1,4 @@
+---
 # Copyright (C) 2024, SFL (https://savoirfairelinux.com)
 # SPDX-License-Identifier: Apache-2.0
 
@@ -10,7 +11,7 @@ VMs:
       memory: 6
       cpuset: [4, 5, 6, 7] # TODO: Choose four host cores to pin the VM to.
       emulatorpin: 3 # TODO: Choose a host core to pin the QEMU thread
-                     # Can be ignored if using PCI passthrough to connect to the process bus
+      # Can be ignored if using PCI passthrough to connect to the process bus
       rt_priority: 50
       wait_for_connection: false
 
@@ -36,7 +37,7 @@ VMs:
           bus: 7
           slot: 0
           function: 0
-        # Can be defined multiple times
+      # Can be defined multiple times
 
       # The following interfaces uses a tap interface on an Open vSwitch bridge
       # You need to create the bridge and the tap interface first

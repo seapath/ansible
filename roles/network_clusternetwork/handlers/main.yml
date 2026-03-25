@@ -4,7 +4,7 @@
 ---
 - name: Trigger daemon-reload
   ansible.builtin.service:
-    daemon_reload: yes
+    daemon_reload: true
 
 - name: Restart hsr
   ansible.builtin.systemd:

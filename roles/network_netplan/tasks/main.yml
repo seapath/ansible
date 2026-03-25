@@ -11,14 +11,14 @@
         state: directory
         owner: root
         group: root
-        mode: '0755'
+        mode: "0755"
     - name: Copy Netplan configuration file
       template:
         src: "../{{ item }}"
         dest: "/etc/netplan/{{ item | basename | replace('.j2', '') }}"
         owner: root
         group: root
-        mode: '0600'
+        mode: "0600"
       with_items: "{{ netplan_configurations }}"
       notify: Apply Netplan configuration
     - name: Avoid reboot for netplan

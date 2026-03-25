@@ -6,7 +6,7 @@
   ansible.builtin.file:
     path: /boot/efi/RESTORE_PLZ
     state: touch
-    mode: '0644'
+    mode: "0644"
 
 - name: Reboot the machine
   ansible.builtin.reboot:
