@@ -29,7 +29,7 @@ scenario:
     - create
     - prepare
     - converge
-    # - idempotence 
+    # - idempotence
     # Disable idempotence test: wipe a directory and deploy a file in it, does not produce idempotent action.
     - verify
     - destroy
