@@ -3,7 +3,7 @@
 
 ---
 - name: Verify nics_affinity variable
-  assert:
+  ansible.builtin.assert:
     that:
       - nics_affinity is not none
     fail_msg: "nics_affinity must be defined to use this role"

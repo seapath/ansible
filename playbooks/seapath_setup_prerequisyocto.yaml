@@ -34,7 +34,7 @@
   become: true
   tasks:
     - name: Upload extra files
-      copy:
+      ansible.builtin.copy:
         src: "{{ item.src }}"
         dest: "{{ item.dest }}"
         owner: "{{ item.owner | default('root') }}"
@@ -46,7 +46,7 @@
         - upload_files is defined
         - item.extract is not defined or item.extract is false
     - name: Upload extra files and extract them
-      unarchive:
+      ansible.builtin.unarchive:
         src: "{{ item.src }}"
         dest: "{{ item.dest }}"
         owner: "{{ item.owner | default('root') }}"

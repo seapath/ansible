@@ -7,7 +7,7 @@
 
 ---
 - name: Setup hugepages number # noqa: risky-file-permissions
-  copy:
+  ansible.builtin.copy:
     content: "{{ yocto_hugepages | string }}"
     dest: /etc/hugepages_nb.conf
   notify:

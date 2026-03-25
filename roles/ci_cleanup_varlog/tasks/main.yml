@@ -3,13 +3,13 @@
 
 ---
 - name: Wipe the /var/log/ directory content
-  shell: rm -rf /var/log/*
+  ansible.builtin.shell: rm -rf /var/log/*
   changed_when: true
   vars:
     disable_warnings: true
 
 - name: Recreate useful folders (1)
-  file:
+  ansible.builtin.file:
     path: "{{ item }}"
     state: directory
     mode: "0755"
@@ -19,13 +19,13 @@
     - /var/log/nginx
 
 - name: Check if hacluster user exists
-  command: getent passwd hacluster
+  ansible.builtin.command: getent passwd hacluster
   register: ci_cleanup_varlog_hacluster_check
   changed_when: false
   failed_when: ci_cleanup_varlog_hacluster_check.rc not in [0, 2]
 
 - name: Recreate useful folders /var/log/crmsh/ (2)
-  file:
+  ansible.builtin.file:
     path: /var/log/crmsh/
     state: directory
     mode: "0755"

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 ---
 - name: Gather interfaces MAC addresses
-  shell:
+  ansible.builtin.shell:
     cmd: "set -o pipefail && cat /sys/class/net/*/address|grep 78:70|sort|uniq"
     executable: "/bin/bash"
   register: hardware_customization_welotec_mac_addresses
@@ -10,14 +10,14 @@
   failed_when: false
   when: hardware_customization_welotec_mac_address_prp is not defined
 - name: Gather PRP-HSR interfaces MAC addresses
-  shell:
+  ansible.builtin.shell:
     cmd: "set -o pipefail && cat /sys/class/net/*/address|grep 70:f8:e7*|sort|uniq"
     executable: "/bin/bash"
   register: hardware_customization_welotec_mac_addresses_hsr_prp
   changed_when: false
   failed_when: false
 - name: Map MAC addresses to interfaces
-  set_fact:
+  ansible.builtin.set_fact:
     hardware_customization_welotec_mac_address_map: >-
       {{
         dict(
@@ -35,12 +35,12 @@
       }}
   when: hardware_customization_welotec_mac_address_map is not defined and hardware_customization_welotec_mac_addresses.rc == 0
 - name: Define PRP-HSR MAC address to interface
-  set_fact:
+  ansible.builtin.set_fact:
     hardware_customization_welotec_mac_address_prp: "{{ hardware_customization_welotec_mac_addresses_hsr_prp.stdout_lines[0] }}"
   when: hardware_customization_welotec_mac_address_prp is not defined and hardware_customization_welotec_mac_addresses_hsr_prp.rc == 0
 
 - name: Copy PRP-HSR network configuration
-  copy:
+  ansible.builtin.copy:
     src: 20_welotec_lan_prp.network
     dest: /etc/systemd/network/20_welotec_lan_prp.network
     mode: "0644"
@@ -48,7 +48,7 @@
   notify: reload systemd-networkd
 
 - name: Copy interface link configuration for lan_hsr-prp
-  template:
+  ansible.builtin.template:
     src: 20_welotec_lan_hsr-prp.link.j2
     dest: /etc/systemd/network/20_welotec_lan_hsr-prp.link
     mode: "0644"
@@ -58,7 +58,7 @@
   notify: reload systemd-networkd
 
 - name: Copy interface link configurations for lan2-lan8
-  template:
+  ansible.builtin.template:
     src: 20_welotec_lan.link.j2
     dest: "/etc/systemd/network/20_welotec_{{ item }}.link"
     mode: "0644"
@@ -76,7 +76,7 @@
   notify: reload systemd-networkd
 
 - name: Copy interface link configuration for lan1
-  template:
+  ansible.builtin.template:
     src: 20_welotec_lan1.link.j2
     dest: /etc/systemd/network/20_welotec_lan1.link
     mode: "0644"

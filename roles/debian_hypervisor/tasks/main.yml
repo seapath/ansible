@@ -3,21 +3,21 @@
 
 ---
 - name: Add vhost_vsock to /etc/modules
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /etc/modules
     state: present
     regexp: "^vhost_vsock$"
     line: "vhost_vsock"
 
 - name: Add sriov driver to /etc/modules
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /etc/modules
     state: present
     regexp: "^{{ sriov_driver }}$"
     line: "{{ sriov_driver }}"
   when: sriov_driver is defined
 - name: Add sriov apparmor permission for libvirt
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /etc/apparmor.d/local/abstractions/libvirt-qemu
     state: present
     line: "/dev/vfio/* rw,"
@@ -43,13 +43,13 @@
   notify: Restart sysfsutils
 
 - name: Systemd conf RuntimeWatchdogSec
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /etc/systemd/system.conf
     regexp: "^RuntimeWatchdogSec=.*$"
     line: "RuntimeWatchdogSec=20"
     state: present
 - name: Systemd conf RebootWatchdogSec
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /etc/systemd/system.conf
     regexp: "^RebootWatchdogSec=.*$"
     line: "RebootWatchdogSec=5min"
@@ -62,7 +62,7 @@
     - cpumachines is defined
   block:
     - name: Create systemd slices override (folder)
-      file:
+      ansible.builtin.file:
         path: /etc/systemd/system.control/{{ item }}.slice.d
         state: directory
         owner: root
@@ -73,7 +73,7 @@
         - "user"
         - "machine"
     - name: Create systemd slices override (files)
-      template:
+      ansible.builtin.template:
         src: systemd_slice_override.j2
         dest: /etc/systemd/system.control/{{ item.name }}.slice.d/50-AllowedCPUs.conf
         owner: root
@@ -84,7 +84,7 @@
         - { name: "user", description: "user slice", allowedcpus: "{{ cpuuser }}" }
         - { name: "machine", description: "machine slice", allowedcpus: "{{ cpumachines }}" }
 - name: Create systemd slices override REVERT
-  file:
+  ansible.builtin.file:
     path: /etc/systemd/system.control/{{ item }}.slice.d
     state: absent
   with_items:
@@ -94,7 +94,7 @@
   when: cpusystem is not defined or cpuuser is not defined or cpumachines is not defined
 
 - name: Create systemd slices
-  template:
+  ansible.builtin.template:
     src: systemd_slice.j2
     dest: /etc/systemd/system/{{ item.name }}.slice
     owner: root
@@ -110,7 +110,7 @@
     - cpumachinesnort is defined
     - cpuovs is defined
 - name: Create systemd slices REVERT
-  file:
+  ansible.builtin.file:
     path: /etc/systemd/system/{{ item }}.slice
     state: absent
   with_items:
@@ -121,31 +121,31 @@
   when: cpumachinesrt is not defined and cpumachinesnort is not defined and cpuovs is not defined
 
 - name: Get tuned version
-  command: tuned --version
+  ansible.builtin.command: tuned --version
   register: debian_hypervisor_tuned_version_output
   changed_when: false
   failed_when: debian_hypervisor_tuned_version_output.rc != 0
 
 - name: Extract tuned version number
-  set_fact:
+  ansible.builtin.set_fact:
     debian_hypervisor_tuned_version: "{{ debian_hypervisor_tuned_version_output.stdout | regex_search('\\d+\\.\\d+', '\\0') | first }}"
 
 - name: Determine tuned profile path
-  set_fact:
+  ansible.builtin.set_fact:
     debian_hypervisor_tuned_profile_path: "{{ '/etc/tuned/profiles/seapath-rt-host' if debian_hypervisor_tuned_version is version('2.22', '>=') else '/etc/tuned/seapath-rt-host' }}"
 
 - name: Create tuned seapath-rt profile folder
-  file:
+  ansible.builtin.file:
     path: "{{ debian_hypervisor_tuned_profile_path }}"
     state: directory
     mode: "0755"
 
 - name: Tuned path
-  set_fact:
+  ansible.builtin.set_fact:
     debian_hypervisor_tuned_path: "{{ custom_tuned_profile_path if custom_tuned_profile_path is defined else 'tuned.conf.j2' }}"
 
 - name: Copy seapath-rt-host tuned profile conf
-  template:
+  ansible.builtin.template:
     src: "{{ debian_hypervisor_tuned_path }}"
     dest: "{{ debian_hypervisor_tuned_profile_path }}/tuned.conf"
     group: root
@@ -153,7 +153,7 @@
     mode: "0644"
 
 - name: Remove tuned dynamic tuning
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /etc/tuned/tuned-main.conf
     state: present
     regexp: "^#?dynamic_tuning = .*$"

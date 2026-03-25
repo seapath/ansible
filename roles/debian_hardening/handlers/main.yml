@@ -2,5 +2,5 @@
 # SPDX-License-Identifier: Apache-2.0
 ---
 - name: Update sysfs values using sysctl
-  command: sysctl --system
+  ansible.builtin.command: sysctl --system
   changed_when: true

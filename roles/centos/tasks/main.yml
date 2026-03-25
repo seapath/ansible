@@ -4,19 +4,19 @@
 
 ---
 - name: Disable vim defaults
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/vimrc
     regexp: '^"? *let g:skip_defaults_vim = 1$'
     line: "let g:skip_defaults_vim = 1"
     state: present
 - name: Vim color syntax
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/vimrc
     regexp: '^"? *syntax on$'
     line: "syntax on"
     state: present
 - name: Remove vimrc.local file
-  file:
+  ansible.builtin.file:
     path: /etc/vimrc.local
     state: absent
 
@@ -33,7 +33,7 @@
     state: present
     gid: 1000
 - name: Adding admin user
-  user:
+  ansible.builtin.user:
     name: "{{ admin_user }}"
     shell: /bin/bash
     group: "{{ admin_user }}"
@@ -48,7 +48,7 @@
   with_items: "{{ admin_ssh_keys }}"
   when: admin_ssh_keys is defined and admin_ssh_keys is iterable
 - name: Install sudo admin user rules
-  copy:
+  ansible.builtin.copy:
     content: |
       {{ admin_user }}   ALL=NOPASSWD:EXEC: ALL
     dest: "/etc/sudoers.d/{{ admin_user }}"
@@ -56,7 +56,7 @@
     group: root
     mode: "0440"
 - name: Remove admin sudoers line created by build_debian_iso
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/sudoers
     state: absent
     regexp: "^{{ admin_user }}"
@@ -87,7 +87,7 @@
   with_items: "{{ env_list | dict2items }}"
 
 - name: "PATH for admin user"
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: "/home/{{ admin_user }}/.bash_profile"
     regexp: "^export PATH"
     line: "export PATH=$PATH:/usr/sbin:/usr/local/sbin:/sbin"
@@ -98,13 +98,13 @@
     mode: "0644"
 
 - name: Remove GRUB_CMDLINE_LINUX_DEFAULT option in grub conf
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/default/grub
     regexp: "^GRUB_CMDLINE_LINUX_DEFAULT="
     state: absent
 
 - name: Make sure GRUB_CMDLINE_LINUX starts with a space
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/default/grub
     regexp: "^(GRUB_CMDLINE_LINUX=)\"([ ]*)(.*)\""
     line: '\1" \3"'
@@ -112,7 +112,7 @@
     backrefs: true
 
 - name: Grub conf
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/default/grub
     regexp: "^(GRUB_CMDLINE_LINUX=(?!.* {{ item }})\"[^\"]*)(\".*)"
     line: "\\1 {{ item }}\\2"
@@ -127,7 +127,7 @@
     - "{{ grub_append | default([]) }}"
 
 - name: Grub conf osprober
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/default/grub
     regexp: "^#?GRUB_DISABLE_OS_PROBER=.*$"
     line: "GRUB_DISABLE_OS_PROBER=true"
@@ -135,20 +135,20 @@
   notify: Update Grub
 
 - name: Stop and Disable NetworkManager
-  service:
+  ansible.builtin.service:
     name: NetworkManager
     state: stopped
     enabled: false
   register: centos_nm_stop
 
 - name: Start and Enable systemd-networkd
-  service:
+  ansible.builtin.service:
     name: systemd-networkd
     state: started
     enabled: true
   register: centos_sd_start
 
 - name: Set need_reboot to true if any change was made
-  set_fact:
+  ansible.builtin.set_fact:
     need_reboot: true # noqa: var-naming[no-role-prefix]
   when: centos_nm_stop is changed or centos_sd_start is changed

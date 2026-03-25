@@ -3,10 +3,9 @@
 
 ---
 - name: Load distribution-specific variables
-  include_vars: "{{ seapath_distro }}.yml"
-
+  ansible.builtin.include_vars: "{{ seapath_distro }}.yml"
 - name: Grub conf
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/default/grub
     regexp: "^(GRUB_CMDLINE_LINUX=(?!.* {{ item }})\"[^\"]*)(\".*)"
     line: "\\1 {{ item }}\\2"
@@ -17,21 +16,21 @@
     - efi=runtime
     - "{{ grub_append | default([]) }}"
 - name: Update grub
-  command: "{{ ci_restore_snapshot_grub_update_command }}"
+  ansible.builtin.command: "{{ ci_restore_snapshot_grub_update_command }}"
   changed_when: true
 - name: Merge lvm snapshot
-  command:
+  ansible.builtin.command:
     cmd: lvconvert --merge vg1/root-snap
   changed_when: true
 - name: Restart for snapshot rollback
-  reboot:
+  ansible.builtin.reboot:
 - name: Refresh LVM
-  command:
+  ansible.builtin.command:
     cmd: lvchange --refresh vg1
   changed_when: true
 
 - name: Wait until snapshot is cleared
-  command: lvs -a
+  ansible.builtin.command: lvs -a
   register: ci_restore_snapshot_result
   until: ci_restore_snapshot_result.stdout | regex_search('root-snap', ignorecase=True) is none
   retries: 60

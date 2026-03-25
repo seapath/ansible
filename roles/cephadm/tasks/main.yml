@@ -3,17 +3,16 @@
 
 ---
 - name: Load distribution-specific variables
-  include_vars: "{{ seapath_distro }}.yml"
-
+  ansible.builtin.include_vars: "{{ seapath_distro }}.yml"
 - name: Ensure group "cephadm" exists
-  group:
+  ansible.builtin.group:
     name: cephadm
     gid: 1001
     state: present
   when: seapath_distro != "Yocto"
 
 - name: Ensure user "cephadm" exists
-  user:
+  ansible.builtin.user:
     name: cephadm
     uid: 1001
     group: cephadm
@@ -21,14 +20,14 @@
   when: seapath_distro != "Yocto"
 
 - name: Ensure group "containerized-ceph" exists
-  group:
+  ansible.builtin.group:
     name: containerized-ceph
     gid: 167
     state: present
   when: seapath_distro == "Debian"
 
 - name: Ensure user "containerized-ceph" exists with nologin (already exists on centos/oraclelinux/Yocto)
-  user:
+  ansible.builtin.user:
     name: containerized-ceph
     uid: 167
     group: containerized-ceph
@@ -37,20 +36,20 @@
   when: seapath_distro == "Debian"
 
 - name: Set cephadm user sudo permissions # noqa: risky-file-permissions
-  copy:
+  ansible.builtin.copy:
     src: cephadm_sudoers
     dest: /etc/sudoers.d/cephadm
   when: seapath_distro != "Yocto"
 
 - name: Download cephadm
-  get_url:
+  ansible.builtin.get_url:
     url: "https://download.ceph.com/rpm-{{ cephadm_release }}/el9/noarch/cephadm"
     dest: "/tmp/cephadm"
     mode: "0755"
   when: cephadm_downloadbinary is true
 
 - name: Copy cephadm to /usr/local/bin
-  copy:
+  ansible.builtin.copy:
     src: "/tmp/cephadm"
     dest: "/usr/local/bin/cephadm"
     mode: "0755"
@@ -58,32 +57,32 @@
   when: cephadm_installbinary is true
 
 - name: Install cephadm repository
-  command: "{{ '/tmp/cephadm' if not cephadm_installbinary else 'cephadm' }} add-repo --release {{ cephadm_release_name }}"
+  ansible.builtin.command: "{{ '/tmp/cephadm' if not cephadm_installbinary else 'cephadm' }} add-repo --release {{ cephadm_release_name }}"
   changed_when: true
   when: cephadm_installrepo is true
 
 - name: Install cephadm
-  command: /tmp/cephadm install
+  ansible.builtin.command: /tmp/cephadm install
   changed_when: true
   when: cephadm_installpackage is true
 
 - name: Install ceph-common package
-  command: cephadm install ceph-common
+  ansible.builtin.command: cephadm install ceph-common
   changed_when: true
   when: cephadm_installcommon is true
 
 - name: Check if host is part of a Ceph cluster
-  command: "ceph -s"
+  ansible.builtin.command: "ceph -s"
   register: cephadm_ceph_status
   ignore_errors: true
   changed_when: false
 
 - name: Mark host as ceph or nonceph
-  set_fact:
+  ansible.builtin.set_fact:
     cephadm_is_ceph_node: "{{ cephadm_ceph_status.rc == 0 }}"
 
 - name: Add host to ceph_nodes group
-  add_host:
+  ansible.builtin.add_host:
     name: "{{ item }}"
     groups: ceph_nodes
   run_once: true
@@ -91,7 +90,7 @@
   when: hostvars[item].cephadm_is_ceph_node
 
 - name: Add host to nonceph_nodes group
-  add_host:
+  ansible.builtin.add_host:
     name: "{{ item }}"
     groups: nonceph_nodes
   run_once: true
@@ -99,7 +98,7 @@
   when: not hostvars[item].cephadm_is_ceph_node
 
 - name: Set first_node and bootstrap condition
-  set_fact:
+  ansible.builtin.set_fact:
     cephadm_first_node: >-
       {{ (groups['ceph_nodes'][0] if (groups['ceph_nodes'] is defined and groups['ceph_nodes'] | length > 0)
          else groups['cluster_machines'][0]) | trim }}
@@ -107,12 +106,12 @@
   run_once: true
 
 - name: Compute list of nodes to add as monitors
-  set_fact:
+  ansible.builtin.set_fact:
     cephadm_mon_nodes_to_add: "{{ (groups['nonceph_nodes'] | default([]) | difference([cephadm_first_node])) if cephadm_do_bootstrap else groups['nonceph_nodes'] | default([]) }}"
   run_once: true
 
 - name: Debug situation
-  debug:
+  ansible.builtin.debug:
     msg: |
       cephadm_first_node = {{ cephadm_first_node }}
       cephadm_do_bootstrap = {{ cephadm_do_bootstrap }}
@@ -160,18 +159,18 @@
     restart_policy: always
 
 - name: Tag ceph image for local registry
-  command: >
+  ansible.builtin.command: >
     podman tag quay.io/ceph/ceph:v{{ cephadm_release }} localhost:5000/ceph:v{{ cephadm_release }}
   changed_when: true
 
 - name: Push ceph image to local registry
-  command: >
+  ansible.builtin.command: >
     podman push localhost:5000/ceph:v{{ cephadm_release }}
   changed_when: true
 
 # === Bootstrap if currently no ceph nodes ===
 - name: Upload file ceph.conf needed for bootstrapping # noqa: risky-file-permissions
-  template:
+  ansible.builtin.template:
     src: ceph.conf.j2
     dest: /tmp/ceph.conf
   run_once: true
@@ -179,7 +178,7 @@
   when: cephadm_do_bootstrap | bool
 
 - name: Find cephadm location
-  command: which cephadm
+  ansible.builtin.command: which cephadm
   register: cephadm_path
   failed_when: false
   changed_when: false
@@ -187,7 +186,7 @@
     PATH: "{{ ansible_env.PATH }}:/usr/local/bin"
 
 - name: Set cephadm binary path
-  set_fact:
+  ansible.builtin.set_fact:
     cephadm_bin: "{{ cephadm_path.stdout if cephadm_path.rc == 0 else '/usr/local/bin/cephadm' }}"
 
 - name: Show bootstrap command
@@ -204,7 +203,7 @@
       --mon-ip {{ hostvars[cephadm_first_node]['cluster_ip_addr'] }}
 
 - name: Bootstrap Ceph cluster
-  command: >-
+  ansible.builtin.command: >-
     {{ cephadm_bin }}
     --image localhost:5000/ceph:v{{ cephadm_release }}
     bootstrap
@@ -227,7 +226,7 @@
 
 # === adding cephadm key on other nodes ===
 - name: Check if /etc/ceph/ceph.pub exists on first_node
-  stat:
+  ansible.builtin.stat:
     path: /etc/ceph/ceph.pub
   register: cephadm_ceph_pub_stat
   run_once: true
@@ -235,14 +234,14 @@
   when: cephadm_mon_nodes_to_add | length > 0
 
 - name: Get cephadm user entry
-  getent:
+  ansible.builtin.getent:
     database: passwd
     key: cephadm
   delegate_to: "{{ cephadm_first_node }}"
   run_once: true
 
 - name: Fetch the ceph keyfile if it exists, otherwise fetch authorized_keys
-  fetch:
+  ansible.builtin.fetch:
     src: >-
       {{
         cephadm_ceph_pub_stat.stat.exists
@@ -258,7 +257,7 @@
   when: cephadm_mon_nodes_to_add | length > 0
 
 - name: Read the key from the local file
-  set_fact:
+  ansible.builtin.set_fact:
     cephadm_ceph_pubkey: "{{ lookup('file', '/tmp/ceph.pub') }}"
   delegate_to: localhost
   run_once: true
@@ -278,7 +277,7 @@
 
 # === adding monitor on other nodes ===
 - name: Add hosts to Ceph orchestrator with _admin label
-  command: "ceph orch host add {{ hostvars[item]['hostname'] }} --labels _admin"
+  ansible.builtin.command: "ceph orch host add {{ hostvars[item]['hostname'] }} --labels _admin"
   loop: "{{ cephadm_mon_nodes_to_add }}"
   changed_when: true
   failed_when: false
@@ -287,7 +286,7 @@
   when: cephadm_mon_nodes_to_add | length > 0
 
 - name: Confirm monitors are in monmap
-  command: ceph mon dump
+  ansible.builtin.command: ceph mon dump
   register: cephadm_mon_dump
   retries: 30
   delay: 5
@@ -300,30 +299,30 @@
 
 # === OSDs now ===
 - name: Get list of current OSD daemons and their hosts
-  command: ceph orch ps --daemon-type=osd --format json
+  ansible.builtin.command: ceph orch ps --daemon-type=osd --format json
   register: cephadm_osd_ps
   delegate_to: "{{ cephadm_first_node }}"
   run_once: true
   changed_when: false
 - name: Set fact for existing OSD hosts
-  set_fact:
+  ansible.builtin.set_fact:
     cephadm_existing_osd_hosts: "{{ cephadm_osd_ps.stdout | from_json | map(attribute='hostname') | list | unique }}"
   run_once: true
 - name: Debug cephadm_existing_osd_hosts
-  debug:
+  ansible.builtin.debug:
     msg: "Nodes with existing OSDs: {{ cephadm_existing_osd_hosts }}"
   run_once: true
 - name: Set list of nodes that need OSDs
-  set_fact:
+  ansible.builtin.set_fact:
     cephadm_nodes_needing_osds: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) | map('extract', hostvars, 'hostname') | difference(cephadm_existing_osd_hosts) }}"
   run_once: true
 - name: Debug nodes needing OSDs
-  debug:
+  ansible.builtin.debug:
     msg: "Nodes that need OSDs: {{ cephadm_nodes_needing_osds }}"
   run_once: true
 
 - name: Zap the volume on nodes that need OSDs
-  command: "{{ cephadm_bin }} --image localhost:5000/ceph:v{{ cephadm_release }} ceph-volume lvm zap vg_ceph/lv_ceph"
+  ansible.builtin.command: "{{ cephadm_bin }} --image localhost:5000/ceph:v{{ cephadm_release }} ceph-volume lvm zap vg_ceph/lv_ceph"
   delegate_to: "{{ item }}"
   run_once: true
   when: hostvars[item]['hostname'] in cephadm_nodes_needing_osds
@@ -331,7 +330,7 @@
   changed_when: true
 
 - name: Copy ceph orch spec file
-  template:
+  ansible.builtin.template:
     src: "{{ cephadm_spec_path | default('spec.yaml.j2') }}"
     dest: /tmp/t.yaml
     mode: "0644"
@@ -339,14 +338,14 @@
   delegate_to: "{{ cephadm_first_node }}"
 
 - name: Add OSD daemon on nodes that need OSDs
-  command: "{{ cephadm_bin }} --image localhost:5000/ceph:v{{ cephadm_release }} shell -v /tmp/t.yaml:/tmp/t.yaml:ro -- ceph orch apply -i /tmp/t.yaml"
+  ansible.builtin.command: "{{ cephadm_bin }} --image localhost:5000/ceph:v{{ cephadm_release }} shell -v /tmp/t.yaml:/tmp/t.yaml:ro -- ceph orch apply -i /tmp/t.yaml"
   delegate_to: "{{ cephadm_first_node }}"
   run_once: true
   changed_when: true
   failed_when: false
 
 - name: Confirm cluster is ok
-  command: ceph status --format=json
+  ansible.builtin.command: ceph status --format=json
   register: cephadm_cephs
   retries: 30
   delay: 10
@@ -356,7 +355,7 @@
   until: cephadm_cephs.stdout | from_json | community.general.json_query('health.status') == "HEALTH_OK"
 
 - name: Check if RBD pool exists
-  shell:
+  ansible.builtin.shell:
     cmd: set -o pipefail && ceph osd lspools | grep -w rbd
     executable: /bin/bash
   register: cephadm_rbd_pool_check
@@ -364,27 +363,27 @@
   failed_when: false
 
 - name: Create RBD pool if it doesn't exist
-  command: ceph osd pool create rbd
+  ansible.builtin.command: ceph osd pool create rbd
   when: cephadm_rbd_pool_check.rc != 0
   changed_when: true
   run_once: true
   delegate_to: "{{ cephadm_first_node }}"
 
 - name: Enable RBD application on the pool
-  command: ceph osd pool application enable rbd rbd
+  ansible.builtin.command: ceph osd pool application enable rbd rbd
   when: cephadm_rbd_pool_check.rc != 0
   changed_when: true
   run_once: true
   delegate_to: "{{ cephadm_first_node }}"
 
 - name: Check if CephX user client.libvirt exists
-  command: ceph auth get client.libvirt
+  ansible.builtin.command: ceph auth get client.libvirt
   register: cephadm_cephx_user_check
   changed_when: false
   failed_when: false
 
 - name: Create CephX user client.libvirt if it does not exist
-  command: >
+  ansible.builtin.command: >
     ceph auth add client.libvirt
     mon 'profile rbd, allow command "osd blacklist"'
     osd 'allow class-read object_prefix rbd_children, profile rbd pool=rbd'
@@ -392,7 +391,7 @@
   changed_when: true
 
 - name: Update CephX user client.libvirt permissions if it exists
-  command: >
+  ansible.builtin.command: >
     ceph auth caps client.libvirt
     mon 'profile rbd, allow command "osd blacklist"'
     osd 'allow class-read object_prefix rbd_children, profile rbd pool=rbd'

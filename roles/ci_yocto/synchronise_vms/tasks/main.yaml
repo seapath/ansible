@@ -6,20 +6,20 @@
 
 ---
 - name: Populate service facts
-  service_facts:
+  ansible.builtin.service_facts:
 - name: Ensure phc2sys service is stopped
-  systemd:
+  ansible.builtin.systemd:
     name: phc2sys
     state: stopped
   when: "'phc2sys' in services"
 - name: Copy systemd service file to server # noqa: risky-file-permissions
-  template:
+  ansible.builtin.template:
     src: phc2sys.service.j2
     dest: /etc/systemd/system/phc2sys.service
     owner: root
     group: root
 - name: Start phc2sys service if not started
-  service:
+  ansible.builtin.service:
     name: phc2sys
     enabled: true
     daemon_reload: true

@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 ---
 - name: Restart
-  reboot:
+  ansible.builtin.reboot:
 - name: Wait for host to be online
-  wait_for_connection:
+  ansible.builtin.wait_for_connection:
 - name: Wait systemd has finished to boot
   command: systemctl is-system-running --wait
   register: system_status

@@ -14,5 +14,5 @@
     enabled: true
 
 - name: Update-grub
-  command: update-grub
+  ansible.builtin.command: update-grub
   changed_when: true

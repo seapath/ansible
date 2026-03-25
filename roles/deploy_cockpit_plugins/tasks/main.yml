@@ -2,13 +2,13 @@
 # SPDX-Licence-Identifier: Apache-2.0
 ---
 - name: Check if cockpit is installed
-  command: which cockpit-bridge
+  ansible.builtin.command: which cockpit-bridge
   register: deploy_cockpit_plugins_cockpit_status
   ignore_errors: true
   changed_when: false
 
 - name: Create cockpit plugin directories
-  file:
+  ansible.builtin.file:
     path: "/usr/share/cockpit/{{ item }}"
     state: directory
     mode: "0755"
@@ -18,7 +18,7 @@
     - cockpit-cluster-vm-management
 
 - name: Extract Cockpit plugins archives
-  unarchive:
+  ansible.builtin.unarchive:
     src: "{{ item }}.tar.gz"
     dest: "/usr/share/cockpit/{{ item }}"
     owner: root

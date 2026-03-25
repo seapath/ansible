@@ -5,13 +5,13 @@
 
 ---
 - name: Create temporary test directory
-  tempfile:
+  ansible.builtin.tempfile:
     state: directory
   register: ci_yocto_tmp_test_dir
 - name: Execute script
-  script: get_system_info.py '{{ ci_yocto_tmp_test_dir.path }}/system_info.adoc'
+  ansible.builtin.script: get_system_info.py '{{ ci_yocto_tmp_test_dir.path }}/system_info.adoc'
 - name: Fetch results
-  fetch:
+  ansible.builtin.fetch:
     src: "{{ ci_yocto_tmp_test_dir.path }}/system_info.adoc"
     dest: "{{ cukinia_test_prefix | default('..') }}/system_info_{{ inventory_hostname }}.adoc"
     flat: true

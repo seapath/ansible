@@ -2,26 +2,26 @@
 # SPDX-License-Identifier: Apache-2.0
 ---
 - name: "Force loading nf_conntrack at boot"
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/modules-load.d/modules.conf
     regexp: "^nf_conntrack$"
     line: "nf_conntrack"
     state: present
   when: not revert
 - name: "Disable force loading nf_conntrack at boot"
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/modules-load.d/modules.conf
     regexp: "^nf_conntrack$"
     state: absent
   when: revert
 
 - name: Get ceph disk stats
-  stat:
+  ansible.builtin.stat:
     path: "{{ ceph_osd_disk }}"
   register: debian_hardening_physical_machine_ceph_osd_disk_stat
   when: ceph_osd_disk is defined
 - name: Restrict ceph sudoers file
-  template:
+  ansible.builtin.template:
     src: sudoers/ceph.j2
     dest: /etc/sudoers.d/ceph-smartctl
     owner: root
@@ -32,7 +32,7 @@
     - cluster_ip_addr is defined
 
 - name: Adding ceph user to group privileged
-  user:
+  ansible.builtin.user:
     name: ceph
     groups: privileged
     append: true
@@ -41,7 +41,7 @@
     - cluster_ip_addr is defined
 
 - name: Adding cephadm user to group privileged
-  user:
+  ansible.builtin.user:
     name: cephadm
     groups: privileged
     append: true
@@ -51,14 +51,14 @@
     - force_cephadm | default(false)
 
 - name: Adding Debian-snmp user to group privileged
-  user:
+  ansible.builtin.user:
     name: "Debian-snmp"
     groups: privileged
     append: true
   when: not revert and snmp_admin_ip_addr is defined
 
 - name: Create systemd service.d directories
-  file:
+  ansible.builtin.file:
     path: "/etc/systemd/system/{{ item }}.service.d/"
     state: directory
     owner: root
@@ -67,14 +67,14 @@
   with_items: "{{ debian_hardening_physical_machine_hardened_services }}"
 
 - name: Add systemd service hardening rules for physical machines # noqa: risky-file-permissions
-  copy:
+  ansible.builtin.copy:
     src: "{{ item }}_hardening.conf"
     dest: "/etc/systemd/system/{{ item }}.service.d/hardening.conf"
   with_items: "{{ debian_hardening_physical_machine_hardened_services }}"
   when: not revert
 
 - name: Remove systemd service hardening rules for physical machines
-  file:
+  ansible.builtin.file:
     path: "/etc/systemd/system/{{ item }}.service.d/hardening.conf"
     state: absent
   with_items: "{{ debian_hardening_physical_machine_hardened_services }}"

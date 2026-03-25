@@ -3,7 +3,7 @@
 
 ---
 - name: Populate service facts
-  service_facts:
+  ansible.builtin.service_facts:
 
 - name: Copy sysctl rules
   ansible.builtin.copy:
@@ -23,25 +23,25 @@
   notify: Restart systemd-sysctl
 
 - name: Create src folder on hosts
-  file:
+  ansible.builtin.file:
     path: /tmp/src
     state: directory
     mode: "0755"
 
 - name: Temp fix for synchronize to force evaluate variables
-  set_fact:
+  ansible.builtin.set_fact:
     ansible_host: "{{ ansible_host }}"
 
 - name: Deploy vm_manager
-  include_role:
+  ansible.builtin.include_role:
     name: deploy_vm_manager
 
 - name: Deploy python3-setup-ovs
-  include_role:
+  ansible.builtin.include_role:
     name: deploy_python3_setup_ovs
 
 - name: Create /usr/lib/ocf/resource.d/seapath on hosts
-  file:
+  ansible.builtin.file:
     path: /usr/lib/ocf/resource.d/seapath
     state: directory
     mode: "0755"
@@ -57,7 +57,7 @@
     - "'cluster_machines' in group_names"
 
 - name: Copy chrony-wait.service
-  template:
+  ansible.builtin.template:
     src: chrony-wait.service.j2
     dest: /etc/systemd/system/chrony-wait.service
     owner: root
@@ -74,14 +74,14 @@
     - services['pacemaker.service'] is defined
   block:
     - name: Create pacemaker.service.d directory
-      file:
+      ansible.builtin.file:
         path: /etc/systemd/system/pacemaker.service.d/
         state: directory
         owner: root
         group: root
         mode: "0755"
     - name: Copy pacemaker.service drop-in
-      template:
+      ansible.builtin.template:
         src: pacemaker_override.conf.j2
         dest: /etc/systemd/system/pacemaker.service.d/override.conf
         owner: root
@@ -105,7 +105,7 @@
       when: oraclelinux_physical_machine_pacemaker_corosync.changed and oraclelinux_physical_machine_pacemaker_service_status.status.UnitFileState == "enabled"
 
 - name: Add extra modules to the kernel
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/modules
     state: present
     regexp: "^{{ item }}$"
@@ -128,7 +128,7 @@
     mode: "0751"
 
 - name: Lineinfile in hosts file for logstash-seapath
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/hosts
     regexp: ".* logstash-seapath$"
     line: "{{ logstash_server_ip }} logstash-seapath"
@@ -136,7 +136,7 @@
   when: logstash_server_ip is defined
 
 - name: Make libvirt use the "machine-id" way to determine host UUID
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/libvirt/libvirtd.conf
     regexp: "^#?host_uuid_source ="
     line: "host_uuid_source = \"machine-id\""
@@ -182,13 +182,13 @@
     enabled: true
 
 - name: Ensure group www-data exists with GID 1033
-  group:
+  ansible.builtin.group:
     name: www-data
     gid: 1033
     state: present
 
 - name: Ensure user www-data exists with UID 1033 and GID 1033
-  user:
+  ansible.builtin.user:
     name: www-data
     uid: 1033
     group: www-data

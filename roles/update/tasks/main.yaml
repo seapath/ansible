@@ -3,17 +3,17 @@
 
 ---
 - name: Check if the system have swupdate
-  command: swupdate -v
+  ansible.builtin.command: swupdate -v
   register: update_swupdate_version
   ignore_errors: true
   changed_when: false
 - name: Fail if swupdate is not available
-  fail:
+  ansible.builtin.fail:
     msg: "Only Swupdate update is supported"
   when: update_swupdate_version.rc != 0
 
 - name: Check the SEAPATH mode, cluster or standalone
-  stat:
+  ansible.builtin.stat:
     path: /etc/corosync/corosync.conf
   register: update_corosync_conf
 
@@ -21,10 +21,10 @@
   when: update_corosync_conf.stat.exists
   block:
     - name: Set hypervisor in maintenance mode
-      command: crm node standby "{{ inventory_hostname }}"
+      ansible.builtin.command: crm node standby "{{ inventory_hostname }}"
       changed_when: true
     - name: Wait for all ressources to be migrated
-      shell:
+      ansible.builtin.shell:
         cmd: set -o pipefail && crm status|grep "Migrating"|wc -l
         executable: /bin/bash
       changed_when: false
@@ -33,14 +33,14 @@
       retries: 10
 
 - name: Copy SWU file on machine # noqa: risky-file-permissions
-  copy:
+  ansible.builtin.copy:
     src: "{{ update_swu_image_path }}"
     dest: "/tmp/update.swu"
 - name: Apply update
-  command: swupdate -i /tmp/update.swu
+  ansible.builtin.command: swupdate -i /tmp/update.swu
   changed_when: true
 - name: Reboot host
-  reboot:
+  ansible.builtin.reboot:
     msg: "Reboot initiated by Ansible"
     connect_timeout: 5
     reboot_timeout: 600
@@ -56,12 +56,12 @@
     - skip_ansible_lint
 
 - name: Unset maintenance mode for hypervisor
-  command: crm node online "{{ inventory_hostname }}"
+  ansible.builtin.command: crm node online "{{ inventory_hostname }}"
   when: update_corosync_conf.stat.exists
   changed_when: true
 
 - name: Check if update has succeed
-  shell:
+  ansible.builtin.shell:
     cmd: set -o pipefail && journalctl -u swupdate_check.service -b |grep "Update have failed"|wc -l
     executable: /bin/bash
   register: update_status

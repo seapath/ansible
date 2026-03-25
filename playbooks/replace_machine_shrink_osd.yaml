@@ -20,14 +20,14 @@
   hosts: localhost
   tasks:
     - name: Exit playbook, if no osd(s) was/were given
-      fail:
+      ansible.builtin.fail:
         msg: "osd_to_kill must be declared
           Exiting shrink-osd playbook, no OSD(s) was/were removed.
            On the command line when invoking the playbook, you can use
            -e osd_to_kill=0,1,2,3 argument."
       when: osd_to_kill is not defined
     - name: Check the osd ids passed have the correct format
-      fail:
+      ansible.builtin.fail:
         msg: "The id {{ item }} has wrong format, please pass the number only"
       with_items: "{{ osd_to_kill.split(',') }}"
       when: not item is regex("^\d+$")
@@ -43,7 +43,7 @@
   become: true
   tasks:
     - name: "Gather facts"
-      gather_facts:
+      ansible.builtin.gather_facts:
       when: machine_up
 
 - name: Remove the OSD
@@ -56,26 +56,26 @@
 
   tasks:
     - name: Import default ceph role
-      import_role:
+      ansible.builtin.import_role:
         name: ceph-defaults
 
     - name: Import ceph facts role
-      import_role:
+      ansible.builtin.import_role:
         name: ceph-facts
         tasks_from: container_binary
 
   post_tasks:
     - name: Set_fact container_exec_cmd build docker exec command (containerized)
-      set_fact:
+      ansible.builtin.set_fact:
         container_exec_cmd: "{{ container_binary }} exec ceph-mon-{{ ansible_facts['hostname'] }}"
       when: containerized_deployment | bool
 
     - name: Set_fact container_run_cmd
-      set_fact:
+      ansible.builtin.set_fact:
         container_run_cmd: "{{ container_binary + ' run --rm --privileged=true --net=host --pid=host --ipc=host -v /dev:/dev -v /etc/ceph:/etc/ceph -v /var/lib/ceph:/var/lib/ceph -v /var/run:/var/run --entrypoint=' if containerized_deployment else '' }}ceph-volume {{ ceph_docker_registry + '/' + ceph_docker_image + ':' + ceph_docker_image_tag if containerized_deployment else '' }}"
 
     - name: Exit playbook, if can not connect to the cluster
-      command: "{{ container_exec_cmd }} timeout 5 ceph --cluster {{ cluster }} health"
+      ansible.builtin.command: "{{ container_exec_cmd }} timeout 5 ceph --cluster {{ cluster }} health"
       register: ceph_health
       changed_when: false
       until: ceph_health.stdout.find("HEALTH") > -1
@@ -83,20 +83,20 @@
       delay: 2
 
     - name: Find the host(s) where the osd(s) is/are running on
-      command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} osd find {{ item }}"
+      ansible.builtin.command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} osd find {{ item }}"
       changed_when: false
       with_items: "{{ osd_to_kill.split(',') }}"
       register: find_osd_hosts
       when: offline_host is undefined
 
     - name: Set_fact osd_hosts
-      set_fact:
+      ansible.builtin.set_fact:
         osd_hosts: "{{ osd_hosts | default([]) + [[(item.stdout | from_json).crush_location.host, (item.stdout | from_json).osd_fsid, item.item]] }}"
       with_items: "{{ find_osd_hosts.results }}"
       when: offline_host is undefined
 
     - name: Set_fact _osd_hosts
-      set_fact:
+      ansible.builtin.set_fact:
         _osd_hosts: "{{ _osd_hosts | default([]) + [ [ item.0, item.2, item.3 ] ] }}"
       with_nested:
         - "{{ groups.get(osd_group_name) }}"
@@ -106,7 +106,7 @@
         - hostvars[item.0]['ansible_facts']['hostname'] == item.1
 
     - name: Get ceph-volume lvm list data
-      command: "{{ container_run_cmd }} lvm list --format json"
+      ansible.builtin.command: "{{ container_run_cmd }} lvm list --format json"
       changed_when: false
       register: _lvm_list_data
       delegate_to: "{{ item.0 }}"
@@ -114,13 +114,13 @@
       when: offline_host is undefined
 
     - name: Set_fact _lvm_list
-      set_fact:
+      ansible.builtin.set_fact:
         _lvm_list: "{{ _lvm_list | default({}) | combine(item.stdout | from_json) }}"
       with_items: "{{ _lvm_list_data.results }}"
       when: offline_host is undefined
 
     - name: Find /etc/ceph/osd files
-      find:
+      ansible.builtin.find:
         paths: /etc/ceph/osd
         pattern: "{{ item.2 }}-*"
       register: ceph_osd_data
@@ -131,7 +131,7 @@
         - item.2 not in _lvm_list.keys()
 
     - name: Slurp ceph osd files content
-      slurp:
+      ansible.builtin.slurp:
         src: "{{ item['files'][0]['path'] }}"
       delegate_to: "{{ item.item.0 }}"
       register: ceph_osd_files_content
@@ -142,7 +142,7 @@
         - item.matched > 0
 
     - name: Set_fact ceph_osd_files_json
-      set_fact:
+      ansible.builtin.set_fact:
         ceph_osd_data_json: "{{ ceph_osd_data_json | default({}) | combine({ item.item.item.2: item.content | b64decode | from_json}) }}"
       with_items: "{{ ceph_osd_files_content.results }}"
       when:
@@ -150,11 +150,11 @@
         - item.skipped is undefined
 
     - name: Mark osd(s) out of the cluster
-      command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} osd out {{ osd_to_kill.replace(',', ' ') }}"
+      ansible.builtin.command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} osd out {{ osd_to_kill.replace(',', ' ') }}"
       changed_when: false
 
     - name: Stop osd(s) service
-      service:
+      ansible.builtin.service:
         name: ceph-osd@{{ item.2 }}
         state: stopped
         enabled: false
@@ -186,7 +186,7 @@
         - not containerized_deployment | bool
 
     - name: Get parent device for data partition
-      command: lsblk --noheadings --output PKNAME --nodeps "{{ ceph_osd_data_json[item.2]['data']['path'] }}"
+      ansible.builtin.command: lsblk --noheadings --output PKNAME --nodeps "{{ ceph_osd_data_json[item.2]['data']['path'] }}"
       register: parent_device_data_part
       loop: "{{ _osd_hosts }}"
       delegate_to: "{{ item.0 }}"
@@ -197,7 +197,7 @@
       changed_when: true
 
     - name: Add pkname information in ceph_osd_data_json
-      set_fact:
+      ansible.builtin.set_fact:
         ceph_osd_data_json: "{{ ceph_osd_data_json | default({}) | combine({(item.item[2]): {'pkname_data': '/dev/' + item.stdout}}, recursive=True) }}"
       loop: "{{ parent_device_data_part.results }}"
       when:
@@ -205,7 +205,7 @@
         - item.skipped is undefined
 
     - name: Close dmcrypt close on devices if needed
-      command: "cryptsetup close {{ ceph_osd_data_json[item.2][item.3]['uuid'] }}"
+      ansible.builtin.command: "cryptsetup close {{ ceph_osd_data_json[item.2][item.3]['uuid'] }}"
       with_nested:
         - "{{ _osd_hosts }}"
         - ["block_dmcrypt", "block.db_dmcrypt", "block.wal_dmcrypt", "data", "journal_dmcrypt"]
@@ -221,7 +221,7 @@
       changed_when: true
 
     - name: Use ceph-volume lvm zap to destroy all partitions
-      command: "{{ container_run_cmd }} lvm zap --destroy {{ ceph_osd_data_json[item.2]['pkname_data'] if item.3 == 'data' else ceph_osd_data_json[item.2][item.3]['path']
+      ansible.builtin.command: "{{ container_run_cmd }} lvm zap --destroy {{ ceph_osd_data_json[item.2]['pkname_data'] if item.3 == 'data' else ceph_osd_data_json[item.2][item.3]['path']
         }}"
       with_nested:
         - "{{ _osd_hosts }}"
@@ -250,16 +250,16 @@
         - item.2 in _lvm_list.keys()
 
     - name: Ensure osds are marked down
-      command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} osd down {{ osd_to_kill.replace(',', ' ') }}"
+      ansible.builtin.command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} osd down {{ osd_to_kill.replace(',', ' ') }}"
       changed_when: false
 
     - name: Purge osd(s) from the cluster
-      command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} osd purge {{ item }} --yes-i-really-mean-it"
+      ansible.builtin.command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} osd purge {{ item }} --yes-i-really-mean-it"
       changed_when: false
       with_items: "{{ osd_to_kill.split(',') }}"
 
     - name: Remove osd data dir
-      file:
+      ansible.builtin.file:
         path: "/var/lib/ceph/osd/{{ cluster }}-{{ item.2 }}"
         state: absent
       loop: "{{ _osd_hosts }}"
@@ -267,9 +267,9 @@
       when: offline_host is undefined
 
     - name: Show ceph health
-      command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} -s"
+      ansible.builtin.command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} -s"
       changed_when: false
 
     - name: Show ceph osd tree
-      command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} osd tree"
+      ansible.builtin.command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} osd tree"
       changed_when: false

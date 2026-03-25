@@ -3,7 +3,7 @@
 
 ---
 - name: Enable and start NIC irq affinity service
-  systemd:
+  ansible.builtin.systemd:
     name: setup_nic_irq_affinity.service
     enabled: true
     state: started

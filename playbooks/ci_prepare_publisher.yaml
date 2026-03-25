@@ -7,7 +7,7 @@
     - publisher_machine
   tasks:
     - name: Gather ansible_user_dir fact
-      setup:
+      ansible.builtin.setup:
         filter: ansible_user_dir
 
 - name: Synchronize publisher machine with PTP

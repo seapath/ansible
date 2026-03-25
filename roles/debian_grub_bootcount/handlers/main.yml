@@ -4,10 +4,10 @@
 ---
 # The secondary kernels are used in the recovery process and must have the initramfs-tools customisations.
 - name: Rebuild initramfs if necessary
-  command:
+  ansible.builtin.command:
     cmd: /usr/sbin/update-initramfs -u -k all
   changed_when: true
 
 - name: Update-grub
-  command: update-grub
+  ansible.builtin.command: update-grub
   changed_when: true

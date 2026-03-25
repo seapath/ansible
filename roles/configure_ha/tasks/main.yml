@@ -3,22 +3,21 @@
 
 ---
 - name: Load distribution-specific variables
-  include_vars: "{{ seapath_distro }}.yml"
-
+  ansible.builtin.include_vars: "{{ seapath_distro }}.yml"
 - name: Save cluster machine informations # noqa: risky-file-permissions
-  template:
+  ansible.builtin.template:
     src: cluster.conf.j2
     dest: /etc/cluster.conf
 
 # Check if corosync is already setup
 - name: Check corosync service status
-  systemd:
+  ansible.builtin.systemd:
     name: corosync
     state: started
   check_mode: true
   register: configure_ha_corosync_service_status
 - name: Create a group with unconfigured_machines # noqa: no-handler
-  add_host:
+  ansible.builtin.add_host:
     name: "{{ item }}"
     groups: unconfigured_machine_group
   run_once: true
@@ -26,7 +25,7 @@
   changed_when: false
   when: hostvars[item].configure_ha_corosync_service_status.changed
 - name: Create a group with valid_machines # noqa: no-handler
-  add_host:
+  ansible.builtin.add_host:
     name: "{{ item }}"
     groups: valid_machine
   run_once: true
@@ -39,28 +38,28 @@
   when: groups['valid_machine'] is undefined
   block:
     - name: Generating /etc/corosync/authkey file
-      command: /usr/sbin/corosync-keygen
+      ansible.builtin.command: /usr/sbin/corosync-keygen
       run_once: true
       changed_when: true
     - name: Waiting for /etc/corosync/authkey file
-      wait_for:
+      ansible.builtin.wait_for:
         path: "/etc/corosync/authkey"
         timeout: 30
       when: inventory_hostname == play_hosts[0]
     - name: Fetching /etc/corosync/authkey
-      slurp:
+      ansible.builtin.slurp:
         src: "/etc/corosync/authkey"
       register: configure_ha_tmp_authkey
       when: inventory_hostname == play_hosts[0]
     - name: Synchronizing /etc/corosync/authkey everywhere
-      copy:
+      ansible.builtin.copy:
         content: "{{ hostvars[play_hosts[0]].configure_ha_tmp_authkey['content'] | b64decode }}"
         dest: /etc/corosync/authkey
         mode: "0400"
       when: inventory_hostname != play_hosts[0]
 
     - name: Templating corosync.conf # noqa: risky-file-permissions
-      template:
+      ansible.builtin.template:
         src: corosync.conf.j2
         dest: /etc/corosync/corosync.conf
       register: configure_ha_corosync_conf
@@ -79,7 +78,7 @@
   delegate_to: "{{ groups['valid_machine'][0] }}"
   block:
     - name: Fetch corosync key
-      fetch:
+      ansible.builtin.fetch:
         src: "/etc/corosync/authkey"
         dest: "{{ configure_ha_tmpdir }}/authkey"
         flat: true
@@ -90,11 +89,11 @@
     - "'unconfigured_machine_group' in group_names"
   block:
     - name: Templating corosync.conf # noqa: risky-file-permissions
-      template:
+      ansible.builtin.template:
         src: corosync.conf.j2
         dest: /etc/corosync/corosync.conf
     - name: Install corosync key
-      copy:
+      ansible.builtin.copy:
         src: "{{ configure_ha_tmpdir }}/authkey"
         dest: /etc/corosync/authkey
         owner: root
@@ -116,14 +115,14 @@
         state: started
         enabled: true
     - name: Wait for pacemaker
-      command: "{{ configure_ha_crm_command_path }} status"
+      ansible.builtin.command: "{{ configure_ha_crm_command_path }} status"
       register: configure_ha_result
       until: configure_ha_result.rc == 0
       retries: 3
       delay: 1
       changed_when: false
     - name: Disable stonith
-      shell: >
+      ansible.builtin.shell: >
         {{ configure_ha_crm_command_path }} configure property stonith-enabled=false;
         sleep 1;
         {{ configure_ha_crm_command_path }} configure show;
@@ -145,7 +144,7 @@
 
 # run extra CRM commands
 - name: Run extra CRM configuration commands
-  command:
+  ansible.builtin.command:
     cmd: crm -d config load update -
     stdin: "{{ extra_crm_cmd_to_run }}"
   when: extra_crm_cmd_to_run is defined

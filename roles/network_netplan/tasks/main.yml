@@ -6,14 +6,14 @@
   when: netplan_configurations is defined
   block:
     - name: Create /etc/netplan directory
-      file:
+      ansible.builtin.file:
         path: /etc/netplan
         state: directory
         owner: root
         group: root
         mode: "0755"
     - name: Copy Netplan configuration file
-      template:
+      ansible.builtin.template:
         src: "../{{ item }}"
         dest: "/etc/netplan/{{ item | basename | replace('.j2', '') }}"
         owner: root
@@ -22,5 +22,5 @@
       with_items: "{{ netplan_configurations }}"
       notify: Apply Netplan configuration
     - name: Avoid reboot for netplan
-      set_fact:
+      ansible.builtin.set_fact:
         need_reboot: false # noqa: var-naming[no-role-prefix]

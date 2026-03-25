@@ -12,7 +12,7 @@
     state: restarted
 
 - name: Rebuild initramfs if necessary
-  command:
+  ansible.builtin.command:
     cmd: /usr/bin/dracut --regenerate-all --force
   changed_when: true
 

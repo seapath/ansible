@@ -3,22 +3,21 @@
 
 ---
 - name: Load distribution-specific variables
-  include_vars: "{{ seapath_distro }}.yml"
-
+  ansible.builtin.include_vars: "{{ seapath_distro }}.yml"
 - name: Configure snmp
   when:
     - seapath_distro != "Yocto"
     - snmp_admin_ip_addr is defined
   block:
     - name: Get uid for {{ snmp_user_name }}
-      getent:
+      ansible.builtin.getent:
         database: passwd
         key: "{{ snmp_user_name }}"
     - name: Get gid for {{ snmp_user_name }}
-      getent:
+      ansible.builtin.getent:
         database: group
         key: "{{ snmp_user_name }}"
-    - debug: # noqa: name[missing]
+    - ansible.builtin.debug: # noqa: name[missing]
         msg:
           - "user id {{ getent_passwd[snmp_user_name][1] }}"
           - "group id {{ getent_group[snmp_user_name][1] }}"
@@ -38,13 +37,13 @@
             state: present
             gid: 902
         - name: Ensure user has correct uid and gid for {{ snmp_user_name }}
-          user:
+          ansible.builtin.user:
             name: "{{ snmp_user_name }}"
             uid: 902
             group: "{{ snmp_user_name }}"
 
     - name: Temp fix for synchronize to force evaluate variables
-      set_fact:
+      ansible.builtin.set_fact:
         ansible_host: "{{ ansible_host }}"
 
     - name: Synchronization of snmp_ scripts
@@ -63,22 +62,22 @@
         owner: root
         group: root
     - name: SNMP PASS AGENT script run by net-snmp for seapath tree
-      copy:
+      ansible.builtin.copy:
         src: exposeseapathsnmp.pl
         dest: "/usr/local/bin/exposeseapathsnmp.pl"
         mode: "0755"
     - name: Script run by cron job to generate snmp data
-      copy:
+      ansible.builtin.copy:
         src: snmp_getdata.py
         dest: "/usr/local/sbin/snmp_getdata.py"
         mode: "0755"
     - name: Cron job to generate snmp data
-      copy:
+      ansible.builtin.copy:
         src: seapathsnmp.cron
         dest: "/etc/cron.d/seapathsnmp"
         mode: "0644"
     - name: Wait for DHCP for SNMP
-      lineinfile:
+      ansible.builtin.lineinfile:
         dest: /lib/systemd/system/snmpd.service
         regexp: "^After="
         line: "After=network-online.target"
@@ -117,7 +116,7 @@
         enabled: true
 
     - name: Install sudo user rules for {{ snmp_user_name }}
-      template:
+      ansible.builtin.template:
         src: sudoers_snmp.j2
         dest: "/etc/sudoers.d/{{ snmp_user_name }}"
         owner: root
@@ -125,7 +124,7 @@
         mode: "0440"
 
 - name: Disable snmp if it is not needed
-  systemd:
+  ansible.builtin.systemd:
     name: snmpd.service
     state: stopped
     enabled: false

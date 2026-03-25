@@ -5,19 +5,19 @@
 
 ---
 - name: Create temporary test directory
-  tempfile:
+  ansible.builtin.tempfile:
     state: directory
   register: ci_yocto_tmp_test_dir
 
 - name: Launch cukinia tests
-  shell:
+  ansible.builtin.shell:
     cmd: >-
       MACHINENAME={{ cukinia_namespace | default(inventory_hostname) }}
       cukinia -f junitxml -o {{ ci_yocto_tmp_test_dir.path }}/cukinia.xml
       /etc/cukinia/cukinia.conf || true
   changed_when: true
 - name: Fetch result
-  fetch:
+  ansible.builtin.fetch:
     src: "{{ ci_yocto_tmp_test_dir.path }}/cukinia.xml"
     dest: >-
       {{ cukinia_test_prefix | default('..') }}/cukinia_{{ inventory_hostname
@@ -28,9 +28,9 @@
   when: skip_cyclictest is not defined or not skip_cyclictest
   block:
     - name: Execute cyclitect script
-      script: run_cyclictest.py '{{ ci_yocto_tmp_test_dir.path }}/cyclictest.txt'
+      ansible.builtin.script: run_cyclictest.py '{{ ci_yocto_tmp_test_dir.path }}/cyclictest.txt'
     - name: Fetch results
-      fetch:
+      ansible.builtin.fetch:
         src: "{{ ci_yocto_tmp_test_dir.path }}/cyclictest.txt"
         dest: "{{ cukinia_test_prefix | default('..') }}/cyclictest_{{ inventory_hostname }}.txt"
         flat: true

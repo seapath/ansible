@@ -3,7 +3,7 @@
 
 ---
 - name: Check which nodes have a Ceph monitor running
-  command: ceph -s
+  ansible.builtin.command: ceph -s
   ignore_errors: true
   changed_when: false
   delegate_to: "{{ item }}"
@@ -12,35 +12,35 @@
   register: deploy_cephfs_ceph_status_results
 
 - name: Find the first node with an active monitor
-  set_fact:
+  ansible.builtin.set_fact:
     deploy_cephfs_first_mon_node: "{{ (deploy_cephfs_ceph_status_results.results | selectattr('rc', 'equalto', 0) | map(attribute='item') | list)[0] }}"
   run_once: true
 
 - name: Debug first monitor node
-  debug:
+  ansible.builtin.debug:
     msg: "First monitor node detected: {{ deploy_cephfs_first_mon_node }}"
   run_once: true
 
 - name: Create CephFS volume 'seapathcephfs' on the first monitor
-  command: ceph fs volume create seapathcephfs
+  ansible.builtin.command: ceph fs volume create seapathcephfs
   delegate_to: "{{ deploy_cephfs_first_mon_node }}"
   run_once: true
   changed_when: true
 
 - name: Get CephFS info to find the data pool
-  command: ceph fs ls --format json
+  ansible.builtin.command: ceph fs ls --format json
   register: deploy_cephfs_fs_list
   changed_when: false
   delegate_to: "{{ deploy_cephfs_first_mon_node }}"
   run_once: true
 
 - name: Set data pool variable
-  set_fact:
+  ansible.builtin.set_fact:
     deploy_cephfs_cephfs_data_pool: "{{ (deploy_cephfs_fs_list.stdout | from_json | selectattr('name', 'equalto', 'seapathcephfs') | list)[0].data_pools[0] }}"
   run_once: true
 
 - name: Create Ceph user 'volumemount' on first monitor
-  command: >
+  ansible.builtin.command: >
     ceph auth get-or-create client.volumemount
     mon 'allow r'
     mds 'allow rw'
@@ -53,16 +53,16 @@
   run_once: true
 
 - name: Gather volumemount key on all nodes via keyring file
-  command: ceph auth get client.volumemount -o /etc/ceph/ceph.client.volumemount.keyring
+  ansible.builtin.command: ceph auth get client.volumemount -o /etc/ceph/ceph.client.volumemount.keyring
   changed_when: false
 
 - name: Read the key from the keyring file
-  slurp:
+  ansible.builtin.slurp:
     src: /etc/ceph/ceph.client.volumemount.keyring
   register: deploy_cephfs_keyring_file
 
 - name: Extract base64 key from keyring
-  set_fact:
+  ansible.builtin.set_fact:
     deploy_cephfs_volumemount_key: >-
       {{
        deploy_cephfs_keyring_file.content | b64decode
@@ -71,7 +71,7 @@
       }}
 
 - name: Write volumemount key to /etc/ceph/volumemount.secret
-  copy:
+  ansible.builtin.copy:
     content: "{{ deploy_cephfs_volumemount_key }}"
     dest: /etc/ceph/volumemount.secret
     owner: root
@@ -79,14 +79,14 @@
     mode: "0600"
 
 - name: Deploy MDS for CephFS volume 'seapathcephfs'
-  command: ceph orch apply mds seapathcephfs --placement="count:3"
+  ansible.builtin.command: ceph orch apply mds seapathcephfs --placement="count:3"
   register: deploy_cephfs_mds_deploy
   changed_when: "'already exists' not in deploy_cephfs_mds_deploy.stderr"
   delegate_to: "{{ deploy_cephfs_first_mon_node }}"
   run_once: true
 
 - name: Install wait-for-mds.sh
-  copy:
+  ansible.builtin.copy:
     src: wait-for-mds.sh
     dest: /usr/local/bin/wait-for-mds.sh
     mode: "0755"
@@ -94,7 +94,7 @@
     group: root
 
 - name: Install ceph-mds-ready@seapathcephfs.service
-  copy:
+  ansible.builtin.copy:
     src: ceph-mds-ready@seapathcephfs.service
     dest: /etc/systemd/system/ceph-mds-ready@seapathcephfs.service
     mode: "0644"
@@ -102,14 +102,14 @@
     group: root
 
 - name: Enable and start ceph-mds-ready@seapathcephfs.service
-  systemd:
+  ansible.builtin.systemd:
     name: ceph-mds-ready@seapathcephfs.service
     enabled: true
     state: started
     daemon_reload: true
 
 - name: Build Ceph monitor list for fstab from detected monitors
-  set_fact:
+  ansible.builtin.set_fact:
     deploy_cephfs_ceph_mon_hosts: >-
       {{
         deploy_cephfs_ceph_status_results.results
@@ -121,7 +121,7 @@
   run_once: true
 
 - name: Ensure deploy_cephfs_remotedir directory exists
-  file:
+  ansible.builtin.file:
     path: "{{ deploy_cephfs_remotedir }}"
     state: directory
     owner: root
