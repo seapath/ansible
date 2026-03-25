@@ -22,8 +22,8 @@
   become: true
   tasks:
     - name: "Gather facts"
-      gather_facts:
-    - debug: # noqa: name[missing]
+      ansible.builtin.gather_facts:
+    - ansible.builtin.debug: # noqa: name[missing]
         msg: gather facts on all Ceph hosts for following reference
 
 - name: Confirm if user really meant to remove manager from the ceph cluster
@@ -31,21 +31,21 @@
   become: true
   pre_tasks:
     - name: Import default ceph role
-      import_role:
+      ansible.builtin.import_role:
         name: ceph-defaults
 
     - name: Import ceph facts role
-      import_role:
+      ansible.builtin.import_role:
         name: ceph-facts
         tasks_from: container_binary
 
     - name: Set_fact container_exec_cmd
       when: containerized_deployment | bool
-      set_fact:
+      ansible.builtin.set_fact:
         container_exec_cmd: "{{ container_binary }} exec ceph-mon-{{ ansible_facts['hostname'] }}"
 
     - name: Exit playbook, if can not connect to the cluster
-      command: "{{ container_exec_cmd | default('') }} timeout 5 ceph --cluster {{ cluster }} health"
+      ansible.builtin.command: "{{ container_exec_cmd | default('') }} timeout 5 ceph --cluster {{ cluster }} health"
       register: ceph_health
       changed_when: false
       until: ceph_health is succeeded
@@ -55,22 +55,22 @@
     - name: Get total number of mgrs in cluster
       block:
         - name: Save mgr dump output
-          command: "{{ container_exec_cmd | default('') }} ceph --cluster {{ cluster }} mgr dump -f json"
+          ansible.builtin.command: "{{ container_exec_cmd | default('') }} ceph --cluster {{ cluster }} mgr dump -f json"
           register: mgr_dump
           changed_when: true
 
         - name: Get active and standbys mgr list
-          set_fact:
+          ansible.builtin.set_fact:
             active_mgr: "{{ [mgr_dump.stdout | from_json] | map(attribute='active_name') | list }}"
             standbys_mgr: "{{ (mgr_dump.stdout | from_json)['standbys'] | map(attribute='name') | list }}"
 
     - name: Exit playbook, if there's no standby manager
-      fail:
+      ansible.builtin.fail:
         msg: "You are about to shrink the only manager present in the cluster."
       when: standbys_mgr | length | int < 1
 
     - name: Exit playbook, if no manager was given
-      fail:
+      ansible.builtin.fail:
         msg: "mgr_to_kill must be declared
               Exiting shrink-cluster playbook, no manager was removed.
               On the command line when invoking the playbook, you can use
@@ -79,11 +79,11 @@
       when: mgr_to_kill is not defined
 
     - name: Set_fact mgr_to_kill_hostname
-      set_fact:
+      ansible.builtin.set_fact:
         mgr_to_kill_hostname: "{{ hostvars[mgr_to_kill]['ansible_facts']['hostname'] }}"
 
     - name: Exit playbook, if the selected manager is not present in the cluster
-      fail:
+      ansible.builtin.fail:
         msg: "It seems that the host given is not present in the cluster."
       when:
         - mgr_to_kill_hostname not in active_mgr
@@ -93,7 +93,7 @@
     - name: Stop manager services and verify it
       block:
         - name: Etop manager service
-          service:
+          ansible.builtin.service:
             name: ceph-mgr@{{ mgr_to_kill_hostname }}
             state: stopped
             enabled: false
@@ -101,7 +101,7 @@
           failed_when: false
 
         - name: Ensure that the mgr is stopped
-          command: "systemctl is-active ceph-mgr@{{ mgr_to_kill_hostname }}" # noqa command-instead-of-module
+          ansible.builtin.command: "systemctl is-active ceph-mgr@{{ mgr_to_kill_hostname }}" # noqa command-instead-of-module
           register: mgr_to_kill_status
           failed_when: mgr_to_kill_status.rc == 0
           delegate_to: "{{ mgr_to_kill }}"
@@ -110,7 +110,7 @@
           changed_when: true
 
     - name: Fail if the mgr is reported in ceph mgr dump
-      command: "{{ container_exec_cmd | default('') }} ceph --cluster {{ cluster }} mgr dump -f json"
+      ansible.builtin.command: "{{ container_exec_cmd | default('') }} ceph --cluster {{ cluster }} mgr dump -f json"
       register: mgr_dump
       changed_when: false
       failed_when: mgr_to_kill_hostname in (([mgr_dump.stdout | from_json] | map(attribute='active_name') | list) + (mgr_dump.stdout | from_json)['standbys'] | map(attribute='name') | list)
@@ -119,12 +119,12 @@
       delay: 10
 
     - name: Purge manager store
-      file:
+      ansible.builtin.file:
         path: /var/lib/ceph/mgr/{{ cluster }}-{{ mgr_to_kill_hostname }}
         state: absent
       delegate_to: "{{ mgr_to_kill }}"
 
   post_tasks:
     - name: Show ceph health
-      command: "{{ container_exec_cmd | default('') }} ceph --cluster {{ cluster }} -s"
+      ansible.builtin.command: "{{ container_exec_cmd | default('') }} ceph --cluster {{ cluster }} -s"
       changed_when: false

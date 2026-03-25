@@ -90,7 +90,7 @@
     - not (is_using_cephadm | default(false))
   block:
     - name: Find the osd number
-      find:
+      ansible.builtin.find:
         paths: /var/lib/ceph/osd/
         file_type: directory
         patterns: "ceph-[0-9]"
@@ -109,7 +109,7 @@
           ansible.builtin.wait_for:
             timeout: 3
         - name: Resize ceph-osd
-          command: "{{ item }}"
+          ansible.builtin.command: "{{ item }}"
           with_items:
             - "/usr/bin/ceph-bluestore-tool bluefs-bdev-expand --path {{ ceph_expansion_lv_ceph_osd_number.files[0].path }}"
             - "/usr/bin/ceph-bluestore-tool bluefs-bdev-expand --path {{ ceph_expansion_lv_ceph_osd_number.files[0].path }}"
@@ -119,7 +119,7 @@
             name: ceph-osd.target
             state: started
         - name: Wait for cluster to be HEALTH_OK
-          command: "/usr/bin/ceph status --format=json"
+          ansible.builtin.command: "/usr/bin/ceph status --format=json"
           register: ceph_expansion_lv_osdsdown
           until: ceph_expansion_lv_osdsdown.stdout | from_json | community.general.json_query('health.status') == "HEALTH_OK"
           retries: 20

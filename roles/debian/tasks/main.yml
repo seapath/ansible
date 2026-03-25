@@ -158,7 +158,7 @@
             dest: /etc/apt/sources.list
 
 - name: Remove /etc/default/grub.d/*.cfg (FAI)
-  file:
+  ansible.builtin.file:
     path: "/etc/default/grub.d/{{ item }}"
     state: absent
   with_items:
@@ -166,7 +166,7 @@
     - 30_console.cfg
 
 - name: Remove quiet from GRUB_CMDLINE_LINUX_DEFAULT option in grub conf
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/default/grub
     regexp: "^(GRUB_CMDLINE_LINUX_DEFAULT=\")(.*?[ ])?quiet([ ].*)?(\")$"
     line: "\\1\\2\\3\\4"
@@ -174,7 +174,7 @@
   notify: Update-grub
 
 - name: Make sure GRUB_CMDLINE_LINUX_DEFAULT has no double space
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/default/grub
     regexp: "^(GRUB_CMDLINE_LINUX_DEFAULT=\".*)[ ][ ](.*\")"
     line: "\\1 \\2"
@@ -186,7 +186,7 @@
   retries: 10
 
 - name: Make sure GRUB_CMDLINE_LINUX exists 1/2
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /etc/default/grub
     regexp: "^GRUB_CMDLINE_LINUX=\".*\""
     state: absent
@@ -195,14 +195,14 @@
   register: debian_check_grub_cmdline_linux
 
 - name: Make sure GRUB_CMDLINE_LINUX exists 2/2
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /etc/default/grub
     state: present
     line: "GRUB_CMDLINE_LINUX=\" \""
   when: debian_check_grub_cmdline_linux.found == 0
 
 - name: Make sure GRUB_CMDLINE_LINUX starts with a space
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/default/grub
     regexp: "^(GRUB_CMDLINE_LINUX=)\"([ ]*)(.*)\""
     line: '\1" \3"'
@@ -210,7 +210,7 @@
     backrefs: true
 
 - name: Make grub conf
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/default/grub
     regexp: "^(GRUB_CMDLINE_LINUX=(?!.* {{ item }})\"[^\"]*)(\".*)"
     line: "\\1 {{ item }}\\2"
@@ -225,7 +225,7 @@
     - "{{ grub_append | default([]) }}"
 
 - name: Grub conf osprober
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/default/grub
     regexp: "^#?GRUB_DISABLE_OS_PROBER=.*$"
     line: "GRUB_DISABLE_OS_PROBER=true"
@@ -233,7 +233,7 @@
   notify: Update-grub
 
 - name: Disable PerSourcePenalties
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/ssh/sshd_config
     regexp: "^#?PerSourcePenalties.*$"
     line: "PerSourcePenalties no"
