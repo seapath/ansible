@@ -38,6 +38,9 @@ all:
     subnet: 24 # Subnet mask in CIDR notation. TODO
     ntp_servers: # NTP servers IP. TODO
       - "185.254.101.25" # public NTP server example
+    ptp_domain_number: 0 # PTP domain number (0 to 255)
+    timemaster_ptp_domain_number: "{{ ptp_domain_number }}"
+    ptp_status_vsock_domain_number: "{{ ptp_domain_number }}"
 
     # SEAPATH ansible variables
     ansible_connection: ssh

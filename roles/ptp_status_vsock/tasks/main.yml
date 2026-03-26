@@ -11,8 +11,8 @@
         state: directory
         mode: "0755"
     - name: Copy ptp_status executable files
-      ansible.builtin.copy:
-        src: ptpstatus/ptpstatus.sh
+      ansible.builtin.template:
+        src: ptpstatus/ptpstatus.sh.j2
         dest: /var/lib/ptp/ptpstatus.sh
         mode: "0755"
     - name: Copy ptp_vsock executable files
