@@ -1,10 +1,12 @@
 # Copyright (C) 2023, RTE (http://www.rte-france.com)
+# Copyright (C) 2026 Savoir-faire Linux Inc.
 # SPDX-License-Identifier: Apache-2.0
 #
 # This file handle the configuration of ansible-lint
 
+---
 exclude_paths:
-  - /etc/ansible/roles    # This is the inside container path for ceph-ansible
+  - /etc/ansible/roles # This is the inside container path for ceph-ansible
   - .github
   - ceph-ansible
   - roles/deploy_cukinia/files/cukinia
@@ -13,11 +15,11 @@ exclude_paths:
 # ceph-ansible and cukinia are submodules and seapath don't have control on it.
 
 skip_list:
-  - role-name              # All role names should match "^[a-z_][a-z0-9_]*$"
+  - role-name # All role names should match "^[a-z_][a-z0-9_]*$"
 
 warn_list:
-  - no-handler             # "when: result.changed" should trigger a handler instead
-  - no-changed-when        # Commands should not change things if nothing needs doing
+  - no-handler # "when: result.changed" should trigger a handler instead
+  - no-changed-when # Commands should not change things if nothing needs doing
 
 ### Why skip these warnings :
 #
