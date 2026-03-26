@@ -26,11 +26,7 @@ jobs:
           ansible-galaxy collection install -r ansible-requirements.yaml
 
       - name: Setup Ansible environment
-        run: |
-          sudo mkdir -p /etc/ansible/hosts /etc/ansible/roles
-          sudo cp inventories/examples/seapath-cluster.yaml /etc/ansible/hosts/hosts.yaml
-          sudo cp -r ceph-ansible/roles/* /etc/ansible/roles/
-          cp src/ceph-ansible-site.yaml ceph-ansible/site.yml
+        run: cp src/ceph-ansible-site.yaml ceph-ansible/site.yml
 
       - name: Run ansible-lint
-        run: ansible-lint -c ansible-lint.conf
+        run: ANSIBLE_INVENTORY=inventories/examples/seapath-cluster.yaml ansible-lint
