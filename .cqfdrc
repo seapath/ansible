@@ -1,7 +1,7 @@
 [project]
 org='seapath'
 name='ansible'
-flavors='prepare manual module_documentation ansible-lint format export'
+flavors='prepare manual module_documentation lint format export'
 
 [build]
 command='check_yaml && ansible-lint -c ansible-lint.conf'
@@ -15,11 +15,11 @@ command='asciidoctor-pdf README.adoc OVS_configuration.adoc'
 [module_documentation]
 command='./generate_module_documentation.sh'
 
-[ansible-lint]
-command='ANSIBLE_INVENTORY=inventories/examples/seapath-cluster.yaml ansible-lint'
+[lint]
+command='ansible-lint'
 
 [format]
-command='ANSIBLE_INVENTORY=inventories/examples/seapath-cluster.yaml ansible-lint --fix=yaml'
+command='ansible-lint --fix=yaml'
 
 [export]
 command="./prepare.sh && \
