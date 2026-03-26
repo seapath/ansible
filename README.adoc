@@ -331,6 +331,16 @@ python3 -m pip install tox
 
 == Contributing to SEAPATH
 
+=== Linting and formating
+
+Ansible-lint is run on every pull request. Some rules are ignored, they can be found in the https://github.com/seapath/ansible/blob/main/.ansible-lint.yml[configuration file]. This enforce YAML linting
+
+You can run the linter manually with `ansible-lint` (requires ansible-lint command), or `cqfd -b lint` with cqfd.
+A formatter is also available and can be run with `ansible-lint --fix=yaml` or `cqfd -b format`
+
+Additionally, a https://pre-commit.com/[pre-commit] hook is available on the repository. It can be installed with `pre-commit install`.
+Be aware that this pre-commit may take several seconds to execute at each commits you create.
+
 === Continuous integration
 
 A CI is actually running on the ansible repository. If you want to contribute to the project, this CI will launch your code to configure a cluster and run all non regression tests.
@@ -342,6 +352,3 @@ For more information please see :
 * https://wiki.lfenergy.org/display/SEAP/Continuous+integration+on+SEAPATH[The Wiki] for a user oriented guide.
 * https://github.com/seapath/ci[The CI repository] for technical implementation.
 
-=== Ansible linter
-
-Ansible-lint is run on every pull request toward the debian-main branch. Some rules are ignored, they can be found in the https://github.com/seapath/ci/blob/main/ansible-lint.conf[configuration file] on the https://github.com/seapath/ci[CI repository].
