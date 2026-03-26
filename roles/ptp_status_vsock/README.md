@@ -8,7 +8,9 @@ No requirement.
 
 ## Role Variables
 
-No variable.
+| Variable                         | Required | Type    | Default | Comments                                                                                                                               |
+|----------------------------------|----------|---------|---------|----------------------------------------------------------------------------------------------------------------------------------------|
+| ptp_status_vsock_domain_number   | no       | Integer | 0       | PTP domain number. Value from 0 to 255                                                                                                      |
 
 ## Example Playbook
 

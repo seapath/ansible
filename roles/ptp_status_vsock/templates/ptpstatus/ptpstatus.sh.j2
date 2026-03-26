@@ -513,7 +513,7 @@ function getPtpStatus() {
   fi
 
   local _pmcOutput="$( \
-    "$PMC_EXE" $PMC_SOCKET_OPTION -u -b 0 \
+    "$PMC_EXE" $PMC_SOCKET_OPTION -d {{ ptp_status_vsock_domain_number }} -u -b 0 \
       'GET TIME_PROPERTIES_DATA_SET' \
       'GET TIME_STATUS_NP' \
       'GET PARENT_DATA_SET' \
