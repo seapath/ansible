@@ -21,10 +21,10 @@
   tasks:
     - name: Exit playbook, if no osd(s) was/were given
       ansible.builtin.fail:
-        msg: "osd_to_kill must be declared
+        msg: |
+          osd_to_kill must be declared
           Exiting shrink-osd playbook, no OSD(s) was/were removed.
-           On the command line when invoking the playbook, you can use
-           -e osd_to_kill=0,1,2,3 argument."
+          On the command line when invoking the playbook, you can use -e osd_to_kill=0,1,2,3 argument.
       when: osd_to_kill is not defined
     - name: Check the osd ids passed have the correct format
       ansible.builtin.fail:
@@ -221,8 +221,7 @@
       changed_when: true
 
     - name: Use ceph-volume lvm zap to destroy all partitions
-      ansible.builtin.command: "{{ container_run_cmd }} lvm zap --destroy {{ ceph_osd_data_json[item.2]['pkname_data'] if item.3 == 'data' else ceph_osd_data_json[item.2][item.3]['path']
-        }}"
+      ansible.builtin.command: "{{ container_run_cmd }} lvm zap --destroy {{ ceph_osd_data_json[item.2]['pkname_data'] if item.3 == 'data' else ceph_osd_data_json[item.2][item.3]['path'] }}"
       with_nested:
         - "{{ _osd_hosts }}"
         - ["block", "block.db", "block.wal", "journal", "data"]

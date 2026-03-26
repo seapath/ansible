@@ -1,4 +1,7 @@
 ---
 
 rules:
-  line-length: disable
+  line-length:
+    # Disabling this rule does not work per https://github.com/ansible/ansible-lint/issues/4233
+    # so we set a really big limit. This allows us to still use ansible-lint --fix=yaml
+    max: 1024
