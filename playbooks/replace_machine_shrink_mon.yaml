@@ -21,10 +21,11 @@
   tasks:
     - name: Exit playbook, if no monitor was given
       ansible.builtin.fail:
-        msg: "mon_to_kill must be declared
+        msg: |
+          mon_to_kill must be declared
           Exiting shrink-cluster playbook, no monitor was removed.
-           On the command line when invoking the playbook, you can use
-           -e mon_to_kill=ceph-mon01 argument. You can only remove a single monitor each time the playbook runs."
+          On the command line when invoking the playbook, you can use -e mon_to_kill=ceph-mon01 argument.
+          You can only remove a single monitor each time the playbook runs.
       when: mon_to_kill is not defined
 
 - name: Import replace_machine_find_online_ceph_machine playbook
@@ -51,8 +52,7 @@
   pre_tasks:
     - name: Exit playbook, if only one monitor is present in cluster
       ansible.builtin.fail:
-        msg: "You are about to shrink the only monitor present in the cluster.
-              If you really want to do that, please use the purge-cluster playbook."
+        msg: "You are about to shrink the only monitor present in the cluster. If you really want to do that, please use the purge-cluster playbook."
       when: groups[mon_group_name] | length | int == 1
 
     - name: Exit playbook, if the monitor is not part of the inventory

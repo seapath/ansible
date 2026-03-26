@@ -71,11 +71,11 @@
 
     - name: Exit playbook, if no manager was given
       ansible.builtin.fail:
-        msg: "mgr_to_kill must be declared
-              Exiting shrink-cluster playbook, no manager was removed.
-              On the command line when invoking the playbook, you can use
-              -e mgr_to_kill=ceph-mgr01 argument. You can only remove a single
-              manager each time the playbook runs."
+        msg: |
+          mgr_to_kill must be declared
+          Exiting shrink-cluster playbook, no manager was removed.
+          On the command line when invoking the playbook, you can use -e mgr_to_kill=ceph-mgr01 argument.
+          You can only remove a single manager each time the playbook runs.
       when: mgr_to_kill is not defined
 
     - name: Set_fact mgr_to_kill_hostname

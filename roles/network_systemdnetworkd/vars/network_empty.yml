@@ -11,5 +11,3 @@ network_systemdnetworkd_no_cluster_network_variable: "{{ network_systemdnetworkd
 network_systemdnetworkd_include_cluster: "{{ 'cluster_machines' in groups and inventory_hostname in groups['cluster_machines'] and not network_systemdnetworkd_no_cluster_network_variable }}"
 
 network_systemdnetworkd_network: "{{ network_systemdnetworkd_network_custom | combine(network_systemdnetworkd_team0_network) if network_systemdnetworkd_include_cluster else network_systemdnetworkd_network_custom }}"
-
-...

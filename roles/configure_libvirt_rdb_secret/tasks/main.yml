@@ -15,16 +15,14 @@
 
 - name: Check if a secret pool has to be created
   ansible.builtin.set_fact:
-    configure_libvirt_rdb_secret_create_secret_pool: "{% if hostvars[item]['configure_libvirt_rdb_secret_secret_defined'].stdout == '' %}true{% else %}{{ configure_libvirt_rdb_secret_create_secret_pool
-      | default(false) }}{% endif %}"
+    configure_libvirt_rdb_secret_create_secret_pool: "{% if hostvars[item]['configure_libvirt_rdb_secret_secret_defined'].stdout == '' %}true{% else %}{{ configure_libvirt_rdb_secret_create_secret_pool | default(false) }}{% endif %}"
   loop: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) }}"
 
 - when: configure_libvirt_rdb_secret_create_secret_pool
   block:
     - name: Check if the secret is already defined
       ansible.builtin.set_fact:
-        configure_libvirt_rdb_secret_libvirt_uuid_rbd: "{% if hostvars[item]['configure_libvirt_rdb_secret_secret_defined'].stdout != '' %}{{ hostvars[item]['configure_libvirt_rdb_secret_secret_defined'].stdout
-          }}{% else %}{{ configure_libvirt_rdb_secret_libvirt_uuid_rbd | default('') }}{% endif %}"
+        configure_libvirt_rdb_secret_libvirt_uuid_rbd: "{% if hostvars[item]['configure_libvirt_rdb_secret_secret_defined'].stdout != '' %}{{ hostvars[item]['configure_libvirt_rdb_secret_secret_defined'].stdout }}{% else %}{{ configure_libvirt_rdb_secret_libvirt_uuid_rbd | default('') }}{% endif %}"
       loop: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) }}"
     - ansible.builtin.debug: # noqa: name[missing]
         msg: "Found UUID {{ configure_libvirt_rdb_secret_libvirt_uuid_rbd }}"
@@ -65,7 +63,6 @@
         path: /tmp/secret.xml
         state: absent
     - name: Set key in libvirt secret
-      ansible.builtin.command: 'virsh secret-set-value --secret "{{ configure_libvirt_rdb_secret_libvirt_uuid_rbd }}" --base64 "{{ configure_libvirt_rdb_secret_ceph_key.stdout
-        }}"'
+      ansible.builtin.command: 'virsh secret-set-value --secret "{{ configure_libvirt_rdb_secret_libvirt_uuid_rbd }}" --base64 "{{ configure_libvirt_rdb_secret_ceph_key.stdout }}"'
       changed_when: true
       no_log: true
