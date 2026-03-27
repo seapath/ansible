@@ -22,13 +22,8 @@ no requirement.
 | cephadm_spec_path              | No       | String | spec.yaml.j2 | Path to the spec file of cephadm. Use it to override the default config               |
 | cephadm_network                | Yes      | String |              | Ceph network (e.g. "192.168.55.0/24")                                                 |
 | cephadm_use_localhost_registry | No       | Bool   | false        | When true, use localhost registry (`localhost:5000`) for ceph image pull.             |
-
-Note that for each node you want in the cluster, those host vars need to be defined:
-
-| Variable               | Required | Type   | Comments                                                                              |
-|------------------------|----------|--------|---------------------------------------------------------------------------------------|
-| hostname               | Yes      | String | The hostname of the machine. Can be fallback to "inventory_hostname" in the inventory |
-| cluster_ip_addr        | Yes      | String | IP address of the machine on the cluster network                                      |
+| cephadm_hostname               | Yes      | String |              | The hostname of the machine. Typically set to `"{{ hostname }}"` in the inventory     |
+| cephadm_ip_addr                | Yes      | String |              | IP address of the machine on the cluster network. Typically set to `"{{ cluster_ip_addr }}"` in the inventory |
 
 More information about ceph networks on [ceph documentation](https://docs.ceph.com/en/latest/rados/configuration/network-config-ref/).
 

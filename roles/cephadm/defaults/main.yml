@@ -10,6 +10,8 @@ cephadm_installbinary: false
 cephadm_installrepo: false
 cephadm_installcommon: false
 cephadm_pullimages: false
+cephadm_hostname:
+cephadm_ip_addr:
 
 # Registry configuration
 cephadm_use_localhost_registry: false

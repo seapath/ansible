@@ -48,7 +48,6 @@ all:
     ansible_remote_tmp: /tmp/.ansible/tmp
     ansible_user: ansible
     ip_addr: "{{ ansible_host }}"
-    hostname: "{{ inventory_hostname }}"
     apply_network_config: true
 
 # Three hypervisors setup. All machines are part of the hypervisor group.
@@ -107,6 +106,9 @@ mons:
     force_cephadm: true
     ceph_origin: distro
     cluster_network: "192.168.55.0/24" # IP range of your cluster. TODO
+    cephadm_network: "{{ cluster_network }}"
+    cephadm_hostname: "{{ inventory_hostname }}"
+    cephadm_ip_addr: "{{ cluster_ip_addr }}"
     public_network: "{{ cluster_network }}"
     monitor_address: "{{ cluster_ip_addr }}"
     configure_firewall: false

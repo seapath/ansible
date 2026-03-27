@@ -165,7 +165,7 @@
       --skip-firewalld
       --config /tmp/ceph.conf
       --ssh-user cephadm
-      --mon-ip {{ hostvars[cephadm_first_node]['cluster_ip_addr'] }}
+      --mon-ip {{ hostvars[cephadm_first_node]['cephadm_ip_addr'] }}
 
 - name: Bootstrap Ceph cluster
   ansible.builtin.command: >-
@@ -177,7 +177,7 @@
     --skip-firewalld
     --config /tmp/ceph.conf
     --ssh-user cephadm
-    --mon-ip {{ hostvars[cephadm_first_node]['cluster_ip_addr'] }}
+    --mon-ip {{ hostvars[cephadm_first_node]['cephadm_ip_addr'] }}
   changed_when: true
   failed_when: false
   run_once: true
@@ -242,7 +242,7 @@
 
 # === adding monitor on other nodes ===
 - name: Add hosts to Ceph orchestrator with _admin label
-  ansible.builtin.command: "ceph orch host add {{ hostvars[item]['hostname'] }} --labels _admin"
+  ansible.builtin.command: "ceph orch host add {{ hostvars[item]['cephadm_hostname'] }} --labels _admin"
   loop: "{{ cephadm_mon_nodes_to_add }}"
   changed_when: true
   failed_when: false
@@ -258,7 +258,7 @@
   changed_when: false
   run_once: true
   delegate_to: "{{ cephadm_first_node }}"
-  until: "hostvars[item]['hostname'] in cephadm_mon_dump.stdout"
+  until: "hostvars[item]['cephadm_hostname'] in cephadm_mon_dump.stdout"
   loop: "{{ cephadm_mon_nodes_to_add }}"
   when: cephadm_mon_nodes_to_add | length > 0
 
@@ -279,7 +279,7 @@
   run_once: true
 - name: Set list of nodes that need OSDs
   ansible.builtin.set_fact:
-    cephadm_nodes_needing_osds: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) | map('extract', hostvars, 'hostname') | difference(cephadm_existing_osd_hosts) }}"
+    cephadm_nodes_needing_osds: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) | map('extract', hostvars, 'cephadm_hostname') | difference(cephadm_existing_osd_hosts) }}"
   run_once: true
 - name: Debug nodes needing OSDs
   ansible.builtin.debug:
@@ -290,7 +290,7 @@
   ansible.builtin.command: "{{ cephadm_bin }} --image {{ cephadm_registry }}/ceph:v{{ cephadm_release }} ceph-volume lvm zap vg_ceph/lv_ceph"
   delegate_to: "{{ item }}"
   run_once: true
-  when: hostvars[item]['hostname'] in cephadm_nodes_needing_osds
+  when: hostvars[item]['cephadm_hostname'] in cephadm_nodes_needing_osds
   loop: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) }}"
   changed_when: true
 
