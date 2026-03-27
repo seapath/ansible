@@ -1,7 +1,11 @@
 # Copyright (C) 2025 RTE
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+- name: Verify role variables are valid
+  ansible.builtin.import_tasks: validate.yml
+
 - name: Load distribution-specific variables
   ansible.builtin.include_vars: "{{ seapath_distro }}.yml"
 - name: Ensure group "cephadm" exists
@@ -120,53 +124,14 @@
       nonceph_nodes = {{ groups['nonceph_nodes'] | default([]) }}
   run_once: true
 
-- name: Ensure insecure registry localhost:5000 is in /etc/containers/registries.conf
-  ansible.builtin.blockinfile:
-    path: /etc/containers/registries.conf
-    marker: "# {mark} ANSIBLE MANAGED BLOCK for insecure registries"
-    block: |
-      [[registry]]
-      insecure = true
-      location = "localhost"
+- name: Configure localhost podman registry mirroring
+  ansible.builtin.import_tasks: local_registry_mirroring.yml
+  when: cephadm_use_localhost_registry | bool
 
-- name: Ensure /var/lib/registry exists
-  ansible.builtin.file:
-    path: /var/lib/registry
-    state: directory
-    owner: root
-    group: root
-    mode: "0755"
-
-- name: Pull needed Docker images
-  containers.podman.podman_image:
-    name: "{{ item }}"
-  when: cephadm_pullimages
-  loop:
-    - "docker.io/library/registry:2"
-    - "quay.io/ceph/ceph:v{{ cephadm_release }}"
-
-- name: Run local container registry using Podman
-  containers.podman.podman_container:
-    name: registry
-    image: registry:2
-    state: started
-    detach: true
-    privileged: true
-    ports:
-      - "5000:5000"
-    volume:
-      - /var/lib/registry:/var/lib/registry
-    restart_policy: always
-
-- name: Tag ceph image for local registry
-  ansible.builtin.command: >
-    podman tag quay.io/ceph/ceph:v{{ cephadm_release }} localhost:5000/ceph:v{{ cephadm_release }}
-  changed_when: true
-
-- name: Push ceph image to local registry
-  ansible.builtin.command: >
-    podman push localhost:5000/ceph:v{{ cephadm_release }}
-  changed_when: true
+# Handles both localhost registry and upstream registry
+- name: Set cephadm_registry based on localhost registry setting
+  ansible.builtin.set_fact:
+    cephadm_registry: "{{ 'localhost:5000' if cephadm_use_localhost_registry | bool else 'quay.io/ceph' }}"
 
 # === Bootstrap if currently no ceph nodes ===
 - name: Upload file ceph.conf needed for bootstrapping # noqa: risky-file-permissions
@@ -193,7 +158,7 @@
   ansible.builtin.debug:
     msg: >-
       {{ cephadm_bin }}
-      --image localhost:5000/ceph:v{{ cephadm_release }}
+      --image {{ cephadm_registry }}/ceph:v{{ cephadm_release }}
       bootstrap
       --skip-monitoring-stack
       --skip-dashboard
@@ -205,7 +170,7 @@
 - name: Bootstrap Ceph cluster
   ansible.builtin.command: >-
     {{ cephadm_bin }}
-    --image localhost:5000/ceph:v{{ cephadm_release }}
+    --image {{ cephadm_registry }}/ceph:v{{ cephadm_release }}
     bootstrap
     --skip-monitoring-stack
     --skip-dashboard
@@ -322,7 +287,7 @@
   run_once: true
 
 - name: Zap the volume on nodes that need OSDs
-  ansible.builtin.command: "{{ cephadm_bin }} --image localhost:5000/ceph:v{{ cephadm_release }} ceph-volume lvm zap vg_ceph/lv_ceph"
+  ansible.builtin.command: "{{ cephadm_bin }} --image {{ cephadm_registry }}/ceph:v{{ cephadm_release }} ceph-volume lvm zap vg_ceph/lv_ceph"
   delegate_to: "{{ item }}"
   run_once: true
   when: hostvars[item]['hostname'] in cephadm_nodes_needing_osds
@@ -338,7 +303,7 @@
   delegate_to: "{{ cephadm_first_node }}"
 
 - name: Add OSD daemon on nodes that need OSDs
-  ansible.builtin.command: "{{ cephadm_bin }} --image localhost:5000/ceph:v{{ cephadm_release }} shell -v /tmp/t.yaml:/tmp/t.yaml:ro -- ceph orch apply -i /tmp/t.yaml"
+  ansible.builtin.command: "{{ cephadm_bin }} --image {{ cephadm_registry }}/ceph:v{{ cephadm_release }} shell -v /tmp/t.yaml:/tmp/t.yaml:ro -- ceph orch apply -i /tmp/t.yaml"
   delegate_to: "{{ cephadm_first_node }}"
   run_once: true
   changed_when: true
@@ -402,3 +367,4 @@
   containers.podman.podman_container:
     name: registry
     state: absent
+  when: cephadm_use_localhost_registry | bool
