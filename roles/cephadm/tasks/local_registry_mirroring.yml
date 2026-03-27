@@ -41,12 +41,8 @@
       - /var/lib/registry:/var/lib/registry
     restart_policy: always
 
-- name: Tag ceph image for local registry
-  ansible.builtin.command: >
-    podman tag quay.io/ceph/ceph:v{{ cephadm_release }} localhost:5000/ceph:v{{ cephadm_release }}
-  changed_when: true
-
 - name: Push ceph image to local registry
-  ansible.builtin.command: >
-    podman push localhost:5000/ceph:v{{ cephadm_release }}
-  changed_when: true
+  containers.podman.podman_image:
+    name: quay.io/ceph/ceph:v{{ cephadm_release }}
+    push: true
+    push_args: localhost:5000/ceph:v{{ cephadm_release }}
