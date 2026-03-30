@@ -18,7 +18,7 @@ service_type: osd
 service_id: {{ 'osd' ~ (groups['osds'].index(host) + 1) }}
 service_name: osd.{{ 'osd' ~ (groups['osds'].index(host) + 1) }}
 placement:
-  host_pattern: {{ hostvars[host]['hostname'] }}
+  host_pattern: {{ hostvars[host]['cephadm_hostname'] }}
 spec:
   data_devices:
     paths:

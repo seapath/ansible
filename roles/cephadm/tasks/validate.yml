@@ -1,0 +1,22 @@
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Verify required host variables are defined
+  ansible.builtin.assert:
+    that:
+      - cephadm_hostname is defined
+      - cephadm_hostname | length > 0
+      - cephadm_ip_addr is defined
+      - cephadm_ip_addr | length > 0
+      - cephadm_network is defined
+      - cephadm_network | length > 0
+    fail_msg: "cephadm_hostname, cephadm_ip_addr and cephadm_network must be set for each host in the cluster"
+
+- name: Verify seapath_distro is set and valid
+  ansible.builtin.assert:
+    that:
+      - seapath_distro is defined
+      - seapath_distro | length > 0
+      - seapath_distro in ['Yocto', 'Debian', 'CentOS', 'OracleLinux']
+    fail_msg: "seapath_distro must be set to either 'Yocto', 'Debian', 'CentOS' or 'OracleLinux'. Set it in your inventory or call the detect_seapath_distro role"

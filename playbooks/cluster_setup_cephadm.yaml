@@ -32,6 +32,8 @@
 - name: Cephadm
   hosts: cluster_machines
   become: true
+  vars:
+    cephadm_use_localhost_registry: "{{ container_registry_url is not defined or container_registry_url is none }}"
   roles:
     - detect_seapath_distro
     - cephadm
