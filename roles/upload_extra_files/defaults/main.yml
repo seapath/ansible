@@ -1,0 +1,5 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+upload_extra_files_upload_files: []
+upload_extra_files_commands_to_run_after_upload: []
