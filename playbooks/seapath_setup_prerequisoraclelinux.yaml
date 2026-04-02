@@ -54,33 +54,5 @@
     - standalone_machine
     - VMs
   become: true
-  tasks:
-    - name: Upload extra files
-      ansible.builtin.copy:
-        src: "{{ item.src }}"
-        dest: "{{ item.dest }}"
-        owner: "{{ item.owner | default('root') }}"
-        group: "{{ item.group | default('root') }}"
-        mode: "{{ item.mode | default('0644') }}"
-        backup: true
-      with_items: "{{ upload_files }}"
-      when:
-        - upload_files is defined
-        - item.extract is not defined or item.extract is false
-    - name: Upload extra files and extract them
-      ansible.builtin.unarchive:
-        src: "{{ item.src }}"
-        dest: "{{ item.dest }}"
-        owner: "{{ item.owner | default('root') }}"
-        group: "{{ item.group | default('root') }}"
-        mode: "{{ item.mode | default('0644') }}"
-      with_items: "{{ upload_files }}"
-      when:
-        - upload_files is defined
-        - item.extract is defined and item.extract is true
-    - name: Run extra commands after upload
-      shell: "{{ item }}"
-      tags:
-        - skip_ansible_lint
-      loop: "{{ commands_to_run_after_upload }}"
-      when: commands_to_run_after_upload is defined
+  roles:
+    - upload_extra_files

@@ -1,0 +1,54 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Ensure destination directory exists for extra uploaded files
+  ansible.builtin.file:
+    path: "{{ item.dest | dirname }}"
+    state: directory
+    owner: "{{ item.owner | default('root') }}"
+    group: "{{ item.group | default('root') }}"
+    mode: "{{ item.dir_mode | default('0755') }}"
+  loop: "{{ upload_extra_files_upload_files }}"
+  when:
+    - item.extract is not defined or item.extract is false
+
+- name: Upload extra files
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ item.owner | default('root') }}"
+    group: "{{ item.group | default('root') }}"
+    mode: "{{ item.mode | default('0644') }}"
+    backup: true
+  loop: "{{ upload_extra_files_upload_files }}"
+  when:
+    - item.extract is not defined or item.extract is false
+
+- name: Ensure destination directory exists for extra archives
+  ansible.builtin.file:
+    path: "{{ item.dest }}"
+    state: directory
+    owner: "{{ item.owner | default('root') }}"
+    group: "{{ item.group | default('root') }}"
+    mode: "{{ item.dir_mode | default('0755') }}"
+  loop: "{{ upload_extra_files_upload_files }}"
+  when:
+    - item.extract is defined and item.extract is true
+
+- name: Upload extra files and extract them
+  ansible.builtin.unarchive:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ item.owner | default('root') }}"
+    group: "{{ item.group | default('root') }}"
+    mode: "{{ item.mode | default('0644') }}"
+  loop: "{{ upload_extra_files_upload_files }}"
+  when:
+    - item.extract is defined and item.extract is true
+
+- name: Run extra commands after upload
+  ansible.builtin.shell: "{{ item }}"
+  tags:
+    - skip_ansible_lint
+  loop: "{{ upload_extra_files_commands_to_run_after_upload }}"
