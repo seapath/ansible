@@ -1,21 +1,37 @@
-# Copyright (C) 2024, SFL (https://savoirfairelinux.com)
+# Copyright (C) 2024-2026, SFL (https://savoirfairelinux.com)
 # SPDX-License-Identifier: Apache-2.0
+
 
 VMs:
   hosts:
-    ssc600example:
-      description: "SSC600 VM Standalone Example"
-      vm_template: "../templates/vm/ssc600.xml.j2"
-      vm_disk: "../files/ssc600_disk.qcow2"
+    ssc600swexample:
+      description: "SSC60SW VM Standalone Example"
+      vm_template: "../templates/vm/ssc600s.xml.j2"
+      vm_disk: "../files/ssc600s_disk.qcow2"
       memory: 6
-      cpuset: [4, 5, 6, 7]
-      emulatorpin: 3
+      cpuset: [4, 5, 6, 7] # TODO: Choose four host cores to pin the VM to.
+      emulatorpin: 3 # TODO: Choose a host core to pin the QEMU thread
+      # Can be ignored if using PCI passthrough to connect to the process bus
       rt_priority: 50
+      wait_for_connection: false
+
+      # Two management interfaces are needed for the VM to accept connections
+      # Both are put on the br0 bridge by default
+      # Override this section if you use a backup management bridge
       bridges:
         - name: "br0"
-          mac_address: "52:54:00:c4:ff:06"
-      sv_interfaces:
-        - name: "enp88s0" # Change to your SV interface
-          mac_address: "52:54:00:c4:ff:07"
-          mode: "vepa"
-      wait_for_connection: false
+          mac_address: "52:54:00:e4:ff:03"
+        - name: "br0"
+          mac_address: "52:54:00:e4:ff:04"
+
+      # The following interfaces uses PCI passthrough.
+      # We need to pass the PCI device address
+      # You can find the PCI address using the command lspci -nn or dpdk-devbind -s
+      # Please be aware that the interface will not be available to the hypervisor anymore
+      pci_passthrough:
+        - domain: 0 # Replace by your interface
+          bus: 2
+          slot: 0
+          function: 0
+      # Can be defined multiple times
+
