@@ -1,0 +1,17 @@
+---
+- name: Reload NetworkManager connection
+  ansible.builtin.shell: |
+    nmcli connection reload
+    nmcli connection up br0
+  changed_when: true
+  failed_when: false
+
+- name: Reload NetworkManager daemon
+  ansible.builtin.systemd:
+    name: NetworkManager
+    state: reloaded
+
+- name: Restart seapath-team0-ip service
+  ansible.builtin.systemd:
+    name: seapath-team0-ip
+    state: restarted

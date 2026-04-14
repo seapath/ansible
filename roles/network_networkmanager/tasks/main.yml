@@ -1,0 +1,119 @@
+---
+- name: Ensure base networking services are running
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+  loop:
+    - NetworkManager
+    - openvswitch
+
+- name: Create br0 bridge for management and VMs
+  community.general.nmcli:
+    conn_name: br0
+    ifname: br0
+    type: bridge
+    ip4: "{{ ansible_host }}/{{ subnet | default('24') }}"
+    gw4: "{{ gateway_addr | default(omit) }}"
+    dns4: "{{ dns_servers | default(omit) }}"
+    method4: manual
+    autoconnect: yes
+    state: present
+  notify: Reload NetworkManager connection
+
+- name: Attach physical management interface to br0
+  community.general.nmcli:
+    conn_name: "{{ network_interface }}"
+    ifname: "{{ network_interface }}"
+    type: ethernet
+    master: br0
+    slave_type: bridge
+    state: present
+  notify: Reload NetworkManager connection
+
+- name: Cluster Network Configuration
+  when: cluster_ip_addr is defined
+  block:
+    - name: Unmanage OVS bridge and ports in NetworkManager
+      ansible.builtin.copy:
+        dest: /etc/NetworkManager/conf.d/99-unmanaged-team0.conf
+        content: |
+          [keyfile]
+          unmanaged-devices=interface-name:team0;interface-name:{{ team0_0 | default('enp2s0') }};interface-name:{{ team0_1 | default('enp3s0') }}
+      notify: Reload NetworkManager daemon
+
+    - name: Flush handlers to apply NM unmanage rules immediately
+      ansible.builtin.meta: flush_handlers
+
+    - name: Create OVS bridge and physical ports manually
+      ansible.builtin.shell: |
+        /usr/bin/ovs-vsctl --may-exist add-br team0
+        /usr/bin/ovs-vsctl --may-exist add-port team0 {{ team0_0 | default('enp2s0') }}
+        /usr/bin/ovs-vsctl --may-exist add-port team0 {{ team0_1 | default('enp3s0') }}
+        /usr/bin/ovs-vsctl set Bridge team0 rstp_enable=true
+        /usr/bin/ovs-vsctl set Bridge team0 other_config=rstp-priority={{ br_rstp_priority | default(16384) }}
+      changed_when: false
+
+    - name: Create systemd service for team0 cluster IP
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/seapath-team0-ip.service
+        content: |
+          [Unit]
+          Description=Configure SEAPATH Cluster IP on team0
+          After=openvswitch.service network.target
+          Requires=openvswitch.service
+
+          [Service]
+          Type=oneshot
+          RemainAfterExit=yes
+          ExecStartPre=/usr/sbin/ip link set {{ team0_0 | default('enp2s0') }} mtu 1800
+          ExecStartPre=/usr/sbin/ip link set {{ team0_0 | default('enp2s0') }} up
+          ExecStartPre=/usr/sbin/ip link set {{ team0_1 | default('enp3s0') }} mtu 1800
+          ExecStartPre=/usr/sbin/ip link set {{ team0_1 | default('enp3s0') }} up
+          ExecStartPre=/usr/sbin/ip link set team0 mtu 1800
+          ExecStartPre=/usr/sbin/ip link set team0 up
+          ExecStart=/bin/sh -c 'ip addr show team0 | grep -q "{{ cluster_ip_addr }}/" || ip addr add {{ cluster_ip_addr }}/{{ team0subnet | default("24") }} brd + dev team0'
+
+          [Install]
+          WantedBy=multi-user.target
+      notify: Restart seapath-team0-ip service
+
+    - name: Enable and start team0 IP systemd service
+      ansible.builtin.systemd:
+        name: seapath-team0-ip
+        state: started
+        enabled: yes
+        daemon_reload: yes
+
+    - name: Enforce cluster IP immediately during playbook run
+      ansible.builtin.shell: |
+        /usr/bin/ip link set {{ team0_0 | default('enp2s0') }} mtu 1800
+        /usr/bin/ip link set {{ team0_0 | default('enp2s0') }} up
+        /usr/bin/ip link set {{ team0_1 | default('enp3s0') }} mtu 1800
+        /usr/bin/ip link set {{ team0_1 | default('enp3s0') }} up
+        /usr/bin/ip link set team0 mtu 1800
+        /usr/bin/ip link set team0 up
+        ip addr show team0 | grep -q "{{ cluster_ip_addr }}/" || ip addr add {{ cluster_ip_addr }}/{{ team0subnet | default("24") }} brd + dev team0
+      changed_when: false
+
+    - name: Ensure firewalld is running
+      ansible.builtin.systemd:
+        name: firewalld
+        state: started
+        enabled: yes
+
+    - name: Add team0 to trusted zone in firewalld
+      ansible.posix.firewalld:
+        zone: trusted
+        interface: team0
+        permanent: yes
+        immediate: yes
+        state: enabled
+
+    - name: Protect our bridge from being destroyed by network_clusternetwork role
+      ansible.builtin.set_fact:
+        skip_recreate_team0_config: true
+
+- name: Refresh Ansible network facts so Ceph sees the new IP
+  ansible.builtin.setup:
+    gather_subset: network
