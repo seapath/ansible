@@ -1,0 +1,15 @@
+# Copyright (C) 2024 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: "Copy additional disk {{ _vm_name ~ ' - ' ~ (add_disk | basename) }}"
+  copy:
+    src: "{{ add_disk }}"
+    dest: "{{ deploy_vms_standalone_disk_pool }}/{{ add_disk | basename }}"
+    mode: "0644"
+  vars:
+    ansible_remote_tmp: "{{ deploy_vms_standalone_qcow2tmpuploadfolder | default(omit) }}"
+  loop: "{{ hostvars[_vm_name].additional_disk }}"
+  loop_control:
+    loop_var: add_disk
+    label: "{{ _vm_name }} - {{ add_disk | basename }}"

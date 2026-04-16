@@ -77,6 +77,16 @@
     - item not in deploy_vms_standalone_all_vms.list_vms or (item in deploy_vms_standalone_all_vms.list_vms and hostvars[item].force is defined and hostvars[item].force)
   loop: "{{ groups['VMs'] }}"
 
+- name: Copy additional disks on target
+  include_tasks: copy_additional_disk.yml
+  vars:
+    _vm_name: "{{ item }}"
+  loop: "{{ groups['VMs'] }}"
+  when:
+    - hostvars[item].additional_disk is defined
+    - deploy_vms_standalone_disk_copy | bool
+    - item not in deploy_vms_standalone_all_vms.list_vms or (item in deploy_vms_standalone_all_vms.list_vms and hostvars[item].force is defined and hostvars[item].force)
+
 - name: Add main disk to disk list
   # This is only done in standalone because the disk is handled by vm-manager in the cluster
   ansible.builtin.set_fact:
