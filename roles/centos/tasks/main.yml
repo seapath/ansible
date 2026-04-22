@@ -138,10 +138,10 @@
   ansible.builtin.systemd:
     name: NetworkManager
     state: started
-    enabled: yes
+    enabled: true
   register: centos_nm_start
 
-- name: Set need_reboot to true if NetworkManager state changed
+- name: Set need_reboot to true if NetworkManager state changed # noqa: no-handler
   ansible.builtin.set_fact:
     need_reboot: true # noqa: var-naming[no-role-prefix]
   when: centos_nm_start.changed

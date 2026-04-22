@@ -3,7 +3,7 @@
   ansible.builtin.service:
     name: "{{ item }}"
     state: started
-    enabled: yes
+    enabled: true
   loop:
     - NetworkManager
     - openvswitch
@@ -17,7 +17,7 @@
     gw4: "{{ gateway_addr | default(omit) }}"
     dns4: "{{ dns_servers | default(omit) }}"
     method4: manual
-    autoconnect: yes
+    autoconnect: true
     state: present
   notify: Reload NetworkManager connection
 
@@ -40,6 +40,7 @@
         content: |
           [keyfile]
           unmanaged-devices=interface-name:team0;interface-name:{{ team0_0 | default('enp2s0') }};interface-name:{{ team0_1 | default('enp3s0') }}
+        mode: "0644"
       notify: Reload NetworkManager daemon
 
     - name: Flush handlers to apply NM unmanage rules immediately
@@ -76,43 +77,47 @@
 
           [Install]
           WantedBy=multi-user.target
+        mode: "0644"
       notify: Restart seapath-team0-ip service
 
     - name: Enable and start team0 IP systemd service
       ansible.builtin.systemd:
         name: seapath-team0-ip
         state: started
-        enabled: yes
-        daemon_reload: yes
+        enabled: true
+        daemon_reload: true
 
     - name: Enforce cluster IP immediately during playbook run
-      ansible.builtin.shell: |
-        /usr/bin/ip link set {{ team0_0 | default('enp2s0') }} mtu 1800
-        /usr/bin/ip link set {{ team0_0 | default('enp2s0') }} up
-        /usr/bin/ip link set {{ team0_1 | default('enp3s0') }} mtu 1800
-        /usr/bin/ip link set {{ team0_1 | default('enp3s0') }} up
-        /usr/bin/ip link set team0 mtu 1800
-        /usr/bin/ip link set team0 up
-        ip addr show team0 | grep -q "{{ cluster_ip_addr }}/" || ip addr add {{ cluster_ip_addr }}/{{ team0subnet | default("24") }} brd + dev team0
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          /usr/bin/ip link set {{ team0_0 | default('enp2s0') }} mtu 1800
+          /usr/bin/ip link set {{ team0_0 | default('enp2s0') }} up
+          /usr/bin/ip link set {{ team0_1 | default('enp3s0') }} mtu 1800
+          /usr/bin/ip link set {{ team0_1 | default('enp3s0') }} up
+          /usr/bin/ip link set team0 mtu 1800
+          /usr/bin/ip link set team0 up
+          ip addr show team0 | grep -q "{{ cluster_ip_addr }}/" || ip addr add {{ cluster_ip_addr }}/{{ team0subnet | default("24") }} brd + dev team0
+        executable: /bin/bash
       changed_when: false
 
     - name: Ensure firewalld is running
       ansible.builtin.systemd:
         name: firewalld
         state: started
-        enabled: yes
+        enabled: true
 
     - name: Add team0 to trusted zone in firewalld
       ansible.posix.firewalld:
         zone: trusted
         interface: team0
-        permanent: yes
-        immediate: yes
+        permanent: true
+        immediate: true
         state: enabled
 
     - name: Protect our bridge from being destroyed by network_clusternetwork role
       ansible.builtin.set_fact:
-        skip_recreate_team0_config: true
+        skip_recreate_team0_config: true # noqa: var-naming[no-role-prefix]
 
 - name: Refresh Ansible network facts so Ceph sees the new IP
   ansible.builtin.setup:
