@@ -35,4 +35,5 @@
   roles:
     - detect_seapath_distro
     - cephadm
-    - deploy_cephfs
+    - role: deploy_cephfs
+      when: seapath_distro == "Debian"
