@@ -8,10 +8,13 @@ no requirement.
 
 ## Role Variables
 
-| Variable      | Required | Type             | Comments                                                                                |
-|---------------|----------|------------------|-----------------------------------------------------------------------------------------|
-| lvm_volumes   | No       | List of one dict | LVM volumes to be used for Ceph OSD. To use one entire disk, use ceph_osd_disk variable |
-| ceph_osd_disk | No       | String           | Node device disk to use for Ceph OSD. The whole disk will be used.                      |
+| Variable      | Required | Type             | Comments                                                                                                          |
+|---------------|----------|------------------|-------------------------------------------------------------------------------------------------------------------|
+| lvm_volumes   | No       | List of one dict | LVM volumes to be used for Ceph OSD. To use one entire disk, use ceph_osd_disk variable                           |
+| ceph_osd_disk | No       | String           | Node device disk to use for Ceph OSD. The whole disk will be used.                                                |
+| ceph_prepare_installation_flush_osds | No       | Boolean          | Force re-creation of OSD LVM volumes even if they already exist. Defaults to false.                               |
+
+When `ceph_osd_disk` is provided and `lvm_volumes` is **not** defined, the role automatically creates a single LVM volume group `vg_ceph` and logical volume `lv_ceph` using the full disk. This is skipped if `vg_ceph/lv_ceph` already exists, unless `ceph_prepare_installation_flush_osds` is set to `true`.
 
 lvm_volumes structure is a list of one dictionnary. All the variables available on the dictionnary are described as follow.
 **Warning** : lvm_volumes must only contain one element it its list. Multiple volumes is not handled by SEAPATH.
