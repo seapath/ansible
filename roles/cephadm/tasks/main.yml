@@ -363,7 +363,7 @@
   failed_when: false
 
 - name: Create RBD pool if it doesn't exist
-  ansible.builtin.command: ceph osd pool create rbd
+  ansible.builtin.command: ceph osd pool create rbd 1 1
   when: cephadm_rbd_pool_check.rc != 0
   changed_when: true
   run_once: true
@@ -371,6 +371,13 @@
 
 - name: Enable RBD application on the pool
   ansible.builtin.command: ceph osd pool application enable rbd rbd
+  when: cephadm_rbd_pool_check.rc != 0
+  changed_when: true
+  run_once: true
+  delegate_to: "{{ cephadm_first_node }}"
+
+- name: Enable autoscale on the RBD pool
+  ansible.builtin.command: ceph osd pool set rbd pg_autoscale_mode on
   when: cephadm_rbd_pool_check.rc != 0
   changed_when: true
   run_once: true
