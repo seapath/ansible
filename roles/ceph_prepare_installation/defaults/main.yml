@@ -1,0 +1,7 @@
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+ceph_prepare_installation_is_using_cephadm: "{{ is_using_cephadm | default(false) }}"
+ceph_prepare_installation_ceph_volume_cmd: "{{ 'cephadm ceph-volume' if ceph_prepare_installation_is_using_cephadm else 'ceph-volume' }}"
+ceph_prepare_installation_flush_osds: false
