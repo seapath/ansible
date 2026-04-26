@@ -21,11 +21,66 @@
     msg: "First monitor node detected: {{ deploy_cephfs_first_mon_node }}"
   run_once: true
 
-- name: Create CephFS volume 'seapathcephfs' on the first monitor
-  ansible.builtin.command: ceph fs volume create seapathcephfs
+- name: Check if CephFS 'seapathcephfs' already exists
+  ansible.builtin.command: ceph fs volume ls --format json
+  register: deploy_cephfs_volume_ls
+  changed_when: false
   delegate_to: "{{ deploy_cephfs_first_mon_node }}"
   run_once: true
+
+- name: Set fact for CephFS existence
+  ansible.builtin.set_fact:
+    deploy_cephfs_exists: "{{ (deploy_cephfs_volume_ls.stdout | default('[]') | from_json | selectattr('name', 'equalto', 'seapathcephfs') | list | length) > 0 }}"
+  run_once: true
+
+- name: Create CephFS metadata pool with fixed PG count
+  ansible.builtin.command: ceph osd pool create cephfs.seapathcephfs.meta 1 1
+  when: not deploy_cephfs_exists
   changed_when: true
+  delegate_to: "{{ deploy_cephfs_first_mon_node }}"
+  run_once: true
+
+- name: Create CephFS data pool with fixed PG count
+  ansible.builtin.command: ceph osd pool create cephfs.seapathcephfs.data 1 1
+  when: not deploy_cephfs_exists
+  changed_when: true
+  delegate_to: "{{ deploy_cephfs_first_mon_node }}"
+  run_once: true
+
+- name: Enable CephFS application on metadata pool
+  ansible.builtin.command: ceph osd pool application enable cephfs.seapathcephfs.meta cephfs
+  when: not deploy_cephfs_exists
+  changed_when: true
+  delegate_to: "{{ deploy_cephfs_first_mon_node }}"
+  run_once: true
+
+- name: Enable CephFS application on data pool
+  ansible.builtin.command: ceph osd pool application enable cephfs.seapathcephfs.data cephfs
+  when: not deploy_cephfs_exists
+  changed_when: true
+  delegate_to: "{{ deploy_cephfs_first_mon_node }}"
+  run_once: true
+
+- name: Create CephFS volume 'seapathcephfs' with explicit pools
+  ansible.builtin.command: ceph fs volume create seapathcephfs '' cephfs.seapathcephfs.meta cephfs.seapathcephfs.data
+  when: not deploy_cephfs_exists
+  changed_when: true
+  delegate_to: "{{ deploy_cephfs_first_mon_node }}"
+  run_once: true
+
+- name: Enable autoscale on CephFS metadata pool
+  ansible.builtin.command: ceph osd pool set cephfs.seapathcephfs.meta pg_autoscale_mode on
+  when: not deploy_cephfs_exists
+  changed_when: true
+  delegate_to: "{{ deploy_cephfs_first_mon_node }}"
+  run_once: true
+
+- name: Enable autoscale on CephFS data pool
+  ansible.builtin.command: ceph osd pool set cephfs.seapathcephfs.data pg_autoscale_mode on
+  when: not deploy_cephfs_exists
+  changed_when: true
+  delegate_to: "{{ deploy_cephfs_first_mon_node }}"
+  run_once: true
 
 - name: Get CephFS info to find the data pool
   ansible.builtin.command: ceph fs ls --format json
