@@ -46,8 +46,10 @@
     - name: Flush handlers to apply NM unmanage rules immediately
       ansible.builtin.meta: flush_handlers
 
-    - name: Reset SSH connection after network changes
-      ansible.builtin.meta: reset_connection
+    - name: Wait for network to stabilize and reconnect
+      ansible.builtin.wait_for_connection:
+        delay: 15
+        timeout: 120
 
     - name: Create OVS bridge and physical ports manually
       ansible.builtin.shell: |
