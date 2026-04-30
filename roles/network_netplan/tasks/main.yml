@@ -21,6 +21,21 @@
         mode: "0600"
       with_items: "{{ netplan_configurations }}"
       notify: Apply Netplan configuration
+    - name: Generate PTP VLAN netplan configuration
+      when:
+        - ptp_interface is defined
+        - ptp_interface is not none
+        - ptp_interface | length > 0
+        - ptp_vlanid is defined
+        - ptp_vlanid is not none
+        - ptp_vlanid | string | length > 0
+      ansible.builtin.template:
+        src: ptp_vlan.yaml.j2
+        dest: /etc/netplan/99-ptp-vlan.yaml
+        owner: root
+        group: root
+        mode: "0600"
+      notify: Apply Netplan configuration
     - name: Avoid reboot for netplan
       ansible.builtin.set_fact:
         need_reboot: false # noqa: var-naming[no-role-prefix]

@@ -64,8 +64,37 @@ network_systemdnetworkd_br0_network:
 network_systemdnetworkd_wired_netdev: "{{ network_systemdnetworkd_br0vlan_netdev if br0vlan is defined else network_systemdnetworkd_br0_netdev }}"
 network_systemdnetworkd_wired_network: "{{ network_systemdnetworkd_br0vlan_network if br0vlan is defined else network_systemdnetworkd_br0_network }}"
 
-network_systemdnetworkd_netdev_nocluster: "{{ network_systemdnetworkd_wired_netdev | combine(network_systemdnetworkd_netdev_custom) }}"
-network_systemdnetworkd_network_nocluster: "{{ network_systemdnetworkd_wired_network | combine(network_systemdnetworkd_network_custom) }}"
+network_systemdnetworkd_ptp_vlan_enabled: >-
+  {{ ptp_interface is defined and ptp_interface is not none and ptp_interface | length > 0
+     and ptp_vlanid is defined and ptp_vlanid is not none and ptp_vlanid | string | length > 0 }}
+
+network_systemdnetworkd_ptp_vlan_netdev:
+  80-ptp-vlan:
+    - NetDev:
+        - Name: "{{ (ptp_interface | default('')) + '.' + (ptp_vlanid | default('') | string) }}"
+        - Kind: "vlan"
+    - VLAN:
+        - Id: "{{ ptp_vlanid | default('') }}"
+
+network_systemdnetworkd_ptp_vlan_network:
+  80-ptp-parent:
+    - Match:
+        - Name: "{{ ptp_interface | default('') }}"
+    - Network:
+        - VLAN: "{{ (ptp_interface | default('')) + '.' + (ptp_vlanid | default('') | string) }}"
+  80-ptp-vlan:
+    - Match:
+        - Name: "{{ (ptp_interface | default('')) + '.' + (ptp_vlanid | default('') | string) }}"
+    - Network: []
+
+network_systemdnetworkd_netdev_nocluster: >-
+  {{ network_systemdnetworkd_wired_netdev
+     | combine(network_systemdnetworkd_netdev_custom)
+     | combine(network_systemdnetworkd_ptp_vlan_netdev if network_systemdnetworkd_ptp_vlan_enabled else {}) }}
+network_systemdnetworkd_network_nocluster: >-
+  {{ network_systemdnetworkd_wired_network
+     | combine(network_systemdnetworkd_network_custom)
+     | combine(network_systemdnetworkd_ptp_vlan_network if network_systemdnetworkd_ptp_vlan_enabled else {}) }}
 
 ## Helper variables, this should probably be refactored with the other network vars files TODO
 network_systemdnetworkd_no_cluster_network_variable: "{{ network_systemdnetworkd_no_cluster_network is defined and network_systemdnetworkd_no_cluster_network }}"

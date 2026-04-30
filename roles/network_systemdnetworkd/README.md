@@ -65,6 +65,10 @@ It can be used to connect to the VMs and the hypervisor on the same interface.
 | gateway_addr       | Yes      | String  |         | IP address of the gateway on the administration network                |
 | subnet             | No       | Integer | 24      | Subnet of the administration network in CIDR notation                  |
 | br0vlan            | No       | Integer |         | Number of the VLAN to configure a VLAN on the br0 bridge               |
+| ptp_interface      | No       | String  |         | PTP interface name. If set together with `ptp_vlanid`, a VLAN interface is automatically created. |
+| ptp_vlanid         | No       | Integer |         | VLAN ID for PTP. If defined and non-empty, the role creates `{{ ptp_interface }}.{{ ptp_vlanid }}`. |
+
+When both `ptp_interface` and `ptp_vlanid` are defined and non-empty, the role automatically generates the required `.netdev` and `.network` systemd-networkd profiles for the PTP VLAN interface.
 
 ## Example Playbook
 
