@@ -21,6 +21,15 @@
         mode: "0600"
       with_items: "{{ netplan_configurations }}"
       notify: Apply Netplan configuration
+    - name: Check of netplan-configure service exist on the target
+      ansible.builtin.service_facts:
+    - name: Enable netplan-configure.service
+      ansible.builtin.systemd:
+        name: netplan-configure.service
+        enabled: true
+        state: restarted
+      when:
+        - '"netplan-configure.service" in ansible_facts.services'
     - name: Avoid reboot for netplan
       ansible.builtin.set_fact:
         need_reboot: false # noqa: var-naming[no-role-prefix]
