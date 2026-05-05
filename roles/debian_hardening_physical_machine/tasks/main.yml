@@ -48,7 +48,7 @@
   when:
     - not revert
     - cluster_ip_addr is defined
-    - force_cephadm | default(false)
+    - is_using_cephadm | default(false)
 
 - name: Adding Debian-snmp user to group privileged
   ansible.builtin.user:
