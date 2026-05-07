@@ -92,6 +92,7 @@
     mode: "0755"
     owner: root
     group: root
+  when: seapath_distro == "Debian"
 
 - name: Install ceph-mds-ready@seapathcephfs.service
   ansible.builtin.copy:
@@ -100,6 +101,7 @@
     mode: "0644"
     owner: root
     group: root
+  when: seapath_distro == "Debian"
 
 - name: Enable and start ceph-mds-ready@seapathcephfs.service
   ansible.builtin.systemd:

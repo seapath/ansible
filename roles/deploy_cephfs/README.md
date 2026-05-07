@@ -11,6 +11,7 @@ You need to use cephadm and not ceph-ansible to use this feature
 | Variable                      | Required | Type   | Default                                    | Comments                                                                 |
 |-------------------------------|----------|--------|--------------------------------------------|--------------------------------------------------------------------------|
 | `deploy_cephfs_localdirtoupload` | No       | string | No default                                  | Local directory that will be uploaded to ceph_fs volume once created |
+| `deploy_cephfs_remotedir_map`    | No       | Map    | No default                                  | Destination directory of the CephFS mount point depending of the SEAPATH distribution |
 | `deploy_cephfs_remotedir`        | No       | string | `/mnt/cephfs/`                              | Destination directory on the remote hosts (CephFS mount point). Files from `deploy_cephfs_localdirtoupload` will be copied here. |
 
 ## Example Playbook
