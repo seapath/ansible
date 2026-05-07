@@ -2,4 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-deploy_cephfs_remotedir: "/mnt/cephfs/"
+deploy_cephfs_remotedir_map:
+  Debian: "/mnt/cephfs/"
+  Yocto: "/mnt/persistent/cephfs/"
+
+deploy_cephfs_remotedir: "{{ deploy_cephfs_remotedir_map[seapath_distro] | default('/mnt/cephfs/') }}"
