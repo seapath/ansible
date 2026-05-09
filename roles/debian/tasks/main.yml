@@ -123,6 +123,14 @@
     group: "{{ admin_user }}"
     mode: "0644"
 
+- name: Configure APT Install-Recommends
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/99norecommends
+    content: 'APT::Install-Recommends "0";'
+    owner: root
+    group: root
+    mode: "0644"
+
 - name: Configure APT repositories
   when: apt_repo is defined
   block:
