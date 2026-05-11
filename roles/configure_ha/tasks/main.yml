@@ -75,7 +75,7 @@
     - groups['valid_machine'] is defined
     - groups['unconfigured_machine_group'] is defined
   run_once: true
-  delegate_to: "{{ groups['valid_machine'][0] }}"
+  delegate_to: "{{ (groups.get('valid_machine') or [inventory_hostname]) | first }}"
   block:
     - name: Fetch corosync key
       ansible.builtin.fetch:
