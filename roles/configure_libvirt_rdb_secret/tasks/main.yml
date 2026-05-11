@@ -18,7 +18,7 @@
     configure_libvirt_rdb_secret_create_secret_pool: "{% if hostvars[item]['configure_libvirt_rdb_secret_secret_defined'].stdout == '' %}true{% else %}{{ configure_libvirt_rdb_secret_create_secret_pool | default(false) }}{% endif %}"
   loop: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) }}"
 
-- when: configure_libvirt_rdb_secret_create_secret_pool
+- when: configure_libvirt_rdb_secret_create_secret_pool | bool
   block:
     - name: Check if the secret is already defined
       ansible.builtin.set_fact:
@@ -47,7 +47,7 @@
 
 - name: Create libvirt RBD secret
   when:
-    - configure_libvirt_rdb_secret_create_secret_pool
+    - configure_libvirt_rdb_secret_create_secret_pool | bool
     - configure_libvirt_rdb_secret_secret_defined.stdout == ''
   block:
     - name: Copy libvirt xml secret file # noqa: risky-file-permissions
