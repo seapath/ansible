@@ -11,7 +11,7 @@
 {% set vm_features = vm.vm_features if "vm_features" in vm else [] %}
 {% set cpu_nb = (vm.cpuset | length) if vm.cpuset is defined else vm.nb_cpu | default(1) %}
 
-<domain type="kvm">
+<domain type="{{ vm.vm_domain_type | default('kvm') }}">
     <name>{{ vm.inventory_hostname }}</name>
     <uuid>{{ vm.uuid |default( 9999999999999999999999 | random | to_uuid) }}</uuid>
     <description>
