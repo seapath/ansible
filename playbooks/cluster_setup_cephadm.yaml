@@ -4,6 +4,14 @@
 # This playbook configures and sets up Ceph with cephadm.
 
 ---
+- name: Install cephadm prerequisites
+  hosts: cluster_machines
+  become: true
+  gather_facts: true
+  roles:
+    - detect_seapath_distro
+    - cephadm_install
+
 - name: Prepare Ceph installation
   hosts: osds
   become: true
