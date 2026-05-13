@@ -1,0 +1,119 @@
+# Copyright (C) 2025 RTE
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Ensure group "cephadm" exists
+  ansible.builtin.group:
+    name: cephadm
+    gid: 1001
+    state: present
+  when: seapath_distro != "Yocto"
+
+- name: Ensure user "cephadm" exists
+  ansible.builtin.user:
+    name: cephadm
+    uid: 1001
+    group: cephadm
+    create_home: true
+  when: seapath_distro != "Yocto"
+
+- name: Ensure group "containerized-ceph" exists
+  ansible.builtin.group:
+    name: containerized-ceph
+    gid: 167
+    state: present
+  when: seapath_distro == "Debian"
+
+- name: Ensure user "containerized-ceph" exists with nologin
+  ansible.builtin.user:
+    name: containerized-ceph
+    uid: 167
+    group: containerized-ceph
+    create_home: false
+    shell: /sbin/nologin
+  when: seapath_distro == "Debian"
+
+- name: Set cephadm user sudo permissions # noqa: risky-file-permissions
+  ansible.builtin.copy:
+    src: cephadm_sudoers
+    dest: /etc/sudoers.d/cephadm
+  when: seapath_distro != "Yocto"
+
+- name: Download cephadm
+  ansible.builtin.get_url:
+    url: "https://download.ceph.com/rpm-{{ cephadm_install_release }}/el9/noarch/cephadm"
+    dest: "/tmp/cephadm"
+    mode: "0755"
+  when: cephadm_install_downloadbinary is true
+
+- name: Copy cephadm to /usr/local/bin
+  ansible.builtin.copy:
+    src: "/tmp/cephadm"
+    dest: "/usr/local/bin/cephadm"
+    mode: "0755"
+    remote_src: true
+  when: cephadm_install_binary is true
+
+- name: Install cephadm repository
+  ansible.builtin.command: "{{ '/tmp/cephadm' if not cephadm_install_binary else 'cephadm' }} add-repo --release {{ cephadm_install_release_name }}"
+  changed_when: true
+  when: cephadm_install_repo is true
+
+- name: Install cephadm
+  ansible.builtin.command: /tmp/cephadm install
+  changed_when: true
+  when: cephadm_install_package is true
+
+- name: Install ceph-common package
+  ansible.builtin.command: cephadm install ceph-common
+  changed_when: true
+  when: cephadm_install_common is true
+
+- name: Ensure insecure registry localhost:5000 is in /etc/containers/registries.conf
+  ansible.builtin.blockinfile:
+    path: /etc/containers/registries.conf
+    marker: "# {mark} ANSIBLE MANAGED BLOCK for insecure registries"
+    block: |
+      [[registry]]
+      insecure = true
+      location = "localhost"
+
+- name: Ensure /var/lib/registry exists
+  ansible.builtin.file:
+    path: /var/lib/registry
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Pull needed Docker images
+  containers.podman.podman_image:
+    name: "{{ item }}"
+  when: cephadm_install_pullimages is true
+  loop:
+    - "docker.io/library/registry:2"
+    - "quay.io/ceph/ceph:v{{ cephadm_install_release }}"
+
+- name: Run local container registry using Podman
+  containers.podman.podman_container:
+    name: registry
+    image: registry:2
+    state: started
+    detach: true
+    privileged: true
+    ports:
+      - "5000:5000"
+    volume:
+      - registry:/var/lib/registry
+    restart_policy: always
+
+- name: Tag ceph image for local registry
+  ansible.builtin.command: >
+    podman tag quay.io/ceph/ceph:v{{ cephadm_install_release }} localhost:5000/ceph:v{{ cephadm_install_release }}
+  changed_when: true
+
+- name: Push ceph image to local registry
+  ansible.builtin.command: >
+    podman push localhost:5000/ceph:v{{ cephadm_install_release }}
+  changed_when: true

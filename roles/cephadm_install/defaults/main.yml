@@ -1,0 +1,13 @@
+# Copyright (C) 2025 RTE
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+cephadm_install_release: "{{ cephadm_release | default('20.2.0') }}"
+cephadm_install_release_name: "{{ cephadm_release_name | default('tentacle') }}"
+cephadm_install_downloadbinary: "{{ cephadm_downloadbinary | default(false) }}"
+cephadm_install_binary: "{{ cephadm_installbinary | default(false) }}"
+cephadm_install_repo: "{{ cephadm_installrepo | default(false) }}"
+cephadm_install_common: "{{ cephadm_installcommon | default(false) }}"
+cephadm_install_package: "{{ cephadm_installpackage | default(false) }}"
+cephadm_install_pullimages: "{{ cephadm_pullimages | default(false) }}"
