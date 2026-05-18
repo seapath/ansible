@@ -79,14 +79,6 @@
       insecure = true
       location = "localhost"
 
-- name: Ensure /var/lib/registry exists
-  ansible.builtin.file:
-    path: /var/lib/registry
-    state: directory
-    owner: root
-    group: root
-    mode: "0755"
-
 - name: Pull needed Docker images
   containers.podman.podman_image:
     name: "{{ item }}"
