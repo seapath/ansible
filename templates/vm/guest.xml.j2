@@ -124,8 +124,8 @@
            <target dev="vda" bus="virtio"/>
         </disk>
 {% endif %}
-{% if vm.additional_disk is defined and vm.standalone_main_disk is defined %}
-{%     for file in vm.additional_disk %}
+{% if vm.standalone_additional_disks is defined and vm.standalone_main_disk is defined %}
+{%     for file in vm.standalone_additional_disks %}
         <disk type="file" device="disk">
            <driver name="qemu" type="{{ 'raw' if vm.disk_extract is defined and vm.disk_extract | bool else 'qcow2' }}"/>
            <source file="/var/lib/libvirt/images/{{ file }}"/>

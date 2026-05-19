@@ -1,0 +1,23 @@
+---
+- name: Prepare
+  hosts: hv1
+  gather_facts: false
+  tasks:
+    - name: Create HTTP server root
+      ansible.builtin.file:
+        path: /srv/disk-images
+        state: directory
+        mode: "0755"
+
+    - name: Publish the test disk on the HTTP server root
+      ansible.builtin.copy:
+        src: files/guest.qcow2
+        dest: /srv/disk-images/guest.qcow2
+        mode: "0644"
+
+    - name: Start an HTTP server for the remote disk source
+      ansible.builtin.shell: |
+        nohup python3 -m http.server 8080 --directory /srv/disk-images >/dev/null 2>&1 &
+        echo $! > /run/disk-http-server.pid
+      args:
+        creates: /run/disk-http-server.pid
