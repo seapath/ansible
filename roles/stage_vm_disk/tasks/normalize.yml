@@ -1,0 +1,42 @@
+# Copyright (C) 2026 Sprecher Automation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: "Validate disk entries for {{ stage_vm_disk_label }}"
+  ansible.builtin.assert:
+    that:
+      - disk is string or disk is mapping
+      - disk is not mapping or (disk.keys() | list | difference(['path', 'label'] + stage_vm_disk_checksum_preference)) | length == 0
+      - disk is not mapping or 'path' in disk
+      - disk is not mapping or disk.label | default('') is match('^[A-Za-z0-9_-]*$')
+    quiet: true
+    fail_msg: >-
+      Invalid disk entry for '{{ stage_vm_disk_label }}': {{ disk }}. Use a path string,
+      or a dict with `path` plus optional sha512/sha384/sha256 checksum keys and an optional
+      `label` (letters, digits, `_` and `-` only) that consumers may reflect in the staged
+      file name. A path that is a URL (http/https/ftp/ftps) is fetched on the target and
+      requires a checksum.
+  loop: "{{ stage_vm_disk_disks }}"
+  loop_control:
+    loop_var: disk
+
+- name: "Reset normalized disk list for {{ stage_vm_disk_label }}"
+  ansible.builtin.set_fact:
+    stage_vm_disk_normalized_disks: []
+
+- name: "Normalize disk entries for {{ stage_vm_disk_label }}"
+  ansible.builtin.set_fact:
+    stage_vm_disk_normalized_disks: "{{ stage_vm_disk_normalized_disks + [_normalized_disk] }}"
+  vars:
+    _disk_source: "{{ disk.path | default('') if disk is mapping else disk }}"
+    _disk_is_remote: "{{ _disk_source is match(stage_vm_disk_url_regex) }}"
+    _normalized_disk:
+      file: "{{ _disk_source | basename }}"
+      label: "{{ disk.label | default('') if disk is mapping else '' }}"
+      local_source: "{{ '' if _disk_is_remote else _disk_source }}"
+      remote_source: "{{ _disk_source if _disk_is_remote else '' }}"
+      checksum: "{{ disk | dict2items | selectattr('key', 'in', stage_vm_disk_checksum_preference) | list | items2dict if disk is mapping else {} }}"
+  loop: "{{ stage_vm_disk_disks }}"
+  loop_control:
+    loop_var: disk
+    label: "{{ _disk_source | basename }}"

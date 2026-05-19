@@ -1,0 +1,33 @@
+---
+dependency:
+  name: galaxy
+
+driver:
+  name: podman
+
+platforms:
+  - name: hv1
+    image: docker.io/geerlingguy/docker-debian13-ansible:latest
+    command: sleep infinity
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      roles_path: "${MOLECULE_PROJECT_DIRECTORY}/.."
+  playbooks:
+    prepare: prepare.yml
+    converge: converge.yml
+    verify: verify.yml
+  inventory:
+    group_vars:
+      all:
+        stage_vm_disk_test_sha256: 1a326b161382288e45bd383c2007622739767db82b6afe19650701c87de9a07e
+        stage_vm_disk_test_sha512: 3334d296f7a345174365666df78c79b948531227b56cf7f1f28df7305df70bd4a9d6f2d28435b4ede82ef5459340559f0e48b7482ad4331ce81a85b8d8707c68
+        stage_vm_disk_test_badsum: "0000000000000000000000000000000000000000000000000000000000000000"
+        stage_vm_disk_test_directory: /var/lib/stage-vm-disk-test
+        stage_vm_disk_test_local_disk: "${MOLECULE_SCENARIO_DIRECTORY}/files/guest.qcow2"
+        stage_vm_disk_test_remote_disk: "http://127.0.0.1:8080/guest.qcow2"
+
+verifier:
+  name: ansible

@@ -1,0 +1,132 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2026 Sprecher Automation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: "Validate disk source entry for {{ stage_vm_disk_label }}"
+  ansible.builtin.assert:
+    that:
+      - stage_vm_disk_source is string or stage_vm_disk_source is mapping
+      - stage_vm_disk_source is not mapping or (stage_vm_disk_source.keys() | list | difference(['path', 'label'] + stage_vm_disk_checksum_preference)) | length == 0
+      - stage_vm_disk_source is not mapping or 'path' in stage_vm_disk_source
+    quiet: true
+    fail_msg: >-
+      Invalid disk source entry for '{{ stage_vm_disk_label }}': {{ stage_vm_disk_source }}.
+      Use a path string, or a dict with `path` plus optional sha512/sha384/sha256 checksum keys
+      and an optional `label`. A path that is a URL (http/https/ftp/ftps) is fetched on the
+      target and requires a checksum.
+
+- name: "Validate disk source for {{ stage_vm_disk_label }}"
+  ansible.builtin.assert:
+    that:
+      - not (stage_vm_disk_local_source | length > 0 and stage_vm_disk_source_is_remote)
+      - stage_vm_disk_resolved_local_source | length > 0 or stage_vm_disk_source_is_remote
+    quiet: true
+    fail_msg: >-
+      For '{{ stage_vm_disk_label }}', set exactly one disk source: a local path on the
+      control node or a URL (http/https/ftp/ftps) fetched on the target.
+
+- name: "Validate disk source locations for {{ stage_vm_disk_label }}"
+  ansible.builtin.assert:
+    that:
+      - stage_vm_disk_remote_source | length == 0 or stage_vm_disk_remote_source is match(stage_vm_disk_url_regex)
+      - stage_vm_disk_resolved_local_source is not match(stage_vm_disk_url_regex)
+    quiet: true
+    fail_msg: >-
+      For '{{ stage_vm_disk_label }}', a remote disk source must be a URL (http/https/ftp/ftps)
+      and a local disk source must be a file path on the control node.
+      Got local: '{{ stage_vm_disk_resolved_local_source }}', remote: '{{ stage_vm_disk_remote_source }}'.
+
+- name: "Validate checksum type for {{ stage_vm_disk_label }}"
+  ansible.builtin.assert:
+    that: stage_vm_disk_checksum is mapping
+    quiet: true
+    fail_msg: >-
+      The checksum for '{{ stage_vm_disk_label }}' must be a dict mapping algorithms to hex
+      digests (e.g. {sha256: '<hex>'}). Got: {{ stage_vm_disk_checksum }}.
+
+- name: "Reject unsupported checksum algorithms for {{ stage_vm_disk_label }}"
+  ansible.builtin.assert:
+    that: stage_vm_disk_checksum_unknown | length == 0
+    quiet: true
+    fail_msg: >-
+      The checksum for '{{ stage_vm_disk_label }}' contains unsupported keys: {{ stage_vm_disk_checksum_unknown }}.
+      Supported algorithms: {{ stage_vm_disk_checksum_preference | join(', ') }} (strongest used).
+
+- name: "Validate checksum shape for {{ stage_vm_disk_label }}"
+  ansible.builtin.assert:
+    that: stage_vm_disk_checksum | length == 0 or stage_vm_disk_checksum_present
+    quiet: true
+    fail_msg: >-
+      The checksum for '{{ stage_vm_disk_label }}' must contain at least one supported
+      algorithm key ({{ stage_vm_disk_checksum_preference | join(', ') }}) with a
+      non-empty hex digest. Got: {{ stage_vm_disk_checksum }}.
+
+- name: "Require checksum for remote disk source of {{ stage_vm_disk_label }}"
+  ansible.builtin.assert:
+    that: not stage_vm_disk_source_is_remote or stage_vm_disk_checksum_present
+    quiet: true
+    fail_msg: >-
+      A checksum is required when the disk source of '{{ stage_vm_disk_label }}' is a URL
+      (e.g. {sha256: '<hex>'}).
+
+- name: "Validate disk destination for {{ stage_vm_disk_label }}"
+  ansible.builtin.assert:
+    that:
+      - stage_vm_disk_destination | length > 0
+      - stage_vm_disk_destination | basename | length > 0
+    quiet: true
+    fail_msg: >-
+      For '{{ stage_vm_disk_label }}', set stage_vm_disk_destination to a target file path,
+      or stage_vm_disk_destination_directory to derive the file name from the disk source.
+
+- name: "Download disk from URL for {{ stage_vm_disk_label }}"
+  ansible.builtin.get_url:
+    url: "{{ stage_vm_disk_remote_source }}"
+    dest: "{{ stage_vm_disk_destination }}"
+    mode: "0644"
+    checksum: "{{ stage_vm_disk_checksum_algorithm }}:{{ stage_vm_disk_checksum_hash }}"
+    validate_certs: "{{ stage_vm_disk_validate_certs }}"
+  vars:
+    ansible_remote_tmp: "{{ stage_vm_disk_remote_tmp | default(omit) }}"
+  when: stage_vm_disk_source_is_remote
+
+- name: "Copy disk on target for {{ stage_vm_disk_label }}"
+  ansible.builtin.copy:
+    src: "{{ stage_vm_disk_resolved_local_source }}"
+    dest: "{{ stage_vm_disk_destination }}"
+    mode: "0644"
+  vars:
+    ansible_remote_tmp: "{{ stage_vm_disk_remote_tmp | default(omit) }}"
+  when: not stage_vm_disk_source_is_remote
+
+- name: "Stat disk for checksum verification of {{ stage_vm_disk_label }}"
+  ansible.builtin.stat:
+    path: "{{ stage_vm_disk_destination }}"
+    checksum_algorithm: "{{ stage_vm_disk_checksum_algorithm }}"
+    get_checksum: true
+  register: stage_vm_disk_stat
+  when:
+    - stage_vm_disk_checksum_present
+    - not stage_vm_disk_source_is_remote
+
+- name: "Remove disk with mismatching checksum for {{ stage_vm_disk_label }}"
+  ansible.builtin.file:
+    path: "{{ stage_vm_disk_destination }}"
+    state: absent
+  when:
+    - stage_vm_disk_checksum_present
+    - not stage_vm_disk_source_is_remote
+    - stage_vm_disk_stat.stat.checksum | default('') != stage_vm_disk_checksum_hash
+
+- name: "Verify disk checksum for {{ stage_vm_disk_label }}"
+  ansible.builtin.assert:
+    that: stage_vm_disk_stat.stat.checksum == stage_vm_disk_checksum_hash
+    fail_msg: >-
+      Checksum mismatch for {{ stage_vm_disk_destination }} on {{ inventory_hostname }}:
+      expected {{ stage_vm_disk_checksum_algorithm }}:{{ stage_vm_disk_checksum_hash }},
+      got {{ stage_vm_disk_checksum_algorithm }}:{{ stage_vm_disk_stat.stat.checksum | default('<none>') }}.
+      The staged file has been removed.
+  when:
+    - stage_vm_disk_checksum_present
+    - not stage_vm_disk_source_is_remote

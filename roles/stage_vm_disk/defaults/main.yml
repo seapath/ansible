@@ -1,0 +1,13 @@
+# Copyright (C) 2026 Sprecher Automation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+stage_vm_disk_source: ""
+stage_vm_disk_local_source: "{{ '' if stage_vm_disk_source_is_url else stage_vm_disk_source_path }}"
+stage_vm_disk_remote_source: "{{ stage_vm_disk_source_path if stage_vm_disk_source_is_url else '' }}"
+stage_vm_disk_checksum: "{{ stage_vm_disk_source | dict2items | selectattr('key', 'in', stage_vm_disk_checksum_preference) | list | items2dict if stage_vm_disk_source is mapping else {} }}"
+stage_vm_disk_fallback_source: ""
+stage_vm_disk_validate_certs: true
+stage_vm_disk_destination_directory: ""
+stage_vm_disk_destination: "{{ stage_vm_disk_destination_directory ~ '/' ~ (stage_vm_disk_resolved_source | basename) if stage_vm_disk_destination_directory | length > 0 else '' }}"
+stage_vm_disk_label: "{{ stage_vm_disk_destination }}"
