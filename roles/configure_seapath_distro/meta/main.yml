@@ -3,11 +3,14 @@
 ---
 galaxy_info:
   author: "Seapath"
-  description: Prerequisite for all debian machine
+  description: Prerequisite for all machine using a runtime package manager based SEAPATH distribution
   min_ansible_version: 2.9.10
   license: Apache-2.0
   platforms:
     - name: Debian
+      versions:
+        - all
+    - name: EL
       versions:
         - all
 dependencies: []

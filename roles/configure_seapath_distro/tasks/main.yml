@@ -13,9 +13,15 @@
   ansible.builtin.import_tasks: users.yml
 - name: Apply sysctl configurations
   ansible.builtin.import_tasks: sysctl.yml
-- name: Apply apt configurations
-  ansible.builtin.import_tasks: apt.yml
 - name: Apply GRUB configurations
   ansible.builtin.import_tasks: grub.yml
-- name: Apply ssh configurations
-  ansible.builtin.import_tasks: ssh.yml
+
+- name: SEAPATH Debian specific distro configuration
+  when: seapath_distro == "Debian"
+  block:
+    - name: Apply Debian apt configurations
+      ansible.builtin.include_tasks: debian/apt.yml
+    - name: Apply Debian ssh configurations
+      ansible.builtin.include_tasks: debian/ssh.yml
+    - name: Apply Debian GRUB configurations
+      ansible.builtin.include_tasks: debian/grub.yml

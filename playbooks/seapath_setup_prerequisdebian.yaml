@@ -19,9 +19,9 @@
   become: true
   roles:
     - syslog_ng_client
-    - role: debian
+    - role: configure_seapath_distro
       vars:
-        debian_vim_config_dir: /etc/vim
+        configure_seapath_distro_vim_config_dir: /etc/vim
 - name: Prerequis physical machine debian
   hosts:
     - cluster_machines

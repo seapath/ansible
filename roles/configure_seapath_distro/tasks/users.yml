@@ -59,3 +59,10 @@
     owner: "{{ admin_user }}"
     group: "{{ admin_user }}"
     mode: "0644"
+
+- name: Add authorized keys to admin user
+  ansible.posix.authorized_key:
+    user: "{{ admin_user }}"
+    key: "{{ item }}"
+  with_items: "{{ admin_ssh_keys }}"
+  when: admin_ssh_keys is defined and admin_ssh_keys is iterable

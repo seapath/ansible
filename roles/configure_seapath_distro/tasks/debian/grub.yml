@@ -1,0 +1,12 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Remove /etc/default/grub.d/*.cfg (FAI)
+  ansible.builtin.file:
+    path: "/etc/default/grub.d/{{ item }}"
+    state: absent
+  with_items:
+    - 20_efi_ipv6.cfg
+    - 30_console.cfg

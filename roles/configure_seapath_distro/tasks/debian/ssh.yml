@@ -3,13 +3,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- name: Add authorized keys to admin user
-  ansible.posix.authorized_key:
-    user: "{{ admin_user }}"
-    key: "{{ item }}"
-  with_items: "{{ admin_ssh_keys }}"
-  when: admin_ssh_keys is defined and admin_ssh_keys is iterable
-
 - name: Disable PerSourcePenalties
   ansible.builtin.lineinfile:
     dest: /etc/ssh/sshd_config
