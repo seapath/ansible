@@ -59,16 +59,79 @@
 - name: Provision cluster VM (create if missing or forced)
   when: deploy_vms_cluster_presencevm.status == "Undefined" or (hostvars[item].force is defined and hostvars[item].force)
   vars:
-    vm_file: "{{ hostvars[item].vm_disk | default( deploy_vms_cluster_vms_disks_directory ~ '/' ~ item ~ '.qcow2') }}"
+    vm_local_disk: "{{ hostvars[item].vm_disk | default(deploy_vms_cluster_vms_disks_directory ~ '/' ~ item ~ '.qcow2') }}"
+    vm_remote_disk: "{{ hostvars[item].vm_remote_disk | default('') }}"
     vm_file_dest: "{{ deploy_vms_cluster_qcow2tmpuploadfolder + '/os.qcow2' }}"
+    vm_disk_checksum: "{{ hostvars[item].vm_disk_checksum | default({}) }}"
+    vm_disk_checksum_preference: ['sha512', 'sha384', 'sha256']
+    vm_disk_checksum_unknown: "{{ (vm_disk_checksum.keys() | list) | difference(vm_disk_checksum_preference) }}"
+    vm_disk_checksum_algo: "{{ (vm_disk_checksum_preference | intersect(vm_disk_checksum.keys() | list)) | first | default('') }}"
+    vm_disk_checksum_hash: "{{ vm_disk_checksum[vm_disk_checksum_algo] | default('') }}"
+    vm_disk_checksum_present: "{{ (vm_disk_checksum_algo | length > 0) and (vm_disk_checksum_hash | length > 0) }}"
   block:
-    - name: "Copy system disk on target for {{ item }}" # noqa: risky-file-permissions
-      ansible.builtin.copy:
-        src: "{{ vm_file }}"
-        dest: "{{ vm_file_dest }}"
-      vars:
-        ansible_remote_tmp: "{{ deploy_vms_cluster_qcow2tmpuploadfolder | default(omit) }}"
+    - name: "Validate VM disk source for {{ item }}"
+      ansible.builtin.fail:
+        msg: >-
+          For '{{ item }}', set either vm_disk (local path on control node) or
+          vm_remote_disk (URL fetched on target), not both.
+      when:
+        - hostvars[item].vm_disk is defined
+        - hostvars[item].vm_remote_disk is defined
+    - name: "Reject unsupported vm_disk_checksum keys for {{ item }}"
+      ansible.builtin.fail:
+        msg: >-
+          hostvars[{{ item }}].vm_disk_checksum contains unsupported keys: {{ vm_disk_checksum_unknown }}.
+          Supported algorithms: {{ vm_disk_checksum_preference | join(', ') }} (strongest used).
+      when: vm_disk_checksum_unknown | length > 0
+    - name: "Validate vm_disk_checksum shape for {{ item }}"
+      ansible.builtin.fail:
+        msg: >-
+          hostvars[{{ item }}].vm_disk_checksum must contain at least one supported
+          algorithm key ({{ vm_disk_checksum_preference | join(', ') }}) with a
+          non-empty hex digest. Got: {{ vm_disk_checksum }}.
+      when:
+        - vm_disk_checksum | length > 0
+        - not vm_disk_checksum_present
+    - name: "Stage system disk for {{ item }}"
       when: deploy_vms_cluster_disk_copy | bool
+      block:
+        - name: "Require checksum for remote VM disk ({{ item }})"
+          ansible.builtin.fail:
+            msg: >-
+              hostvars[{{ item }}].vm_disk_checksum is required when using vm_remote_disk
+              (e.g. {sha256: '<hex>'}).
+          when:
+            - vm_remote_disk | length > 0
+            - not vm_disk_checksum_present
+        - name: "Download system disk from URL for {{ item }}"
+          ansible.builtin.get_url:
+            url: "{{ vm_remote_disk }}"
+            dest: "{{ vm_file_dest }}"
+            mode: "0644"
+            checksum: "{{ vm_disk_checksum_algo }}:{{ vm_disk_checksum_hash }}"
+          when: vm_remote_disk | length > 0
+        - name: "Copy system disk on target for {{ item }}"  # noqa: risky-file-permissions
+          ansible.builtin.copy:
+            src: "{{ vm_local_disk }}"
+            dest: "{{ vm_file_dest }}"
+          vars:
+            ansible_remote_tmp: "{{ deploy_vms_cluster_qcow2tmpuploadfolder | default(omit) }}"
+          when: vm_remote_disk | length == 0
+        - name: "Stat system disk for checksum verification ({{ item }})"
+          ansible.builtin.stat:
+            path: "{{ vm_file_dest }}"
+            checksum_algorithm: "{{ vm_disk_checksum_algo }}"
+            get_checksum: true
+          register: deploy_vms_cluster_disk_stat
+          when: vm_disk_checksum_present
+        - name: "Verify system disk checksum for {{ item }}"
+          ansible.builtin.assert:
+            that: deploy_vms_cluster_disk_stat.stat.checksum == vm_disk_checksum_hash
+            fail_msg: >-
+              Checksum mismatch for {{ vm_file_dest }} on {{ inventory_hostname }}:
+              expected {{ vm_disk_checksum_algo }}:{{ vm_disk_checksum_hash }},
+              got {{ vm_disk_checksum_algo }}:{{ deploy_vms_cluster_disk_stat.stat.checksum | default('<none>') }}.
+          when: vm_disk_checksum_present
     - name: "Create {{ item }}"
       cluster_vm:
         name: "{{ item }}"
