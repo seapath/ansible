@@ -22,6 +22,7 @@
     - role: configure_seapath_distro
       vars:
         configure_seapath_distro_vim_config_dir: /etc/vim
+        configure_seapath_distro_grub_update_command: update-grub
 - name: Prerequis physical machine debian
   hosts:
     - cluster_machines
