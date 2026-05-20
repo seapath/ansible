@@ -6,6 +6,7 @@ seapath_distro can have one of the following value:
 - CentOS
 - OracleLinux
 - Yocto
+- SLES
 
 If the role can't detect one of these distro it fails.
 

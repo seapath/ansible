@@ -30,6 +30,11 @@
     detect_seapath_distro_distro: OracleLinux
   when: ansible_distribution | regex_search("Oracle") != None
 
+- name: Detect SLES distribution
+  ansible.builtin.set_fact:
+    detect_seapath_distro_distro: SLES
+  when: ansible_distribution | regex_search("SLES") != None
+
 - name: Show detect_seapath_distro_distro
   ansible.builtin.debug:
     var: detect_seapath_distro_distro
