@@ -25,3 +25,9 @@
       ansible.builtin.include_tasks: debian/ssh.yml
     - name: Apply Debian GRUB configurations
       ansible.builtin.include_tasks: debian/grub.yml
+
+- name: SEAPATH OracleLinux specific distro configuration
+  when: seapath_distro == "OracleLinux"
+  block:
+    - name: Apply OracleLinux network configurations
+      ansible.builtin.include_tasks: oraclelinux/network.yml
