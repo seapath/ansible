@@ -1,0 +1,22 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Disable vim defaults
+  ansible.builtin.lineinfile:
+    dest: /etc/vim/vimrc
+    regexp: '^"? *let g:skip_defaults_vim = 1$'
+    line: "let g:skip_defaults_vim = 1"
+    state: present
+- name: Vim color syntax
+  ansible.builtin.lineinfile:
+    dest: /etc/vim/vimrc
+    regexp: '^"? *syntax on$'
+    line: "syntax on"
+    state: present
+
+- name: Remove vimrc.local file
+  ansible.builtin.file:
+    path: /etc/vim/vimrc.local
+    state: absent

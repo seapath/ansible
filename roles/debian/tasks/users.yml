@@ -1,0 +1,61 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Ensure admin group exists
+  ansible.builtin.group:
+    name: "{{ admin_user }}"
+    state: present
+    gid: 1000
+- name: Adding admin user
+  ansible.builtin.user:
+    name: "{{ admin_user }}"
+    shell: /bin/bash
+    group: "{{ admin_user }}"
+    uid: 1000
+    password: "{{ admin_passwd | default(omit) }}"
+    append: false
+  no_log: true
+
+- name: Install sudo admin user rules
+  ansible.builtin.copy:
+    content: |
+      {{ admin_user }}   ALL=NOPASSWD:EXEC: ALL
+    dest: "/etc/sudoers.d/{{ admin_user }}"
+    owner: root
+    group: root
+    mode: "0440"
+- name: Remove admin sudoers line created by build_debian_iso
+  ansible.builtin.lineinfile:
+    dest: /etc/sudoers
+    state: absent
+    regexp: "^{{ admin_user }}"
+    validate: visudo -cf %s
+
+- name: Customize /etc/environment
+  ansible.builtin.lineinfile:
+    dest: "/etc/environment"
+    state: present
+    regexp: "^{{ item.key }}="
+    line: "{{ item.key }}={{ item.value }}"
+  vars:
+    env_list:
+      HISTSIZE: 2000000
+      HISTFILESIZE: 2000000
+      LIBVIRT_DEFAULT_URI: "qemu:///system"
+      HISTTIMEFORMAT: '"%F %T "'
+      EDITOR: "vim"
+      SYSTEMD_EDITOR: "vim"
+  with_items: "{{ env_list | dict2items }}"
+
+- name: PATH for admin user
+  ansible.builtin.lineinfile:
+    dest: "/home/{{ admin_user }}/.bash_profile"
+    regexp: "^export PATH"
+    line: "export PATH=$PATH:/usr/sbin:/usr/local/sbin:/sbin"
+    state: present
+    create: true
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: "0644"
