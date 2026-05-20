@@ -14,5 +14,5 @@
     enabled: true
 
 - name: Update-grub
-  ansible.builtin.command: update-grub
+  ansible.builtin.command: "{{ configure_seapath_distro_grub_update_command }}"
   changed_when: true

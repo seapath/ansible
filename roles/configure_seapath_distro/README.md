@@ -18,6 +18,7 @@ no requirement.
 | grub_append          |  No      | String list | List of extra kernel parameters                                    |
 | apt_repo             |  No      | String list | List of apt repositories                                           |
 | configure_seapath_distro_vim_config_dir |  Yes | String | VIM directory containing vimrc and vimrc.local      |
+| configure_seapath_distro_grub_update_command  | Yes | String | Command to be run to update GRUB after configuration modification  |
 
 ## Example Playbook
 
