@@ -15,6 +15,7 @@ no requirement.
 | admin_ssh_keys       |  No      | String list | List of SSH public keys used to connect to the administration user |
 | grub_append          |  No      | String list | List of extra kernel parameters                                    |
 | apt_repo             |  No      | String list | List of apt repositories                                           |
+| debian_vim_config_dir|  Yes     | String      | VIM directory containing vimrc and vimrc.local                     |
 
 ## Example Playbook
 
