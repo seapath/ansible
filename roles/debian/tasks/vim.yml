@@ -5,18 +5,18 @@
 ---
 - name: Disable vim defaults
   ansible.builtin.lineinfile:
-    dest: /etc/vim/vimrc
+    dest: "{{ debian_vim_config_dir }}/vimrc"
     regexp: '^"? *let g:skip_defaults_vim = 1$'
     line: "let g:skip_defaults_vim = 1"
     state: present
 - name: Vim color syntax
   ansible.builtin.lineinfile:
-    dest: /etc/vim/vimrc
+    dest: "{{ debian_vim_config_dir }}/vimrc"
     regexp: '^"? *syntax on$'
     line: "syntax on"
     state: present
 
 - name: Remove vimrc.local file
   ansible.builtin.file:
-    path: /etc/vim/vimrc.local
+    path: "{{ debian_vim_config_dir }}/vimrc.local"
     state: absent

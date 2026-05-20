@@ -1,4 +1,5 @@
 # Copyright (C) 2023, RTE (http://www.rte-france.com)
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 ---
@@ -18,7 +19,9 @@
   become: true
   roles:
     - syslog_ng_client
-    - debian
+    - role: debian
+      vars:
+        debian_vim_config_dir: /etc/vim
 - name: Prerequis physical machine debian
   hosts:
     - cluster_machines
