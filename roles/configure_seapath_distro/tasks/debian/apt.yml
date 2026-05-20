@@ -16,9 +16,9 @@
   block:
     - name: Detect apt_repo type
       ansible.builtin.set_fact:
-        debian_apt_repo_is_dict: "{{ apt_repo is not none and apt_repo | selectattr('name', 'defined') | list | length > 0 }}"
+        configure_seapath_distro_apt_repo_is_dict: "{{ apt_repo is not none and apt_repo | selectattr('name', 'defined') | list | length > 0 }}"
     - name: Configure apt_repo from config
-      when: debian_apt_repo_is_dict
+      when: configure_seapath_distro_apt_repo_is_dict
       block:
         - name: Remove file /etc/apt/sources.list
           ansible.builtin.file:
@@ -34,7 +34,7 @@
             signed_by: "{{ item.signed_by }}"
           loop: "{{ apt_repo }}"
     - name: Configure default apt repositories
-      when: not debian_apt_repo_is_dict
+      when: not configure_seapath_distro_apt_repo_is_dict
       block:
         - name: Remove all files in /etc/apt/sources.list.d
           ansible.builtin.file:

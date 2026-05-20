@@ -3,14 +3,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- name: Remove /etc/default/grub.d/*.cfg (FAI)
-  ansible.builtin.file:
-    path: "/etc/default/grub.d/{{ item }}"
-    state: absent
-  with_items:
-    - 20_efi_ipv6.cfg
-    - 30_console.cfg
-
 - name: Remove quiet from GRUB_CMDLINE_LINUX_DEFAULT option in grub conf
   ansible.builtin.lineinfile:
     dest: /etc/default/grub
@@ -26,8 +18,8 @@
     line: "\\1 \\2"
     state: present
     backrefs: true
-  register: debian_doublespace
-  until: not debian_doublespace.changed
+  register: configure_seapath_distro_doublespace
+  until: not configure_seapath_distro_doublespace.changed
   delay: 1
   retries: 10
 
@@ -38,14 +30,14 @@
     state: absent
   check_mode: true
   changed_when: false
-  register: debian_check_grub_cmdline_linux
+  register: configure_seapath_distro_check_grub_cmdline_linux
 
 - name: Make sure GRUB_CMDLINE_LINUX exists 2/2
   ansible.builtin.lineinfile:
     path: /etc/default/grub
     state: present
     line: "GRUB_CMDLINE_LINUX=\" \""
-  when: debian_check_grub_cmdline_linux.found == 0
+  when: configure_seapath_distro_check_grub_cmdline_linux.found == 0
 
 - name: Make sure GRUB_CMDLINE_LINUX starts with a space
   ansible.builtin.lineinfile:

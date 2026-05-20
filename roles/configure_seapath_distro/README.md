@@ -1,6 +1,8 @@
-# Debian Role
+# Configure SEAPATH Distro Role
 
-This role apply the basic SEAPATH prerequisites for any debian machine
+This role apply the basic SEAPATH prerequisites for any machine using a runtime package manager based SEAPATH distribution.
+
+This role doesn't apply to SEAPATH Yocto distributions.
 
 ## Requirements
 
@@ -15,12 +17,12 @@ no requirement.
 | admin_ssh_keys       |  No      | String list | List of SSH public keys used to connect to the administration user |
 | grub_append          |  No      | String list | List of extra kernel parameters                                    |
 | apt_repo             |  No      | String list | List of apt repositories                                           |
-| debian_vim_config_dir|  Yes     | String      | VIM directory containing vimrc and vimrc.local                     |
+| configure_seapath_distro_vim_config_dir |  Yes | String | VIM directory containing vimrc and vimrc.local      |
 
 ## Example Playbook
 
 ```yaml
 - hosts: cluster_machines
   roles:
-    - { role: seapath_ansible.debian }
+    - { role: seapath_ansible.configure_seapath_distro }
 ```

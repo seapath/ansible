@@ -5,27 +5,27 @@
 ---
 - name: Retrieve user information for UID 1000
   ansible.builtin.command: getent passwd 1000
-  register: debian_user_info
+  register: configure_seapath_distro_user_info
   changed_when: false
 - name: Extract username from the result
   ansible.builtin.set_fact:
-    debian_old_admin_user: "{{ debian_user_info.stdout.split(':')[0] }}"
+    configure_seapath_distro_old_admin_user: "{{ configure_seapath_distro_user_info.stdout.split(':')[0] }}"
 
 - name: Removing old admin user created by the ISO
-  when: admin_user != debian_old_admin_user
+  when: admin_user != configure_seapath_distro_old_admin_user
   block:
     - name: Remove old admin user from sudoers file
       ansible.builtin.lineinfile:
         dest: /etc/sudoers
         state: absent
-        regexp: "^{{ debian_old_admin_user }}"
+        regexp: "^{{ configure_seapath_distro_old_admin_user }}"
         validate: visudo -cf %s
     - name: Remove the old admin user
       ansible.builtin.user:
-        name: "{{ debian_old_admin_user }}"
+        name: "{{ configure_seapath_distro_old_admin_user }}"
         state: absent
         remove: true
     - name: Remove the old admin group
       ansible.builtin.group:
-        name: "{{ debian_old_admin_user }}"
+        name: "{{ configure_seapath_distro_old_admin_user }}"
         state: absent
