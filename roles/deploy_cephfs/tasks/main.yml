@@ -92,7 +92,7 @@
     mode: "0755"
     owner: root
     group: root
-  when: seapath_distro == "Debian"
+  when: seapath_distro != "Yocto"
 
 - name: Install ceph-mds-ready@seapathcephfs.service
   ansible.builtin.copy:
@@ -101,7 +101,7 @@
     mode: "0644"
     owner: root
     group: root
-  when: seapath_distro == "Debian"
+  when: seapath_distro != "Yocto"
 
 - name: Enable and start ceph-mds-ready@seapathcephfs.service
   ansible.builtin.systemd:
@@ -109,6 +109,7 @@
     enabled: true
     state: started
     daemon_reload: true
+  when: seapath_distro != "Yocto"
 
 - name: Build Ceph monitor list for fstab from detected monitors
   ansible.builtin.set_fact:
