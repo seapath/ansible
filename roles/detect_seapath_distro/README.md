@@ -4,6 +4,7 @@ This role detects the Seapath distribution and set the seapath_distro fact.
 seapath_distro can have one of the following value:
 - Debian
 - CentOS
+- OracleLinux
 - Yocto
 
 If the role can't detect one of these distro it fails.
