@@ -1,0 +1,46 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Configure APT Install-Recommends
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/99norecommends
+    content: 'APT::Install-Recommends "0";'
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Configure APT repositories
+  when: apt_repo is defined
+  block:
+    - name: Detect apt_repo type
+      ansible.builtin.set_fact:
+        debian_apt_repo_is_dict: "{{ apt_repo is not none and apt_repo | selectattr('name', 'defined') | list | length > 0 }}"
+    - name: Configure apt_repo from config
+      when: debian_apt_repo_is_dict
+      block:
+        - name: Remove file /etc/apt/sources.list
+          ansible.builtin.file:
+            path: /etc/apt/sources.list
+            state: absent
+        - name: Configure apt repositories
+          ansible.builtin.deb822_repository:
+            name: "{{ item.name }}"
+            types: deb
+            uris: "{{ item.uris }}"
+            suites: "{{ item.suites }}"
+            components: "{{ item.components }}"
+            signed_by: "{{ item.signed_by }}"
+          loop: "{{ apt_repo }}"
+    - name: Configure default apt repositories
+      when: not debian_apt_repo_is_dict
+      block:
+        - name: Remove all files in /etc/apt/sources.list.d
+          ansible.builtin.file:
+            path: /etc/apt/sources.list.d
+            state: absent
+        - name: Configure apt repositories # noqa: risky-file-permissions
+          ansible.builtin.template:
+            src: sources.list.j2
+            dest: /etc/apt/sources.list
