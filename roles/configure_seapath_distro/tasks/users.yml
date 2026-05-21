@@ -26,7 +26,7 @@
     owner: root
     group: root
     mode: "0440"
-- name: Remove admin sudoers line created by build_debian_iso
+- name: Remove admin sudoers line created by image build
   ansible.builtin.lineinfile:
     dest: /etc/sudoers
     state: absent
