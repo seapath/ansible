@@ -33,6 +33,15 @@
     regexp: "^{{ admin_user }}"
     validate: visudo -cf %s
 
+- name: Create /etc/environment
+  ansible.builtin.file:
+    path: "/etc/environment"
+    state: touch
+    access_time: preserve
+    modification_time: preserve
+    owner: root
+    group: root
+    mode: "0640"
 - name: Customize /etc/environment
   ansible.builtin.lineinfile:
     dest: "/etc/environment"
