@@ -1,0 +1,24 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2024 Red Hat, Inc.
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Stop and Disable NetworkManager
+  ansible.builtin.service:
+    name: NetworkManager
+    state: stopped
+    enabled: false
+  register: configure_seapath_distro_centos_nm_stop
+
+- name: Start and Enable systemd-networkd
+  ansible.builtin.service:
+    name: systemd-networkd
+    state: started
+    enabled: true
+  register: configure_seapath_distro_centos_sd_start
+
+- name: Set need_reboot to true if any change was made
+  ansible.builtin.set_fact:
+    need_reboot: true # noqa: var-naming[no-role-prefix]
+  when: configure_seapath_distro_centos_nm_stop is changed or configure_seapath_distro_centos_sd_start is changed
