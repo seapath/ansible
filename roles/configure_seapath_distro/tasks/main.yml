@@ -4,7 +4,7 @@
 
 ---
 - name: Remove old admin user
-  when: seapath_distro in ["Debian", "OracleLinux"]
+  when: seapath_distro in ["Debian", "OracleLinux", "SLES"]
   ansible.builtin.import_tasks: remove_old_admin.yml
 
 - name: Apply vim configurations

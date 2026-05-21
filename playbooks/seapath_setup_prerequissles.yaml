@@ -1,0 +1,79 @@
+# Copyright (C) 2023, RTE (http://www.rte-france.com)
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Detect Seapath distribution
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  roles:
+    - detect_seapath_distro
+
+- name: SLES machines prerequisites
+  gather_facts: true
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  become: true
+  roles:
+    - syslog_ng_client
+    - role: configure_seapath_distro
+      vars:
+        configure_seapath_distro_vim_config_dir: /etc
+        configure_seapath_distro_grub_update_command: grub2-mkconfig -o /boot/grub2/grub.cfg
+
+- name: SLES physical machine prerequisites
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  become: true
+  roles:
+    - role: configure_physical_machine
+      vars:
+        configure_physical_machine_distro_extra_modules:
+          - br_netfilter
+          - raid6_pq
+        configure_physical_machine_initramfs: dracut
+
+- name: SLES hypervisor prerequisites
+  hosts:
+    - hypervisors
+    - standalone_machine
+  become: true
+  roles:
+    - configure_hypervisor
+
+
+- name: Add admin user to haclient group
+  hosts:
+    - cluster_machines
+  become: true
+  tasks:
+    - name: Add admin user to haclient group
+      ansible.builtin.user:
+        name: "{{ admin_user }}"
+        groups: haclient
+        append: true
+
+- name: Disable libvirt-guests.service
+  hosts:
+    - cluster_machines
+  become: true
+  tasks:
+    - name: Disable libvirt-guests.service
+      ansible.builtin.systemd:
+        name: libvirt-guests.service
+        enabled: false
+        state: stopped
+
+- name: Upload extra files
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  become: true
+  roles:
+    - upload_extra_files
