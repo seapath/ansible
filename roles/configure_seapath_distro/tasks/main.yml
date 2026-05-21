@@ -35,3 +35,11 @@
       ansible.builtin.include_tasks: debian/grub_cmdline_default_linux.yml
     - name: Apply OracleLinux network configurations
       ansible.builtin.include_tasks: oraclelinux/network.yml
+
+- name: SEAPATH CentOS specific distro configuration
+  when: seapath_distro == "CentOS"
+  block:
+    - name: Format GRUB_CMDLINE_LINUX_DEFAULT option
+      ansible.builtin.include_tasks: centos/grub_cmdline_default_linux.yml
+    - name: Apply CentOS network configurations
+      ansible.builtin.include_tasks: centos/network.yml
