@@ -3,26 +3,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- name: Remove quiet from GRUB_CMDLINE_LINUX_DEFAULT option in grub conf
-  ansible.builtin.lineinfile:
-    dest: /etc/default/grub
-    regexp: "^(GRUB_CMDLINE_LINUX_DEFAULT=\")(.*?[ ])?quiet([ ].*)?(\")$"
-    line: "\\1\\2\\3\\4"
-    backrefs: true
-  notify: Update-grub
-
-- name: Make sure GRUB_CMDLINE_LINUX_DEFAULT has no double space
-  ansible.builtin.lineinfile:
-    dest: /etc/default/grub
-    regexp: "^(GRUB_CMDLINE_LINUX_DEFAULT=\".*)[ ][ ](.*\")"
-    line: "\\1 \\2"
-    state: present
-    backrefs: true
-  register: configure_seapath_distro_doublespace
-  until: not configure_seapath_distro_doublespace.changed
-  delay: 1
-  retries: 10
-
 - name: Make sure GRUB_CMDLINE_LINUX exists 1/2
   ansible.builtin.lineinfile:
     path: /etc/default/grub
