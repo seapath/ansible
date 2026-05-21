@@ -3,6 +3,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+- name: Format GRUB_CMDLINE_LINUX_DEFAULT option
+  ansible.builtin.import_tasks: debian/grub_cmdline_default_linux.yml
+
 - name: Remove /etc/default/grub.d/*.cfg (FAI)
   ansible.builtin.file:
     path: "/etc/default/grub.d/{{ item }}"

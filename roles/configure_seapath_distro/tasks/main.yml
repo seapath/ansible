@@ -3,10 +3,12 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+- name: Remove old admin user
+  when: seapath_distro in ["Debian", "OracleLinux"]
+  ansible.builtin.import_tasks: remove_old_admin.yml
+
 - name: Apply vim configurations
   ansible.builtin.import_tasks: vim.yml
-- name: Remove old admin user
-  ansible.builtin.import_tasks: remove_old_admin.yml
 - name: Apply logging configurations
   ansible.builtin.import_tasks: logging.yml
 - name: Apply users configurations
@@ -29,5 +31,7 @@
 - name: SEAPATH OracleLinux specific distro configuration
   when: seapath_distro == "OracleLinux"
   block:
+    - name: Format GRUB_CMDLINE_LINUX_DEFAULT option
+      ansible.builtin.include_tasks: debian/grub_cmdline_default_linux.yml
     - name: Apply OracleLinux network configurations
       ansible.builtin.include_tasks: oraclelinux/network.yml
