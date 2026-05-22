@@ -29,7 +29,11 @@
     - standalone_machine
   become: true
   roles:
-    - configure_physical_machine
+    - role: configure_physical_machine
+      vars:
+        configure_physical_machine_distro_extra_modules:
+          - br_netfilter
+          - raid6_pq
 - name: Backup_restore on cluster machines
   hosts:
     - cluster_machines
