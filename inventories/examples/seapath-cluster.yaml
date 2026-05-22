@@ -51,6 +51,8 @@ all:
     hostname: "{{ inventory_hostname }}"
     apply_network_config: true
 
+    deploy_cephfs: true
+
 # Three hypervisors setup. All machines are part of the hypervisor group.
 hypervisors:
   hosts:
