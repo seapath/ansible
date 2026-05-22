@@ -1,0 +1,17 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Copy rebooter.conf # noqa: risky-file-permissions
+  ansible.builtin.template:
+    src: initramfs-tools/conf.d/rebooter.conf.j2
+    dest: /etc/initramfs-tools/conf.d/rebooter.conf
+
+- name: Configure initramfs-tools to use busybox
+  ansible.builtin.lineinfile:
+    dest: /etc/initramfs-tools/initramfs.conf
+    regexp: "^#?BUSYBOX="
+    line: "BUSYBOX=y"
+    state: present
+  notify: Rebuild initramfs if necessary

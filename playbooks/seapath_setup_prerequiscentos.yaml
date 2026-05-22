@@ -21,7 +21,12 @@
     - standalone_machine
   become: true
   roles:
-    - centos_physical_machine
+    - role: configure_physical_machine
+      vars:
+        configure_physical_machine_distro_extra_modules:
+          - br_netfilter
+          - raid6_pq
+        configure_physical_machine_initramfs: dracut
 - name: Prerequis hypervisor centos
   hosts:
     - hypervisors

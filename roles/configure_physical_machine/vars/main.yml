@@ -1,0 +1,12 @@
+# Copyright (C) 2025 RTE
+# Copyright (C) 2024 Red Hat, Inc.
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+configure_physical_machine_initramfs_rebuild_cmd: >-
+  {{ configure_physical_machine_dracut_rebuild_cmd if configure_physical_machine_initramfs == "dracut" else
+      configure_physical_machine_initramfs_tools_rebuild_cmd if configure_physical_machine_initramfs == "initramfs-tools" }}
+
+configure_physical_machine_initramfs_tools_rebuild_cmd: /usr/sbin/update-initramfs -u
+configure_physical_machine_dracut_rebuild_cmd: /usr/bin/dracut --regenerate-all --force

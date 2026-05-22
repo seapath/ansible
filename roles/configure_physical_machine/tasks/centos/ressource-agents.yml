@@ -1,0 +1,19 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2024 Red Hat, Inc.
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Create /usr/lib/ocf/resource.d/seapath on hosts
+  ansible.builtin.file:
+    path: /usr/lib/ocf/resource.d/seapath
+    state: directory
+    mode: "0755"
+
+- name: Copy Pacemaker Seapath Resource-Agent files
+  ansible.posix.synchronize:
+    src: centos/pacemaker_ra/
+    dest: /usr/lib/ocf/resource.d/seapath/
+    rsync_opts:
+      - "--chmod=F755"
+      - "--chown=root:root"
