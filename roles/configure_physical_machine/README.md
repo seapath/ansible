@@ -1,6 +1,6 @@
-# Debian Physical Machine Role
+# Configure Physical Machine Role
 
-This role apply the SEAPATH prerequisites for any physical machine (hypervisor, observer, or standalone).
+This role applies the SEAPATH prerequisites for any physical machine (hypervisor or observer).
 
 ## Requirements
 
@@ -23,5 +23,5 @@ No requirement.
 ```yaml
 - hosts: cluster_machines
   roles:
-    - { role: seapath_ansible.debian_physical_machine }
+    - { role: seapath_ansible.configure_physical_machine }
 ```

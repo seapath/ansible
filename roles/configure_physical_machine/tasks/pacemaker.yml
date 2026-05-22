@@ -18,18 +18,18 @@
     group: root
     mode: "0644"
   notify: Trigger daemon-reload
-  register: debian_physical_machine_pacemaker_corosync
+  register: configure_physical_machine_pacemaker_corosync
 - name: Get Pacemaker service Status
   ansible.builtin.systemd:
     name: "pacemaker.service"
-  register: debian_physical_machine_pacemaker_service_status
+  register: configure_physical_machine_pacemaker_service_status
 - name: Disable pacemaker (reinstall step 1/2)
   ansible.builtin.systemd:
     name: pacemaker.service
     enabled: false
-  when: debian_physical_machine_pacemaker_corosync.changed and debian_physical_machine_pacemaker_service_status.status.UnitFileState == "enabled"
+  when: configure_physical_machine_pacemaker_corosync.changed and configure_physical_machine_pacemaker_service_status.status.UnitFileState == "enabled"
 - name: Enable pacemaker (reinstall step 2/2)
   ansible.builtin.systemd:
     name: pacemaker.service
     enabled: true
-  when: debian_physical_machine_pacemaker_corosync.changed and debian_physical_machine_pacemaker_service_status.status.UnitFileState == "enabled"
+  when: configure_physical_machine_pacemaker_corosync.changed and configure_physical_machine_pacemaker_service_status.status.UnitFileState == "enabled"
