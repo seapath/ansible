@@ -29,7 +29,7 @@
     - standalone_machine
   become: true
   roles:
-    - debian_physical_machine
+    - configure_physical_machine
 - name: Backup_restore on cluster machines
   hosts:
     - cluster_machines
