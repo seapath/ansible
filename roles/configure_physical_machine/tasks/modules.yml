@@ -6,7 +6,7 @@
 - name: Add extra modules to load on boot
   ansible.builtin.template:
     src: extra_modules.conf.j2
-    dest: /etc/modules
+    dest: /etc/modules-load.d/extra_modules.conf
     owner: root
     group: root
     mode: "0644"
