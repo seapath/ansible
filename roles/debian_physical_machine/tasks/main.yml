@@ -1,4 +1,5 @@
 # Copyright (C) 2024 RTE
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 ---
@@ -21,12 +22,6 @@
     content: "{{ extra_sysctl_physical_machines }}"
   when: extra_sysctl_physical_machines is defined
   notify: Restart systemd-sysctl
-
-- name: Create src folder on hosts
-  ansible.builtin.file:
-    path: /tmp/src
-    state: directory
-    mode: "0755"
 
 - name: Temp fix for synchronize to force evaluate variables
   ansible.builtin.set_fact:

@@ -4,6 +4,13 @@
 ---
 - name: Load distribution-specific variables
   ansible.builtin.include_vars: "{{ seapath_distro }}.yml"
+
+- name: Create src folder on hosts
+  ansible.builtin.file:
+    path: /tmp/src
+    state: directory
+    mode: "0755"
+
 - name: Synchronization of src vm_manager on the control machine to dest on the remote hosts
   ansible.posix.synchronize:
     src: vm_manager
