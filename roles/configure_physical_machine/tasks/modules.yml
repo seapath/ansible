@@ -3,23 +3,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- name: Add extra modules to the kernel
-  ansible.builtin.lineinfile:
+- name: Add extra modules to load on boot
+  ansible.builtin.template:
+    src: extra_modules.conf.j2
     dest: /etc/modules
-    state: present
-    regexp: "^{{ item }}$"
-    line: "{{ item }}"
-  with_items: "{{ extra_kernel_modules | default([]) }}"
-
-- name: Add br_netfilter to /etc/modules
-  ansible.builtin.lineinfile:
-    dest: /etc/modules
-    state: present
-    regexp: "^br_netfilter$"
-    line: "br_netfilter"
-- name: Add raid6_pq to /etc/modules
-  ansible.builtin.lineinfile:
-    dest: /etc/modules
-    state: present
-    regexp: "^raid6_pq$"
-    line: "raid6_pq"
+    owner: root
+    group: root
+    mode: "0644"

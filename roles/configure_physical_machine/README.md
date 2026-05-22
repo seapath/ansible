@@ -16,6 +16,7 @@ No requirement.
 | logstash_server_ip             | String      | Address IP of the logstash server                                                                                                    |
 | pacemaker_shutdown_timeout     | String      | Custom timeout for stopping the systemd Pacemaker service. Time is a seconds, but support the min suffix to use minutes.Default 2min |
 | chrony_wait_timeout_sec        | String      | Custom timeout for stopping the systemd Chrony service. Time is a seconds, but support the min suffix to use minutes.Default 180     |
+| configure_physical_machine_distro_extra_modules | String list | List of distro specific kernel modules to load during boot |
 
 
 ## Example Playbook

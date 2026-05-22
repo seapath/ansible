@@ -1,0 +1,2 @@
+{% for module in (extra_kernel_modules | default([])) + (configure_physical_machine_distro_extra_modules | default([])) %}
+{{ module }}{% endfor %}
