@@ -34,6 +34,7 @@
         configure_physical_machine_distro_extra_modules:
           - br_netfilter
           - raid6_pq
+        configure_physical_machine_initramfs: initramfs-tools
 - name: Backup_restore on cluster machines
   hosts:
     - cluster_machines

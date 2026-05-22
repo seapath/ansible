@@ -1,0 +1,11 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Add udev rules for lvm2 limitation
+  ansible.builtin.copy:
+    src: 69-lvm.rules
+    dest: /etc/udev/rules.d/69-lvm.rules
+    mode: "0644"
+  when: ansible_distribution_version | int >= 12

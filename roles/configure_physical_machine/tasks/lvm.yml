@@ -3,13 +3,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- name: Add udev rules for lvm2 limitation
-  ansible.builtin.copy:
-    src: 69-lvm.rules
-    dest: /etc/udev/rules.d/69-lvm.rules
-    mode: "0644"
-  when: ansible_distribution == 'Debian' and ansible_distribution_version | int >= 12
-
 - name: Add rbd type to lvm.conf
   ansible.builtin.lineinfile:
     path: /etc/lvm/lvm.conf

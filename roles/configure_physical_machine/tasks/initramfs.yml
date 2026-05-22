@@ -28,15 +28,9 @@
   ansible.builtin.set_fact:
     configure_physical_machine_lvm_rebooter_log_path: "{{ configure_physical_machine_varlog_path.stdout }}"
 
-- name: Copy rebooter.conf # noqa: risky-file-permissions
-  ansible.builtin.template:
-    src: initramfs-tools/conf.d/rebooter.conf.j2
-    dest: /etc/initramfs-tools/conf.d/rebooter.conf
-
-- name: Configure initramfs-tools to use busybox
-  ansible.builtin.lineinfile:
-    dest: /etc/initramfs-tools/initramfs.conf
-    regexp: "^#?BUSYBOX="
-    line: "BUSYBOX=y"
-    state: present
-  notify: Rebuild initramfs if necessary
+- name: Apply initramfs-tools configurations
+  when: configure_physical_machine_initramfs == "initramfs-tools"
+  ansible.builtin.include_tasks: initramfs/initramfs-tools.yml
+- name: Apply dracut configurations
+  when: configure_physical_machine_initramfs == "dracut"
+  ansible.builtin.include_tasks: initramfs/dracut.yml

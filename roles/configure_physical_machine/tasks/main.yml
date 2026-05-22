@@ -30,9 +30,26 @@
   ansible.builtin.import_tasks: openvswitch.yml
 - name: Apply network configurations
   ansible.builtin.import_tasks: network.yml
-- name: Configure SEAPATH pacemaker ressource agents
-  when: "'cluster_machines' in group_names"
-  ansible.builtin.include_tasks: ressource-agents.yml
 - name: Configure pacemaker
   when: services['pacemaker.service'] is defined
   ansible.builtin.include_tasks: pacemaker.yml
+
+- name: SEAPATH Debian specific physical machine configuration
+  when: seapath_distro == "Debian"
+  block:
+    - name: Apply Debian lvm configurations
+      ansible.builtin.include_tasks: debian/lvm.yml
+    - name: Configure Debian SEAPATH pacemaker ressource agents
+      when: "'cluster_machines' in group_names"
+      ansible.builtin.include_tasks: debian/ressource-agents.yml
+
+- name: SEAPATH CentOS specific physical machine configuration
+  when: seapath_distro == "CentOS"
+  block:
+    - name: Apply CentOS libvirt configurations
+      ansible.builtin.include_tasks: centos/libvirt.yml
+    - name: Apply CentOS firewalld configurations
+      ansible.builtin.include_tasks: centos/firewalld.yml
+    - name: Configure CentOS SEAPATH pacemaker ressource agents
+      when: "'cluster_machines' in group_names"
+      ansible.builtin.include_tasks: centos/ressource-agents.yml

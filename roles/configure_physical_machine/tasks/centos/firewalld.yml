@@ -1,0 +1,29 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2024 Red Hat, Inc.
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Configure firewalld for ceph
+  block:
+    - name: "Configure firewalld for ceph monitor"
+      ansible.posix.firewalld:
+        port: 3300/tcp
+        permanent: true
+        state: enabled
+    - name: "Configure firewalld for ceph monitor legacy v1 port"
+      ansible.posix.firewalld:
+        port: 6789/tcp
+        permanent: true
+        state: enabled
+    - name: "Configure firewalld for ceph OSD"
+      ansible.posix.firewalld:
+        port: 6800-7300/tcp
+        permanent: true
+        state: enabled
+
+- name: Configure firewalld for high-availability services
+  ansible.posix.firewalld:
+    service: high-availability
+    permanent: true
+    state: enabled
