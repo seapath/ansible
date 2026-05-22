@@ -43,4 +43,5 @@
   roles:
     - detect_seapath_distro
     - cephadm
-    - deploy_cephfs
+    - role: deploy_cephfs
+      when: deploy_cephfs is defined and deploy_cephfs | bool
