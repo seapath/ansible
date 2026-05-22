@@ -1,0 +1,12 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Deploy vm_manager
+  ansible.builtin.include_role:
+    name: deploy_vm_manager
+
+- name: Deploy python3-setup-ovs
+  ansible.builtin.include_role:
+    name: deploy_python3_setup_ovs

@@ -1,0 +1,22 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Create ovs-vswitchd.service.d directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/ovs-vswitchd.service.d/
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  notify: Restart ovs-vswitchd
+- name: Create ovs-vswitchd.service drop-in
+  ansible.builtin.template:
+    src: ovs-vswitchd_override.conf.j2
+    dest: /etc/systemd/system/ovs-vswitchd.service.d/override.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when: team0_0 is defined and team0_1 is defined
+  notify: Restart ovs-vswitchd

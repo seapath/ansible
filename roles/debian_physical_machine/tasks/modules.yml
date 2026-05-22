@@ -1,0 +1,25 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Add extra modules to the kernel
+  ansible.builtin.lineinfile:
+    dest: /etc/modules
+    state: present
+    regexp: "^{{ item }}$"
+    line: "{{ item }}"
+  with_items: "{{ extra_kernel_modules | default([]) }}"
+
+- name: Add br_netfilter to /etc/modules
+  ansible.builtin.lineinfile:
+    dest: /etc/modules
+    state: present
+    regexp: "^br_netfilter$"
+    line: "br_netfilter"
+- name: Add raid6_pq to /etc/modules
+  ansible.builtin.lineinfile:
+    dest: /etc/modules
+    state: present
+    regexp: "^raid6_pq$"
+    line: "raid6_pq"
