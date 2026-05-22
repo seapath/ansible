@@ -1,0 +1,15 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Make libvirt use the "machine-id" way to determine host UUID
+  ansible.builtin.lineinfile:
+    dest: /etc/libvirt/libvirtd.conf
+    regexp: "^#?host_uuid_source ="
+    line: "host_uuid_source = \"machine-id\""
+    state: present
+- name: Restart libvirtd
+  ansible.builtin.systemd:
+    name: libvirtd.service
+    state: restarted

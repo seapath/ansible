@@ -1,0 +1,21 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Copy sysctl rules
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: /etc/sysctl.d/{{ item }}
+    mode: "0644"
+  with_items:
+    - 00-bridge_nf_call.conf
+  notify: Restart systemd-sysctl
+
+- name: Add sysctl conf from inventory (extra_sysctl_physical_machines)
+  ansible.builtin.copy:
+    dest: /etc/sysctl.d/00-seapathextra_physicalmachines.conf
+    mode: "0644"
+    content: "{{ extra_sysctl_physical_machines }}"
+  when: extra_sysctl_physical_machines is defined
+  notify: Restart systemd-sysctl

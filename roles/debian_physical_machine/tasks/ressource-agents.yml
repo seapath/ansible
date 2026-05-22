@@ -1,0 +1,56 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Create /usr/lib/ocf/resource.d/seapath on hosts
+  ansible.builtin.file:
+    path: /usr/lib/ocf/resource.d/seapath
+    state: directory
+    mode: "0755"
+
+- name: Copy Pacemaker Seapath Resource-Agent files
+  ansible.posix.synchronize:
+    src: pacemaker_ra/
+    dest: /usr/lib/ocf/resource.d/seapath/
+    rsync_opts:
+      - "--chmod=F755"
+      - "--chown=root:root"
+
+- name: Copy VirtualDomain from heartbeat to seapath
+  ansible.builtin.copy:
+    remote_src: true
+    src: /usr/lib/ocf/resource.d/heartbeat/VirtualDomain
+    dest: /usr/lib/ocf/resource.d/seapath/VirtualDomain
+    owner: root
+    group: root
+    mode: "0755"
+    force: true
+
+- name: Apply patch to VirtualDomain
+  ansible.posix.patch:
+    src: VirtualDomain_patch
+    dest: /usr/lib/ocf/resource.d/seapath/VirtualDomain
+    strip: 0
+
+- name: Copy ethmonitor from heartbeat to seapath
+  ansible.builtin.copy:
+    remote_src: true
+    src: /usr/lib/ocf/resource.d/heartbeat/ethmonitor
+    dest: /usr/lib/ocf/resource.d/seapath/ethmonitor
+    owner: root
+    group: root
+    mode: "0755"
+    force: true
+
+- name: Apply patch1 to ethmonitor
+  ansible.posix.patch:
+    src: ethmonitor_patch1
+    dest: /usr/lib/ocf/resource.d/seapath/ethmonitor
+    strip: 0
+
+- name: Apply patch2 to ethmonitor
+  ansible.posix.patch:
+    src: ethmonitor_patch2
+    dest: /usr/lib/ocf/resource.d/seapath/ethmonitor
+    strip: 0

@@ -1,0 +1,14 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Copy team0_x@.service file
+  ansible.builtin.copy:
+    src: team0_x@.service
+    dest: /etc/systemd/system/team0_x@.service
+    owner: root
+    group: root
+    mode: "0644"
+  when: team0_0 is defined and team0_1 is defined
+  notify: Restart ovs-vswitchd
