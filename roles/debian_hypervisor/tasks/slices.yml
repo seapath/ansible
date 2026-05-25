@@ -1,0 +1,69 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Configure CPU allocation for systemd slices
+  when:
+    - cpusystem is defined
+    - cpuuser is defined
+    - cpumachines is defined
+  block:
+    - name: Create systemd slices override (folder)
+      ansible.builtin.file:
+        path: /etc/systemd/system.control/{{ item }}.slice.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      with_items:
+        - "system"
+        - "user"
+        - "machine"
+    - name: Create systemd slices override (files)
+      ansible.builtin.template:
+        src: systemd_slice_override.j2
+        dest: /etc/systemd/system.control/{{ item.name }}.slice.d/50-AllowedCPUs.conf
+        owner: root
+        group: root
+        mode: "0644"
+      with_items:
+        - { name: "system", description: "system slice", allowedcpus: "{{ cpusystem }}" }
+        - { name: "user", description: "user slice", allowedcpus: "{{ cpuuser }}" }
+        - { name: "machine", description: "machine slice", allowedcpus: "{{ cpumachines }}" }
+- name: Create systemd slices override REVERT
+  ansible.builtin.file:
+    path: /etc/systemd/system.control/{{ item }}.slice.d
+    state: absent
+  with_items:
+    - "system"
+    - "user"
+    - "machine"
+  when: cpusystem is not defined or cpuuser is not defined or cpumachines is not defined
+
+- name: Create systemd slices
+  ansible.builtin.template:
+    src: systemd_slice.j2
+    dest: /etc/systemd/system/{{ item.name }}.slice
+    owner: root
+    group: root
+    mode: "0644"
+  with_items:
+    - { name: "machine-rt", description: "VM rt slice", wants: "machine.slice", allowedcpus: "{{ cpumachinesrt }}" }
+    - { name: "machine-nort", description: "VM nonrt slice", wants: "machine.slice", allowedcpus: "{{ cpumachinesnort }}" }
+    - { name: "ovs", description: "ovs slice", wants: "", allowedcpus: "{{ cpuovs }}" }
+  notify: Start new slices
+  when:
+    - cpumachinesrt is defined
+    - cpumachinesnort is defined
+    - cpuovs is defined
+- name: Create systemd slices REVERT
+  ansible.builtin.file:
+    path: /etc/systemd/system/{{ item }}.slice
+    state: absent
+  with_items:
+    - "machine-rt"
+    - "machine-nort"
+    - "ovs"
+  notify: Start new slices REVERT
+  when: cpumachinesrt is not defined and cpumachinesnort is not defined and cpuovs is not defined

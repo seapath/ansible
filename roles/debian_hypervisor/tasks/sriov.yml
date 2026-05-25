@@ -1,0 +1,37 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Configure sriov driver
+  when: sriov_driver is defined
+  block:
+    - name: Add sriov driver to /etc/modules
+      ansible.builtin.lineinfile:
+        path: /etc/modules
+        state: present
+        regexp: "^{{ sriov_driver }}$"
+        line: "{{ sriov_driver }}"
+    - name: Add sriov apparmor permission for libvirt
+      ansible.builtin.lineinfile:
+        path: /etc/apparmor.d/local/abstractions/libvirt-qemu
+        state: present
+        line: "/dev/vfio/* rw,"
+        create: true
+        mode: "0644"
+    - name: Load the sriov module
+      community.general.modprobe:
+        name: "{{ sriov_driver }}"
+        state: present
+
+- name: Add sriov sysfs rules
+  when: sriov is defined
+  ansible.builtin.lineinfile:
+    path: "/etc/sysfs.d/sriov.conf"
+    state: present
+    regexp: "^class/net/{{ item.key }}/device/sriov_numvfs = "
+    line: "class/net/{{ item.key }}/device/sriov_numvfs = {{ item.value }}"
+    create: true
+    mode: "0644"
+  with_items: "{{ sriov | dict2items }}"
+  notify: Restart sysfsutils

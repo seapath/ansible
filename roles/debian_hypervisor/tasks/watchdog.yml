@@ -1,0 +1,17 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Systemd conf RuntimeWatchdogSec
+  ansible.builtin.lineinfile:
+    path: /etc/systemd/system.conf
+    regexp: "^RuntimeWatchdogSec=.*$"
+    line: "RuntimeWatchdogSec=20"
+    state: present
+- name: Systemd conf RebootWatchdogSec
+  ansible.builtin.lineinfile:
+    path: /etc/systemd/system.conf
+    regexp: "^RebootWatchdogSec=.*$"
+    line: "RebootWatchdogSec=5min"
+    state: present
