@@ -23,11 +23,13 @@
 - name: Apply libvirt configurations
   ansible.builtin.import_tasks: libvirt.yml
 - name: Apply initramfs configurations
-  ansible.builtin.import_tasks: initramfs.yml
+  when: configure_physical_machine_initramfs is defined
+  ansible.builtin.include_tasks: initramfs.yml
 - name: Apply LVM configurations
   ansible.builtin.import_tasks: lvm.yml
 - name: Apply OpenVSwitch configurations
-  ansible.builtin.import_tasks: openvswitch.yml
+  when: services['ovs-vswitchd.service'] is defined
+  ansible.builtin.include_tasks: openvswitch.yml
 - name: Apply network configurations
   ansible.builtin.import_tasks: network.yml
 - name: Configure pacemaker

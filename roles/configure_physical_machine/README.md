@@ -17,7 +17,7 @@ No requirement.
 | pacemaker_shutdown_timeout     | String      | Custom timeout for stopping the systemd Pacemaker service. Time is a seconds, but support the min suffix to use minutes.Default 2min |
 | chrony_wait_timeout_sec        | String      | Custom timeout for stopping the systemd Chrony service. Time is a seconds, but support the min suffix to use minutes.Default 180     |
 | configure_physical_machine_distro_extra_modules | String list | List of distro specific kernel modules to load during boot |
-| configure_physical_machine_initramfs | String | The initramfs tool used by the distribution. Can be `initramfs-tools` or `dracut`. |
+| configure_physical_machine_initramfs | String | The initramfs tool used by the distribution. Can be `initramfs-tools` or `dracut`. Do not set if the initramfs shouldn't be configured. |
 
 ## Example Playbook
 

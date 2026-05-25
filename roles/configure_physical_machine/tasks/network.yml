@@ -10,5 +10,7 @@
     owner: root
     group: root
     mode: "0644"
-  when: team0_0 is defined and team0_1 is defined
+  when:
+    - team0_0 is defined and team0_1 is defined
+    - services['ovs-vswitchd.service'] is defined
   notify: Restart ovs-vswitchd
