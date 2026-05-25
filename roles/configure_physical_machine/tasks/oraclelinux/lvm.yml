@@ -1,0 +1,11 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Disable lvm use_devicesfile
+  ansible.builtin.lineinfile:
+    path: /etc/lvm/lvm.conf
+    regexp: "^\\s*#?\\s*use_devicesfile\\s*=\\s*"
+    line: "        use_devicesfile = 0"
+    state: present

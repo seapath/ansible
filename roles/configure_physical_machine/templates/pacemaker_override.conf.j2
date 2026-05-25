@@ -1,6 +1,10 @@
 [Unit]
 Wants=libvirtd.service
 After=libvirtd.service
+{% if seapath_distro == "OracleLinux" %}
+Wants=virtqemud.service
+After=virtqemud.service
+{% endif %}
 
 [Install]
 WantedBy=corosync.service

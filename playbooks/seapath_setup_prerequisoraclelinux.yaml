@@ -21,7 +21,10 @@
     - standalone_machine
   become: true
   roles:
-    - oraclelinux_physical_machine
+    - role: configure_physical_machine
+      vars:
+        configure_physical_machine_distro_extra_modules:
+          - br_netfilter
 - name: Prerequis physical machine oraclelinux
   hosts:
     - cluster_machines
