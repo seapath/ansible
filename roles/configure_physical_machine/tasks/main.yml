@@ -55,3 +55,18 @@
     - name: Configure CentOS SEAPATH pacemaker ressource agents
       when: "'cluster_machines' in group_names"
       ansible.builtin.include_tasks: centos/ressource-agents.yml
+
+- name: SEAPATH OracleLinux specific physical machine configuration
+  when: seapath_distro == "OracleLinux"
+  block:
+    - name: Apply OracleLinux lvm configurations
+      ansible.builtin.include_tasks: oraclelinux/lvm.yml
+    - name: Apply OracleLinux QEMU configurations
+      ansible.builtin.include_tasks: oraclelinux/qemu.yml
+    - name: Apply OracleLinux socket configurations
+      ansible.builtin.include_tasks: oraclelinux/sockets.yml
+    - name: Apply OracleLinux user configurations
+      ansible.builtin.include_tasks: oraclelinux/users.yml
+    - name: Configure OracleLinux SEAPATH pacemaker ressource agents
+      when: "'cluster_machines' in group_names"
+      ansible.builtin.include_tasks: oraclelinux/ressource-agents.yml

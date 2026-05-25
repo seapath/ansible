@@ -1,0 +1,17 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Ensure group www-data exists with GID 1033
+  ansible.builtin.group:
+    name: www-data
+    gid: 1033
+    state: present
+
+- name: Ensure user www-data exists with UID 1033 and GID 1033
+  ansible.builtin.user:
+    name: www-data
+    uid: 1033
+    group: www-data
+    shell: /bin/bash
