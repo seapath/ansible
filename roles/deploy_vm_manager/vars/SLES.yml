@@ -1,0 +1,5 @@
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+deploy_vm_manager_pip_options: "--root-user-action=ignore --no-build-isolation --prefix=/usr/local/"
