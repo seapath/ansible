@@ -10,7 +10,6 @@
     owner: root
     group: root
     mode: "0644"
-  register: configure_physical_machine_chronywait
   notify: Trigger daemon-reload
 - name: Enable chrony-wait.service
   ansible.builtin.systemd:
