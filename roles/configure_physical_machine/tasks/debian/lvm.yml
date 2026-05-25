@@ -5,7 +5,7 @@
 ---
 - name: Add udev rules for lvm2 limitation
   ansible.builtin.copy:
-    src: 69-lvm.rules
+    src: debian/69-lvm.rules
     dest: /etc/udev/rules.d/69-lvm.rules
     mode: "0644"
   when: ansible_distribution_version | int >= 12

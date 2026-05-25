@@ -29,7 +29,7 @@
 
 - name: Apply patch to VirtualDomain
   ansible.posix.patch:
-    src: VirtualDomain_patch
+    src: debian/VirtualDomain_patch
     dest: /usr/lib/ocf/resource.d/seapath/VirtualDomain
     strip: 0
 
@@ -45,12 +45,12 @@
 
 - name: Apply patch1 to ethmonitor
   ansible.posix.patch:
-    src: ethmonitor_patch1
+    src: debian/ethmonitor_patch1
     dest: /usr/lib/ocf/resource.d/seapath/ethmonitor
     strip: 0
 
 - name: Apply patch2 to ethmonitor
   ansible.posix.patch:
-    src: ethmonitor_patch2
+    src: debian/ethmonitor_patch2
     dest: /usr/lib/ocf/resource.d/seapath/ethmonitor
     strip: 0
