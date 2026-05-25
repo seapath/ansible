@@ -1,0 +1,11 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Add vhost_vsock to /etc/modules
+  ansible.builtin.lineinfile:
+    path: /etc/modules
+    state: present
+    regexp: "^vhost_vsock$"
+    line: "vhost_vsock"
