@@ -1,0 +1,13 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Add sriov apparmor permission for libvirt
+  when: sriov_driver is defined
+  ansible.builtin.lineinfile:
+    path: /etc/apparmor.d/local/abstractions/libvirt-qemu
+    state: present
+    line: "/dev/vfio/* rw,"
+    create: true
+    mode: "0644"

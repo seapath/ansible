@@ -1,0 +1,25 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2024 Red Hat, Inc.
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Make sure tuned package is installed
+  ansible.builtin.dnf:
+    name:
+      - tuned
+      - tuned-profiles-nfv
+      - tuned-profiles-realtime
+    state: present
+
+- name: Remove old isolation files
+  ansible.builtin.file:
+    state: absent
+    path: "{{ item }}"
+  with_items:
+    - /etc/sysfs.d/00-workqueue_cpumask.conf
+    - /etc/systemd/system/kthread-taskset.service
+    - /usr/local/bin/taskset_boot.sh
+    - /etc/systemd/system/multi-user.target.wants/kthread-taskset.service
+    - /etc/sysctl.d/00-schedrt.conf
+    - /etc/default/grub.d/10-isolcpus.cfg

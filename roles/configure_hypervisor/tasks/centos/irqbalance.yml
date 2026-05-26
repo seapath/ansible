@@ -1,0 +1,24 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2024 Red Hat, Inc.
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Setup irqbalance conf
+  ansible.builtin.lineinfile:
+    path: /etc/sysconfig/irqbalance
+    regexp: '^#?IRQBALANCE_BANNED_CPULIST=".*"$'
+    line: 'IRQBALANCE_BANNED_CPULIST="{{ isolcpus }}"'
+    state: present
+  notify: Restart irqbalance
+  when: isolcpus is defined
+
+- name: Setup irqbalance conf revert
+  ansible.builtin.lineinfile:
+    path: /etc/sysconfig/irqbalance
+    regexp: "^#?IRQBALANCE_BANNED_CPULIST=(.*)$"
+    line: "#IRQBALANCE_BANNED_CPULIST=\\1"
+    state: present
+    backrefs: true
+  notify: Restart irqbalance
+  when: isolcpus is not defined

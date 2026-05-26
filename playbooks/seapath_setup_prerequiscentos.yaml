@@ -33,7 +33,9 @@
     - standalone_machine
   become: true
   roles:
-    - centos_hypervisor
+    - role: configure_hypervisor
+      vars:
+        configure_hypervisor_tuned_profiles_dir: /etc/tuned
 
 - name: Add admin user to haclient group
   hosts:

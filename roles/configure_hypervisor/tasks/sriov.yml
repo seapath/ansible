@@ -14,13 +14,6 @@
         owner: root
         group: root
         mode: "0644"
-    - name: Add sriov apparmor permission for libvirt
-      ansible.builtin.lineinfile:
-        path: /etc/apparmor.d/local/abstractions/libvirt-qemu
-        state: present
-        line: "/dev/vfio/* rw,"
-        create: true
-        mode: "0644"
     - name: Load the sriov module
       community.general.modprobe:
         name: "{{ sriov_driver }}"
