@@ -1,0 +1,7 @@
+# Copyright (C) 2024 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+timemaster_path_timemaster_conf: "/etc/timemaster.conf"
+timemaster_path_chrony_conf: "/etc/chrony.conf"
+timemaster_service_name_chrony: "chronyd"
