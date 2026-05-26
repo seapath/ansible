@@ -22,6 +22,7 @@ All variables are optional.
 | cpumachinesnort           | String       | CPU cores reserved for no real-time virtual machines processes. Comma separated values, range can be defined using a dash: e.g. 4,6-7,10 |
 | cpuovs                    | String       | CPU cores reserved open vSwitch processes. Comma separated values, range can be defined using a dash: e.g. 4,6-7,10                      |
 | custom_tuned_profile_path | String       | Path in the Ansible machine for custom tuned profile to be used                                                                          |
+| configure_hypervisor_tuned_profiles_dir | String | Directory containing tuned profiles on the hypervisor. Defaults to /etc/tuned/profiles. |
 
 
 ## Example Playbook

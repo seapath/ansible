@@ -3,23 +3,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- name: Get tuned version
-  ansible.builtin.command: tuned --version
-  register: configure_hypervisor_tuned_version_output
-  changed_when: false
-  failed_when: configure_hypervisor_tuned_version_output.rc != 0
-
-- name: Extract tuned version number
-  ansible.builtin.set_fact:
-    configure_hypervisor_tuned_version: "{{ configure_hypervisor_tuned_version_output.stdout | regex_search('\\d+\\.\\d+', '\\0') | first }}"
-
-- name: Determine tuned profile path
-  ansible.builtin.set_fact:
-    configure_hypervisor_tuned_profile_path: "{{ '/etc/tuned/profiles/seapath-rt-host' if configure_hypervisor_tuned_version is version('2.22', '>=') else '/etc/tuned/seapath-rt-host' }}"
-
 - name: Create tuned seapath-rt profile folder
   ansible.builtin.file:
-    path: "{{ configure_hypervisor_tuned_profile_path }}"
+    path: "{{ configure_hypervisor_tuned_profiles_dir }}/seapath-rt-host"
     state: directory
     mode: "0755"
 
@@ -30,7 +16,7 @@
 - name: Copy seapath-rt-host tuned profile conf
   ansible.builtin.template:
     src: "{{ configure_hypervisor_tuned_path }}"
-    dest: "{{ configure_hypervisor_tuned_profile_path }}/tuned.conf"
+    dest: "{{ configure_hypervisor_tuned_profiles_dir }}/seapath-rt-host/tuned.conf"
     group: root
     owner: root
     mode: "0644"
