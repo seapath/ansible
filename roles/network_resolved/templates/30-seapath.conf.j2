@@ -1,0 +1,4 @@
+[Resolve]
+LLMNR=no
+DNS={{ dns_servers | join(' ') if dns_servers is not string else dns_servers }}
+MulticastDNS=no
