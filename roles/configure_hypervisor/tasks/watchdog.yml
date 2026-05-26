@@ -3,15 +3,18 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- name: Systemd conf RuntimeWatchdogSec
-  ansible.builtin.lineinfile:
-    path: /etc/systemd/system.conf
-    regexp: "^RuntimeWatchdogSec=.*$"
-    line: "RuntimeWatchdogSec=20"
-    state: present
-- name: Systemd conf RebootWatchdogSec
-  ansible.builtin.lineinfile:
-    path: /etc/systemd/system.conf
-    regexp: "^RebootWatchdogSec=.*$"
-    line: "RebootWatchdogSec=5min"
-    state: present
+- name: Create /etc/systemd/system.conf.d
+  ansible.builtin.file:
+    path: /etc/systemd/system.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Systemd conf Watchdog
+  ansible.builtin.copy:
+    src: 30-watchdog.conf
+    dest: /etc/systemd/system.conf.d/30-watchdog.conf
+    owner: root
+    group: root
+    mode: "0644"
