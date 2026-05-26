@@ -6,12 +6,14 @@
 - name: Configure sriov driver
   when: sriov_driver is defined
   block:
-    - name: Add sriov driver to /etc/modules
-      ansible.builtin.lineinfile:
-        path: /etc/modules
-        state: present
-        regexp: "^{{ sriov_driver }}$"
-        line: "{{ sriov_driver }}"
+    - name: Add sriov driver to /etc/modules-load.d
+      ansible.builtin.copy:
+        content: |
+          {{ sriov_driver }}
+        dest: /etc/modules-load.d/sriov_driver.conf
+        owner: root
+        group: root
+        mode: "0644"
     - name: Add sriov apparmor permission for libvirt
       ansible.builtin.lineinfile:
         path: /etc/apparmor.d/local/abstractions/libvirt-qemu
