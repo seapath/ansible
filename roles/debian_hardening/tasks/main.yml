@@ -82,6 +82,55 @@
   notify: Update sysfs values using sysctl
   when: revert
 
+- name: "Check if docker service exists on the target"
+  ansible.builtin.service_facts:
+- name: "Ensure br_netfilter loads before systemd-sysctl"
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/50-bridge-nf-call.conf
+    content: "br_netfilter\n"
+    owner: root
+    group: root
+    mode: '0644'
+  when:
+    - not revert
+    - ansible_facts['services']['docker.service']['status'] == 'enabled'
+- name: "Disable iptables for bridge" # noqa: risky-file-permissions
+  ansible.builtin.lineinfile:
+    dest: /etc/sysctl.d/50-bridge-nf-call-iptables.conf
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    create: true
+    state: present
+  loop:
+    - { regexp: '^net.bridge.bridge-nf-call-iptables=0$', line: 'net.bridge.bridge-nf-call-iptables=0' }
+    - { regexp: '^net.bridge.bridge-nf-call-ip6tables=0$', line: 'net.bridge.bridge-nf-call-ip6tables=0' }
+    - { regexp: '^net.bridge.bridge-nf-call-arptables=0$', line: 'net.bridge.bridge-nf-call-arptables=0' }
+  notify: Update sysfs values using sysctl
+  when:
+    - not revert
+    - ansible_facts['services']['docker.service']['status'] == 'enabled'
+- name: "Revert disabling iptables for bridge"
+  ansible.builtin.file:
+    dest: /etc/sysctl.d/50-bridge-nf-call-iptables.conf
+    state: absent
+  when:
+    - revert
+    - ansible_facts['services']['docker.service']['status'] == 'enabled'
+- name: "Restore kernel defaults at revert time"
+  ansible.posix.sysctl:
+    name: "{{ item }}"
+    value: '1'
+    state: present
+    sysctl_set: true
+    reload: false
+  loop:
+    - net.bridge.bridge-nf-call-iptables
+    - net.bridge.bridge-nf-call-ip6tables
+    - net.bridge.bridge-nf-call-arptables
+  when:
+    - revert
+    - ansible_facts['services']['docker.service']['status'] == 'enabled'
+
 - name: "Install hardened sysfs rules" # noqa: risky-file-permissions
   ansible.builtin.copy:
     src: sysctl/90-sysctl-hardening.conf
