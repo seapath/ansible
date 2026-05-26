@@ -5,32 +5,32 @@
 ---
 - name: Get tuned version
   ansible.builtin.command: tuned --version
-  register: debian_hypervisor_tuned_version_output
+  register: configure_hypervisor_tuned_version_output
   changed_when: false
-  failed_when: debian_hypervisor_tuned_version_output.rc != 0
+  failed_when: configure_hypervisor_tuned_version_output.rc != 0
 
 - name: Extract tuned version number
   ansible.builtin.set_fact:
-    debian_hypervisor_tuned_version: "{{ debian_hypervisor_tuned_version_output.stdout | regex_search('\\d+\\.\\d+', '\\0') | first }}"
+    configure_hypervisor_tuned_version: "{{ configure_hypervisor_tuned_version_output.stdout | regex_search('\\d+\\.\\d+', '\\0') | first }}"
 
 - name: Determine tuned profile path
   ansible.builtin.set_fact:
-    debian_hypervisor_tuned_profile_path: "{{ '/etc/tuned/profiles/seapath-rt-host' if debian_hypervisor_tuned_version is version('2.22', '>=') else '/etc/tuned/seapath-rt-host' }}"
+    configure_hypervisor_tuned_profile_path: "{{ '/etc/tuned/profiles/seapath-rt-host' if configure_hypervisor_tuned_version is version('2.22', '>=') else '/etc/tuned/seapath-rt-host' }}"
 
 - name: Create tuned seapath-rt profile folder
   ansible.builtin.file:
-    path: "{{ debian_hypervisor_tuned_profile_path }}"
+    path: "{{ configure_hypervisor_tuned_profile_path }}"
     state: directory
     mode: "0755"
 
 - name: Tuned path
   ansible.builtin.set_fact:
-    debian_hypervisor_tuned_path: "{{ custom_tuned_profile_path if custom_tuned_profile_path is defined else 'tuned.conf.j2' }}"
+    configure_hypervisor_tuned_path: "{{ custom_tuned_profile_path if custom_tuned_profile_path is defined else 'tuned.conf.j2' }}"
 
 - name: Copy seapath-rt-host tuned profile conf
   ansible.builtin.template:
-    src: "{{ debian_hypervisor_tuned_path }}"
-    dest: "{{ debian_hypervisor_tuned_profile_path }}/tuned.conf"
+    src: "{{ configure_hypervisor_tuned_path }}"
+    dest: "{{ configure_hypervisor_tuned_profile_path }}/tuned.conf"
     group: root
     owner: root
     mode: "0644"
