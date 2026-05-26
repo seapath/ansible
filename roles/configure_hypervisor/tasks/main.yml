@@ -3,6 +3,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+- name: Apply CentOS hypervisor distro configuration pre-tasks
+  when: seapath_distro == "CentOS"
+  ansible.builtin.include_tasks: centos/distro.yml
+
 - name: Apply modules configurations
   ansible.builtin.import_tasks: modules.yml
 - name: Apply sriov configurations
@@ -13,5 +17,19 @@
   ansible.builtin.import_tasks: slices.yml
 - name: Apply tuned configurations
   ansible.builtin.import_tasks: tuned.yml
-- name: Apply libvirt configurations
-  ansible.builtin.import_tasks: libvirt.yml
+
+- name: SEAPATH Debian specific hypervisor configuration
+  when: seapath_distro == "Debian"
+  block:
+    - name: Apply Debian sriov configurations
+      ansible.builtin.include_tasks: debian/sriov.yml
+    - name: Apply Debian libvirt configurations
+      ansible.builtin.import_tasks: debian/libvirt.yml
+
+- name: SEAPATH CentOS specific hypervisor configuration
+  when: seapath_distro == "CentOS"
+  block:
+    - name: Apply CentOS irqbalance configurations
+      ansible.builtin.include_tasks: centos/irqbalance.yml
+    - name: Apply CentOS libvirt configurations
+      ansible.builtin.include_tasks: centos/libvirt.yml

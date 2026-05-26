@@ -1,0 +1,17 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2024 Red Hat, Inc.
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Enable libvirtd.service
+  ansible.builtin.systemd:
+    name: libvirtd.service
+    enabled: true
+    state: started
+
+- name: Create system alternative for a debian kvm path
+  community.general.alternatives:
+    name: "debian kvm"
+    path: "/usr/libexec/qemu-kvm"
+    link: "/usr/bin/qemu-system-x86_64"
