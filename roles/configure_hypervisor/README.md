@@ -1,6 +1,6 @@
-# Debian Hypervisor Role
+# Configure Hypervisor Role
 
-This role apply the hypervisor specific configurations (virtualisation, realtime...) for Debian machines.
+This role applies hypervisor specific configurations (virtualisation, realtime...).
 
 ## Requirements
 
@@ -29,5 +29,5 @@ All variables are optional.
 ```yaml
 - hosts: cluster_machines
   roles:
-    - { role: seapath_ansible.debian_hypervisor }
+    - { role: seapath_ansible.configure_hypervisor }
 ```
