@@ -47,7 +47,9 @@
     - standalone_machine
   become: true
   roles:
-    - configure_hypervisor
+    - role: configure_hypervisor
+      vars:
+        configure_hypervisor_tuned_profiles_dir: "{{ '/etc/tuned/profiles' if ansible_distribution_version | int >= 13 else '/etc/tuned' }}"
 
 - name: Add admin user to haclient group
   hosts:
