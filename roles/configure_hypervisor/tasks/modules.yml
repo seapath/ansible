@@ -3,9 +3,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- name: Add vhost_vsock to /etc/modules
-  ansible.builtin.lineinfile:
-    path: /etc/modules
-    state: present
-    regexp: "^vhost_vsock$"
-    line: "vhost_vsock"
+- name: Add vhost_vsock to /etc/modules-load.d
+  ansible.builtin.copy:
+    content: |
+      vhost_vsock
+    dest: /etc/modules-load.d/vhost_vsock.conf
+    owner: root
+    group: root
+    mode: "0644"
