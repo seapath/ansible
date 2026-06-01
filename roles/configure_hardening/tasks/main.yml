@@ -18,7 +18,7 @@
     line: "\\1 {{ item }}\\2"
     state: present
     backrefs: true
-  with_items: "{{ debian_hardening_kernel_params }}"
+  with_items: "{{ configure_hardening_kernel_params }}"
   when: not revert
 
 - name: "Revert kernel parameters added in grub"
@@ -28,7 +28,7 @@
     line: "\\1\\3"
     state: present
     backrefs: true
-  with_items: "{{ debian_hardening_kernel_params }}"
+  with_items: "{{ configure_hardening_kernel_params }}"
   when: revert
 
 - name: "Disable coredumps" # noqa: risky-file-permissions
@@ -114,13 +114,13 @@
     src: random-root-passwd.service
     dest: /etc/systemd/system/random-root-passwd.service
   when: not revert
-  register: debian_hardening_random_root
+  register: configure_hardening_random_root
 - name: "Enable random-root-passwd.service"
   ansible.builtin.systemd:
     name: random-root-passwd.service
     enabled: true
     state: started
-  when: not revert and debian_hardening_random_root.changed
+  when: not revert and configure_hardening_random_root.changed
 - name: "Disable random-root-passwd.service"
   ansible.builtin.file:
     path: /etc/systemd/system/sysinit.target.wants/random-root-passwd.service
@@ -191,7 +191,7 @@
   ansible.builtin.find:
     paths: /etc/sudoers.d/
     exclude: README
-  register: debian_hardening_sudoers_files
+  register: configure_hardening_sudoers_files
   when: not revert
 - name: Fix sudoers.d permission
   ansible.builtin.file:
@@ -199,7 +199,7 @@
     owner: root
     group: root
     mode: "0440"
-  with_items: "{{ debian_hardening_sudoers_files.files }}"
+  with_items: "{{ configure_hardening_sudoers_files.files }}"
   when: not revert
 
 - name: Adding sudo users to group privileged
@@ -217,7 +217,7 @@
 
 - name: Check if cockpit is installed
   ansible.builtin.command: which cockpit-bridge
-  register: debian_hardening_cockpit_status
+  register: configure_hardening_cockpit_status
   ignore_errors: true
   changed_when: false
 
@@ -225,13 +225,13 @@
   ansible.builtin.copy:
     src: sudoers/cockpit
     dest: /etc/sudoers.d/cockpit
-  when: not revert and debian_hardening_cockpit_status.rc == 0
+  when: not revert and configure_hardening_cockpit_status.rc == 0
 
 - name: Remove cockpit sudo configuration
   ansible.builtin.file:
     path: /etc/sudoers.d/cockpit
     state: absent
-  when: revert and debian_hardening_cockpit_status.rc == 0
+  when: revert and configure_hardening_cockpit_status.rc == 0
 
 - name: Configure sudo to be run only users member of the privileged group
   ansible.builtin.file:
@@ -322,20 +322,20 @@
     owner: root
     group: root
     mode: "0755"
-  with_items: "{{ debian_hardening_hardened_services }}"
+  with_items: "{{ configure_hardening_hardened_services }}"
 
 - name: Add systemd service hardening rules # noqa: risky-file-permissions
   ansible.builtin.copy:
     src: "{{ item }}_hardening.conf"
     dest: "/etc/systemd/system/{{ item }}.service.d/hardening.conf"
-  with_items: "{{ debian_hardening_hardened_services }}"
+  with_items: "{{ configure_hardening_hardened_services }}"
   when: not revert
 
 - name: Remove systemd service hardening rules
   ansible.builtin.file:
     path: "/etc/systemd/system/{{ item }}.service.d/hardening.conf"
     state: absent
-  with_items: "{{ debian_hardening_hardened_services }}"
+  with_items: "{{ configure_hardening_hardened_services }}"
   when: revert
 
 - name: Set grub password
