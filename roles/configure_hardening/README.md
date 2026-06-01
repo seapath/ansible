@@ -1,6 +1,8 @@
-# Debian Hardening Role
+# Hardening Role
 
-This role apply the hardening SEAPATH configurations.
+This role apply hardening SEAPATH configurations.
+
+Note that this role isn't necessary for SEAPATH Yocto as hardening is done at build time.
 
 ## Requirements
 
@@ -20,5 +22,5 @@ No requirement.
 ```yaml
 - hosts: cluster_machines
   roles:
-    - { role: seapath_ansible.debian_hardening }
+    - { role: seapath_ansible.configure_hardening }
 ```

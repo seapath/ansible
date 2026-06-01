@@ -10,7 +10,7 @@
   vars:
     revert: true
   roles:
-    - debian_hardening
+    - configure_hardening
 - name: Remove hardened for SEAPATH physical machines
   become: true
   hosts:
