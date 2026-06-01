@@ -1,0 +1,5 @@
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+configure_ha_crm_command_path: "/sbin/crm"
