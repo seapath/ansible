@@ -6,11 +6,12 @@
   ansible.builtin.include_vars: "{{ seapath_distro }}.yml"
 - name: Populate service facts
   ansible.builtin.service_facts:
-- name: Stop and disable systemd-timesyncd if it exists
+- name: Stop, disable and mask systemd-timesyncd if it exists
   ansible.builtin.service:
     name: "systemd-timesyncd"
     state: stopped
     enabled: false
+    masked: true
   when: "'systemd-timesyncd.service' in services and (services['systemd-timesyncd.service'].status != 'not-found')"
 - name: Stop, disable and mask chronyd if it exists
   ansible.builtin.systemd:
