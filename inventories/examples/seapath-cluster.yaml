@@ -93,8 +93,6 @@ cluster_machines:
     deploy_cephfs: false # Change to true to deploy cephfs on your cluster
 
 # Ceph monitor. All machines in the cluster must be part of mons groups
-# Note : By default SEAPATH uses ceph-ansible to configure Ceph.
-# You can also switch to cephadm deployment by setting force_cephadm to true (Only available on Debian for now)
 mons:
   hosts:
     node1:
