@@ -1,0 +1,9 @@
+# Copyright (C) 2022-2024, RTE (http://www.rte-france.com)
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Copy audit.rules # noqa: risky-file-permissions
+  ansible.builtin.copy:
+    src: auditd/audit.rules
+    dest: /etc/audit/rules.d/audit.rules

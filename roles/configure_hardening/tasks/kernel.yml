@@ -1,0 +1,25 @@
+# Copyright (C) 2022-2024, RTE (http://www.rte-france.com)
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: "Add kernel parameters in grub"
+  ansible.builtin.lineinfile:
+    dest: /etc/default/grub
+    regexp: "^(GRUB_CMDLINE_LINUX=(?!.* {{ item }})\"[^\"]*)(\".*)"
+    line: "\\1 {{ item }}\\2"
+    state: present
+    backrefs: true
+  with_items: "{{ configure_hardening_kernel_params }}"
+  notify: Update grub
+  when: not revert
+- name: "Revert kernel parameters added in grub"
+  ansible.builtin.lineinfile:
+    dest: /etc/default/grub
+    regexp: "^(GRUB_CMDLINE_LINUX=\".*)( {{ item }})(.*\")$"
+    line: "\\1\\3"
+    state: present
+    backrefs: true
+  with_items: "{{ configure_hardening_kernel_params }}"
+  notify: Update grub
+  when: revert

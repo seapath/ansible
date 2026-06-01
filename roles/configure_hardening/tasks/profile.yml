@@ -1,0 +1,26 @@
+# Copyright (C) 2022-2024, RTE (http://www.rte-france.com)
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: "Enable private TMPDIR" # noqa: risky-file-permissions
+  ansible.builtin.copy:
+    src: mktmpdir.sh
+    dest: /etc/profile.d/mktmpdir.sh
+  when: not revert
+- name: "Disable private TMPDIR"
+  ansible.builtin.file:
+    path: /etc/profile.d/mktmpdir.sh
+    state: absent
+  when: revert
+
+- name: "Set bash timeout to 300s" # noqa: risky-file-permissions
+  ansible.builtin.copy:
+    src: terminal_idle.sh
+    dest: /etc/profile.d/terminal_idle.sh
+  when: not revert
+- name: "Unset bash timeout"
+  ansible.builtin.file:
+    path: /etc/profile.d/terminal_idle.sh
+    state: absent
+  when: revert

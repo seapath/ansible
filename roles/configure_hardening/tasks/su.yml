@@ -1,0 +1,25 @@
+# Copyright (C) 2022-2024, RTE (http://www.rte-france.com)
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Disable su # noqa: risky-file-permissions
+  ansible.builtin.copy:
+    src: hardened_pam_su
+    dest: /etc/pam.d/su
+  when: not revert
+- name: Disable su-l # noqa: risky-file-permissions
+  ansible.builtin.copy:
+    src: hardened_pam_su
+    dest: /etc/pam.d/su-l
+  when: not revert
+- name: Restore su pam setting # noqa: risky-file-permissions
+  ansible.builtin.copy:
+    src: default_pam_su
+    dest: /etc/pam.d/su
+  when: revert
+- name: Restore su -l pam setting # noqa: risky-file-permissions
+  ansible.builtin.copy:
+    src: default_pam_su-l
+    dest: /etc/pam.d/su-l
+  when: revert

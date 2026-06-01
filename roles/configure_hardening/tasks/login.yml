@@ -1,0 +1,22 @@
+# Copyright (C) 2022-2024, RTE (http://www.rte-france.com)
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: "Configure login.defs"
+  ansible.builtin.lineinfile:
+    dest: /etc/login.defs
+    regexp: "^{{ item }}$"
+    line: "{{ item }}"
+    state: present
+  with_items:
+    - PASS_MAX_DAYS 90
+  when: not revert
+- name: "Unconfigure login.defs"
+  ansible.builtin.lineinfile:
+    dest: /etc/login.defs
+    regexp: "^{{ item }}$"
+    state: absent
+  with_items:
+    - PASS_MAX_DAYS 90
+  when: revert

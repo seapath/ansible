@@ -1,0 +1,37 @@
+# Copyright (C) 2022-2024, RTE (http://www.rte-france.com)
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Set grub password
+  ansible.builtin.template:
+    src: "01_password.j2"
+    dest: /etc/grub.d/01_password
+    group: "root"
+    owner: "root"
+    mode: "0755"
+  notify: Update grub
+  when: not revert
+- name: Unset grub password
+  ansible.builtin.file:
+    state: absent
+    path: /etc/grub.d/01_password
+  notify: Update grub
+  when: revert
+
+- name: Add unrestricted in grub.cfg
+  ansible.builtin.lineinfile:
+    # CLASS="--class gnu-linux --class gnu --class os --unrestricted"
+    path: /etc/grub.d/10_linux
+    regexp: "^CLASS="
+    line: 'CLASS="--class gnu-linux --class gnu --class os --unrestricted"'
+  notify: Update grub
+  when: not revert
+- name: Remove unrestricted in grub.cfg
+  ansible.builtin.lineinfile:
+    # CLASS="--class gnu-linux --class gnu --class os"
+    path: /etc/grub.d/10_linux
+    regexp: "^CLASS="
+    line: 'CLASS="--class gnu-linux --class gnu --class os"'
+  notify: Update grub
+  when: revert
