@@ -12,3 +12,8 @@ cephadm_install_common: "{{ cephadm_installcommon | default(false) }}"
 cephadm_install_package: "{{ cephadm_installpackage | default(false) }}"
 cephadm_install_pullimages: "{{ cephadm_pullimages | default(false) }}"
 cephadm_install_registryurl: "docker.io/library/registry:2"
+cephadm_install_cephadm_uid: null
+cephadm_install_cephadm_gid: null
+cephadm_install_containerized_ceph_uid: null
+cephadm_install_containerized_ceph_gid: null
+cephadm_install_containerized_ceph_enabled: false

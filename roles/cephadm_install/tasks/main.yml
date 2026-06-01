@@ -6,14 +6,14 @@
 - name: Ensure group "cephadm" exists
   ansible.builtin.group:
     name: cephadm
-    gid: 1001
+    gid: "{{ cephadm_install_cephadm_gid }}"
     state: present
   when: seapath_distro != "Yocto"
 
 - name: Ensure user "cephadm" exists
   ansible.builtin.user:
     name: cephadm
-    uid: 1001
+    uid: "{{ cephadm_install_cephadm_uid }}"
     group: cephadm
     create_home: true
   when: seapath_distro != "Yocto"
@@ -21,18 +21,18 @@
 - name: Ensure group "containerized-ceph" exists
   ansible.builtin.group:
     name: containerized-ceph
-    gid: 167
+    gid: "{{ cephadm_install_containerized_ceph_gid }}"
     state: present
-  when: seapath_distro == "Debian"
+  when: cephadm_install_containerized_ceph_enabled
 
 - name: Ensure user "containerized-ceph" exists with nologin
   ansible.builtin.user:
     name: containerized-ceph
-    uid: 167
+    uid: "{{ cephadm_install_containerized_ceph_uid }}"
     group: containerized-ceph
     create_home: false
     shell: /sbin/nologin
-  when: seapath_distro == "Debian"
+  when: cephadm_install_containerized_ceph_enabled
 
 - name: Set cephadm user sudo permissions # noqa: risky-file-permissions
   ansible.builtin.copy:
