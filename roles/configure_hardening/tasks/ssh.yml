@@ -1,0 +1,23 @@
+# Copyright (C) 2022-2024, RTE (http://www.rte-france.com)
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Install openssh hardening rules # noqa: risky-file-permissions
+  ansible.builtin.template:
+    src: ssh-audit_hardening.conf.j2
+    dest: /etc/ssh/sshd_config.d/ssh-audit_hardening.conf
+  when: not revert
+- name: Uninstall openssh hardening rules
+  ansible.builtin.file:
+    path: /etc/ssh/sshd_config.d/ssh-audit_hardening.conf
+    state: absent
+  when: revert
+
+- name: Wait for DHCP for SSH
+  ansible.builtin.lineinfile:
+    dest: /lib/systemd/system/ssh.service
+    regexp: "^After="
+    line: "After=network.target auditd.service network-online.target"
+    state: present
+  when: not revert

@@ -1,0 +1,61 @@
+# Copyright (C) 2022-2024, RTE (http://www.rte-france.com)
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Install sudo special rules following ansi bp28 r39
+  ansible.builtin.copy:
+    src: sudoers/security
+    dest: /etc/sudoers.d/00-security
+    owner: root
+    group: root
+    mode: "0440"
+  when: not revert
+- name: Uninstall sudo special rules
+  ansible.builtin.file:
+    path: /etc/sudoers.d/00-security
+    state: absent
+  when: revert
+
+- name: Find sudoers files
+  ansible.builtin.find:
+    paths: /etc/sudoers.d/
+    exclude: README
+  register: configure_hardening_sudoers_files
+  when: not revert
+- name: Fix sudoers.d permission
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    owner: root
+    group: root
+    mode: "0440"
+  with_items: "{{ configure_hardening_sudoers_files.files }}"
+  when: not revert
+
+- name: Adding sudo users to group privileged
+  ansible.builtin.user:
+    name: "{{ item }}"
+    groups: privileged
+    append: true
+  with_items:
+    - "{{ admin_user }}"
+    - ansible
+  when: not revert
+
+- name: Reset ssh connection to allow user changes to affect ansible user
+  ansible.builtin.meta: reset_connection
+
+- name: Configure sudo to be run only users member of the privileged group
+  ansible.builtin.file:
+    path: /usr/bin/sudo
+    owner: root
+    group: privileged
+    mode: "4750"
+  when: not revert
+- name: Restore sudo permissions
+  ansible.builtin.file:
+    path: /usr/bin/sudo
+    owner: root
+    group: root
+    mode: "4755"
+  when: revert

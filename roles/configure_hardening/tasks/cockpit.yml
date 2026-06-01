@@ -1,0 +1,22 @@
+# Copyright (C) 2022-2024, RTE (http://www.rte-france.com)
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Check if cockpit is installed
+  ansible.builtin.command: which cockpit-bridge
+  register: configure_hardening_cockpit_status
+  ignore_errors: true
+  changed_when: false
+
+- name: Disable require tty for cockpit # noqa: risky-file-permissions
+  ansible.builtin.copy:
+    src: sudoers/cockpit
+    dest: /etc/sudoers.d/cockpit
+  when: not revert and configure_hardening_cockpit_status.rc == 0
+
+- name: Remove cockpit sudo configuration
+  ansible.builtin.file:
+    path: /etc/sudoers.d/cockpit
+    state: absent
+  when: revert and configure_hardening_cockpit_status.rc == 0

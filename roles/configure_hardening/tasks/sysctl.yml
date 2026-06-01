@@ -1,0 +1,81 @@
+# Copyright (C) 2022-2024, RTE (http://www.rte-france.com)
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: "Disable coredumps" # noqa: risky-file-permissions
+  ansible.builtin.lineinfile:
+    dest: /etc/sysctl.d/50-coredump.conf
+    regexp: "^kernel.core_pattern=/dev/null$"
+    line: "kernel.core_pattern=/dev/null"
+    create: true
+    state: present
+  notify: Update sysfs values using sysctl
+  when: not revert
+- name: "Revert coredump disabling"
+  ansible.builtin.lineinfile:
+    dest: /etc/sysctl.d/50-coredump.conf
+    regexp: "^kernel.core_pattern=/dev/null$"
+    state: absent
+  notify: Update sysfs values using sysctl
+  when: revert
+
+- name: "Disable kexec" # noqa: risky-file-permissions
+  ansible.builtin.lineinfile:
+    dest: /etc/sysctl.d/50-kexec.conf
+    regexp: "^kernel.kexec_load_disabled=1$"
+    line: "kernel.kexec_load_disabled=1"
+    create: true
+    state: present
+  notify: Update sysfs values using sysctl
+  when: not revert
+- name: "Revert kexec disabling"
+  ansible.builtin.lineinfile:
+    dest: /etc/sysctl.d/50-kexec.conf
+    regexp: "^kernel.kexec_load_disabled=1$"
+    state: absent
+  notify: Update sysfs values using sysctl
+  when: revert
+
+- name: "Disable binfmt_misc" # noqa: risky-file-permissions
+  ansible.builtin.lineinfile:
+    dest: /etc/sysctl.d/50-binfmt_misc.conf
+    regexp: "^fs.binfmt_misc.status=0$"
+    line: "fs.binfmt_misc.status=0"
+    create: true
+    state: present
+  notify: Update sysfs values using sysctl
+  when: not revert
+- name: "Revert binfmt_misc disabling"
+  ansible.builtin.lineinfile:
+    dest: /etc/sysctl.d/50-binfmt_misc.conf
+    regexp: "^fs.binfmt_misc.status=0$"
+    state: absent
+  notify: Update sysfs values using sysctl
+  when: revert
+
+- name: "Install hardened sysfs rules" # noqa: risky-file-permissions
+  ansible.builtin.copy:
+    src: sysctl/90-sysctl-hardening.conf
+    dest: /etc/sysctl.d/zz-sysctl-hardening.conf
+  notify: Update sysfs values using sysctl
+  when: not revert
+- name: "Uninstall hardened sysfs rules"
+  ansible.builtin.file:
+    path: /etc/sysctl.d/zz-sysctl-hardening.conf
+    state: absent
+  notify: Update sysfs values using sysctl
+  when: revert
+
+- name: "Install network hardened sysfs rules" # noqa: risky-file-permissions
+  ansible.builtin.copy:
+    src: sysctl/99-sysctl-network.conf
+    dest: /etc/sysctl.d/99-sysctl-network.conf
+  notify: Update sysfs values using sysctl
+  when: not revert
+- name: "Uninstall network hardened sysfs rules"
+  ansible.builtin.file:
+    path: /etc/sysctl.d/99-sysctl-network.conf
+    state: absent
+  notify: Update sysfs values using sysctl
+  when: revert
