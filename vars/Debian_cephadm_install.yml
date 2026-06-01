@@ -1,0 +1,9 @@
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+cephadm_install_cephadm_uid: 1001
+cephadm_install_cephadm_gid: 1001
+cephadm_install_containerized_ceph_uid: 167
+cephadm_install_containerized_ceph_gid: 167
+cephadm_install_containerized_ceph_enabled: true

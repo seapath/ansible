@@ -8,9 +8,15 @@
   hosts: cluster_machines
   become: true
   gather_facts: true
-  roles:
-    - detect_seapath_distro
-    - cephadm_install
+  tasks:
+    - name: Detect SEAPATH distribution
+      ansible.builtin.include_role:
+        name: detect_seapath_distro
+    - name: Load cephadm_install distribution-specific variables
+      ansible.builtin.include_vars: "../vars/{{ seapath_distro }}_cephadm_install.yml"
+    - name: Install cephadm prerequisites
+      ansible.builtin.include_role:
+        name: cephadm_install
 
 - name: Prepare Ceph installation
   hosts: osds
