@@ -16,7 +16,7 @@
 
 - name: Wait for DHCP for SSH
   ansible.builtin.lineinfile:
-    dest: /lib/systemd/system/ssh.service
+    dest: /lib/systemd/system/{{ configure_hardening_ssh_service }}.service
     regexp: "^After="
     line: "After=network.target auditd.service network-online.target"
     state: present
