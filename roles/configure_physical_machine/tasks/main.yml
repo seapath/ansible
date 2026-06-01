@@ -70,3 +70,10 @@
     - name: Configure OracleLinux SEAPATH pacemaker ressource agents
       when: "'cluster_machines' in group_names"
       ansible.builtin.include_tasks: oraclelinux/ressource-agents.yml
+
+- name: SEAPATH SLES specific physical machine configuration
+  when: seapath_distro == "SLES"
+  block:
+    - name: Configure SLES SEAPATH pacemaker ressource agents
+      when: "'cluster_machines' in group_names"
+      ansible.builtin.include_tasks: sles/ressource-agents.yml
