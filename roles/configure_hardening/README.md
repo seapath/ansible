@@ -16,6 +16,7 @@ No requirement.
 | grub_password   | Yes      | String | Password to access grub console |
 | ip_addr         | Yes      | String | IP address for administration   |
 | cluster_ip_addr | No       | String | Cluster IP address              |
+| configure_hardening_ssh_service | Yes | String | Name of SSH systemd service |
 
 ## Example Playbook
 

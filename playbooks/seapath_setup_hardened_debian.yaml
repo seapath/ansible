@@ -1,6 +1,15 @@
 # Copyright (C) 2022, RTE (http://www.rte-france.com)
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
 ---
+- name: Detect Seapath distribution
+  hosts:
+    - cluster_machines
+    - standalone_machine
+    - VMs
+  roles:
+    - detect_seapath_distro
+
 - name: Add hardened in SEAPATH Debian machines
   become: true
   hosts:
@@ -9,8 +18,12 @@
     - VMs
   vars:
     revert: false
+  pre_tasks:
+    - name: Load distribution-specific hardening variables
+      ansible.builtin.include_vars: ../vars/{{ seapath_distro }}_hardening.yml
   roles:
     - configure_hardening
+
 - name: Add hardened for SEAPATH physical machines
   become: true
   hosts:
