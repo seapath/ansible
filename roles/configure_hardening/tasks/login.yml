@@ -5,16 +5,18 @@
 ---
 - name: "Configure login.defs"
   ansible.builtin.lineinfile:
-    dest: /etc/login.defs
+    dest: "{{ configure_hardening_login_defs_file }}"
     regexp: "^{{ item }}$"
     line: "{{ item }}"
     state: present
+    create: true
+    mode: "0644"
   with_items:
     - PASS_MAX_DAYS 90
   when: not revert
 - name: "Unconfigure login.defs"
   ansible.builtin.lineinfile:
-    dest: /etc/login.defs
+    dest: "{{ configure_hardening_login_defs_file }}"
     regexp: "^{{ item }}$"
     state: absent
   with_items:
