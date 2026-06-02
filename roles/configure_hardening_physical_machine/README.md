@@ -11,6 +11,7 @@ No requirement.
 | Variable      | Type   | Comments                                                        |
 |---------------|--------|-----------------------------------------------------------------|
 | ceph_osd_disk | String | Node device disk to use for Ceph OSD if lvm_volumes is not used |
+| configure_hardening_physical_machine_snmp_user_name | String | SNMP user |
 
 ## Example Playbook
 

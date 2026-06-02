@@ -5,3 +5,4 @@
 configure_hardening_ssh_service: ssh
 configure_hardening_etc_securetty_group: sys
 configure_hardening_grub_update_command: update-grub
+configure_hardening_physical_machine_snmp_user_name: Debian-snmp
