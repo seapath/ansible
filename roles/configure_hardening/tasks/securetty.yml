@@ -8,7 +8,7 @@
     content: ""
     dest: /etc/securetty
     force: false
-    group: sys
+    group: "{{ configure_hardening_etc_securetty_group }}"
     owner: root
     mode: "0644"
   when: not revert
