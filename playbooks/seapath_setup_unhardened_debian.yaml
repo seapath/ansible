@@ -32,7 +32,7 @@
   vars:
     revert: true
   roles:
-    - debian_hardening_physical_machine
+    - configure_hardening_physical_machine
 
 - name: Reboot to apply hardening revert
   become: true
