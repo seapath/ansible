@@ -5,14 +5,16 @@
 ---
 - name: "Force loading nf_conntrack at boot"
   ansible.builtin.lineinfile:
-    dest: /etc/modules-load.d/modules.conf
+    dest: /etc/modules-load.d/hardening.conf
     regexp: "^nf_conntrack$"
     line: "nf_conntrack"
     state: present
+    mode: "0644"
+    create: true
   when: not revert
 - name: "Disable force loading nf_conntrack at boot"
   ansible.builtin.lineinfile:
-    dest: /etc/modules-load.d/modules.conf
+    dest: /etc/modules-load.d/hardening.conf
     regexp: "^nf_conntrack$"
     state: absent
   when: revert
