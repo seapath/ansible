@@ -1,81 +1,13 @@
 # Copyright (C) 2022-2024, RTE (http://www.rte-france.com)
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
+
 ---
-- name: "Force loading nf_conntrack at boot"
-  ansible.builtin.lineinfile:
-    dest: /etc/modules-load.d/modules.conf
-    regexp: "^nf_conntrack$"
-    line: "nf_conntrack"
-    state: present
-  when: not revert
-- name: "Disable force loading nf_conntrack at boot"
-  ansible.builtin.lineinfile:
-    dest: /etc/modules-load.d/modules.conf
-    regexp: "^nf_conntrack$"
-    state: absent
-  when: revert
-
-- name: Get ceph disk stats
-  ansible.builtin.stat:
-    path: "{{ ceph_osd_disk }}"
-  register: configure_hardening_physical_machine_ceph_osd_disk_stat
-  when: ceph_osd_disk is defined
-- name: Restrict ceph sudoers file
-  ansible.builtin.template:
-    src: sudoers/ceph.j2
-    dest: /etc/sudoers.d/ceph-smartctl
-    owner: root
-    group: root
-    mode: "0440"
-  when:
-    - not revert
-    - cluster_ip_addr is defined
-
-- name: Adding ceph user to group privileged
-  ansible.builtin.user:
-    name: ceph
-    groups: privileged
-    append: true
-  when:
-    - not revert
-    - cluster_ip_addr is defined
-
-- name: Adding cephadm user to group privileged
-  ansible.builtin.user:
-    name: cephadm
-    groups: privileged
-    append: true
-  when:
-    - not revert
-    - cluster_ip_addr is defined
-    - is_using_cephadm | default(false)
-
-- name: Adding Debian-snmp user to group privileged
-  ansible.builtin.user:
-    name: "Debian-snmp"
-    groups: privileged
-    append: true
-  when: not revert and snmp_admin_ip_addr is defined
-
-- name: Create systemd service.d directories
-  ansible.builtin.file:
-    path: "/etc/systemd/system/{{ item }}.service.d/"
-    state: directory
-    owner: root
-    group: root
-    mode: "0755"
-  with_items: "{{ configure_hardening_physical_machine_hardened_services }}"
-
-- name: Add systemd service hardening rules for physical machines # noqa: risky-file-permissions
-  ansible.builtin.copy:
-    src: "{{ item }}_hardening.conf"
-    dest: "/etc/systemd/system/{{ item }}.service.d/hardening.conf"
-  with_items: "{{ configure_hardening_physical_machine_hardened_services }}"
-  when: not revert
-
-- name: Remove systemd service hardening rules for physical machines
-  ansible.builtin.file:
-    path: "/etc/systemd/system/{{ item }}.service.d/hardening.conf"
-    state: absent
-  with_items: "{{ configure_hardening_physical_machine_hardened_services }}"
-  when: revert
+- name: Configure modules hardening
+  ansible.builtin.import_tasks: modules.yml
+- name: Configure ceph hardening
+  ansible.builtin.import_tasks: ceph.yml
+- name: Configure snmp hardening
+  ansible.builtin.import_tasks: snmp.yml
+- name: Configure services hardening
+  ansible.builtin.import_tasks: services.yml
