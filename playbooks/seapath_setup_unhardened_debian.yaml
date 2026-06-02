@@ -31,6 +31,9 @@
     - standalone_machine
   vars:
     revert: true
+  pre_tasks:
+    - name: Load distribution-specific hardening variables
+      ansible.builtin.include_vars: ../vars/{{ seapath_distro }}_hardening.yml
   roles:
     - configure_hardening_physical_machine
 

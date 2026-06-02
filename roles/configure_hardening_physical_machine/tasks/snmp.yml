@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- name: Adding Debian-snmp user to group privileged
+- name: Add snmp user to group privileged
   ansible.builtin.user:
-    name: "Debian-snmp"
+    name: "{{ configure_hardening_physical_machine_snmp_user_name }}"
     groups: privileged
     append: true
   when: not revert and snmp_admin_ip_addr is defined
