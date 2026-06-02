@@ -1,0 +1,11 @@
+# Copyright (C) 2022-2024, RTE (http://www.rte-france.com)
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Adding Debian-snmp user to group privileged
+  ansible.builtin.user:
+    name: "Debian-snmp"
+    groups: privileged
+    append: true
+  when: not revert and snmp_admin_ip_addr is defined

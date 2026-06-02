@@ -1,0 +1,26 @@
+# Copyright (C) 2022-2024, RTE (http://www.rte-france.com)
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Create systemd service.d directories
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ item }}.service.d/"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  with_items: "{{ configure_hardening_physical_machine_hardened_services }}"
+
+- name: Add systemd service hardening rules for physical machines # noqa: risky-file-permissions
+  ansible.builtin.copy:
+    src: "{{ item }}_hardening.conf"
+    dest: "/etc/systemd/system/{{ item }}.service.d/hardening.conf"
+  with_items: "{{ configure_hardening_physical_machine_hardened_services }}"
+  when: not revert
+- name: Remove systemd service hardening rules for physical machines
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ item }}.service.d/hardening.conf"
+    state: absent
+  with_items: "{{ configure_hardening_physical_machine_hardened_services }}"
+  when: revert

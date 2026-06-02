@@ -1,0 +1,39 @@
+# Copyright (C) 2022-2024, RTE (http://www.rte-france.com)
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Get ceph disk stats
+  ansible.builtin.stat:
+    path: "{{ ceph_osd_disk }}"
+  register: configure_hardening_physical_machine_ceph_osd_disk_stat
+  when: ceph_osd_disk is defined
+- name: Restrict ceph sudoers file
+  ansible.builtin.template:
+    src: sudoers/ceph.j2
+    dest: /etc/sudoers.d/ceph-smartctl
+    owner: root
+    group: root
+    mode: "0440"
+  when:
+    - not revert
+    - cluster_ip_addr is defined
+
+- name: Adding ceph user to group privileged
+  ansible.builtin.user:
+    name: ceph
+    groups: privileged
+    append: true
+  when:
+    - not revert
+    - cluster_ip_addr is defined
+
+- name: Adding cephadm user to group privileged
+  ansible.builtin.user:
+    name: cephadm
+    groups: privileged
+    append: true
+  when:
+    - not revert
+    - cluster_ip_addr is defined
+    - is_using_cephadm | default(false)
