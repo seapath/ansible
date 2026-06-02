@@ -39,7 +39,7 @@ Integration tests run on self-hosted runners and use the external `seapath/ci` r
 ## Repo Structure & Entrypoints
 
 - **Main setup playbook**: `playbooks/seapath_setup_main.yaml`
-- **Debian hardening**: `playbooks/seapath_setup_hardened_debian.yaml`
+- **Debian hardening**: `playbooks/seapath_setup_hardening.yaml`
 - **Example inventories**: `inventories/examples/` (cluster, standalone, vm-deployment, ovs)
 - **Roles**: `roles/` — most have a `README`. Some include `molecule/` for unit tests.
 - **Custom modules**: `library/`

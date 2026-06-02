@@ -280,16 +280,16 @@ Or if you use `cqfd`:
 === Debian Hardening ===
 
 When using SEAPATH Debian, the security features are applied with the hardening playbook
-_playbooks/seapath_setup_hardened_debian.yaml_.
+_playbooks/seapath_setup_hardening.yaml_.
 If you are using SEAPATH Yocto, the security features are already applied in meta-seapath at build time.
 
-To launch the playbook _seapath_setup_hardened_debian.yaml_ use the following command:
+To launch the playbook _seapath_setup_hardening.yaml_ use the following command:
 
- $ ansible-playbook -i inventories/cluster_inventory.yaml -i inventories/networktopology_inventory.yaml playbooks/seapath_setup_hardened_debian.yaml
+ $ ansible-playbook -i inventories/cluster_inventory.yaml -i inventories/networktopology_inventory.yaml playbooks/seapath_setup_hardening.yaml
 
 Or if you use `cqfd`:
 
- $ cqfd run ansible-playbook -i inventories/cluster_inventory.yaml -i inventories/networktopology_inventory.yaml playbooks/seapath_setup_hardened_debian.yaml
+ $ cqfd run ansible-playbook -i inventories/cluster_inventory.yaml -i inventories/networktopology_inventory.yaml playbooks/seapath_setup_hardening.yaml
 
 == Advanced usage
 
@@ -321,7 +321,7 @@ Test only Playbooks
 ```
 tox -e molecule-playbooks
 ```
- 
+
 
 It requires tox, that can be installed with:
 ```
@@ -351,4 +351,3 @@ For more information please see :
 
 * https://wiki.lfenergy.org/display/SEAP/Continuous+integration+on+SEAPATH[The Wiki] for a user oriented guide.
 * https://github.com/seapath/ci[The CI repository] for technical implementation.
-

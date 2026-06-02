@@ -10,7 +10,7 @@
   roles:
     - detect_seapath_distro
 
-- name: Remove hardened in SEAPATH Debian machines
+- name: Revert hardening for SEAPATH machines
   become: true
   hosts:
     - cluster_machines
@@ -24,7 +24,7 @@
   roles:
     - configure_hardening
 
-- name: Remove hardened for SEAPATH physical machines
+- name: Revert hardening for SEAPATH physical machines
   become: true
   hosts:
     - cluster_machines
