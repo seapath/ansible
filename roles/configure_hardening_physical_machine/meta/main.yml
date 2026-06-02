@@ -3,7 +3,7 @@
 ---
 galaxy_info:
   author: "Seapath"
-  description: Debian hardening tasks specific to physical machines
+  description: Hardening tasks specific to physical machines
   license: Apache-2.0
   min_ansible_version: 2.9.10
   platforms:

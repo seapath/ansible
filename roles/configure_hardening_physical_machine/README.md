@@ -1,6 +1,6 @@
-# Debian Hardening for Physical Machine Role
+# Hardening for Physical Machine Role
 
-This role apply the hardening configurations for debian physical machines.
+This role applies the hardening configurations for physical machines.
 
 ## Requirements
 
@@ -17,5 +17,5 @@ No requirement.
 ```yaml
 - hosts: cluster_machines
   roles:
-    - { role: seapath_ansible.debian_hardening_physical_machine }
+    - { role: seapath_ansible.configure_hardening_physical_machine }
 ```
