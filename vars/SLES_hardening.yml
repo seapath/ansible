@@ -1,0 +1,8 @@
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+configure_hardening_ssh_service: sshd
+configure_hardening_login_defs_file: /etc/login.defs.d/hardening.defs
+configure_hardening_grub_update_command: grub2-mkconfig -o /boot/grub2/grub.cfg
+configure_hardening_physical_machine_snmp_user_name: snmp
