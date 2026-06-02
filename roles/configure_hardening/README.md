@@ -19,6 +19,7 @@ No requirement.
 | configure_hardening_ssh_service | Yes | String |  | Name of SSH systemd service |
 | configure_hardening_login_defs_file | No | String | /etc/login.defs | The login.defs file to configure |
 | configure_hardening_etc_securetty_group | No | String | root | The group of the /etc/securetty file |
+| configure_hardening_grub_update_command | Yes | String | | Command to be run to update GRUB after configuration modification |
 
 ## Example Playbook
 
