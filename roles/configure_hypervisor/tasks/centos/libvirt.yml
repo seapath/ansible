@@ -4,12 +4,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- name: Enable libvirtd.service
-  ansible.builtin.systemd:
-    name: libvirtd.service
-    enabled: true
-    state: started
-
 - name: Create system alternative for a debian kvm path
   community.general.alternatives:
     name: "debian kvm"
