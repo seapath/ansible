@@ -8,6 +8,9 @@ Before=network.target
 DefaultDependencies=false
 StopWhenUnneeded=true
 
+BindsTo=sys-subsystem-net-devices-%i.device
+After=sys-subsystem-net-devices-%i.device
+
 [Service]
 Type=oneshot
 RemainAfterExit=yes
