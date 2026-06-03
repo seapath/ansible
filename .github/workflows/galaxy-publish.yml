@@ -1,0 +1,78 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+name: Publish Ansible Collection
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Collection version (e.g. 99.99.99-test for a dry run)
+        required: true
+        default: "0.0.0-test"
+      publish:
+        description: Publish to Ansible Galaxy (leave false to only build the tarball)
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Build and publish to Galaxy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install Ansible
+        run: pip install 'ansible-core~=2.16.0'
+
+      - name: Set collection version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="${{ inputs.version }}"
+          fi
+          sed -i "s/^version:.*/version: ${VERSION}/" galaxy.yml
+          echo "Collection version: ${VERSION}"
+          echo "VERSION=${VERSION}" >> "${GITHUB_ENV}"
+
+      - name: Build collection
+        run: ansible-galaxy collection build
+
+      - name: Upload collection artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: seapath-ansible-${{ env.VERSION }}
+          path: seapath-ansible-*.tar.gz
+
+      - name: Check Galaxy API key is configured
+        if: github.event_name == 'release' || inputs.publish == true
+        env:
+          ANSIBLE_GALAXY_API_KEY: ${{ secrets.GALAXY_API_KEY }}
+        run: |
+          if [ -z "${ANSIBLE_GALAXY_API_KEY}" ]; then
+            echo "::error::GALAXY_API_KEY repository secret is missing or empty."
+            echo "Add it under Settings → Secrets and variables → Actions → Repository secrets."
+            exit 1
+          fi
+
+      - name: Publish collection to Ansible Galaxy
+        if: github.event_name == 'release' || inputs.publish == true
+        env:
+          ANSIBLE_GALAXY_API_KEY: ${{ secrets.GALAXY_API_KEY }}
+        run: >-
+          ansible-galaxy collection publish seapath-ansible-*.tar.gz
+          --api-key "${ANSIBLE_GALAXY_API_KEY}"

@@ -23,7 +23,8 @@ jobs:
       - name: Install dependencies
         run: |
           pip install ansible-core~=2.16.0 ansible-lint
-          ansible-galaxy collection install -r ansible-requirements.yaml
+          ansible-galaxy collection install -p collections -r ansible-requirements.yaml
+          ansible-galaxy collection install -p collections --force .
 
       - name: Setup Ansible environment
         run: cp src/ceph-ansible-site.yaml ceph-ansible/site.yml

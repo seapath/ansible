@@ -306,17 +306,17 @@ EXAMPLES = r"""
     system_image: my_disk.qcow2
     xml: "{{ lookup('file', 'my_vm_config.xml', errors='strict') }}"
     metadata:
-        myMetadata: value
-        anotherMetadata: value
+      myMetadata: value
+      anotherMetadata: value
     pacemaker_meta:
-        resource-stickiness: 1
+      resource-stickiness: 1
     pacemaker_params:
-        autoset_utilization_cpu: False
-        autoset_utilization_host_memory: False
-        autoset_utilization_hv_memory: False
+      autoset_utilization_cpu: false
+      autoset_utilization_host_memory: false
+      autoset_utilization_hv_memory: false
     pacemaker_utilization:
-        cpu: 4
-        memory: 2048
+      cpu: 4
+      memory: 2048
 
 # Create a VM with additional disks
 - name: Create guest0 with an extra data disk
@@ -326,7 +326,7 @@ EXAMPLES = r"""
     system_image: my_disk.qcow2
     xml: "{{ lookup('template', 'my_vm_config.xml.j2') }}"
     additional_disks:
-        - additional_data.qcow2
+      - additional_data.qcow2
 
 # Remove a VM
 - name: Remove guest0
@@ -377,7 +377,7 @@ EXAMPLES = r"""
     src_name: guest0
     command: clone
     xml: "{{ lookup('template', 'my_vm_config.xml', errors='strict') }}"
-    clear_pacemaker_params: True
+    clear_pacemaker_params: true
 
 # Create a VM snapshot
 - name: Create a snapshot of guest0
@@ -405,8 +405,8 @@ EXAMPLES = r"""
     name: guest0
     command: purge_image
     purge_date:
-        date: '2021-01-24'
-        time: '08:00'
+      date: '2021-01-24'
+      time: '08:00'
 
 # Restore a VM from a snapshot
 - name: Rollback guest0 into snapshot snap1
@@ -440,8 +440,8 @@ EXAMPLES = r"""
     name: guest0
     command: colocation
     colocated_vms:
-     - guest1
-     - guest2
+      - guest1
+      - guest2
 
 # Define a list of crm command to run when enabling the guest
 - name: create a guest and run extra crm commands
@@ -449,7 +449,7 @@ EXAMPLES = r"""
     name: GUEST1
     command: create
     crm_config_cmd:
-     - location ping_test_GUEST1 GUEST1 rule pingd: defined pingd
+      - location ping_test_GUEST1 GUEST1 rule pingd: defined pingd
 
 # Configure a pacemaker remote
 - name: Add a pacemaker remote

@@ -42,7 +42,7 @@ Integration tests run on self-hosted runners and use the external `seapath/ci` r
 - **Debian hardening**: `playbooks/seapath_setup_hardened_debian.yaml`
 - **Example inventories**: `inventories/examples/` (cluster, standalone, vm-deployment, ovs)
 - **Roles**: `roles/` — most have a `README`. Some include `molecule/` for unit tests.
-- **Custom modules**: `library/`
+- **Custom modules**: `plugins/modules/` (Galaxy collection + `ansible.cfg` `library = ./plugins/modules:...` for checkout/cqfd/CI)
 - **Ceph integration**: `ceph-ansible/` is a **submodule** (`stable-8.0`). It is patched at setup time by `prepare.sh` from `src/ceph-ansible-patches/` and `src/ceph-ansible-site.yaml`.
 
 ## Important Ansible Config (`ansible.cfg`)
