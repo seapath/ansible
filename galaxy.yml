@@ -1,0 +1,54 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+namespace: seapath
+name: ansible
+version: 1.0.0
+readme: README-ansible-galaxy.md
+authors:
+  - RTE (https://www.rte-france.com)
+  - Savoir-faire Linux (https://www.savoirfairelinux.com)
+description: Ansible collection to deploy and manage SEAPATH clusters and standalone machines.
+license:
+  - Apache-2.0
+tags:
+  - infrastructure
+  - linux
+repository: https://github.com/seapath/ansible
+documentation: https://github.com/seapath/ansible/blob/main/README-ansible-galaxy.md
+homepage: https://lfenergy.org/projects/seapath/
+issues: https://github.com/seapath/ansible/issues
+dependencies:
+  ansible.posix: ">=1.5.0"
+  ansible.utils: ">=2.0.0"
+  community.general: ">=8.0.0"
+  community.libvirt: ">=1.0.0"
+  containers.podman: ">=1.0.0"
+build_ignore:
+  - .github
+  - .gitignore
+  - .pre-commit-config.yaml
+  - .ansible-lint.yml
+  - .yamllint
+  - AGENTS.md
+  - README.adoc
+  - ansible-requirements.yaml
+  - ansible.cfg
+  - ansible.log
+  - ceph-ansible
+  - cqfd
+  - files
+  - inventories
+  - library
+  - molecule_requirements.txt
+  - module_documentation
+  - prepare.sh
+  - scripts
+  - src
+  - templates
+  - tests_results
+  - tox.ini
+  - "**/molecule/**"
+  - "*.tar.gz"
+  - "*.csv"
+  - "*.xml"

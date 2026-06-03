@@ -1,6 +1,7 @@
 # Ansible generated files
 collections/
 ansible.log
+seapath-ansible-*.tar.gz
 
 # Ignore user defined playbooks and inventory
 playbooks/*

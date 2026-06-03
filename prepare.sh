@@ -52,6 +52,9 @@ echo "Install collections in ansible-requirements.yaml"
 ansible-galaxy collection install --collections-path="$(pwd)/collections" -r \
     ansible-requirements.yaml
 
+echo "Install local seapath.ansible collection (plugins/modules, roles, playbooks)"
+ansible-galaxy collection install --collections-path="$(pwd)/collections" --force .
+
 echo "Update git submodules"
 git submodule update --init --force
 
