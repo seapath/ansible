@@ -17,6 +17,8 @@
   ansible.builtin.import_tasks: slices.yml
 - name: Apply tuned configurations
   ansible.builtin.import_tasks: tuned.yml
+- name: Apply libvirt configurations
+  ansible.builtin.import_tasks: libvirt.yml
 
 - name: SEAPATH Debian specific hypervisor configuration
   when: seapath_distro == "Debian"
