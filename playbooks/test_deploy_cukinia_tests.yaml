@@ -21,7 +21,9 @@
   become: true
   gather_facts: true
   roles:
-    - role: debian_tests
-      when: seapath_distro == "Debian"
+    - role: deploy_cukinia_tests
+      when:
+        - seapath_distro != "OracleLinux"
+        - seapath_distro != "Yocto"
     - role: oraclelinux_tests
       when: seapath_distro == "OracleLinux"
