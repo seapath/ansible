@@ -5,9 +5,9 @@ cukinia_log "$(_colorize yellow "--- check systemd settings ---")"
 
 test_id "SEAPATH-00199" as "No systemd service failed" cukinia_systemd_failed
 
-{% if debian_tests_extra_essential_services | default([]) %}
+{% if deploy_cukinia_tests_extra_essential_services | default([]) %}
 ESSENTIAL_SERVICES_EXTRA="|\
-{{ debian_tests_extra_essential_services | join('|\\\n') }}"
+{{ deploy_cukinia_tests_extra_essential_services | join('|\\\n') }}"
 {% else %}
 ESSENTIAL_SERVICES_EXTRA=""
 {% endif %}

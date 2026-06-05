@@ -216,9 +216,9 @@ vim-tiny|\
 whiptail|\
 zstd"
 
-{% if debian_tests_extra_essential_packages | default([]) %}
+{% if deploy_cukinia_tests_extra_essential_packages | default([]) %}
 ESSENTIAL_PACKAGES_EXTRA="|\
-{{ debian_tests_extra_essential_packages | join('|\\\n') }}"
+{{ deploy_cukinia_tests_extra_essential_packages | join('|\\\n') }}"
 {% else %}
 ESSENTIAL_PACKAGES_EXTRA=""
 {% endif %}
