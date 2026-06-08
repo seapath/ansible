@@ -1,4 +1,5 @@
 # Copyright (C) 2024 RTE
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 ---
@@ -10,17 +11,17 @@
     owner: false
     rsync_opts:
       - "--exclude=*.j2"
+
 - name: Copy Cukinia's tests templates # noqa: risky-file-permissions
   ansible.builtin.template:
-    src: cukinia-tests/cukinia/{{ item.src }}
-    dest: /etc/cukinia/{{ item.dest }}
-  with_items:
-    - { src: "common_security_tests.d/apt.conf.j2", dest: "common_security_tests.d/apt.conf" }
-    - { src: "common_security_tests.d/systemd.conf.j2", dest: "common_security_tests.d/systemd.conf" }
-    - { src: "hypervisor_security_tests.d/shadow.conf.j2", dest: "hypervisor_security_tests.d/shadow.conf" }
-    - { src: "hypervisor_security_tests.d/passwd.conf.j2", dest: "hypervisor_security_tests.d/passwd.conf" }
-    - { src: "hypervisor_security_tests.d/groups.conf.j2", dest: "hypervisor_security_tests.d/groups.conf" }
-    - { src: "common_security_tests.d/sudo.conf.j2", dest: "common_security_tests.d/sudo.conf" }
+    src: cukinia-tests/cukinia/{{ item }}
+    dest: /etc/cukinia/{{ item | splitext | first }}
+  loop: >-
+    {{ lookup('community.general.filetree', 'cukinia-tests/cukinia/') |
+        selectattr('state', '==', 'file') |
+        map(attribute='path') |
+        select('search', '\.j2$') }}
+
 - name: Create /usr/share/cukinia/includes
   ansible.builtin.file:
     path: /usr/share/cukinia/includes
