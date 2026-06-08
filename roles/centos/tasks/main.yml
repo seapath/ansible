@@ -134,21 +134,14 @@
     state: present
   notify: Update Grub
 
-- name: Stop and Disable NetworkManager
-  ansible.builtin.service:
+- name: Ensure NetworkManager is started and enabled
+  ansible.builtin.systemd:
     name: NetworkManager
-    state: stopped
-    enabled: false
-  register: centos_nm_stop
-
-- name: Start and Enable systemd-networkd
-  ansible.builtin.service:
-    name: systemd-networkd
     state: started
     enabled: true
-  register: centos_sd_start
+  register: centos_nm_start
 
-- name: Set need_reboot to true if any change was made
+- name: Set need_reboot to true if NetworkManager state changed # noqa: no-handler
   ansible.builtin.set_fact:
     need_reboot: true # noqa: var-naming[no-role-prefix]
-  when: centos_nm_stop is changed or centos_sd_start is changed
+  when: centos_nm_start.changed
