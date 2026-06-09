@@ -12,11 +12,13 @@
     group: false
     rsync_opts:
       - "--exclude=*.j2"
+      - "--chmod=D0755,F0644"
 
-- name: Copy Cukinia's tests templates # noqa: risky-file-permissions
+- name: Copy Cukinia's tests templates
   ansible.builtin.template:
     src: cukinia-tests/cukinia/{{ item }}
     dest: /etc/cukinia/{{ item | splitext | first }}
+    mode: "0644"
   loop: >-
     {{ lookup('community.general.filetree', 'cukinia-tests/cukinia/') |
         selectattr('state', '==', 'file') |
