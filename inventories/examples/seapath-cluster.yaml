@@ -119,6 +119,7 @@ mons:
         osd memory target: 8076326604
 
 # Ceph OSD. Machines that will be used as OSDs (which will store data)
+# Only hypervisors are part of the OSD group
 osds:
   hosts:
     node1:
@@ -154,14 +155,5 @@ clients:
           osd: "allow class-read object_prefix rbd_children, profile rbd pool=rbd"
         mode: "{{ ceph_keyring_permissions }}"
 
-# Empty groups to prevent warnings, mostly ceph-ansible
-grafana-server:
-iscsigws:
-iscsi-gws:
-mdss:
-mgrs:
-nfss:
-rbdmirrors:
-rgwloadbalancers:
-rgws:
+# Empty groups to prevent warnings
 standalone_machine:

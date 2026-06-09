@@ -6,13 +6,8 @@
 
 ---
 exclude_paths:
-  - /etc/ansible/roles # This is the inside container path for ceph-ansible
   - .github
-  - ceph-ansible
   - roles/deploy_cukinia/files/cukinia
-  - src/ceph-ansible-site.yaml
-
-# ceph-ansible and cukinia are submodules and seapath don't have control on it.
 
 skip_list:
   - role-name # All role names should match "^[a-z_][a-z0-9_]*$"

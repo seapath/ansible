@@ -42,8 +42,7 @@ Integration tests run on self-hosted runners and use the external `seapath/ci` r
 - **Debian hardening**: `playbooks/seapath_setup_hardened_debian.yaml`
 - **Example inventories**: `inventories/examples/` (cluster, standalone, vm-deployment, ovs)
 - **Roles**: `roles/` — most have a `README`. Some include `molecule/` for unit tests.
-- **Custom modules**: `plugins/modules/` (Galaxy collection + `ansible.cfg` `library = ./plugins/modules:...` for checkout/cqfd/CI)
-- **Ceph integration**: `ceph-ansible/` is a **submodule** (`stable-8.0`). It is patched at setup time by `prepare.sh` from `src/ceph-ansible-patches/` and `src/ceph-ansible-site.yaml`.
+- **Custom modules**: `library/`
 
 ## Important Ansible Config (`ansible.cfg`)
 
@@ -51,12 +50,10 @@ Integration tests run on self-hosted runners and use the external `seapath/ci` r
 - `any_errors_fatal = True` — any host failure stops the playbook.
 - `tags: skip = package-install` — package-install tag is skipped by default.
 - `inventory = inventories/examples/seapath-cluster.yaml` — default inventory (mostly for CI).
-- `roles_path = ./roles:ceph-ansible/roles` — local roles take precedence over ceph-ansible roles.
 
 ## Submodules
 
 ```
-ceph-ansible                         → https://github.com/ceph/ceph-ansible.git (stable-8.0)
 roles/deploy_cukinia/files/cukinia   → https://github.com/savoirfairelinux/cukinia.git
 roles/deploy_python3_setup_ovs/...   → https://github.com/seapath/python3-setup-ovs.git
 roles/deploy_vm_manager/files/...    → https://github.com/seapath/vm_manager.git
@@ -66,7 +63,6 @@ Run `git submodule update --init --force` (done by `prepare.sh`) after clone or 
 
 ## Gotchas
 
-- **Always run `prepare.sh` after fresh clone or when `ansible-requirements.yaml` / submodules change.** It installs galaxy roles/collections, initializes submodules, patches ceph-ansible, and downloads Cockpit plugins.
-- ** ceph-ansible is excluded from lint** (see `.ansible-lint.yml` `exclude_paths`). Do not lint inside it.
+- **Always run `prepare.sh` after fresh clone or when `ansible-requirements.yaml` / submodules change.** It installs galaxy roles/collections, initializes submodules, and downloads Cockpit plugins.
 - **Molecule playbooks** run from the `playbooks/` directory, not the repo root.
 - **Molecule roles** are discovered dynamically — only roles with a `molecule/` directory are tested.

@@ -26,8 +26,5 @@ jobs:
           ansible-galaxy collection install -p collections -r ansible-requirements.yaml
           ansible-galaxy collection install -p collections --force .
 
-      - name: Setup Ansible environment
-        run: cp src/ceph-ansible-site.yaml ceph-ansible/site.yml
-
       - name: Run ansible-lint
         run: ansible-lint

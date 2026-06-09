@@ -166,7 +166,6 @@ The other playbooks can be called alone to re-configure a specific part, when yo
 
 ## Cluster
 
-- `cluster_setup_ceph.yaml`: Configure Ceph using ceph-ansible
 - `cluster_setup_cephadm.yaml`: Configure Ceph using cephadm
 - `cluster_setup_ha.yaml`: Configure Corosync and Pacemaker et Corosync
 - `cluster_setup_libvirt.yaml`: Create a Ceph RBD pool for libvirt
@@ -189,14 +188,9 @@ The other playbooks can be called alone to re-configure a specific part, when yo
 ## Utility
 
 - `replace_machine_remove_machine_cephadm.yaml`: Remove a machine from the cluster when using cephadm.
-- `replace_machine_remove_machine_from_cluster.yaml`: Remove a machine on the cluster when using ceph-ansible.
 - `seapath_setup_configure_nic_irq_affinity.yaml`: Configure NIC IRQs affinity (useful for macvtap interfaces)
 - `seapath_setup_cockpit_plugins.yaml`: Deploy cockpit plugins on the cluster
 - `seapath_setup_custom_hardware.yaml`: Apply hardware specific roles
-- `purge_ceph.yaml`: Remove the Ceph configuration on the cluster (only used for development)
-
-Note: All the other `replace_machine_*` playbooks are specific parts of the machine replacement scenario.
-They should not be called alone.
 
 ## Management
 
