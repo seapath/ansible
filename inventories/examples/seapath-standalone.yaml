@@ -43,14 +43,5 @@ hypervisors:
   vars:
     isolcpus: "4-N" # List of CPUs to isolate (Debian only). TODO
 
-# Empty groups to prevent warnings, mostly ceph-ansible
-grafana-server:
-iscsigws:
-iscsi-gws:
-mdss:
-mgrs:
-nfss:
-rbdmirrors:
-rgwloadbalancers:
-rgws:
+# Empty groups to prevent warnings
 cluster_machines:

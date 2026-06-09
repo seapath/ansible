@@ -58,13 +58,6 @@ ansible-galaxy collection install --collections-path="$(pwd)/collections" --forc
 echo "Update git submodules"
 git submodule update --init --force
 
-echo "Copy ceph-ansible site.yml"
-cp -vf src/ceph-ansible-site.yaml ceph-ansible/site.yml
-
-echo "Patch ceph-ansible"
-find src/ceph-ansible-patches -type f -name "*.diff" -exec git -C ceph-ansible \
-    apply ../{} \;
-
 echo "Fetch Cockpit plugins"
 mkdir -p roles/deploy_cockpit_plugins/files
 curl -L -o roles/deploy_cockpit_plugins/files/cockpit-cluster-dashboard.tar.gz \

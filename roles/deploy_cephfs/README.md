@@ -4,7 +4,7 @@ This role deploys the CephFS feature using cephadm
 
 ## Requirements
 
-You need to use cephadm and not ceph-ansible to use this feature
+Ceph needs to de deployed to use this role
 
 ## Role Variables
 
