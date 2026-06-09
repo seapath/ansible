@@ -51,6 +51,12 @@ all:
     hostname: "{{ inventory_hostname }}"
     apply_network_config: true
 
+    # Hardening Debian specific
+    # On Debian you can defined the Grub (Bootloader) protected password here
+    # Use grub2-mkpasswd-pbkdf2 / grub-mkpasswd-pbkdf2 to encoded it.
+    # Default password is seapath
+    grub_password: "grub.pbkdf2.sha512.10000.876266D5A876FADE04725F61C182BE34F1D552018AB495CF757AB6F7BF46E965D67FF1ADAFFA930CA850A4B738121EA13FA2E497CBA576CE16C7FBFC25485635.42CAC92CF24D06470F2AC2A0588506C02A972BA0C85BD2599BFC141FE0C865E8A5CD15CED6080AA3810C68EF38880E9825CB180BA5F704FE4F54FF49B690948C"
+
 # Three hypervisors setup. All machines are part of the hypervisor group.
 hypervisors:
   hosts:
