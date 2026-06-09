@@ -1,0 +1,17 @@
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+# Setup a virtual cluster based on a fixed SEAPATH Yocto cluster image
+# that test the modification made in Ansible.
+
+name: CI Virtual cluster
+
+on:
+  workflow_dispatch:
+
+jobs:
+  virtual-cluster:
+    uses: seapath/virtual-cluster/.github/workflows/ansible-setup.yml@main
+    with:
+      ansible_repo: https://github.com/seapath/ansible.git
+      ansible_ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'main' }}
