@@ -103,6 +103,7 @@ mons:
     cluster_network: "192.168.55.0/24" # IP range of your cluster. TODO
     public_network: "{{ cluster_network }}"
     monitor_address: "{{ cluster_ip_addr }}"
+    cephadm_network: "{{ public_network }}"
     configure_firewall: false
     ntp_service_enabled: false
     dashboard_enabled: false
