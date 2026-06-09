@@ -9,6 +9,7 @@
     dest: /etc/
     delete: true
     owner: false
+    group: false
     rsync_opts:
       - "--exclude=*.j2"
 
