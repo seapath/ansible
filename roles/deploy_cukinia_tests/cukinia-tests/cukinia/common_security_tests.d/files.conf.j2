@@ -1,4 +1,5 @@
 # Copyright (C) 2022, RTE (http://www.rte-france.com)
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 cukinia_log "$(_colorize yellow "--- check common files permissions ---")"
@@ -34,35 +35,53 @@ test_id "SEAPATH-00194" as "All directories writable by all users are owned by r
 test_id "SEAPATH-00195" as "Ceph OSD are owned by ceph" \
     cukinia_test "$(find /var/lib/ceph/osd -type d -perm -0002 -a \! -user ceph 2>/dev/null || true)" = ""
 
+
 # These binaries come from official repositories and safely handle setuid
-SETUID_ALLOWLIST="(\
+
+SETUID_ALLOWLIST_DEBIAN="\
+/usr/bin/crontab|\
+/usr/bin/fusermount3|\
+/usr/bin/ksu|\
+/usr/bin/pkexec|\
+/usr/bin/wall|\
+/usr/lib/dbus-1.0/dbus-daemon-launch-helper|\
+/usr/lib/openssh/ssh-keysign|\
+/usr/lib/polkit-1/polkit-agent-helper-1|\
+/usr/lib/x86_64-linux-gnu/utempter/utempter|\
+/usr/libexec/polkit-agent-helper-1"
+
+SETUID_ALLOWLIST_SLES="\
+/usr/libexec/qemu-bridge-helper|\
+/usr/libexec/polkit-1/polkit-agent-helper-1|\
+/usr/libexec/dbus-1/dbus-daemon-launch-helper"
+
+SETUID_ALLOWLIST_COMMON="\
 /usr/bin/at|\
 /usr/bin/chage|\
 /usr/bin/chfn|\
 /usr/bin/chsh|\
-/usr/bin/crontab|\
 /usr/bin/expiry|\
-/usr/bin/fusermount3|\
 /usr/bin/gpasswd|\
-/usr/bin/ksu|\
 /usr/bin/mount|\
+/usr/bin/newgidmap|\
 /usr/bin/newgrp|\
 /usr/bin/newuidmap|\
-/usr/bin/newgidmap|\
 /usr/bin/ntfs-3g|\
 /usr/bin/passwd|\
-/usr/bin/pkexec|\
 /usr/bin/ssh-agent|\
 /usr/bin/su|\
 /usr/bin/sudo|\
 /usr/bin/umount|\
-/usr/bin/wall|\
-/usr/lib/dbus-1.0/dbus-daemon-launch-helper|\
-/usr/lib/openssh/ssh-keysign|\
-/usr/lib/x86_64-linux-gnu/utempter/utempter|\
-/usr/libexec/polkit-agent-helper-1|\
-/usr/lib/polkit-1/polkit-agent-helper-1|\
-/usr/sbin/unix_chkpwd\
+/usr/sbin/unix_chkpwd"
+
+SETUID_ALLOWLIST="(\
+{% if seapath_distro == "Debian" %}
+$SETUID_ALLOWLIST_DEBIAN|\
+{% elif seapath_distro == "SLES" %}
+$SETUID_ALLOWLIST_SLES|\
+{% endif %}
+$SETUID_ALLOWLIST_COMMON\
 )"
+
 test_id "SEAPATH-00196" as "No unexpected file has setuid/setgid enabled" \
     cukinia_test "$(find / -type f -perm /6000 -not -path '/var/lib/docker/*' -not -path '/var/lib/containers/*' 2>/dev/null | grep -Ev ${SETUID_ALLOWLIST})" = ""
