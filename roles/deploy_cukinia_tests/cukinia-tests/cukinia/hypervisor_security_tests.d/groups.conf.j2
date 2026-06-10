@@ -2,63 +2,86 @@
 # Copyright (C) 2026 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
-groups=" \
+EXPECTED_GROUPS_DEBIAN=" \
+    adm \
+    backup \
+    bin \
+    crontab \
+    daemon \
+    dip \
+    fax \
+    floppy \
+    games \
+    irc \
+    libvirt-qemu \
+    list \
+    mail \
+    man \
+    netdev \
+    news \
+    nogroup \
+    operator \
+    plugdev \
+    proxy \
+    rdma \
+    sasl \
+    src \
+    staff \
+    sudo \
+    sys \
+    uucp \
+    uuidd \
+    voice \
+    www-data \
+"
+
+EXPECTED_GROUPS_SLES=" \
+    at \
+    audit \
+    dnsmasq \
+    libvirtdbus \
+    lock \
+    openvswitch \
+    qemu \
+    systemd-coredump \
+    systemd-timesync \
+    tftp \
+    trusted \
+    tss \
+    unbound \
+"
+
+EXPECTED_GROUPS_COMMON=" \
     {{ admin_user }} \
 {% if inventory_hostname in groups.get('cluster_machines', []) %}
     ceph \
     haclient \
 {% endif %}
 {% if inventory_hostname in groups.get('cluster_machines', []) and (is_using_cephadm | default(false)) %}
-    containerized-ceph \
     cephadm \
+    containerized-ceph \
 {% endif %}
-    adm \
     ansible \
     audio \
-    backup \
-    bin \
     cdrom \
-    _chrony \
     clock \
-    crontab \
-    daemon \
-    Debian-snmp \
+    {% if seapath_distro == "Debian" %}_chrony{% else %}chrony{% endif %} \
     dialout \
-    dip \
     disk \
-    fax \
-    floppy \
-    games \
     input \
-    irc \
     kmem \
     kvm \
     libvirt \
-    libvirt-qemu \
-    list \
     lp \
-    mail \
-    man \
     messagebus \
-    netdev \
-    news \
-    nogroup \
-    operator \
-    plugdev \
     polkitd \
     privileged \
-    proxy \
-    rdma \
     render \
     root \
-    sasl \
     sgx \
     shadow \
-    src \
-    _ssh \
-    staff \
-    sudo \
-    sys \
+    {% if seapath_distro == "Debian" %}Debian-snmp{% else %}snmp{% endif %} \
+    {% if seapath_distro == "Debian" %}_ssh{% else %}sshd{% endif %} \
     systemd-journal \
     systemd-network \
     systemd-resolve \
@@ -66,20 +89,26 @@ groups=" \
     tty \
     users \
     utmp \
-    uucp \
-    uuidd \
     video \
-    voice \
-    www-data \
 "
+
+EXPECTED_GROUPS=" \
+{% if seapath_distro == "Debian" %}
+$EXPECTED_GROUPS_DEBIAN \
+{% elif seapath_distro == "SLES" %}
+$EXPECTED_GROUPS_SLES \
+{% endif %}
+$EXPECTED_GROUPS_COMMON \
+"
+
 args="-v"
-for g in ${groups}; do
+for g in ${EXPECTED_GROUPS}; do
     args="$args -e $g"
 done
 
 cukinia_log "$(_colorize yellow "--- check /etc/group ---")"
 
-nb_group=$(echo $groups | wc -w)
+nb_group=$(echo $EXPECTED_GROUPS | wc -w)
 
 GROUP_EXTRA_GROUPS=$(grep $args /etc/group | wc -l)
 GROUP_NB_GROUPS=$(cat /etc/group | wc -l)
