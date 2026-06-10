@@ -1,4 +1,5 @@
 # Copyright (C) 2023, RTE (http://www.rte-france.com)
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 cukinia_log "$(_colorize yellow "--- check systemd settings ---")"
@@ -12,40 +13,62 @@ ESSENTIAL_SERVICES_EXTRA="|\
 ESSENTIAL_SERVICES_EXTRA=""
 {% endif %}
 
-ESSENTIAL_SERVICES="(\
-apparmor|\
-atd|\
-auditd|\
-blk-availability|\
-ceph-[a-Z0-9-]*|\
-chrony|\
-chrony-wait|\
+ESSENTIAL_SERVICES_DEBIAN="\
 console-setup|\
-conntrackd|\
 containerd|\
-corosync|\
-cron|\
-dbus|\
-dm-event|\
 dpdk|\
-getty|\
 hddtemp|\
-irqbalance|\
 keyboard-setup|\
-kmod-static-nodes|\
-libvirt-guests|\
-libvirtd|\
+kthread-taskset|\
 lm-sensors|\
 logd|\
-logrotate|\
-lvm2-monitor|\
 lvm2-pvscan|\
 netfilter-persistent|\
 nginx|\
 nginxquadlet|\
 openipmi|\
-openvswitch-switch|\
 ovs-record-hostname|\
+quadlet-macvlan-network|\
+rc.local|\
+sysfsutils|\
+systemd-backlight|\
+systemd-fsck|\
+systemd-update-utmp-runlevel|\
+systemd-update-utmp|\
+wtmpdb-update-boot"
+
+ESSENTIAL_SERVICES_SLES="\
+dracut-shutdown|\
+iscsi|\
+kbdsettings|\
+kernel-sysctl|\
+klog|\
+ovs-delete-transient-ports|\
+soft-reboot-cleanup|\
+systemd-fsck-root|\
+systemd-vconsole-setup"
+
+ESSENTIAL_SERVICES_COMMON="\
+apparmor|\
+atd|\
+auditd|\
+blk-availability|\
+ceph-[a-Z0-9-]*|\
+{% if seapath_distro == "Debian" %}chrony{% else %}chronyd{% endif %}|\
+chrony-wait|\
+conntrackd|\
+corosync|\
+cron|\
+{% if seapath_distro == "SLES" %}dbus-broker{% else %}dbus{% endif %}|\
+dm-event|\
+getty|\
+irqbalance|\
+kmod-static-nodes|\
+libvirt-guests|\
+libvirtd|\
+logrotate|\
+lvm2-monitor|\
+{% if seapath_distro == "Debian" %}openvswitch-switch{% else %}openvswitch{% endif %}|\
 ovs-vswitchd|\
 ovsdb-server|\
 pacemaker|\
@@ -53,51 +76,50 @@ podman|\
 polkit|\
 ptp_vsock|\
 ptpstatus|\
-quadlet-macvlan-network|\
 rbdmap|\
-rc.local|\
 serial-getty@ttyS0|\
-smartmontools|\
+{% if seapath_distro == "Debian" %}smartmontools{% else %}smartd{% endif %}|\
 snmpd|\
-ssh|\
-sysfsutils|\
+{% if seapath_distro == "Debian" %}ssh{% else %}sshd{% endif %}|\
+seapath-config_ovs|\
 syslog-ng|\
 sysstat|\
-systemd-backlight|\
 systemd-binfmt|\
-systemd-fsck|\
 systemd-journal-flush|\
 systemd-journald|\
 systemd-logind|\
 systemd-machined|\
 systemd-modules-load|\
 systemd-network-generator|\
+systemd-networkd-persistent-storage|\
 systemd-networkd-wait-online|\
 systemd-networkd|\
-systemd-networkd-persistent-storage|\
 systemd-random-seed|\
 systemd-remount-fs|\
 systemd-resolved|\
 systemd-sysctl|\
 systemd-sysusers|\
-systemd-tmpfiles-setup-dev|\
 systemd-tmpfiles-setup-dev-early|\
+systemd-tmpfiles-setup-dev|\
 systemd-tmpfiles-setup|\
 systemd-udev-load-credentials|\
 systemd-udev-trigger|\
 systemd-udevd|\
-systemd-update-utmp|\
-systemd-update-utmp-runlevel|\
 systemd-user-sessions|\
 team0_x|\
 timemaster|\
 tuned|\
 user-runtime-dir|\
 user|\
-virtlogd|\
-wtmpdb-update-boot|\
-seapath-config_ovs|\
-kthread-taskset\
+virtlogd"
+
+ESSENTIAL_SERVICES="(\
+{% if seapath_distro == "Debian" %}
+$ESSENTIAL_SERVICES_DEBIAN|\
+{% elif seapath_distro == "SLES" %}
+$ESSENTIAL_SERVICES_SLES|\
+{% endif %}
+$ESSENTIAL_SERVICES_COMMON\
 $ESSENTIAL_SERVICES_EXTRA\
 )"
 
