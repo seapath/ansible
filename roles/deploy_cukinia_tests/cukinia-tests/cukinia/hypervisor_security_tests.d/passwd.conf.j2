@@ -1,4 +1,5 @@
 # Copyright (C) 2023, RTE (http://www.rte-france.com)
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 passwd=" \
@@ -52,6 +53,11 @@ for g in ${passwd}; do
 done
 
 cukinia_log "$(_colorize yellow "--- check /etc/passwd ---")"
+
 nb_passwd=$(echo $passwd | wc -w)
-test_id "SEAPATH-00047" as "/etc/passwd is consistent" cukinia_test $(grep $args /etc/passwd | wc -l) -eq 0
-test_id "SEAPATH-00048" as "/etc/passwd does not include extra user" cukinia_test $(cat /etc/passwd | wc -l) -eq $nb_passwd
+
+PASSWD_EXTRA_USERS=$(grep $args /etc/passwd | wc -l)
+PASSWD_NB_USERS=$(cat /etc/passwd | wc -l)
+
+test_id "SEAPATH-00047" as "/etc/passwd only contains expected users" \
+    cukinia_test $PASSWD_EXTRA_USERS -eq 0 -a $PASSWD_NB_USERS -eq $nb_passwd
