@@ -1,4 +1,5 @@
 # Copyright (C) 2023, RTE (http://www.rte-france.com)
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 groups=" \
@@ -79,6 +80,12 @@ done
 cukinia_log "$(_colorize yellow "--- check /etc/group ---")"
 nb_group=$(echo $groups | wc -w)
 test_id "SEAPATH-00033" as "/etc/group is consistent" cukinia_test $(grep $args /etc/group | wc -l)
-test_id "SEAPATH-00033" as "/etc/gshadow is consistent" cukinia_test $(grep $args /etc/gshadow | wc -l)
 test_id "SEAPATH-00034" as "/etc/group does not include extra group" cukinia_test $(cat /etc/group | wc -l) -eq $nb_group
+
+{% if seapath_distro == "SLES" %}
+test_id "SEAPATH-00036" as "/etc/group has no group password" \
+    not cukinia_cmd grep -Ev '^[^:]+:[x!*]:' /etc/group
+{% else %}
+test_id "SEAPATH-00033" as "/etc/gshadow is consistent" cukinia_test $(grep $args /etc/gshadow | wc -l)
 test_id "SEAPATH-00034" as "/etc/gshadow does not include extra group" cukinia_test $(cat /etc/gshadow | wc -l) -eq $nb_group
+{% endif %}
