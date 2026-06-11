@@ -36,3 +36,7 @@ jobs:
   ci-centos:
     needs: ci-molecule
     uses: ./.github/workflows/ci-centos.yml
+
+  ci-virtual-cluster:
+    needs: ci-molecule
+    uses: ./.github/workflows/ci-virtual-cluster.yml
