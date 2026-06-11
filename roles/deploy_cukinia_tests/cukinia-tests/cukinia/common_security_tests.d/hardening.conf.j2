@@ -58,12 +58,18 @@ test_id "SEAPATH-00101" as "PAM securetty module is active in 'login' policy" \
 
 # Check that bootloader is password protected with a superuser "root" & one
 # unrestricted boot menuentry
-test_id "SEAPATH-00202" as "grub root superuser is set in /boot/grub/grub.cfg" \
-	cukinia_cmd grep -q "^superusers=root$" /boot/grub/grub.cfg
+{% if seapath_distro == "Debian" %}
+GRUB_CFG_FILE="/boot/grub/grub.cfg"
+{% else %}
+GRUB_CFG_FILE="/boot/grub2/grub.cfg"
+{% endif %}
+
+test_id "SEAPATH-00202" as "grub root superuser is set in $GRUB_CFG_FILE" \
+	cukinia_cmd grep -q "^superusers=root$" $GRUB_CFG_FILE
 test_id "SEAPATH-00203" as "grub root superuser is password protected" \
-	cukinia_cmd grep -q "^password_pbkdf2 root grub.pbkdf2.sha512.65536.*$" /boot/grub/grub.cfg
-test_id "SEAPATH-00204" as "main menuentry is unrestricted in /boot/grub/grub.cfg" \
-	cukinia_cmd grep -q "^menuentry.*--unrestricted" /boot/grub/grub.cfg
+	cukinia_cmd grep -q "^password_pbkdf2 root grub.pbkdf2.sha512.65536.*$" $GRUB_CFG_FILE
+test_id "SEAPATH-00204" as "main menuentry is unrestricted in $GRUB_CFG_FILE" \
+	cukinia_cmd grep -q "^menuentry.*--unrestricted" $GRUB_CFG_FILE
 
 # Check that $USER have a private $TMPDIR
 test_id "SEAPATH-00205" as "TMPDIR env var is defined and readonly" cukinia_test \
