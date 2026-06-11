@@ -1,4 +1,5 @@
 # Copyright (C) 2023, RTE (http://www.rte-france.com)
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 cukinia_log "$(_colorize yellow "--- check /etc/shadow ---")"
@@ -19,9 +20,11 @@ locked_users=" \
     _apt \
     _chrony \
     ansible \
+    at \
     backup \
     bin \
     ceph \
+    chrony \
     daemon \
     Debian-snmp \
     dnsmasq \
@@ -30,6 +33,7 @@ locked_users=" \
     hacluster \
     irc \
     libvirt-qemu \
+    libvirtdbus \
     list \
     lp \
     mail \
@@ -37,8 +41,10 @@ locked_users=" \
     messagebus \
     news \
     nobody \
+    openvswitch \
     polkitd \
     proxy \
+    snmp \
     sshd \
     sync \
     sys \
@@ -46,6 +52,9 @@ locked_users=" \
     systemd-network \
     systemd-resolve \
     systemd-timesync \
+    tftp \
+    tss \
+    unbound \
     uucp \
     uuidd \
     www-data \
