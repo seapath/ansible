@@ -3,8 +3,8 @@
 ---
 namespace: seapath
 name: ansible
-version: 1.0.0
-readme: README-ansible-galaxy.md
+version: 2.0.0
+readme: README.md
 authors:
   - RTE (https://www.rte-france.com)
   - Savoir-faire Linux (https://www.savoirfairelinux.com)
