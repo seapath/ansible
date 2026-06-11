@@ -7,3 +7,5 @@ configure_hardening_login_defs_file: /etc/login.defs.d/hardening.defs
 configure_hardening_grub_update_command: grub2-mkconfig -o /boot/grub2/grub.cfg
 configure_hardening_sshd_has_lastlog: false
 configure_hardening_physical_machine_snmp_user_name: snmp
+configure_hardening_oscap_profile: xccdf_org.ssgproject.content_profile_anssi_bp28_high
+configure_hardening_oscap_ds_file: /usr/share/xml/scap/ssg/content/ssg-sle16-ds.xml

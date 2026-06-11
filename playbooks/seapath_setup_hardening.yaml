@@ -37,6 +37,19 @@
   roles:
     - configure_hardening_physical_machine
 
+- name: Run OpenSCAP remediation
+  become: true
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  vars:
+    revert: false
+  pre_tasks:
+    - name: Load distribution-specific hardening variables
+      ansible.builtin.include_vars: ../vars/{{ seapath_distro }}_hardening.yml
+  roles:
+    - configure_hardening_oscap
+
 - name: Reboot to apply hardening
   become: true
   hosts:
