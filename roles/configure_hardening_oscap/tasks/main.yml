@@ -1,0 +1,21 @@
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Run OpenSCAP ANSSI BP28 High remediation
+  ansible.builtin.command:
+    cmd: >
+      oscap xccdf eval
+      --remediate
+      --fetch-remote-resources
+      --results /tmp/oscap-results.xml
+      --report /tmp/oscap-report.html
+      --profile {{ configure_hardening_oscap_profile }}
+      {{ configure_hardening_oscap_ds_file }}
+  register: configure_hardening_oscap_remediation
+  failed_when: configure_hardening_oscap_remediation.rc not in [0, 2]
+  changed_when: configure_hardening_oscap_remediation.rc == 2
+  when:
+    - not revert
+    - configure_hardening_oscap_ds_file is defined
+    - configure_hardening_oscap_profile is defined
