@@ -26,7 +26,9 @@ PermitEmptyPasswords no
 AllowAgentForwarding no
 AllowTcpForwarding no
 X11Forwarding no
+{% if configure_hardening_sshd_has_lastlog %}
 PrintLastLog yes
+{% endif %}
 PermitUserEnvironment no
 Compression no
 ClientAliveInterval 300
