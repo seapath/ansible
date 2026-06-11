@@ -17,6 +17,8 @@
   ansible.builtin.import_tasks: sysctl.yml
 - name: Apply GRUB configurations
   ansible.builtin.import_tasks: grub.yml
+- name: Apply auditd configurations
+  ansible.builtin.import_tasks: audit.yml
 
 - name: SEAPATH Debian specific distro configuration
   when: seapath_distro == "Debian"
