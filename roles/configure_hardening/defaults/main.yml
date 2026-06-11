@@ -4,3 +4,4 @@
 ---
 configure_hardening_login_defs_file: /etc/login.defs
 configure_hardening_etc_securetty_group: root
+configure_hardening_sshd_has_lastlog: true
