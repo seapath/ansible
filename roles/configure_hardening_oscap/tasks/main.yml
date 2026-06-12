@@ -11,6 +11,9 @@
       --results /tmp/oscap-results.xml
       --report /tmp/oscap-report.html
       --profile {{ configure_hardening_oscap_profile }}
+      {% if configure_hardening_oscap_tailoring_file is defined %}
+      --tailoring-file {{ configure_hardening_oscap_tailoring_file }}
+      {% endif %}
       {{ configure_hardening_oscap_ds_file }}
   register: configure_hardening_oscap_remediation
   failed_when: configure_hardening_oscap_remediation.rc not in [0, 2]
