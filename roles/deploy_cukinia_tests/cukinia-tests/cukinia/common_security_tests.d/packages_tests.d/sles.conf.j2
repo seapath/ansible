@@ -1,0 +1,200 @@
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+cukinia_log "$(_colorize yellow "--- Check zypper and installed packages ---")"
+
+
+EXPECTED_PACKAGES=" \
+    apparmor-parser \
+    apparmor-utils \
+    at \
+    audit \
+    audit-audispd-plugins \
+    busybox \
+    bzip2 \
+    ca-certificates \
+    ca-certificates \
+    ca-certificates-mozilla \
+    ceph-common \
+    cephadm \
+    chrony \
+    cockpit \
+    cockpit-machines \
+    cockpit-packagekit \
+    conntrack-tools \
+    conntrackd \
+    corosync \
+    cpuset \
+    cracklib-dict-full \
+    crmsh \
+    curl \
+    dbus-1 \
+    dracut \
+    dracut-kiwi-oem-dump \
+    dracut-kiwi-oem-repart \
+    e2fsprogs \
+    efibootmgr \
+    filesystem \
+    glibc-locale \
+    gpg2 \
+    grub2 \
+    grub2-x86_64-efi \
+    ipmitool \
+    iproute2 \
+    iptables \
+    iputils \
+    irqbalance \
+    jq \
+    kernel-firmware-all \
+    kernel-rt \
+    libcephfs2 \
+    libvirt-client \
+    libvirt-client-qemu \
+    libvirt-daemon \
+    libvirt-daemon-config-network \
+    libvirt-daemon-config-nwfilter \
+    libvirt-daemon-driver-network \
+    libvirt-daemon-driver-nodedev \
+    libvirt-daemon-driver-nwfilter \
+    libvirt-daemon-driver-qemu \
+    libvirt-daemon-driver-secret \
+    libvirt-daemon-driver-storage \
+    libxml2-tools \
+    linuxptp \
+    lsb-release \
+    lvm2 \
+    net-snmp \
+    net-tools \
+    ntfs-3g \
+    openscap-utils \
+    openssh \
+    openssh-server \
+    openvswitch \
+    ovmf \
+    pacemaker \
+    PackageHub-release
+    parted \
+    patch \
+    perf \
+    podman \
+    podman-docker \
+    python3-ceph-argparse \
+    python3-cephfs \
+    python313 \
+    python313-cffi \
+    python313-libvirt-python \
+    python313-lxml \
+    python313-pip \
+    python313-setuptools \
+    qemu-block-curl \
+    qemu-block-rbd \
+    qemu-img \
+    qemu-tools \
+    qemu-x86 \
+    rsync \
+    rt-tests \
+    scap-security-guide \
+    sensors \
+    shadow \
+    shim \
+    skopeo \
+    SLES-release \
+    sudo \
+    suseconnect-ng \
+    sysfsutils \
+    syslog-ng \
+    sysstat \
+    systemd \
+    systemd-networkd \
+    systemd-resolved \
+    timezone \
+    tuned \
+    tuned-profiles-nfv \
+    tuned-profiles-realtime \
+    ucode-amd \
+    ucode-intel \
+    udev \
+    udev \
+    util-linux \
+    vim \
+    virt-install \
+    wget \
+    x86_64_v3 \
+    zypper \
+"
+
+grep_is_essential_cmd="grep -Eq"
+for p in $EXPECTED_PACKAGES; do
+    grep_is_essential_cmd="$grep_is_essential_cmd -e (^|\s)$p(\s|$)"
+done
+
+# Check if package is in the list of essential packages
+package_is_essential() {
+    echo $1 | $grep_is_essential_cmd
+}
+
+set_dependency_chain() {
+    dependency_chain=""
+    for i in "$@"; do
+        if [ -n "$dependency_chain" ]; then
+            dependency_chain="$dependency_chain -> $i"
+        else
+            dependency_chain="$i"
+        fi
+    done
+}
+
+REQUIRED_PACKAGES=""
+UNNEEDED_PACKAGES=""
+
+# Parameters:
+# $1 is the package name
+# $2 is the dependency chain to avoid infinite loops. Leave empty on initial call.
+# Return: 0 if the package is required by an explicitly installed package, 1 if not.
+package_is_required() {
+    if package_is_essential "$1" || echo "$REQUIRED_PACKAGES" | grep -Eq "(^|\s)$1(\s|$)"; then
+        set_dependency_chain $2 $1
+
+        for r in $2 $1; do
+            if ! echo "$REQUIRED_PACKAGES" | grep -Eq "(^|\s)$r(\s|$)"; then
+                REQUIRED_PACKAGES="$REQUIRED_PACKAGES $r"
+            fi
+        done
+
+        return 0
+    fi
+
+    # Detect packages installed with weak requirements (e.g. recommends, suggest, ...)
+    requires="$(zypper --no-remote -q se -i --requires-pkg $1 | tail -n+4 | cut -d'|' -f2)"
+    if [ -z "$requires" ] || echo "$UNNEEDED_PACKAGES" | grep -Eq "(^|\s)$1(\s|$)"; then
+        set_dependency_chain $2 $1
+
+        if ! echo "$UNNEEDED_PACKAGES" | grep -Eq "(^|\s)$1(\s|$)"; then
+            UNNEEDED_PACKAGES="$UNNEEDED_PACKAGES $r"
+        fi
+
+        return 1
+    fi
+
+    for r in $requires; do
+        if echo "$2" | grep -Eq "(^|\s)$r(\s|$)"; then
+            continue
+        fi
+
+        if package_is_required "$r" "$2 $1"; then
+            return 0
+        fi
+    done
+
+    # No required package found
+    return 1
+}
+
+for p in $(zypper --no-remote -q se -i -t package | tail -n+4 | cut -d'|' -f2); do
+    if ! package_is_required "$p"; then
+        cukinia_log "$(_colorize red Unneeded package: $p \(dependency chain: $dependency_chain\))"
+    fi
+done
+
+test_id "SEAPATH-00198" as "No unneded packages installed" \
+    cukinia_test "$UNNEEDED_PACKAGES" = ""
