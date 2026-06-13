@@ -49,6 +49,10 @@ jobs:
           echo "Collection version: ${VERSION}"
           echo "VERSION=${VERSION}" >> "${GITHUB_ENV}"
 
+      - name: Override README.md with Galaxy-specific version for build
+        run: |
+          cp README-ansible-galaxy.md README.md
+
       - name: Build collection
         run: ansible-galaxy collection build
 
