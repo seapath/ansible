@@ -13,7 +13,7 @@
   when:
     - item.extract is not defined or item.extract is false
 
-- name: Upload extra files
+- name: Upload extra files (static)
   ansible.builtin.copy:
     src: "{{ item.src }}"
     dest: "{{ item.dest }}"
@@ -24,6 +24,20 @@
   loop: "{{ upload_extra_files_upload_files }}"
   when:
     - item.extract is not defined or item.extract is false
+    - not item.src.endswith('.j2')
+
+- name: Upload extra files (template)
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ item.owner | default('root') }}"
+    group: "{{ item.group | default('root') }}"
+    mode: "{{ item.mode | default('0644') }}"
+    backup: true
+  loop: "{{ upload_extra_files_upload_files }}"
+  when:
+    - item.extract is not defined or item.extract is false
+    - item.src.endswith('.j2')
 
 - name: Ensure destination directory exists for extra archives
   ansible.builtin.file:
