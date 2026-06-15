@@ -216,10 +216,17 @@ vim-tiny|\
 whiptail|\
 zstd"
 
+{% if debian_tests_extra_essential_packages | default([]) %}
+ESSENTIAL_PACKAGES_EXTRA="|\
+{{ debian_tests_extra_essential_packages | join('|\\\n') }}"
+{% else %}
+ESSENTIAL_PACKAGES_EXTRA=""
+{% endif %}
 ESSENTIAL_PACKAGES="(\
 $ESSENTIAL_PACKAGES_SEAPATH|\
 $ESSENTIAL_PACKAGES_FAI|\
 $ESSENTIAL_PACKAGES_DEBOOTSTRAP\
+$ESSENTIAL_PACKAGES_EXTRA\
 )"
 
 UNRECOGNIZED_PACKAGES=""
