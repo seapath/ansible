@@ -25,7 +25,7 @@ test_id "SEAPATH-00090" as "Check /etc/ssh/ssh_host_rsa_key permissions" cukinia
     "$(stat -c "%a %U %G" /etc/ssh/ssh_host_rsa_key)" == "600 root root"
 
 test_id "SEAPATH-00192" as "All files have a known owner and group" \
-    cukinia_test "$(find / -type f,d,l \( -nouser -o -nogroup \) -not -path '/sys/*' -not -path '/proc/*' -not -path '/var/lib/docker/*' -not -path '/var/lib/containers/*' 2>/dev/null || true)" = ""
+    cukinia_test "$(find / -path '/sys' -prune -o -path '/proc' -prune -o -path '/var/lib/docker' -prune -o -path '/var/lib/containers' -prune -o -type f,d,l \( -nouser -o -nogroup \) -print 2>/dev/null || true)" = ""
 
 test_id "SEAPATH-00193" as "All directories writable by all users have the sticky bit" \
     cukinia_test "$(find / -type d \( -perm -0002 -a \! -perm -1000 \) 2>/dev/null || true)" = ""
