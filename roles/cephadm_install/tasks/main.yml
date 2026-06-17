@@ -84,7 +84,7 @@
     name: "{{ item }}"
   when: cephadm_install_pullimages is true
   loop:
-    - "docker.io/library/registry:2"
+    - "{{ cephadm_install_registryurl }}"
     - "quay.io/ceph/ceph:v{{ cephadm_install_release }}"
 
 - name: Run local container registry using Podman
