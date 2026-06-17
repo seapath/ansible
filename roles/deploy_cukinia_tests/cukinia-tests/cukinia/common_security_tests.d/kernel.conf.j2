@@ -8,7 +8,9 @@ unset kernel_options && declare -A kernel_options
 kernel_options["hardening"]="SECURITY_YAMA:y                   \
                              DEBUG_WX:y                        \
                              SECURITY_DMESG_RESTRICT:y         \
+{% if seapath_distro != "SLES" %}
                              LEGACY_VSYSCALL_NONE:y            \
+{% endif %}
                              SLAB_FREELIST_RANDOM:y            \
                              SLAB_FREELIST_HARDENED:y          \
                              HARDENED_USERCOPY:y               \
@@ -19,6 +21,13 @@ kernel_options["hardening"]="SECURITY_YAMA:y                   \
 cukinia_log "$(_colorize yellow "--- Common hardening Kernel configuration ---")"
 
 check_kernel_configuration ${kernel_options[@]}
+
+{% if seapath_distro == "SLES" %}
+# Explicitly skipped as current SLES kernel-rt doesn't compile with LEGACY_VSYSCALL_NONE option
+when false test_id "SEAPATH-00050" as "Linux kernel 'hardening' : \
+                LEGACY_VSYSCALL_NONE is enabled" \
+                cukinia_kconf LEGACY_VSYSCALL_NONE y
+{% endif %}
 
 test_id "SEAPATH-00170" as "Wipe slab and page allocations enabled on cmdline" cukinia_cmd \
     grep -q "init_on_alloc=1" /proc/cmdline && \
