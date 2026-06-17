@@ -65,7 +65,7 @@ GRUB_CFG_FILE="/boot/grub2/grub.cfg"
 {% endif %}
 
 test_id "SEAPATH-00202" as "grub root superuser is set in $GRUB_CFG_FILE" \
-	cukinia_cmd grep -q "^superusers=root$" $GRUB_CFG_FILE
+	cukinia_cmd grep -q "^set superusers=root$" $GRUB_CFG_FILE
 test_id "SEAPATH-00203" as "grub root superuser is password protected" \
 	cukinia_cmd grep -q "^password_pbkdf2 root grub.pbkdf2.sha512.65536.*$" $GRUB_CFG_FILE
 test_id "SEAPATH-00204" as "main menuentry is unrestricted in $GRUB_CFG_FILE" \
