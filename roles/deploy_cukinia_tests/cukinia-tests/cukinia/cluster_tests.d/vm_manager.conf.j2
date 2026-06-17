@@ -1,0 +1,9 @@
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+{% if inventory_hostname in groups.get('hypervisors', []) %}
+cukinia_conf_include /etc/cukinia/cluster_tests.d/vm_manager_tests.d/vm_manager_libvirt.conf
+{% endif %}
+
+cukinia_conf_include /etc/cukinia/cluster_tests.d/vm_manager_tests.d/vm_manager_pacemaker.conf
+cukinia_conf_include /etc/cukinia/cluster_tests.d/vm_manager_tests.d/vm_manager_rbd.conf
