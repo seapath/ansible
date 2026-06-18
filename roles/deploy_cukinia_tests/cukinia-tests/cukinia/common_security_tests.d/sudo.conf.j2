@@ -15,8 +15,8 @@ test_id "SEAPATH-00148" as "sudoers files include directive requiretty " \
     cukinia_cmd grep -q "^Defaults.*requiretty" $SUDOERS_FILES
 test_id "SEAPATH-00148" as "sudoers files include directive use_pty " \
     cukinia_cmd grep -q "^Defaults.*use_pty" $SUDOERS_FILES
-test_id "SEAPATH-00148" as "sudoers files include directive umask=0027 " \
-    cukinia_cmd grep -q "^Defaults.*umask=0027" $SUDOERS_FILES
+test_id "SEAPATH-00148" as "sudoers files include directive umask=0077 " \
+    cukinia_cmd grep -q "^Defaults.*umask=0077" $SUDOERS_FILES
 test_id "SEAPATH-00148" as "sudoers files include directive ignore_dot " \
     cukinia_cmd grep -q "^Defaults.*ignore_dot" $SUDOERS_FILES
 test_id "SEAPATH-00148" as "sudoers files include directive env_reset " \
