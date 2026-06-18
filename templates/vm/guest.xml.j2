@@ -9,6 +9,7 @@
 -->
 
 {% set vm_features = vm.vm_features if "vm_features" in vm else [] %}
+{% set vm_legacy_bios = vm.legacy_bios if "legacy_bios" in vm else false %}
 {% set cpu_nb = (vm.cpuset | length) if vm.cpuset is defined else vm.nb_cpu | default(1) %}
 
 <domain type="{{ vm.vm_domain_type | default('kvm') }}">
@@ -40,15 +41,17 @@
     <memory unit="MiB">{{ vm.memory | default ("2048") }}</memory>
     <currentMemory unit="MiB">{{ vm.memory | default ("2048") }}</currentMemory>
 {% endif %}
-    <os firmware="efi">
+    <os{% if not vm_legacy_bios %} firmware="efi"{% endif %}>
         <type arch="x86_64" machine="q35">hvm</type>
         <boot dev="hd" />
         <bootmenu enable="no" />
+{% if not vm_legacy_bios %}
         <bios useserial="yes" rebootTimeout="0" />
         <smbios mode="emulate" />
         <firmware>
             <feature enabled="{{ 'yes' if 'secure-boot' is in vm_features else 'no' }}" name="secure-boot"/>
         </firmware>
+{% endif %}
     </os>
     <features>
         <acpi />
