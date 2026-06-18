@@ -16,6 +16,7 @@ configure_hardening_kernel_params:
   - mce=0
   - rng_core.default_quality=500
   - lsm=apparmor,lockdown,capability,landlock,yama,bpf,integrity
+  - kvm.nx_huge_pages=auto
 
 configure_hardening_hardened_services:
   - syslog-ng
