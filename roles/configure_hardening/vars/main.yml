@@ -11,6 +11,7 @@ configure_hardening_kernel_params:
   - randomize_kstack_offset=on
   - slab_common.usercopy_fallback=N
   - iommu=pt
+  - intel_iommu=on
   - security=yama
   - mce=0
   - rng_core.default_quality=500
