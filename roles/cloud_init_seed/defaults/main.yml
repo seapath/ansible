@@ -1,0 +1,17 @@
+# Copyright (C) 2026, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# Directory on the Ansible controller where the cloud-init seed images and
+# their intermediate files (meta-data, user-data, network-config) are built.
+cloud_init_seed_output_dir: "/tmp/seapath_cloud_init"
+
+# Disk format of the generated seed image. Passed to `cloud-localds --disk-format`.
+cloud_init_seed_disk_format: "qcow2"
+
+# Keys of the per-VM `cloud_init` mapping that are NOT valid #cloud-config keys
+# and must therefore be stripped before rendering user-data.
+cloud_init_seed_reserved_keys:
+  - network
+  - user_data_file
+  - instance_id
