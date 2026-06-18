@@ -1,0 +1,99 @@
+---
+- name: Verify network_systemdnetworkd configuration
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Ensure /etc/systemd/network/10-eth0.link exists
+      ansible.builtin.stat:
+        path: /etc/systemd/network/10-eth0.link
+      register: network_systemdnetworkd_link_stat
+
+    - name: Assert /etc/systemd/network/10-eth0.link exists with correct ownership and permissions
+      ansible.builtin.assert:
+        that:
+          - network_systemdnetworkd_link_stat.stat.exists
+          - network_systemdnetworkd_link_stat.stat.mode == "0640"
+          - network_systemdnetworkd_link_stat.stat.pw_name == "root"
+          - network_systemdnetworkd_link_stat.stat.gr_name == "systemd-network"
+        fail_msg: "/etc/systemd/network/10-eth0.link missing or wrong permissions/ownership"
+
+    - name: Read /etc/systemd/network/10-eth0.link content
+      ansible.builtin.slurp:
+        src: /etc/systemd/network/10-eth0.link
+      register: network_systemdnetworkd_link_content
+
+    - name: Assert /etc/systemd/network/10-eth0.link has expected content
+      ansible.builtin.assert:
+        that:
+          - "'[Match]' in network_systemdnetworkd_link_content.content | b64decode"
+          - "'Name=eth0' in network_systemdnetworkd_link_content.content | b64decode"
+          - "'[Link]' in network_systemdnetworkd_link_content.content | b64decode"
+          - "'MTUBytes=1800' in network_systemdnetworkd_link_content.content | b64decode"
+        fail_msg: "/etc/systemd/network/10-eth0.link does not contain expected values"
+
+    - name: Ensure /etc/systemd/network/20-bridge0.netdev exists
+      ansible.builtin.stat:
+        path: /etc/systemd/network/20-bridge0.netdev
+      register: network_systemdnetworkd_netdev_stat
+
+    - name: Assert /etc/systemd/network/20-bridge0.netdev exists with correct ownership and permissions
+      ansible.builtin.assert:
+        that:
+          - network_systemdnetworkd_netdev_stat.stat.exists
+          - network_systemdnetworkd_netdev_stat.stat.mode == "0640"
+          - network_systemdnetworkd_netdev_stat.stat.pw_name == "root"
+          - network_systemdnetworkd_netdev_stat.stat.gr_name == "systemd-network"
+        fail_msg: "/etc/systemd/network/20-bridge0.netdev missing or wrong permissions/ownership"
+
+    - name: Read /etc/systemd/network/20-bridge0.netdev content
+      ansible.builtin.slurp:
+        src: /etc/systemd/network/20-bridge0.netdev
+      register: network_systemdnetworkd_netdev_content
+
+    - name: Assert /etc/systemd/network/20-bridge0.netdev has expected content
+      ansible.builtin.assert:
+        that:
+          - "'[NetDev]' in network_systemdnetworkd_netdev_content.content | b64decode"
+          - "'Name=bridge0' in network_systemdnetworkd_netdev_content.content | b64decode"
+          - "'Kind=bridge' in network_systemdnetworkd_netdev_content.content | b64decode"
+        fail_msg: "/etc/systemd/network/20-bridge0.netdev does not contain expected values"
+
+    - name: Ensure /etc/systemd/network/30-test0.network exists
+      ansible.builtin.stat:
+        path: /etc/systemd/network/30-test0.network
+      register: network_systemdnetworkd_network_stat
+
+    - name: Assert /etc/systemd/network/30-test0.network exists with correct ownership and permissions
+      ansible.builtin.assert:
+        that:
+          - network_systemdnetworkd_network_stat.stat.exists
+          - network_systemdnetworkd_network_stat.stat.mode == "0640"
+          - network_systemdnetworkd_network_stat.stat.pw_name == "root"
+          - network_systemdnetworkd_network_stat.stat.gr_name == "systemd-network"
+        fail_msg: "/etc/systemd/network/30-test0.network missing or wrong permissions/ownership"
+
+    - name: Read /etc/systemd/network/30-test0.network content
+      ansible.builtin.slurp:
+        src: /etc/systemd/network/30-test0.network
+      register: network_systemdnetworkd_network_content
+
+    - name: Assert /etc/systemd/network/30-test0.network has expected content
+      ansible.builtin.assert:
+        that:
+          - "'[Match]' in network_systemdnetworkd_network_content.content | b64decode"
+          - "'Name=eth0' in network_systemdnetworkd_network_content.content | b64decode"
+          - "'[Network]' in network_systemdnetworkd_network_content.content | b64decode"
+          - "'DHCP=yes' in network_systemdnetworkd_network_content.content | b64decode"
+        fail_msg: "/etc/systemd/network/30-test0.network does not contain expected values"
+
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Assert systemd-networkd is enabled
+      ansible.builtin.assert:
+        that:
+          - services['systemd-networkd.service'] is defined
+          - services['systemd-networkd.service'].status == 'enabled'
+        fail_msg: "systemd-networkd is not enabled"
