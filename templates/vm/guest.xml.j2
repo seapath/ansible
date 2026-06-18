@@ -133,6 +133,13 @@
         </disk>
 {%     endfor %}
 {% endif %}
+{% if vm.standalone_cloud_init_seed is defined %}
+        <disk type="file" device="disk">
+           <driver name="qemu" type="qcow2"/>
+           <source file="/var/lib/libvirt/images/{{ vm.standalone_cloud_init_seed }}"/>
+           <target dev="vdz" bus="virtio"/>
+        </disk>
+{% endif %}
 {% if "dpdk" in vm_features %}
 {%     for interface in vm.dpdk %}
         <interface type='vhostuser'>
