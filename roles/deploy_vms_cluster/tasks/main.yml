@@ -81,6 +81,21 @@
         loop_var: add_disk
         index_var: add_disk_idx
       when: deploy_vms_cluster_disk_copy | bool
+    - name: "Build and upload cloud-init seed for {{ item }}"
+      when: hostvars[item].cloud_init is defined
+      block:
+        - name: "Generate cloud-init seed for {{ item }}"
+          ansible.builtin.include_role:
+            name: cloud_init_seed
+          vars:
+            cloud_init_seed_vm_name: "{{ item }}"
+            cloud_init_seed_vm: "{{ hostvars[item] }}"
+        - name: "Copy cloud-init seed on target for {{ item }}" # noqa: risky-file-permissions
+          ansible.builtin.copy:
+            src: "{{ cloud_init_seed_path }}"
+            dest: "{{ deploy_vms_cluster_qcow2tmpuploadfolder }}/cloudinit-seed.qcow2"
+          vars:
+            ansible_remote_tmp: "{{ deploy_vms_cluster_qcow2tmpuploadfolder | default(omit) }}"
     - name: "Create {{ item }}"
       cluster_vm:
         name: "{{ item }}"
@@ -98,7 +113,11 @@
         preferred_host: "{{ hostvars[item].preferred_host | default(omit) }}"
         crm_config_cmd: "{{ hostvars[item].crm_config_cmd | default(omit) }}"
         disk_bus: "{{ hostvars[item].disk_bus | default(omit) }}"
-        additional_disks: "{{ range(hostvars[item].additional_disk | default([]) | length) | map('string') | map('regex_replace', '^(.+)$', deploy_vms_cluster_qcow2tmpuploadfolder ~ '/additional_\\1.qcow2') | list }}"
+        additional_disks: >-
+          {{ (range(hostvars[item].additional_disk | default([]) | length) | map('string')
+              | map('regex_replace', '^(.+)$', deploy_vms_cluster_qcow2tmpuploadfolder ~ '/additional_\1.qcow2') | list)
+             + ([deploy_vms_cluster_qcow2tmpuploadfolder ~ '/cloudinit-seed.qcow2']
+                if hostvars[item].cloud_init is defined else []) }}
         xml: >-
           {{ lookup('file', hostvars[item].xml_path)
                if hostvars[item].xml_path is defined
@@ -118,6 +137,11 @@
       loop_control:
         loop_var: add_disk
         index_var: add_disk_idx
+    - name: "Remove temporary cloud-init seed file for {{ item }}"
+      ansible.builtin.file:
+        path: "{{ deploy_vms_cluster_qcow2tmpuploadfolder }}/cloudinit-seed.qcow2"
+        state: absent
+      when: hostvars[item].cloud_init is defined
     - name: Wait for VM connections
       ansible.builtin.wait_for_connection:
       delegate_to: "{{ item }}"

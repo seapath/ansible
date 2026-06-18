@@ -54,6 +54,23 @@ VMs:
       [...]
 ```
 
+## Configure the guest with cloud-init
+
+A VM can be configured on first boot with [cloud-init](https://cloudinit.readthedocs.io/)
+by adding a `cloud_init` mapping to its inventory entry. When present, this role
+builds a NoCloud seed image (via the `cloud_init_seed` role) and attaches it to
+the VM as an extra disk; cloud-init inside the guest applies it on first boot.
+
+Requirements:
+- The base VM image must ship cloud-init.
+- `cloud-localds` (Debian/Ubuntu package `cloud-image-utils`) must be installed
+  on the Ansible controller.
+
+Every key of the `cloud_init` mapping is passed through as a `#cloud-config`
+`user-data` key, except the reserved keys `hostname`, `instance_id`, `network`
+and `user_data_file`. See the `cloud_init_seed` role README for the full
+reference and an example.
+
 ## Use a templated libvirt XML file
 
 The `vm_template` variable can point toward a jinja2 templated XML file.

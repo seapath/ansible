@@ -1,0 +1,81 @@
+# Copyright (C) 2026, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# Build a cloud-init NoCloud seed image on the Ansible controller for a single
+# VM. The caller must provide:
+#   cloud_init_seed_vm_name : name of the VM (used as default instance-id/hostname)
+#   cloud_init_seed_vm      : hostvars of the VM (must contain a `cloud_init` mapping)
+# The path of the generated seed image is returned in `cloud_init_seed_path`.
+
+---
+- name: "Set cloud-init seed facts for {{ cloud_init_seed_vm_name }}"
+  ansible.builtin.set_fact:
+    cloud_init_seed_workdir: "{{ cloud_init_seed_output_dir }}/{{ cloud_init_seed_vm_name }}"
+    cloud_init_seed_path: "{{ cloud_init_seed_output_dir }}/{{ cloud_init_seed_vm_name }}-seed.{{ cloud_init_seed_disk_format }}"
+
+- name: "Create local cloud-init working directory for {{ cloud_init_seed_vm_name }}"
+  ansible.builtin.file:
+    path: "{{ cloud_init_seed_workdir }}"
+    state: directory
+    mode: "0700"
+  delegate_to: localhost
+  become: false
+
+- name: "Render cloud-init meta-data for {{ cloud_init_seed_vm_name }}"
+  ansible.builtin.copy:
+    dest: "{{ cloud_init_seed_workdir }}/meta-data"
+    mode: "0644"
+    content: |
+      instance-id: {{ cloud_init_seed_vm.cloud_init.instance_id | default(cloud_init_seed_vm_name) }}
+      local-hostname: {{ cloud_init_seed_vm.cloud_init.hostname | default(cloud_init_seed_vm_name) }}
+  delegate_to: localhost
+  become: false
+
+- name: "Copy provided cloud-init user-data file for {{ cloud_init_seed_vm_name }}"
+  ansible.builtin.copy:
+    src: "{{ cloud_init_seed_vm.cloud_init.user_data_file }}"
+    dest: "{{ cloud_init_seed_workdir }}/user-data"
+    mode: "0644"
+  delegate_to: localhost
+  become: false
+  when: cloud_init_seed_vm.cloud_init.user_data_file is defined
+
+- name: "Render cloud-init user-data for {{ cloud_init_seed_vm_name }}"
+  ansible.builtin.copy:
+    dest: "{{ cloud_init_seed_workdir }}/user-data"
+    mode: "0644"
+    content: |
+      #cloud-config
+      {{ cloud_init_seed_vm.cloud_init | dict2items
+         | rejectattr('key', 'in', cloud_init_seed_reserved_keys)
+         | items2dict | to_nice_yaml(indent=2) }}
+  delegate_to: localhost
+  become: false
+  when: cloud_init_seed_vm.cloud_init.user_data_file is not defined
+
+- name: "Render cloud-init network-config for {{ cloud_init_seed_vm_name }}"
+  ansible.builtin.copy:
+    dest: "{{ cloud_init_seed_workdir }}/network-config"
+    mode: "0644"
+    content: |
+      {{ {'version': 2} | combine(cloud_init_seed_vm.cloud_init.network) | to_nice_yaml(indent=2) }}
+  delegate_to: localhost
+  become: false
+  when: cloud_init_seed_vm.cloud_init.network is defined
+
+- name: "Build cloud-localds command line for {{ cloud_init_seed_vm_name }}"
+  ansible.builtin.set_fact:
+    cloud_init_seed_localds_argv: >-
+      {{ ['cloud-localds', '--disk-format=' + cloud_init_seed_disk_format]
+         + (['--network-config=' + cloud_init_seed_workdir + '/network-config']
+            if cloud_init_seed_vm.cloud_init.network is defined else [])
+         + [cloud_init_seed_path,
+            cloud_init_seed_workdir + '/user-data',
+            cloud_init_seed_workdir + '/meta-data'] }}
+
+- name: "Build cloud-init seed image for {{ cloud_init_seed_vm_name }}"
+  ansible.builtin.command:
+    argv: "{{ cloud_init_seed_localds_argv }}"
+  delegate_to: localhost
+  become: false
+  changed_when: true
