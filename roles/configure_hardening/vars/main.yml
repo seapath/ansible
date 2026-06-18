@@ -7,7 +7,7 @@ configure_hardening_kernel_params:
   - init_on_free=1
   - slab_nomerge
   - pti=on
-  - slub_debug=ZF
+  - slub_debug=ZFP
   - randomize_kstack_offset=on
   - slab_common.usercopy_fallback=N
   - iommu=pt
