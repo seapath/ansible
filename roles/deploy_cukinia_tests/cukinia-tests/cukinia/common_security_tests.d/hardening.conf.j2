@@ -79,7 +79,7 @@ test_id "SEAPATH-00206" as "TMPDIR is set with 700 mode and $USER as owner and g
 	"$(bash -l -c 'stat $TMPDIR -c "%a %U %G"')" = "700 $USER $USER"
 
 test_id "SEAPATH-00225" as "Umask is set correctly set" \
-  cukinia_test "$(sh -c 'umask')" = "0027"
+  cukinia_test "$(sh -c 'umask')" = "0077"
 
 test_id "SEAPATH-00227" as "AppArmor processes are confined in enforce mode" \
   cukinia_test aa-status | grep "0 processes are unconfined"
