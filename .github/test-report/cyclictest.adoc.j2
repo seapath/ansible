@@ -1,0 +1,49 @@
+* Purpose of the test
+  ** Employ *cyclictest* to measure real-time system latency
+    *** Run on isolated CPUs
+    *** Determine worst-case latencies
+
+The following command is used to start a {{ env["CYCLICTEST_DURATION"] }}s-long cyclictest:
+[,bash]
+----
+cyclictest -l{{ (env["CYCLICTEST_DURATION"] | int) * 10**6 // (env["CYCLICTEST_INTERVAL"] | int) }} -m -Sp90 -i{{ env["CYCLICTEST_INTERVAL"] }} -h400 -q
+----
+
+For more information, please refer to https://lf-energy.atlassian.net/wiki/x/QoTlAQ[LF Energy wiki page].
+
+{% macro cyclictest_table(value, limit) -%}
+[cols="1,1,1",frame=all, grid=all]
+|===
+|
+Max latency < {{ limit }} µs
+{set:cellbgcolor!}
+|
+{{ value }}
+|
+{% if value > limit %}
+FAILED
+{set:cellbgcolor:#F08080}
+{% else %}
+PASS
+{set:cellbgcolor:#90EE90}
+{% endif %}
+|===
+{%- endmacro %}
+
+{% if env.get('INVENTORY_NAMES_HYP') %}
+= Hypervisor
+{% for hyp in env['INVENTORY_NAMES_HYP'].split() %}
+== {{ hyp }}
+image::cyclictest_{{ hyp }}.png[]
+{{ cyclictest_table(env["LATENCY_HYP_" + hyp] | int, env["LATENCY_MAXIMAL_HYP"] | int) }}
+{% endfor %}
+{% endif %}
+
+{% if env.get('INVENTORY_NAMES_VM_RT') %}
+= Virtual Machines
+{% for vm in env['INVENTORY_NAMES_VM_RT'].split() %}
+== {{ vm }}
+image::cyclictest_{{ vm }}.png[]
+{{ cyclictest_table(env["LATENCY_VM_" + vm] | int, env["LATENCY_MAXIMAL_VM"] | int) }}
+{% endfor %}
+{% endif %}

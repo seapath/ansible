@@ -1,0 +1,61 @@
+# Copyright (C) 2023 Savoir-faire Linux, Inc.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+extends: default
+title_page:
+  background_color: #56b0c9
+  align: center
+  logo:
+    image: image:logo.png[width=30%, align=center]
+  title:
+    top: 30%
+    font_style: bold
+    font_color: #ffffff
+    line_height: 0.9
+    text-transform: uppercase
+  authors:
+    margin-top: 40
+    content:
+      with_email: |
+          Receiver: {author}
+          Contact: <{email}>
+    font-color: #181818
+code:
+  font_color: #333333
+  font_style: normal
+  font_size: 10
+  background_color: #f6f6f6
+  border_color: #56b0c9
+  border_radius: 2
+base:
+  font_color: #000000
+table:
+  align: center
+  border_color: #000000
+  font-size: 8
+  head:
+    font-size: 10
+    background-color: #56b0c9
+footer:
+  height: 0.75in
+  verso: &shared_footer
+    center:
+      content: Copyright © {year} Savoir-faire Linux
+  recto: *shared_footer
+  title:
+      center:
+        content: |
+            Copyright © {year} Savoir-faire Linux
+            The registered trademark Linux® is used pursuant to a sublicense from LMI, the exclusive license of Linus Torvalds, owner of the mark on a world-wide basis.

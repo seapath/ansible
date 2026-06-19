@@ -1,0 +1,4 @@
+{% for hyp in env['INVENTORY_NAMES_HYP'].split() %}
+=== {{ hyp }}
+include::system_info_{{ hyp }}.adoc[]
+{% endfor %}

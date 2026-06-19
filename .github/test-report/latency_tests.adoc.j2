@@ -1,0 +1,10 @@
+* Purpose of the test
+  ** Perform SV IEC61850 packet network latency tests
+  ** Compute latency between publisher and VM userspace.
+
+* Number of sent IEC61850 Sampled Values streams: 8 {# TODO templatize if configurable #}
+* Test duration: {{ env["LATENCY_TESTS_DURATION"] }}
+
+{% for test_result in env["LATENCY_TESTS_RESULTS"].split() %}
+include::{{ test_result }}[leveloffset=-4]
+{% endfor %}

@@ -22,63 +22,20 @@ permissions:
   checks: write
 
 jobs:
-  Integration-tests:
-    runs-on: [self-hosted, runner-SFL]
-    env:
-      PCAP_LOOP: ${{ inputs.pcap_loop == '' && '60' || inputs.pcap_loop  }}
-    steps:
-
-      - name: Initialize sources
-        run: mkdir ${{ env.WORK_DIR }}; cd ${{ env.WORK_DIR }};
-             git clone -q --depth 1 --recurse-submodules -b main https://github.com/seapath/ci ci;
-             echo "CI sources downloaded successfully";
-             ci/launch-yocto.sh init;
-
-      - name: Configure SEAPATH
-        id: conf
-        run: cd ${{ env.WORK_DIR }};
-             mkdir -p ansible/examples/inventories;
-             cp ansible/inventories/netplan* ansible/examples/inventories/;
-             ci/launch-yocto.sh conf;
-
-      - name: Launch system tests
-        if: ${{ always() && steps.conf.conclusion == 'success' }}
-        run: cd ${{ env.WORK_DIR }};
-             ci/launch-yocto.sh system;
-
-      - name: Deploy VMs
-        if: ${{ always() && steps.conf.conclusion == 'success' }}
-        run: cd ${{ env.WORK_DIR }};
-            ci/launch-yocto.sh deploy_vms;
-
-      - name: Run seapath-benchmark
-        if: ${{ inputs.weekly && steps.conf.conclusion == 'success' }}
-        run: cd ${{ env.WORK_DIR }};
-            ci/launch-yocto.sh run_benchmark_weekly;
-
-      - name: Launch VMs tests
-        if: ${{ always() && steps.conf.conclusion == 'success' }}
-        run: cd ${{ env.WORK_DIR }};
-             ci/launch-yocto.sh test_vms;
-
-      - name: Launch latency tests
-        if: ${{ always() && steps.conf.conclusion == 'success'}}
-        run: cd ${{ env.WORK_DIR }};
-            ci/launch-yocto.sh test_latency
-
-      - name: Generate test report
-        if: ${{ always() && steps.conf.conclusion == 'success' }}
-        run: cd ${{ env.WORK_DIR }};
-             ci/launch-yocto.sh report;
-
-      - name: Upload test report
-        if: ${{ always() && steps.conf.conclusion == 'success' }}
-        uses: actions/upload-artifact@v7
-        with:
-            name: seapath-test-report-yocto-standalone
-            path: ${{ env.WORK_DIR }}/seapath-test-report.pdf
-            if-no-files-found: error
-
-      - name: Clean
-        if: always()
-        run: rm -rf $WORK_DIR;
+  call-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Welotec RSAPC Mk2
+            inventory: ci_yocto_standalone.yaml
+            vms-inventory: ci_vms.yaml
+          - name: Aaeon ARM I.MX8P-2G
+            inventory: ci_yocto_standalone_aaeon.yaml
+    uses: ./.github/workflows/_tests.yml
+    name: Run tests on ${{ matrix.name }}
+    with:
+      seapath-flavor: "Yocto ${{ matrix.name }}"
+      hyp-inventory-name: ${{ matrix.inventory }}
+      vms-inventory-name: ${{ matrix.vms-inventory }}
+      runner-label: "runner-SFL"

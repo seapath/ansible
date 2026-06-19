@@ -1,0 +1,340 @@
+on:
+  workflow_call:
+    inputs:
+      seapath-flavor:
+        type: string
+        required: true
+        description: Flavor of SEAPATH that is being tested (e.g. Debian, Yocto)
+      runner-label:
+        type: string
+        required: true
+        description: Label of the runner used to deploy and test machines.
+      hyp-inventory-name:
+        type: string
+        required: true
+        description: Name of the inventory for the hypervisor.
+      vms-inventory-name:
+        type: string
+        required: false
+        default: ""
+        description: Name of the inventory for the VMs, or empty if VMs should not be deployed and tested.
+
+env:
+  # TODO make this better
+  PRIVATE_INVENTORIES_REPO_URL: "git@github.com:seapath-ci/ci-seapath-yocto-inventories.git"
+  INVENTORY_PUBLISHER: "inventories_private/ci_publisher.yaml"
+  CYCLICTEST_DURATION: 20
+  CYCLICTEST_INTERVAL: 200 # hardcoded in the cyclictest role for now
+  LATENCY_MAXIMAL_HYP: 100
+  LATENCY_MAXIMAL_VM: 100
+  PCAP_LOOP: 10
+  PCAP: "/seapath-ci/pcaps/8_streams_4000_SV.pcap"
+
+jobs:
+  run-tests:
+    name: Run tests
+    runs-on: "${{ inputs.runner-label }}"
+    defaults:
+      run:
+        shell: bash
+    env:
+      RESULTS_FOLDER: ${{ github.workspace }}/test_results
+    steps:
+      - name: Clean working directory
+        if: ${{ always() }}
+        run: |
+          rm -rf ${{ github.workspace }}
+          mkdir -p ${{ github.workspace }}
+
+      - name: Checkout Ansible repository
+        uses: actions/checkout@v6
+        with:
+          path: ansible
+
+      - name: Prepare Ansible
+        working-directory: ansible
+        run: |
+          git clone -q "${{ env.PRIVATE_INVENTORIES_REPO_URL }}" inventories_private
+
+          cqfd init
+          cqfd -b prepare
+
+          mkdir ${{ env.RESULTS_FOLDER }}
+          echo "CQFD_EXTRA_RUN_ARGS=-v ${{ env.RESULTS_FOLDER }}:/results" >> "$GITHUB_ENV"
+
+      - name: Configure SEAPATH on hypervisors
+        id: configure-hyp
+        working-directory: ansible
+        continue-on-error: false # if this fails, we completely stop the CI
+        run: |
+          cqfd exec ansible-playbook \
+            playbooks/ci_standalone_setup.yaml \
+            playbooks/ci_prepare_publisher.yaml \
+            --inventory "inventories_private/${{ inputs.hyp-inventory-name }}"
+
+          hyp_names=$(cqfd exec ansible-inventory --list \
+            --inventory "inventories_private/${{ inputs.hyp-inventory-name }}" \
+            --limit "standalone_machine,cluster_machines" \
+            2> /dev/null | jq '._meta.hostvars | keys[]' -r | tr '\n' ' '
+          )
+          echo "Running on hypervisors $hyp_names"
+          echo "INVENTORY_NAMES_HYP=$hyp_names" >> "$GITHUB_ENV"
+
+      - name: Test hypervisors
+        id: test-hyp
+        working-directory: ansible
+        continue-on-error: true
+        run: |
+          cqfd exec ansible-playbook \
+            playbooks/ci_all_machines_tests.yaml \
+            --inventory "inventories_private/${{ inputs.hyp-inventory-name }}" \
+            --limit "standalone_machine,cluster_machines" \
+            --extra-vars "cukinia_test_prefix=/results" \
+            --extra-vars "cyclictest_result_folder=/results" \
+            --extra-vars "cyclictest_duration=${{ env.CYCLICTEST_DURATION }}" \
+
+          # Check for kernel backtrace error. This is a random error so it must not
+          # stop the CI but just display a warning
+          # See https://github.com/seapath/ansible/issues/164
+          if grep '<failure' ${{ env.RESULTS_FOLDER }}/*.xml | grep -q '00080'; then
+            echo "::warning title=Hypervisor::kernel back trace detected, see https://github.com/seapath/ansible/issues/164"
+          fi
+
+          if grep '<failure' ${{ env.RESULTS_FOLDER }}/*.xml | grep -q -v '00080'; then
+            echo "::error title=Hypervisor::Test fails, see associated test report"
+            exit 1
+          fi
+
+          for hyp in $INVENTORY_NAMES_HYP; do
+            file="${{ env.RESULTS_FOLDER }}/cyclictest_${hyp}.txt"
+            if [[ -f $file ]]; then
+              max_latency=$(grep "Max Latencies" "$file" | tr " " "\n" | sort -n | tail -1 | sed s/^0*//)
+              echo "LATENCY_HYP_${hyp}=${max_latency}" >> "$GITHUB_ENV"
+              echo "::notice title=Hypervisor $hyp::Max latency: $max_latency µs"
+              if [ "$max_latency" -gt "${{ env.LATENCY_MAXIMAL_HYP }}" ]; then
+                echo "::error title=Hypervisor $hyp::Max latency exceeded limit ${{ env.LATENCY_MAXIMAL_HYP }} µs"
+                exit 1
+              fi
+            fi
+          done
+
+      - name: Deploy SEAPATH VMs
+        id: deploy-vms
+        working-directory: ansible
+        if: "${{ inputs.vms-inventory-name != '' }}"
+        continue-on-error: true
+        run: |
+          CQFD_EXTRA_RUN_ARGS="-v /etc/seapath-ci/vm_file:$(pwd)/vm_images" \
+          cqfd exec ansible-playbook \
+            playbooks/ci_vms_standalone_ptp.yaml \
+            --inventory "inventories_private/${{ inputs.hyp-inventory-name }}" \
+            --inventory "inventories_private/${{ inputs.vms-inventory-name }}"
+
+          vm_names=$(cqfd exec ansible-inventory --list \
+            --inventory "inventories_private/${{ inputs.vms-inventory-name }}" \
+            --limit "VMs" \
+            2> /dev/null | jq '._meta.hostvars | keys[]' -r | tr '\n' ' '
+          )
+          vm_rt_names=$(cqfd exec ansible-inventory --list \
+            --inventory "inventories_private/${{ inputs.vms-inventory-name }}" \
+            --limit "VMs" \
+            2> /dev/null | jq '._meta.hostvars | map_values(select(.vm_features[] | . == "rt")) | keys[]' -r | tr '\n' ' '
+          )
+
+          echo "Deployed VMs $vm_names"
+          echo "RT VMs are $vm_rt_names"
+          echo "INVENTORY_NAMES_VM=$vm_names" >> "$GITHUB_ENV"
+          echo "INVENTORY_NAMES_VM_RT=$vm_rt_names" >> "$GITHUB_ENV"
+
+      # TODO weekly benchmark
+
+      - name: Test VMs
+        id: test-vms
+        working-directory: ansible
+        if: "${{ steps.deploy-vms.outcome == 'success' }}"
+        continue-on-error: true
+        run: |
+          cqfd exec ansible-playbook \
+            playbooks/ci_all_machines_tests.yaml \
+            --inventory "inventories_private/${{ inputs.vms-inventory-name }}" \
+            --limit "VMs" \
+            --extra-vars "cukinia_test_prefix=/results" \
+            --extra-vars "cyclictest_result_folder=/results" \
+            --extra-vars "cyclictest_duration=${{ env.CYCLICTEST_DURATION }}" \
+
+          if grep '<failure' ${{ env.RESULTS_FOLDER }}/*.xml | grep -q -v '00080'; then
+            echo "::error title=VMs::Test fails, see associated test report"
+            exit 1
+          fi
+
+          for vm in $INVENTORY_NAMES_VM_RT; do
+            file="${{ env.RESULTS_FOLDER }}/cyclictest_${vm}.txt"
+            if [[ -f $file ]]; then
+              max_latency=$(grep "Max Latencies" "$file" | tr " " "\n" | sort -n | tail -1 | sed s/^0*//)
+              echo "LATENCY_VM_${vm}=${max_latency}" >> "$GITHUB_ENV"
+              echo "::notice title=VM $vm::Max latency: $max_latency µs"
+              if [ "$max_latency" -gt "${{ env.LATENCY_MAXIMAL_VM }}" ]; then
+                echo "::error title=VM $vm::Max latency exceeded limit ${{ env.LATENCY_MAXIMAL_VM }} µs"
+                exit 1
+              fi
+            fi
+          done
+
+      - name: Checkout svtrace-ansible repository
+        uses: actions/checkout@v6
+        if: "${{ steps.deploy-vms.outcome == 'success' }}"
+        with:
+          repository: seapath/svtrace-ansible
+          path: svtrace-ansible
+
+      - name: Do latency tests on VMs
+        working-directory: svtrace-ansible
+        if: "${{ steps.deploy-vms.outcome == 'success' }}"
+        continue-on-error: true
+        run: |
+          git clone -q "${{ env.PRIVATE_INVENTORIES_REPO_URL }}" inventories_private
+          cqfd init
+
+          export CQFD_EXTRA_RUN_ARGS="-v /var/run/docker.sock:/var/run/docker.sock"
+          cqfd exec ansible-playbook \
+            playbooks/configure_latency_tests.yaml \
+            --limit "localhost,sv_publisher,VMs" \
+            -i inventories_private/${{ inputs.vms-inventory-name }} \
+            -i ${{ env.INVENTORY_PUBLISHER }} \
+
+          cqfd exec ansible-playbook \
+            playbooks/run_latency_tests.yaml \
+            --limit "localhost,sv_publisher,VMs" \
+            -i inventories_private/${{ inputs.vms-inventory-name }} \
+            -i ${{ env.INVENTORY_PUBLISHER }} \
+            -e "pcap=${{ env.PCAP }}" \
+            -e "pcap_cycles=${{ env.PCAP_LOOP }}" \
+            -e "stream_to_log=0000" # TODO check maybe wrong quoting here
+
+          for latency_test_dir in tests_results/data/ci_latency_tests_*; do
+            hostname="$(basename $latency_test_dir)"
+            hostname="${hostname#ci_latency_tests_}"
+            cp ${latency_test_dir}/results/*.png "${{ env.RESULTS_FOLDER }}"
+            cp "${latency_test_dir}/results/latency_tests.adoc" "${{ env.RESULTS_FOLDER }}/latency_tests_${hostname}.adoc"
+          done
+
+          if grep -q "FAILED" ${{ env.RESULTS_FOLDER }}/latency_tests_*.adoc; then
+            echo "::error title=VMs::Test fails, see associated test report"
+            exit 1
+          fi
+
+      - name: Upload raw results
+        id: raw-results-artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: raw-results
+          path: ${{ env.RESULTS_FOLDER }}
+          include-hidden-files: true
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Generate Cyclictest plot
+        run: |
+          for file in ${{ env.RESULTS_FOLDER }}/cyclictest_*.txt; do
+            echo "Found cyclictest result file $file."
+
+            name=$(basename "$file")
+            name="${name#cyclictest_}"
+            name="${name%.txt}"
+
+            if $(echo "$INVENTORY_NAMES_HYP" | grep -w -q "$name"); then
+              limit="${{ env.LATENCY_MAXIMAL_HYP }}"
+            elif $(echo "$INVENTORY_NAMES_VM_RT" | grep -w -q "$name"); then
+              limit="${{ env.LATENCY_MAXIMAL_VM }}"
+            elif $(echo "$INVENTORY_NAMES_VM" | grep -w -q "$name"); then
+              # non-RT VM: we don't care about the cyclictest plot
+              continue
+            else
+              echo "::warning::Unknown Cyclictest result $name."
+              continue
+            fi
+
+            ./ansible/.github/test-report/cyclictest_plot.sh \
+              -i "$file" \
+              -o "${{ env.RESULTS_FOLDER }}/cyclictest_${name}.png" \
+              -l "$limit"
+          done
+
+      - name: Checkout test-report-pdf
+        uses: actions/checkout@v6
+        with:
+          repository: savoirfairelinux/test-report-pdf
+          path: test-report-pdf
+
+      - name: Prepare report generation
+        working-directory: test-report-pdf
+        run: |
+          cqfd init
+
+          mkdir include
+          cp -r ${{ env.RESULTS_FOLDER }}/* include/
+          cp ../ansible/.github/test-report/{prerequisites,notes}.adoc include/
+
+          latency_tests_results=$(basename -a test_results/latency_tests_*.adoc)
+          echo "LATENCY_TESTS_RESULTS=$latency_tests_results" >> "$GITHUB_ENV"
+          latency_tests_duration=$(python3 -c "import datetime; print(datetime.timedelta(seconds=${{ env.PCAP_LOOP }}))")
+          echo "LATENCY_TESTS_DURATION=$latency_tests_duration" >> "$GITHUB_ENV"
+
+      - name: Templatize system information
+        uses: cuchi/jinja2-action@8bd801365a8d36a0b20f45ee969161685de7785a # v1.3.0
+        with:
+          template: ansible/.github/test-report/system_info.adoc.j2
+          output_file: test-report-pdf/include/system_info.adoc
+          strict: true
+          # uses env variables to populate the document
+
+      - name: Templatize cyclictest results
+        uses: cuchi/jinja2-action@8bd801365a8d36a0b20f45ee969161685de7785a # v1.3.0
+        with:
+          template: ansible/.github/test-report/cyclictest.adoc.j2
+          output_file: test-report-pdf/include/cyclictest.adoc
+          strict: true
+          # uses env variables to populate the document
+
+      - name: Templatize latency tests results
+        uses: cuchi/jinja2-action@8bd801365a8d36a0b20f45ee969161685de7785a # v1.3.0
+        with:
+          template: ansible/.github/test-report/latency_tests.adoc.j2
+          output_file: test-report-pdf/include/latency_tests.adoc
+          strict: true
+          # uses env variables to populate the document
+
+      - name: Generate test report
+        working-directory: test-report-pdf
+        run: |
+          CQFD_EXTRA_RUN_ARGS="-v $(realpath ../ansible/.github/test-report):/report" \
+          cqfd exec ./compile.py \
+            --contact_email "seapath@savoirfairelinux.com" \
+            --client_name "SEAPATH" \
+            --project_name "SEAPATH" \
+            --subtitle "${{ inputs.seapath-flavor }}" \
+            --add_machine_name \
+            --pdf_themes_dir "/report/seapath-themes" \
+            --include_dir "./include" \
+            --compliance_matrix "/report/bp28-compliance-matrices/ANSSI-BP28-M-Recommendations.csv" \
+            --compliance_matrix "/report/bp28-compliance-matrices/ANSSI-BP28-MI-Recommendations.csv" \
+            --compliance_matrix "/report/bp28-compliance-matrices/ANSSI-BP28-MIE-Recommendations.csv" \
+            --allow_absent \
+            --merge_compliance_matrices
+
+          mv test-report.pdf "SEAPATH ${{ inputs.seapath-flavor }} Tests Report.pdf"
+
+      - name: Upload test report
+        if: ${{ !cancelled() && steps.configure-hyp.outcome == 'success' }}
+        uses: actions/upload-artifact@v7
+        with:
+          path: test-report-pdf/*.pdf
+          if-no-files-found: error
+          archive: false
+
+      # Some steps have "continue-on-error: true" in order to continue executing the following tests.
+      # Thus, we fail this workflow at the end if those steps failed before.
+      - name: Fail if needed
+        if: ${{ steps.test-hyp.outcome == 'failure' || steps.test-vms.outcome == 'failure' }}
+        run: |
+          exit 1
