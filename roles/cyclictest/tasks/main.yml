@@ -1,0 +1,16 @@
+# Copyright (C) 2023-2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Create temporary test directory
+  ansible.builtin.tempfile:
+    state: directory
+  register: cyclictest_tmp_test_dir
+
+- name: Execute cyclitect script
+  ansible.builtin.script: run_cyclictest.py '{{ cyclictest_tmp_test_dir.path }}/cyclictest.txt'
+- name: Fetch results
+  ansible.builtin.fetch:
+    src: "{{ cyclictest_tmp_test_dir.path }}/cyclictest.txt"
+    dest: "{{ cukinia_test_prefix }}/cyclictest_{{ inventory_hostname }}.txt"
+    flat: true

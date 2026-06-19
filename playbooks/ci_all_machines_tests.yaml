@@ -13,6 +13,11 @@
   gather_facts: false
   roles:
     - ci_yocto/run_tests
+  tasks:
+    - name: Cyclictest
+      when: skip_cyclictest is not defined or not skip_cyclictest
+      ansible.builtin.include_role:
+        name: cyclictest
 
 - name: CI Yocto - get system info
   hosts:
