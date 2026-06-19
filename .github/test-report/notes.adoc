@@ -1,0 +1,9 @@
+:imagesdir: ./include
+
+<<<
+== Real-time testing (cyclictest)
+include::cyclictest.adoc[leveloffset=+2]
+
+<<<
+== IEC61850 Sampled Value Latency Testing
+include::latency_tests.adoc[leveloffset=+2]
