@@ -8,9 +8,10 @@ no requirement.
 
 ## Role Variables
 
-| Variable            | Required | Type   | Default | Comments                               |
-|---------------------|----------|--------|---------|----------------------------------------|
-| cukinia_test_prefix | No       | String | ..      | Path where cyclictest result is stored |
+| Variable                 | Required | Type   | Default | Comments                               |
+|--------------------------|----------|--------|---------|----------------------------------------|
+| cyclictest_result_folder | No       | String | ..      | Path where cyclictest result is stored |
+| cyclictest_duration      | No       | Int    | 20      | Duration of the test in seconds        |
 
 ## Example Playbook
 
