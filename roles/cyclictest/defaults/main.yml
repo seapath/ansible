@@ -2,4 +2,5 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-cukinia_test_prefix: ".."
+cyclictest_result_folder: ".."
+cyclictest_duration: 20
