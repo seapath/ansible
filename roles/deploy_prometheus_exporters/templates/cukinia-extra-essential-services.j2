@@ -1,0 +1,6 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+# {{ ansible_managed }}
+{% for exporter in deploy_prometheus_exporters_exporters %}
+{{ exporter }}
+{% endfor %}

@@ -1,0 +1,10 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+galaxy_info:
+  author: "Seapath"
+  namespace: "seapath"
+  description: Deploy Prometheus exporters as Podman quadlet container units.
+  min_ansible_version: 2.9.10
+  license: Apache-2.0
+dependencies: []

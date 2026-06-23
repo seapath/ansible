@@ -1,0 +1,19 @@
+---
+- name: Prepare test environment (Debian 13)
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Install podman
+      ansible.builtin.apt:
+        name:
+          - podman
+        state: present
+        update_cache: true
+
+    - name: Ensure quadlet directory exists
+      ansible.builtin.file:
+        path: /etc/containers/systemd
+        state: directory
+        mode: "0755"
