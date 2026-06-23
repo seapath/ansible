@@ -18,11 +18,3 @@
       when: skip_cyclictest is not defined or not skip_cyclictest
       ansible.builtin.include_role:
         name: cyclictest
-
-- name: CI Yocto - get system info
-  hosts:
-    - cluster_machines
-    - standalone_machine
-  gather_facts: false
-  roles:
-    - ci_yocto/get_system_info
