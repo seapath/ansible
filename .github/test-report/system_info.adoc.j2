@@ -1,4 +1,16 @@
-{% for hyp in env['INVENTORY_NAMES_HYP'].split() %}
+{% for hyp, facts in host_facts.items() %}
 === {{ hyp }}
-include::system_info_{{ hyp }}.adoc[]
+* *Kernel*: ``{{ facts.ansible_kernel }} {{ facts.ansible_kernel_version }}``
+
+* *Boot options*:
++
+----
+{% for name, value in facts.ansible_cmdline.items() %}{{name}}={{value}} {% endfor %}
+----
+
+* *CPU architecture*: {{ facts.ansible_architecture }}
+
+* *Number of physical CPUs*: {{ facts.ansible_processor_cores }}
+
+* *RAM*: {{ facts.ansible_memtotal_mb }} MB
 {% endfor %}

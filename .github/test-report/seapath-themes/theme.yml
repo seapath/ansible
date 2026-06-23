@@ -42,6 +42,11 @@ code:
   background_color: #f6f6f6
   border_color: #56b0c9
   border_radius: 2
+codespan:
+  font-color: #333333
+  background-color: #f6f6f6
+  border-radius: 2
+  border-offset: 2
 base:
   font_color: #000000
 table:

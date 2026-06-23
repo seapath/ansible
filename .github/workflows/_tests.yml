@@ -80,6 +80,23 @@ jobs:
           echo "Running on hypervisors $hyp_names"
           echo "INVENTORY_NAMES_HYP=$hyp_names" >> "$GITHUB_ENV"
 
+      - name: Fetch hypervisors information
+        working-directory: ansible
+        run: |
+          # Those run args allow to have a clean JSON output that can be parsed.
+          CQFD_EXTRA_RUN_ARGS="\
+            -e ANSIBLE_HOST_PATTERN_MISMATCH=ignore \
+            -e ANSIBLE_LOAD_CALLBACK_PLUGINS=true \
+            -e ANSIBLE_STDOUT_CALLBACK=json \
+            -e ANSIBLE_CALLBACKS_ENABLED=null \
+          " \
+          cqfd exec ansible \
+            standalone_machine,cluster_machines \
+            --inventory "inventories_private/${{ inputs.hyp-inventory-name }}" \
+            -m setup \
+            | jq '.plays[0].tasks[0].hosts | {host_facts: with_entries(.value = .value.ansible_facts)}' \
+            > ${{ env.RESULTS_FOLDER}}/hypervisors_facts.json
+
       - name: Test hypervisors
         id: test-hyp
         working-directory: ansible
@@ -282,7 +299,7 @@ jobs:
           template: ansible/.github/test-report/system_info.adoc.j2
           output_file: test-report-pdf/include/system_info.adoc
           strict: true
-          # uses env variables to populate the document
+          data_file: "${{ env.RESULTS_FOLDER }}/hypervisors_facts.json"
 
       - name: Templatize cyclictest results
         uses: cuchi/jinja2-action@8bd801365a8d36a0b20f45ee969161685de7785a # v1.3.0
