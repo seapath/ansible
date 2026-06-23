@@ -1,0 +1,5 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+# Drop-in directory read at cukinia test runtime by systemd.conf (SEAPATH-00200).
+deploy_cukinia_tests_extra_essential_services_dir: /etc/cukinia/extra-essential-services.d

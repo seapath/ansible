@@ -1,0 +1,6 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+- name: Reload systemd after exporter container unit changes
+  ansible.builtin.systemd:
+    daemon_reload: true

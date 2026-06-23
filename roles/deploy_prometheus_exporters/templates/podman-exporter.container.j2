@@ -1,0 +1,15 @@
+[Unit]
+Description=Prometheus Podman Exporter
+After=network.target podman.socket
+Requires=podman.socket
+
+[Container]
+Image={{ deploy_prometheus_exporters_podman_exporter_image }}
+Environment=CONTAINER_HOST=unix:///run/podman/podman.sock
+Volume=/run/podman/podman.sock:/run/podman/podman.sock
+User=root
+PublishPort={{ deploy_prometheus_exporters_listen_address }}:9882:9882
+SecurityLabelDisable=true
+
+[Install]
+WantedBy=default.target

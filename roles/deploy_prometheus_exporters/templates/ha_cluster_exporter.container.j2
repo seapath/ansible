@@ -1,0 +1,17 @@
+[Unit]
+Description=HA Cluster Exporter
+After=network.target
+
+[Container]
+Image={{ deploy_prometheus_exporters_ha_cluster_exporter_image }}
+PublishPort={{ deploy_prometheus_exporters_listen_address }}:9664:9664
+PodmanArgs=--pid=host --ipc=host --privileged
+Volume=/var/run:/var/run
+Exec=\
+  --crm-mon-path=/usr/local/bin/crm_mon \
+  --cibadmin-path=/usr/local/bin/cibadmin \
+  --corosync-cfgtoolpath-path=/usr/local/bin/corosync-cfgtool \
+  --corosync-quorumtool-path=/usr/local/bin/corosync-quorumtool
+
+[Install]
+WantedBy=multi-user.target

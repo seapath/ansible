@@ -1,0 +1,16 @@
+[Unit]
+Description=Prometheus Libvirt Exporter
+After=network-online.target {{ deploy_prometheus_exporters_libvirt_systemd_unit }}
+Wants=network-online.target
+
+[Container]
+Image={{ deploy_prometheus_exporters_libvirt_exporter_image }}
+PublishPort={{ deploy_prometheus_exporters_listen_address }}:9177:9177
+Volume={{ deploy_prometheus_exporters_libvirt_exporter_socket }}:{{ deploy_prometheus_exporters_libvirt_exporter_socket }}:ro
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
