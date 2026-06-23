@@ -25,6 +25,9 @@ title_page:
     font_color: #ffffff
     line_height: 0.9
     text-transform: uppercase
+  subtitle:
+    font_color: #ffffff
+    line_height: 0.9
   authors:
     margin-top: 40
     content:
