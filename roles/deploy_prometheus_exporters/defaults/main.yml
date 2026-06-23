@@ -1,0 +1,49 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+deploy_prometheus_exporters_listen_address: "{{ ip_addr | default(ansible_host) }}"
+
+deploy_prometheus_exporters_images: {}
+
+deploy_prometheus_exporters_node_exporter_image: >-
+  {{ deploy_prometheus_exporters_images.get(
+       'node-exporter',
+       deploy_prometheus_exporters_default_images['node-exporter']) }}
+deploy_prometheus_exporters_podman_exporter_image: >-
+  {{ deploy_prometheus_exporters_images.get(
+       'podman-exporter',
+       deploy_prometheus_exporters_default_images['podman-exporter']) }}
+deploy_prometheus_exporters_libvirt_exporter_image: >-
+  {{ deploy_prometheus_exporters_images.get(
+       'libvirt-exporter',
+       deploy_prometheus_exporters_default_images['libvirt-exporter']) }}
+deploy_prometheus_exporters_insatomcat_exporter_image: >-
+  {{ deploy_prometheus_exporters_images.get(
+       'insatomcat-exporter',
+       deploy_prometheus_exporters_default_images['insatomcat-exporter']) }}
+deploy_prometheus_exporters_ha_cluster_exporter_image: >-
+  {{ deploy_prometheus_exporters_images.get(
+       'ha_cluster_exporter',
+       deploy_prometheus_exporters_default_images['ha_cluster_exporter']) }}
+
+deploy_prometheus_exporters_exporters: >-
+  {{
+    ['node-exporter']
+    + (
+      deploy_prometheus_exporters_group_exporters.cluster_machines
+      if inventory_hostname in groups.get('cluster_machines', [])
+      else []
+    )
+    + (
+      deploy_prometheus_exporters_group_exporters.hypervisors
+      if inventory_hostname in groups.get('hypervisors', [])
+      else []
+    )
+    | unique
+  }}
+
+deploy_prometheus_exporters_enabled: true
+deploy_prometheus_exporters_manage_services: true
+deploy_prometheus_exporters_register_essential_services: true
+deploy_prometheus_exporters_cukinia_extra_essential_services_dir: /etc/cukinia/extra-essential-services.d
+deploy_prometheus_exporters_cukinia_extra_essential_services_file: "{{ deploy_prometheus_exporters_cukinia_extra_essential_services_dir }}/deploy_prometheus_exporters"
