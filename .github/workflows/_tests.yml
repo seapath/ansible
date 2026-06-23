@@ -39,6 +39,7 @@ jobs:
         shell: bash
     env:
       RESULTS_FOLDER: ${{ github.workspace }}/test_results
+      FAILED: false # can be changed if tests fail
     steps:
       - name: Clean working directory
         if: ${{ always() }}
@@ -65,7 +66,6 @@ jobs:
       - name: Configure SEAPATH on hypervisors
         id: configure-hyp
         working-directory: ansible
-        continue-on-error: false # if this fails, we completely stop the CI
         run: |
           cqfd exec ansible-playbook \
             playbooks/ci_standalone_setup.yaml \
@@ -83,7 +83,6 @@ jobs:
       - name: Test hypervisors
         id: test-hyp
         working-directory: ansible
-        continue-on-error: true
         run: |
           cqfd exec ansible-playbook \
             playbooks/ci_all_machines_tests.yaml \
@@ -102,7 +101,7 @@ jobs:
 
           if grep '<failure' ${{ env.RESULTS_FOLDER }}/*.xml | grep -q -v '00080'; then
             echo "::error title=Hypervisor::Test fails, see associated test report"
-            exit 1
+            echo "FAILED=true" >> "$GITHUB_ENV"
           fi
 
           for hyp in $INVENTORY_NAMES_HYP; do
@@ -112,8 +111,8 @@ jobs:
               echo "LATENCY_HYP_${hyp}=${max_latency}" >> "$GITHUB_ENV"
               echo "::notice title=Hypervisor $hyp::Max latency: $max_latency µs"
               if [ "$max_latency" -gt "${{ env.LATENCY_MAXIMAL_HYP }}" ]; then
-                echo "::error title=Hypervisor $hyp::Max latency exceeded limit ${{ env.LATENCY_MAXIMAL_HYP }} µs"
-                exit 1
+                echo "::error title=Hypervisor $hyp::Max latency $max_latency exceeded limit ${{ env.LATENCY_MAXIMAL_HYP }} µs"
+                echo "FAILED=true" >> "$GITHUB_ENV"
               fi
             fi
           done
@@ -122,7 +121,6 @@ jobs:
         id: deploy-vms
         working-directory: ansible
         if: "${{ inputs.vms-inventory-name != '' }}"
-        continue-on-error: true
         run: |
           CQFD_EXTRA_RUN_ARGS="-v /etc/seapath-ci/vm_file:$(pwd)/vm_images" \
           cqfd exec ansible-playbook \
@@ -150,9 +148,8 @@ jobs:
 
       - name: Test VMs
         id: test-vms
-        working-directory: ansible
         if: "${{ steps.deploy-vms.outcome == 'success' }}"
-        continue-on-error: true
+        working-directory: ansible
         run: |
           cqfd exec ansible-playbook \
             playbooks/ci_all_machines_tests.yaml \
@@ -164,7 +161,7 @@ jobs:
 
           if grep '<failure' ${{ env.RESULTS_FOLDER }}/*.xml | grep -q -v '00080'; then
             echo "::error title=VMs::Test fails, see associated test report"
-            exit 1
+            echo "FAILED=true" >> "$GITHUB_ENV"
           fi
 
           for vm in $INVENTORY_NAMES_VM_RT; do
@@ -174,8 +171,8 @@ jobs:
               echo "LATENCY_VM_${vm}=${max_latency}" >> "$GITHUB_ENV"
               echo "::notice title=VM $vm::Max latency: $max_latency µs"
               if [ "$max_latency" -gt "${{ env.LATENCY_MAXIMAL_VM }}" ]; then
-                echo "::error title=VM $vm::Max latency exceeded limit ${{ env.LATENCY_MAXIMAL_VM }} µs"
-                exit 1
+                echo "::error title=VM $vm::Max latency $max_latency exceeded limit ${{ env.LATENCY_MAXIMAL_VM }} µs"
+                echo "FAILED=true" >> "$GITHUB_ENV"
               fi
             fi
           done
@@ -190,7 +187,6 @@ jobs:
       - name: Do latency tests on VMs
         working-directory: svtrace-ansible
         if: "${{ steps.deploy-vms.outcome == 'success' }}"
-        continue-on-error: true
         run: |
           git clone -q "${{ env.PRIVATE_INVENTORIES_REPO_URL }}" inventories_private
           cqfd init
@@ -220,7 +216,7 @@ jobs:
 
           if grep -q "FAILED" ${{ env.RESULTS_FOLDER }}/latency_tests_*.adoc; then
             echo "::error title=VMs::Test fails, see associated test report"
-            exit 1
+            echo "FAILED=true" >> "$GITHUB_ENV"
           fi
 
       - name: Upload raw results
@@ -325,16 +321,16 @@ jobs:
           mv test-report.pdf "SEAPATH ${{ inputs.seapath-flavor }} Tests Report.pdf"
 
       - name: Upload test report
-        if: ${{ !cancelled() && steps.configure-hyp.outcome == 'success' }}
         uses: actions/upload-artifact@v7
         with:
           path: test-report-pdf/*.pdf
           if-no-files-found: error
           archive: false
 
-      # Some steps have "continue-on-error: true" in order to continue executing the following tests.
-      # Thus, we fail this workflow at the end if those steps failed before.
+      # When the workflow detects a failing test, it does not stop the workflow
+      # directly. Thus, we fail this workflow at the end if one failing test
+      # has been previously detected.
       - name: Fail if needed
-        if: ${{ steps.test-hyp.outcome == 'failure' || steps.test-vms.outcome == 'failure' }}
+        if: "${{ env.FAILED == 'true' }}"
         run: |
           exit 1
