@@ -123,6 +123,7 @@ This two roles should always be called together, we advise using the `seapath_se
 
 ## Management
 
+- `deploy_prometheus_exporters`: Deploy Prometheus exporters as Podman quadlet services
 - `snmp`: Configure SNMP
 - `vmmgrapi`: Configure the vm manager API
 
@@ -194,6 +195,7 @@ The other playbooks can be called alone to re-configure a specific part, when yo
 
 ## Management
 
+- `seapath_setup_prometheus_exporters.yaml`: Deploy Prometheus exporters per host group
 - `seapath_setup_snmp.yaml`: Configure SNMP on all machines
 - `seapath_setup_vmmgrapi.yaml`: Configure vm-mgr API on all machines
 

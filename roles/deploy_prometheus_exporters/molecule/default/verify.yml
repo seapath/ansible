@@ -1,0 +1,69 @@
+---
+- name: Verify observer prometheus exporters deployment
+  hosts: all
+  become: true
+  gather_facts: false
+
+  vars:
+    deploy_prometheus_exporters_other_exporters:
+      - podman-exporter
+      - libvirt-exporter
+      - insatomcat-exporter
+      - ha_cluster_exporter
+
+  tasks:
+    - name: Check node-exporter quadlet unit exists
+      ansible.builtin.stat:
+        path: /etc/containers/systemd/node-exporter.container
+      register: deploy_prometheus_exporters_node_exporter_unit
+
+    - name: Assert node-exporter quadlet unit exists with expected permissions
+      ansible.builtin.assert:
+        that:
+          - deploy_prometheus_exporters_node_exporter_unit.stat.exists
+          - deploy_prometheus_exporters_node_exporter_unit.stat.mode == "0644"
+          - deploy_prometheus_exporters_node_exporter_unit.stat.pw_name == "root"
+          - deploy_prometheus_exporters_node_exporter_unit.stat.gr_name == "root"
+
+    - name: Read node-exporter quadlet unit content
+      ansible.builtin.slurp:
+        path: /etc/containers/systemd/node-exporter.container
+      register: deploy_prometheus_exporters_node_exporter_content
+
+    - name: Assert node-exporter quadlet unit content
+      ansible.builtin.assert:
+        that:
+          - >-
+            ('--web.listen-address=' ~ ip_addr ~ ':9100')
+            in (deploy_prometheus_exporters_node_exporter_content.content | b64decode)
+          - >-
+            deploy_prometheus_exporters_node_exporter_image
+            in (deploy_prometheus_exporters_node_exporter_content.content | b64decode)
+        fail_msg: node-exporter.container content is missing expected listen address or image
+
+    - name: Check other exporter quadlet units are absent
+      ansible.builtin.stat:
+        path: "/etc/containers/systemd/{{ item }}.container"
+      loop: "{{ deploy_prometheus_exporters_other_exporters }}"
+      register: deploy_prometheus_exporters_other_units
+
+    - name: Assert other exporter quadlet units were not deployed
+      ansible.builtin.assert:
+        that:
+          - not item.stat.exists
+        fail_msg: "{{ item.item }}.container should not be deployed in observer scenario"
+      loop: "{{ deploy_prometheus_exporters_other_units.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Check node exporter textfile collector directory exists
+      ansible.builtin.stat:
+        path: /var/lib/prometheus/node_exporter
+      register: deploy_prometheus_exporters_textfile_dir
+
+    - name: Assert node exporter textfile collector directory exists
+      ansible.builtin.assert:
+        that:
+          - deploy_prometheus_exporters_textfile_dir.stat.exists
+          - deploy_prometheus_exporters_textfile_dir.stat.isdir
+          - deploy_prometheus_exporters_textfile_dir.stat.mode == "0755"

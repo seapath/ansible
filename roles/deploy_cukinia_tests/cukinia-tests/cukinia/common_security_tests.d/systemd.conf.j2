@@ -6,11 +6,23 @@ cukinia_log "$(_colorize yellow "--- check systemd settings ---")"
 
 test_id "SEAPATH-00199" as "No systemd service failed" cukinia_systemd_failed
 
-{% if deploy_cukinia_tests_extra_essential_services | default([]) %}
-ESSENTIAL_SERVICES_EXTRA="|\
-{{ deploy_cukinia_tests_extra_essential_services | join('|\\\n') }}"
-{% else %}
 ESSENTIAL_SERVICES_EXTRA=""
+_cukinia_extra_services_dir="/etc/cukinia/extra-essential-services.d"
+if [ -d "$_cukinia_extra_services_dir" ]; then
+    for _cukinia_extra_services_file in "$_cukinia_extra_services_dir"/*; do
+        [ -f "$_cukinia_extra_services_file" ] || continue
+        while IFS= read -r _cukinia_extra_service || [ -n "$_cukinia_extra_service" ]; do
+            case "$_cukinia_extra_service" in
+                ''|\#*) continue ;;
+            esac
+            ESSENTIAL_SERVICES_EXTRA="${ESSENTIAL_SERVICES_EXTRA}|${_cukinia_extra_service}"
+        done < "$_cukinia_extra_services_file"
+    done
+fi
+
+{% if deploy_cukinia_tests_extra_essential_services | default([]) %}
+ESSENTIAL_SERVICES_EXTRA="${ESSENTIAL_SERVICES_EXTRA}|\
+{{ deploy_cukinia_tests_extra_essential_services | join('|\\\n') }}"
 {% endif %}
 
 ESSENTIAL_SERVICES_DEBIAN="\

@@ -1,0 +1,94 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Load distribution-specific variables
+  ansible.builtin.include_vars: "{{ seapath_distro }}.yml"
+
+- name: Deploy prometheus exporters
+  when: deploy_prometheus_exporters_enabled | bool
+  block:
+    - name: Validate prometheus exporters list
+      ansible.builtin.assert:
+        that:
+          - deploy_prometheus_exporters_exporters | length > 0
+          - deploy_prometheus_exporters_exporters | difference(deploy_prometheus_exporters_supported_exporters) | length == 0
+        fail_msg: >-
+          deploy_prometheus_exporters_exporters must be a non-empty subset of
+          {{ deploy_prometheus_exporters_supported_exporters | join(', ') }}.
+          Got: {{ deploy_prometheus_exporters_exporters | join(', ') }}
+
+    - name: Ensure node exporter textfile collector directory exists
+      ansible.builtin.file:
+        path: /var/lib/prometheus/node_exporter
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      when: "'node-exporter' in deploy_prometheus_exporters_exporters"
+
+    - name: Ensure podman quadlet directory exists
+      ansible.builtin.file:
+        path: /etc/containers/systemd
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Deploy prometheus exporter container units
+      ansible.builtin.template:
+        src: "{{ item }}.container.j2"
+        dest: "/etc/containers/systemd/{{ item }}.container"
+        owner: root
+        group: root
+        mode: "0644"
+      loop: "{{ deploy_prometheus_exporters_exporters }}"
+      notify: Reload systemd after exporter container unit changes
+
+    - name: Flush handlers before starting exporter services
+      ansible.builtin.meta: flush_handlers
+      when: deploy_prometheus_exporters_manage_services | bool
+
+    - name: Enable and start podman API socket
+      ansible.builtin.systemd:
+        name: podman.socket
+        enabled: true
+        state: started
+      when:
+        - "'podman-exporter' in deploy_prometheus_exporters_exporters"
+        - deploy_prometheus_exporters_manage_services | bool
+
+    - name: Enable and start prometheus exporter services
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        enabled: true
+        state: started
+      loop: "{{ deploy_prometheus_exporters_exporters }}"
+      when: deploy_prometheus_exporters_manage_services | bool
+
+    - name: Publish prometheus exporter services for cukinia tests
+      when: deploy_prometheus_exporters_register_essential_services | bool
+      block:
+        - name: Ensure cukinia extra essential services drop-in directory exists
+          ansible.builtin.file:
+            path: "{{ deploy_prometheus_exporters_cukinia_extra_essential_services_dir }}"
+            state: directory
+            owner: root
+            group: root
+            mode: "0755"
+
+        - name: Publish prometheus exporter services for cukinia tests
+          ansible.builtin.template:
+            src: cukinia-extra-essential-services.j2
+            dest: "{{ deploy_prometheus_exporters_cukinia_extra_essential_services_file }}"
+            owner: root
+            group: root
+            mode: "0644"
+
+- name: Remove prometheus exporters cukinia extra services drop-in
+  ansible.builtin.file:
+    path: "{{ deploy_prometheus_exporters_cukinia_extra_essential_services_file }}"
+    state: absent
+  when: >-
+    not deploy_prometheus_exporters_enabled | bool
+    or not deploy_prometheus_exporters_register_essential_services | bool
