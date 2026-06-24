@@ -5,6 +5,6 @@
 * Number of sent IEC61850 Sampled Values streams: 8 {# TODO templatize if configurable #}
 * Test duration: {{ env["LATENCY_TESTS_DURATION"] }}
 
-{% for test_result in env["LATENCY_TESTS_RESULTS"].split() %}
-include::{{ test_result }}[leveloffset=-4]
+{% for vm, vm_data in vms.items() if vm_data.rt and vm_data.sv_subscriber %}
+include::latency_tests_{{ vm }}.adoc[leveloffset=-4]
 {% endfor %}
