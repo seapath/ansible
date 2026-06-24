@@ -306,6 +306,92 @@
   delegate_to: "{{ cephadm_first_node }}"
   until: cephadm_cephs.stdout | from_json | community.general.json_query('health.status') == "HEALTH_OK"
 
+- name: Enable Ceph prometheus exporter
+  when: cephadm_prometheus_exporter_enabled | bool
+  block:
+    - name: List enabled Ceph mgr modules
+      ansible.builtin.command: ceph mgr module ls --format json
+      register: cephadm_mgr_modules
+      changed_when: false
+      run_once: true
+      delegate_to: "{{ cephadm_first_node }}"
+
+    - name: Enable prometheus mgr module
+      ansible.builtin.command: ceph mgr module enable prometheus
+      when: >-
+        'prometheus' not in (
+          cephadm_mgr_modules.stdout | from_json
+        ).enabled_modules | default([])
+      changed_when: true
+      run_once: true
+      delegate_to: "{{ cephadm_first_node }}"
+
+    - name: Get prometheus perf counter exclusion setting
+      ansible.builtin.command: ceph config get mgr mgr/prometheus/exclude_perf_counters
+      register: cephadm_prometheus_exclude_perf_counters
+      changed_when: false
+      failed_when: false
+      run_once: true
+      delegate_to: "{{ cephadm_first_node }}"
+
+    - name: Include all perf counters in prometheus exporter metrics
+      ansible.builtin.command: ceph config set mgr mgr/prometheus/exclude_perf_counters false
+      when: >-
+        cephadm_prometheus_exclude_perf_counters.rc != 0
+        or cephadm_prometheus_exclude_perf_counters.stdout | trim != 'false'
+      changed_when: true
+      run_once: true
+      delegate_to: "{{ cephadm_first_node }}"
+
+    - name: Get Ceph mgr daemons
+      ansible.builtin.command: ceph orch ps --daemon-type=mgr --format json
+      register: cephadm_mgr_ps
+      changed_when: false
+      run_once: true
+      delegate_to: "{{ cephadm_first_node }}"
+
+    - name: Find the mgr daemon running on this host
+      ansible.builtin.set_fact:
+        cephadm_mgr_daemon_name: >-
+          {{
+            cephadm_mgr_ps.stdout | from_json
+            | selectattr('hostname', 'equalto',
+                         hostname | default(ansible_facts['hostname'] | default(inventory_hostname)))
+            | map(attribute='daemon_name') | first | default('')
+          }}
+
+    - name: Check the mgr prometheus listen address is an IP address
+      ansible.builtin.assert:
+        that:
+          - cephadm_prometheus_listen_address is match('^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$')
+            or ':' in cephadm_prometheus_listen_address
+        fail_msg: >-
+          cephadm_prometheus_listen_address is
+          "{{ cephadm_prometheus_listen_address }}", which is not an IP address.
+          Set ip_addr or cephadm_prometheus_listen_address for {{ inventory_hostname }}.
+      when: cephadm_mgr_daemon_name | length > 0
+
+    - name: Get mgr prometheus server_addr
+      ansible.builtin.command: >-
+        ceph config get {{ cephadm_mgr_daemon_name }} mgr/prometheus/server_addr
+      register: cephadm_mgr_prometheus_server_addr
+      when: cephadm_mgr_daemon_name | length > 0
+      failed_when: false
+      changed_when: false
+      delegate_to: "{{ cephadm_first_node }}"
+
+    - name: Set mgr prometheus server_addr to administration IP
+      ansible.builtin.command: >-
+        ceph config set {{ cephadm_mgr_daemon_name }}
+        mgr/prometheus/server_addr {{ cephadm_prometheus_listen_address }}
+      when:
+        - cephadm_mgr_daemon_name | length > 0
+        - cephadm_mgr_prometheus_server_addr.rc != 0
+          or cephadm_mgr_prometheus_server_addr.stdout | trim
+             != cephadm_prometheus_listen_address
+      changed_when: true
+      delegate_to: "{{ cephadm_first_node }}"
+
 - name: Check if RBD pool exists
   ansible.builtin.shell:
     cmd: set -o pipefail && ceph osd lspools | grep -w rbd
