@@ -40,6 +40,8 @@ jobs:
     env:
       RESULTS_FOLDER: ${{ github.workspace }}/test_results
       FAILED: false # can be changed if tests fail
+      DO_LATENCY_TESTS: false # automatically changed below
+      DO_CYCLIC_TESTS: false
     steps:
       - name: Clean working directory
         if: ${{ always() }}
@@ -72,13 +74,18 @@ jobs:
             playbooks/ci_prepare_publisher.yaml \
             --inventory "inventories_private/${{ inputs.hyp-inventory-name }}"
 
-          hyp_names=$(cqfd exec ansible-inventory --list \
+          # Create a JSON object with data about the hypervisors
+          hyp=$(cqfd exec ansible-inventory --list \
             --inventory "inventories_private/${{ inputs.hyp-inventory-name }}" \
             --limit "standalone_machine,cluster_machines" \
-            2> /dev/null | jq '._meta.hostvars | keys[]' -r | tr '\n' ' '
+            2> /dev/null \
+            | jq -c '._meta.hostvars | map_values({
+                skip_cyclictest: (.skip_cyclictest // false),
+            })'
           )
-          echo "Running on hypervisors $hyp_names"
-          echo "INVENTORY_NAMES_HYP=$hyp_names" >> "$GITHUB_ENV"
+          hyp_pretty_list=$(echo "$hyp" | jq -r 'keys | join(", ")')
+          echo "Running on hypervisors $hyp_pretty_list"
+          echo "INVENTORY_HYP=$hyp" >> "$GITHUB_ENV"
 
       - name: Fetch hypervisors information
         working-directory: ansible
@@ -121,7 +128,7 @@ jobs:
             echo "FAILED=true" >> "$GITHUB_ENV"
           fi
 
-          for hyp in $INVENTORY_NAMES_HYP; do
+          for hyp in $(echo $INVENTORY_HYP | jq -r 'map_values(select(.skip_cyclictest == false)) | keys | join(" ")'); do
             file="${{ env.RESULTS_FOLDER }}/cyclictest_${hyp}.txt"
             if [[ -f $file ]]; then
               max_latency=$(grep "Max Latencies" "$file" | tr " " "\n" | sort -n | tail -1 | sed s/^0*//)
@@ -145,21 +152,23 @@ jobs:
             --inventory "inventories_private/${{ inputs.hyp-inventory-name }}" \
             --inventory "inventories_private/${{ inputs.vms-inventory-name }}"
 
-          vm_names=$(cqfd exec ansible-inventory --list \
+          # Create a JSON object with data about the VMs
+          vms=$(cqfd exec ansible-inventory --list \
             --inventory "inventories_private/${{ inputs.vms-inventory-name }}" \
             --limit "VMs" \
-            2> /dev/null | jq '._meta.hostvars | keys[]' -r | tr '\n' ' '
-          )
-          vm_rt_names=$(cqfd exec ansible-inventory --list \
-            --inventory "inventories_private/${{ inputs.vms-inventory-name }}" \
-            --limit "VMs" \
-            2> /dev/null | jq '._meta.hostvars | map_values(select(.vm_features[] | . == "rt")) | keys[]' -r | tr '\n' ' '
+            2> /dev/null \
+            | jq -c '. as $root | ._meta.hostvars | with_entries(.value = {
+                rt: (.value.vm_features // []) | contains(["rt"]),
+                skip_cyclictest: (.value.skip_cyclictest // false),
+                sv_subscriber: (.key as $key | $root.subscriber.hosts | any(select(. == $key))), # works only if members of group subscriber are not transitive
+            })'
           )
 
-          echo "Deployed VMs $vm_names"
-          echo "RT VMs are $vm_rt_names"
-          echo "INVENTORY_NAMES_VM=$vm_names" >> "$GITHUB_ENV"
-          echo "INVENTORY_NAMES_VM_RT=$vm_rt_names" >> "$GITHUB_ENV"
+          vms_pretty_list=$(echo "$vms" | jq -r 'to_entries | map(if .value.rt then .key + " (RT)" else .key end) | join(", ")')
+          echo "Deployed VMs $vms_pretty_list"
+          echo "INVENTORY_VMS=$vms" >> "$GITHUB_ENV"
+
+          echo "DO_LATENCY_TESTS=$(echo "$vms" | jq 'any(.[]; .sv_subscriber == true and .rt == true)')" >> "$GITHUB_ENV"
 
       # TODO weekly benchmark
 
@@ -181,7 +190,7 @@ jobs:
             echo "FAILED=true" >> "$GITHUB_ENV"
           fi
 
-          for vm in $INVENTORY_NAMES_VM_RT; do
+          for vm in $(echo $INVENTORY_VMS | jq -r 'map_values(select(.skip_cyclictest == false and .rt == true)) | keys | join(" ")'); do
             file="${{ env.RESULTS_FOLDER }}/cyclictest_${vm}.txt"
             if [[ -f $file ]]; then
               max_latency=$(grep "Max Latencies" "$file" | tr " " "\n" | sort -n | tail -1 | sed s/^0*//)
@@ -196,14 +205,14 @@ jobs:
 
       - name: Checkout svtrace-ansible repository
         uses: actions/checkout@v6
-        if: "${{ steps.deploy-vms.outcome == 'success' }}"
+        if: "${{ steps.deploy-vms.outcome == 'success' && env.DO_LATENCY_TESTS == 'true' }}"
         with:
           repository: seapath/svtrace-ansible
           path: svtrace-ansible
 
       - name: Do latency tests on VMs
         working-directory: svtrace-ansible
-        if: "${{ steps.deploy-vms.outcome == 'success' }}"
+        if: "${{ steps.deploy-vms.outcome == 'success' && env.DO_LATENCY_TESTS == 'true' }}"
         run: |
           git clone -q "${{ env.PRIVATE_INVENTORIES_REPO_URL }}" inventories_private
           cqfd init
@@ -224,17 +233,22 @@ jobs:
             -e "pcap_cycles=${{ env.PCAP_LOOP }}" \
             -e "stream_to_log=0000" # TODO check maybe wrong quoting here
 
-          for latency_test_dir in tests_results/data/ci_latency_tests_*; do
-            hostname="$(basename $latency_test_dir)"
-            hostname="${hostname#ci_latency_tests_}"
-            cp ${latency_test_dir}/results/*.png "${{ env.RESULTS_FOLDER }}"
-            cp "${latency_test_dir}/results/latency_tests.adoc" "${{ env.RESULTS_FOLDER }}/latency_tests_${hostname}.adoc"
-          done
+          for vm in $(echo $INVENTORY_VMS | jq -r 'map_values(select(.sv_subscriber == true and .rt == true)) | keys | join(" ")'); do
+            latency_test_dir=tests_results/data/ci_latency_tests_${vm}
 
-          if grep -q "FAILED" ${{ env.RESULTS_FOLDER }}/latency_tests_*.adoc; then
-            echo "::error title=VMs::Test fails, see associated test report"
-            echo "FAILED=true" >> "$GITHUB_ENV"
-          fi
+            if [ ! -d "$latency_test_dir" ]; then
+              echo "::error::Test results not found for VM $vm"
+              exit 1
+            fi
+
+            cp ${latency_test_dir}/results/*.png "${{ env.RESULTS_FOLDER }}"
+            cp "${latency_test_dir}/results/latency_tests.adoc" "${{ env.RESULTS_FOLDER }}/latency_tests_${vm}.adoc"
+
+            if grep -q "FAILED" "${latency_test_dir}/results/latency_tests.adoc"; then
+              echo "::error title=VM $vm::Latency test failed, see associated test report"
+              echo "FAILED=true" >> "$GITHUB_ENV"
+            fi
+          done
 
       - name: Upload raw results
         id: raw-results-artifact
@@ -245,33 +259,6 @@ jobs:
           include-hidden-files: true
           retention-days: 1
           if-no-files-found: error
-
-      - name: Generate Cyclictest plot
-        run: |
-          for file in ${{ env.RESULTS_FOLDER }}/cyclictest_*.txt; do
-            echo "Found cyclictest result file $file."
-
-            name=$(basename "$file")
-            name="${name#cyclictest_}"
-            name="${name%.txt}"
-
-            if $(echo "$INVENTORY_NAMES_HYP" | grep -w -q "$name"); then
-              limit="${{ env.LATENCY_MAXIMAL_HYP }}"
-            elif $(echo "$INVENTORY_NAMES_VM_RT" | grep -w -q "$name"); then
-              limit="${{ env.LATENCY_MAXIMAL_VM }}"
-            elif $(echo "$INVENTORY_NAMES_VM" | grep -w -q "$name"); then
-              # non-RT VM: we don't care about the cyclictest plot
-              continue
-            else
-              echo "::warning::Unknown Cyclictest result $name."
-              continue
-            fi
-
-            ./ansible/.github/test-report/cyclictest_plot.sh \
-              -i "$file" \
-              -o "${{ env.RESULTS_FOLDER }}/cyclictest_${name}.png" \
-              -l "$limit"
-          done
 
       - name: Checkout test-report-pdf
         uses: actions/checkout@v6
@@ -286,12 +273,40 @@ jobs:
 
           mkdir include
           cp -r ${{ env.RESULTS_FOLDER }}/* include/
-          cp ../ansible/.github/test-report/{prerequisites,notes}.adoc include/
+          cp ../ansible/.github/test-report/prerequisites.adoc include/
 
-          latency_tests_results=$(basename -a test_results/latency_tests_*.adoc)
-          echo "LATENCY_TESTS_RESULTS=$latency_tests_results" >> "$GITHUB_ENV"
           latency_tests_duration=$(python3 -c "import datetime; print(datetime.timedelta(seconds=${{ env.PCAP_LOOP }}))")
           echo "LATENCY_TESTS_DURATION=$latency_tests_duration" >> "$GITHUB_ENV"
+
+          echo "$INVENTORY_HYP" "$INVENTORY_VMS" | jq --slurp '{hypervisors: .[0], vms: .[1]}' > ${{ env.RESULTS_FOLDER }}/data.json
+
+          echo "DO_CYCLIC_TESTS=$(jq \
+            'any(.vms[]; .skip_cyclictest == false and .rt == true)
+            or any(.hypervisors[]; .skip_cyclictest == false)'\
+            ${{ env.RESULTS_FOLDER }}/data.json
+          )" >> "$GITHUB_ENV"
+
+      - name: Generate Cyclictest plots
+        if: "${{ env.DO_CYCLIC_TESTS == 'true' }}"
+        working-directory: test-report-pdf
+        run: |
+          for hyp in $(echo $INVENTORY_HYP | jq -r 'map_values(select(.skip_cyclictest == false)) | keys | join(" ")'); do
+            echo "Generating Cyclictest plot for $hyp"
+
+            ../ansible/.github/test-report/cyclictest_plot.sh \
+              -i "${{ env.RESULTS_FOLDER }}/cyclictest_${hyp}.txt" \
+              -o "include/cyclictest_${hyp}.png" \
+              -l "${{ env.LATENCY_MAXIMAL_HYP }}"
+          done
+
+          for vm in $(echo $INVENTORY_VMS | jq -r 'map_values(select(.skip_cyclictest == false and .rt == true)) | keys | join(" ")'); do
+            echo "Generating Cyclictest plot for $vm"
+
+            ../ansible/.github/test-report/cyclictest_plot.sh \
+              -i "${{ env.RESULTS_FOLDER }}/cyclictest_${vm}.txt" \
+              -o "include/cyclictest_${vm}.png" \
+              -l "${{ env.LATENCY_MAXIMAL_VM }}"
+          done
 
       - name: Templatize system information
         uses: cuchi/jinja2-action@8bd801365a8d36a0b20f45ee969161685de7785a # v1.3.0
@@ -301,20 +316,33 @@ jobs:
           strict: true
           data_file: "${{ env.RESULTS_FOLDER }}/hypervisors_facts.json"
 
+      - name: Templatize notes
+        uses: cuchi/jinja2-action@8bd801365a8d36a0b20f45ee969161685de7785a # v1.3.0
+        with:
+          template: ansible/.github/test-report/notes.adoc.j2
+          output_file: test-report-pdf/include/notes.adoc
+          strict: true
+          data_file: "${{ env.RESULTS_FOLDER }}/data.json"
+          # uses env variables to populate the document
+
       - name: Templatize cyclictest results
         uses: cuchi/jinja2-action@8bd801365a8d36a0b20f45ee969161685de7785a # v1.3.0
+        if: "${{ env.DO_CYCLIC_TESTS == 'true' }}"
         with:
           template: ansible/.github/test-report/cyclictest.adoc.j2
           output_file: test-report-pdf/include/cyclictest.adoc
           strict: true
+          data_file: "${{ env.RESULTS_FOLDER }}/data.json"
           # uses env variables to populate the document
 
       - name: Templatize latency tests results
         uses: cuchi/jinja2-action@8bd801365a8d36a0b20f45ee969161685de7785a # v1.3.0
+        if: "${{ env.DO_LATENCY_TESTS == 'true' }}"
         with:
           template: ansible/.github/test-report/latency_tests.adoc.j2
           output_file: test-report-pdf/include/latency_tests.adoc
           strict: true
+          data_file: "${{ env.RESULTS_FOLDER }}/data.json"
           # uses env variables to populate the document
 
       - name: Generate test report
@@ -333,7 +361,8 @@ jobs:
             --compliance_matrix "/report/bp28-compliance-matrices/ANSSI-BP28-MI-Recommendations.csv" \
             --compliance_matrix "/report/bp28-compliance-matrices/ANSSI-BP28-MIE-Recommendations.csv" \
             --allow_absent \
-            --merge_compliance_matrices
+            --merge_compliance_matrices \
+            --show_failed_cdata
 
           mv test-report.pdf "SEAPATH ${{ inputs.seapath-flavor }} Tests Report.pdf"
 

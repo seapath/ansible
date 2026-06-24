@@ -173,6 +173,11 @@ export VERBOSE=0
 # Parse options
 parse_options "${@}"
 
+if [ ! -f "$INPUT_FILE" ]; then
+    echo "Cyclictest input file does not exist: $INPUT_FILE"
+    exit 1
+fi
+
 # Keep directory to retrieve tools
 TEMP_DIR=$(mktemp -d)
 HISTOGRAM_FILE=$TEMP_DIR/histogram

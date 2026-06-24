@@ -1,9 +1,13 @@
 :imagesdir: ./include
 
+{% if env.get("DO_CYCLIC_TESTS") == 'true' %}
 <<<
 == Real-time testing (cyclictest)
 include::cyclictest.adoc[leveloffset=+2]
+{% endif %}
 
+{% if env.get("DO_LATENCY_TESTS") == 'true' %}
 <<<
 == IEC61850 Sampled Value Latency Testing
 include::latency_tests.adoc[leveloffset=+2]
+{% endif %}

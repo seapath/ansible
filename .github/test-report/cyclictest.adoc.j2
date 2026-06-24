@@ -30,18 +30,18 @@ PASS
 |===
 {%- endmacro %}
 
-{% if env.get('INVENTORY_NAMES_HYP') %}
+{% if hypervisors %}
 = Hypervisor
-{% for hyp in env['INVENTORY_NAMES_HYP'].split() %}
+{% for hyp, hyp_data in hypervisors.items() if not hyp_data.skip_cyclictest %}
 == {{ hyp }}
 image::cyclictest_{{ hyp }}.png[]
 {{ cyclictest_table(env["LATENCY_HYP_" + hyp] | int, env["LATENCY_MAXIMAL_HYP"] | int) }}
 {% endfor %}
 {% endif %}
 
-{% if env.get('INVENTORY_NAMES_VM_RT') %}
+{% if vms %}
 = Virtual Machines
-{% for vm in env['INVENTORY_NAMES_VM_RT'].split() %}
+{% for vm, vm_data in vms.items() if vm_data.rt and not vm_data.skip_cyclictest %}
 == {{ vm }}
 image::cyclictest_{{ vm }}.png[]
 {{ cyclictest_table(env["LATENCY_VM_" + vm] | int, env["LATENCY_MAXIMAL_VM"] | int) }}
