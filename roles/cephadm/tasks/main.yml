@@ -244,6 +244,75 @@
   delegate_to: "{{ cephadm_first_node }}"
   until: cephadm_cephs.stdout | from_json | community.general.json_query('health.status') == "HEALTH_OK"
 
+- name: Enable Ceph prometheus exporter
+  when: cephadm_prometheus_exporter_enabled | bool
+  block:
+    - name: List enabled Ceph mgr modules
+      ansible.builtin.command: ceph mgr module ls --format json
+      register: cephadm_mgr_modules
+      changed_when: false
+      run_once: true
+      delegate_to: "{{ cephadm_first_node }}"
+
+    - name: Enable prometheus mgr module
+      ansible.builtin.command: ceph mgr module enable prometheus
+      when: >-
+        'prometheus' not in (
+          cephadm_mgr_modules.stdout | from_json
+        ).enabled_modules | default([])
+      changed_when: true
+      run_once: true
+      delegate_to: "{{ cephadm_first_node }}"
+
+    - name: Get prometheus perf counter exclusion setting
+      ansible.builtin.command: ceph config get mgr mgr/prometheus/exclude_perf_counters
+      register: cephadm_prometheus_exclude_perf_counters
+      changed_when: false
+      failed_when: false
+      run_once: true
+      delegate_to: "{{ cephadm_first_node }}"
+
+    - name: Include all perf counters in prometheus exporter metrics
+      ansible.builtin.command: ceph config set mgr mgr/prometheus/exclude_perf_counters false
+      when: >-
+        cephadm_prometheus_exclude_perf_counters.rc != 0
+        or cephadm_prometheus_exclude_perf_counters.stdout | trim != 'false'
+      changed_when: true
+      run_once: true
+      delegate_to: "{{ cephadm_first_node }}"
+
+    - name: Get Ceph mgr daemons
+      ansible.builtin.command: ceph orch ps --daemon-type=mgr --format json
+      register: cephadm_mgr_ps
+      changed_when: false
+      run_once: true
+      delegate_to: "{{ cephadm_first_node }}"
+
+    - name: Bind mgr prometheus exporter to administration IP on each host
+      ansible.builtin.include_tasks: prometheus_mgr_bind.yml
+      vars:
+        host_hostname: "{{ hostvars[cephadm_target_host].hostname | default(cephadm_target_host) }}"
+        mgr_daemon: >-
+          {{
+            cephadm_mgr_ps.stdout | from_json
+            | selectattr('hostname', 'equalto', host_hostname)
+            | list | first | default(none)
+          }}
+        listen_address: >-
+          {{
+            hostvars[cephadm_target_host]['cephadm_prometheus_listen_address']
+            | default(
+              hostvars[cephadm_target_host]['ip_addr']
+              | default(hostvars[cephadm_target_host]['ansible_host'])
+            )
+          }}
+      when: mgr_daemon is not none
+      loop: "{{ groups['cluster_machines'] }}"
+      loop_control:
+        loop_var: cephadm_target_host
+        label: "{{ mgr_daemon.daemon_name | default(cephadm_target_host) }}"
+      run_once: true
+
 - name: Check if RBD pool exists
   ansible.builtin.shell:
     cmd: set -o pipefail && ceph osd lspools | grep -w rbd
