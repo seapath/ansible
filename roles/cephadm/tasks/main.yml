@@ -6,14 +6,18 @@
   ansible.builtin.include_vars: "{{ seapath_distro }}.yml"
 
 - name: Check if host is part of a Ceph cluster
-  ansible.builtin.command: "ceph -s"
-  register: cephadm_ceph_status
-  ignore_errors: true
+  ansible.builtin.command: cephadm ls
+  register: cephadm_ls_output
   changed_when: false
+  failed_when: false
 
 - name: Mark host as ceph or nonceph
   ansible.builtin.set_fact:
-    cephadm_is_ceph_node: "{{ cephadm_ceph_status.rc == 0 }}"
+    cephadm_is_ceph_node: >-
+      {{
+        cephadm_ls_output.rc == 0
+        and (cephadm_ls_output.stdout | from_json | length) > 0
+      }}
 
 - name: Add host to ceph_nodes group
   ansible.builtin.add_host:
