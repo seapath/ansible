@@ -9,19 +9,38 @@ on:
         type: string
         required: true
         description: Label of the runner used to deploy and test machines.
-      hyp-inventory-name:
+      inventories-repository:
         type: string
         required: true
-        description: Name of the inventory for the hypervisor.
-      vms-inventory-name:
+        description: URL to clone the repository containing the private inventories.
+      hyp-inventories:
+        type: string
+        required: true
+        description: --inventory flags for the hypervisor.
+      hyp-configure-playbooks:
+        type: string
+        required: true
+        description: List of playbooks used to configure the hypervisor, separated by space.
+      hyp-test-playbooks:
+        type: string
+        required: true
+        description: List of playbooks used to test the hypervisor, separated by space.
+      vms-inventories:
         type: string
         required: false
         default: ""
-        description: Name of the inventory for the VMs, or empty if VMs should not be deployed and tested.
+        description: --inventory flags for the VMs, or empty if VMs should not be deployed and tested.
+      vms-deploy-playbooks:
+        type: string
+        required: false
+        description: List of playbooks used to deploy the VMs, separated by space.
+      vms-test-playbooks:
+        type: string
+        required: false
+        description: List of playbooks used to test the VMs, separated by space.
 
 env:
   # TODO make this better
-  PRIVATE_INVENTORIES_REPO_URL: "git@github.com:seapath-ci/ci-seapath-yocto-inventories.git"
   INVENTORY_PUBLISHER: "inventories_private/ci_publisher.yaml"
   CYCLICTEST_DURATION: 20
   CYCLICTEST_INTERVAL: 200 # hardcoded in the cyclictest role for now
@@ -57,7 +76,7 @@ jobs:
       - name: Prepare Ansible
         working-directory: ansible
         run: |
-          git clone -q "${{ env.PRIVATE_INVENTORIES_REPO_URL }}" inventories_private
+          git clone -q "${{ inputs.inventories-repository }}" inventories_private
 
           cqfd init
           cqfd -b prepare
@@ -70,13 +89,12 @@ jobs:
         working-directory: ansible
         run: |
           cqfd exec ansible-playbook \
-            playbooks/ci_standalone_setup.yaml \
-            playbooks/ci_prepare_publisher.yaml \
-            --inventory "inventories_private/${{ inputs.hyp-inventory-name }}"
+            ${{ inputs.hyp-configure-playbooks }} \
+            ${{ inputs.hyp-inventories }}
 
           # Create a JSON object with data about the hypervisors
           hyp=$(cqfd exec ansible-inventory --list \
-            --inventory "inventories_private/${{ inputs.hyp-inventory-name }}" \
+            ${{ inputs.hyp-inventories }} \
             --limit "standalone_machine,cluster_machines" \
             2> /dev/null \
             | jq -c '._meta.hostvars | map_values({
@@ -99,8 +117,8 @@ jobs:
           " \
           cqfd exec ansible \
             standalone_machine,cluster_machines \
-            --inventory "inventories_private/${{ inputs.hyp-inventory-name }}" \
-            -m setup \
+            ${{ inputs.hyp-inventories }} \
+            --module-name setup \
             | jq '.plays[0].tasks[0].hosts | {host_facts: with_entries(.value = .value.ansible_facts)}' \
             > ${{ env.RESULTS_FOLDER}}/hypervisors_facts.json
 
@@ -109,8 +127,8 @@ jobs:
         working-directory: ansible
         run: |
           cqfd exec ansible-playbook \
-            playbooks/ci_all_machines_tests.yaml \
-            --inventory "inventories_private/${{ inputs.hyp-inventory-name }}" \
+            ${{ inputs.hyp-test-playbooks }} \
+            ${{ inputs.hyp-inventories }} \
             --limit "standalone_machine,cluster_machines" \
             --extra-vars "cukinia_test_prefix=/results" \
             --extra-vars "cyclictest_result_folder=/results" \
@@ -144,17 +162,17 @@ jobs:
       - name: Deploy SEAPATH VMs
         id: deploy-vms
         working-directory: ansible
-        if: "${{ inputs.vms-inventory-name != '' }}"
+        if: "${{ inputs.vms-inventories != '' }}"
         run: |
           CQFD_EXTRA_RUN_ARGS="-v /etc/seapath-ci/vm_file:$(pwd)/vm_images" \
           cqfd exec ansible-playbook \
-            playbooks/ci_vms_standalone_ptp.yaml \
-            --inventory "inventories_private/${{ inputs.hyp-inventory-name }}" \
-            --inventory "inventories_private/${{ inputs.vms-inventory-name }}"
+            ${{ inputs.vms-deploy-playbooks }} \
+            ${{ inputs.hyp-inventories }} \
+            ${{ inputs.vms-inventories }}
 
           # Create a JSON object with data about the VMs
           vms=$(cqfd exec ansible-inventory --list \
-            --inventory "inventories_private/${{ inputs.vms-inventory-name }}" \
+            ${{ inputs.vms-inventories }} \
             --limit "VMs" \
             2> /dev/null \
             | jq -c '. as $root | ._meta.hostvars | with_entries(.value = {
@@ -178,8 +196,8 @@ jobs:
         working-directory: ansible
         run: |
           cqfd exec ansible-playbook \
-            playbooks/ci_all_machines_tests.yaml \
-            --inventory "inventories_private/${{ inputs.vms-inventory-name }}" \
+            ${{ inputs.vms-test-playbooks }} \
+            ${{ inputs.vms-inventories }} \
             --limit "VMs" \
             --extra-vars "cukinia_test_prefix=/results" \
             --extra-vars "cyclictest_result_folder=/results" \
@@ -214,24 +232,24 @@ jobs:
         working-directory: svtrace-ansible
         if: "${{ steps.deploy-vms.outcome == 'success' && env.DO_LATENCY_TESTS == 'true' }}"
         run: |
-          git clone -q "${{ env.PRIVATE_INVENTORIES_REPO_URL }}" inventories_private
+          git clone -q "${{ inputs.inventories-repository }}" inventories_private
           cqfd init
 
           export CQFD_EXTRA_RUN_ARGS="-v /var/run/docker.sock:/var/run/docker.sock"
           cqfd exec ansible-playbook \
             playbooks/configure_latency_tests.yaml \
             --limit "localhost,sv_publisher,VMs" \
-            -i inventories_private/${{ inputs.vms-inventory-name }} \
-            -i ${{ env.INVENTORY_PUBLISHER }} \
+            --inventory ${{ env.INVENTORY_PUBLISHER }} \
+            ${{ inputs.vms-inventories }} \
 
           cqfd exec ansible-playbook \
             playbooks/run_latency_tests.yaml \
             --limit "localhost,sv_publisher,VMs" \
-            -i inventories_private/${{ inputs.vms-inventory-name }} \
-            -i ${{ env.INVENTORY_PUBLISHER }} \
-            -e "pcap=${{ env.PCAP }}" \
-            -e "pcap_cycles=${{ env.PCAP_LOOP }}" \
-            -e "stream_to_log=0000" # TODO check maybe wrong quoting here
+            --inventory ${{ env.INVENTORY_PUBLISHER }} \
+            ${{ inputs.vms-inventories }} \
+            --extra-vars "pcap=${{ env.PCAP }}" \
+            --extra-vars "pcap_cycles=${{ env.PCAP_LOOP }}" \
+            --extra-vars "stream_to_log=0000" # TODO check maybe wrong quoting here
 
           for vm in $(echo $INVENTORY_VMS | jq -r 'map_values(select(.sv_subscriber == true and .rt == true)) | keys | join(" ")'); do
             latency_test_dir=tests_results/data/ci_latency_tests_${vm}

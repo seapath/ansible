@@ -28,14 +28,27 @@ jobs:
       matrix:
         include:
           - name: Welotec RSAPC Mk2
-            inventory: ci_yocto_standalone.yaml
-            vms-inventory: ci_vms.yaml
+            hyp-inventories: >-
+              --inventory inventories_private/ci_yocto_standalone.yaml
+            vms-inventories: >-
+              --inventory inventories_private/ci_vms.yaml
           - name: Aaeon ARM I.MX8P-2G
-            inventory: ci_yocto_standalone_aaeon.yaml
+            hyp-inventories: >-
+              --inventory inventories_private/ci_yocto_standalone_aaeon.yaml
     uses: ./.github/workflows/_tests.yml
     name: Run tests on ${{ matrix.name }}
     with:
       seapath-flavor: "Yocto ${{ matrix.name }}"
-      hyp-inventory-name: ${{ matrix.inventory }}
-      vms-inventory-name: ${{ matrix.vms-inventory }}
       runner-label: "runner-SFL"
+      inventories-repository: "git@github.com:seapath-ci/ci-seapath-yocto-inventories.git"
+      hyp-inventories: ${{ matrix.hyp-inventories }}
+      hyp-configure-playbooks: >-
+        playbooks/ci_standalone_setup.yaml
+        playbooks/ci_prepare_publisher.yaml
+      hyp-test-playbooks: >-
+        playbooks/ci_all_machines_tests.yaml
+      vms-inventories: ${{ matrix.vms-inventories }}
+      vms-deploy-playbooks: >-
+        playbooks/ci_vms_standalone_ptp.yaml
+      vms-test-playbooks: >-
+        playbooks/ci_all_machines_tests.yaml
