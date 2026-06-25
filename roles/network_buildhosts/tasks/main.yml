@@ -9,7 +9,7 @@
 - name: Build hosts file (Cluster Network)
   ansible.builtin.lineinfile:
     dest: /etc/hosts
-    regexp: ".*{{ hostvars[item].hostname | default(item) }}$"
+    regexp: "^\\S+\\s+{{ item }}(\\s|$)"
     line: "{{ hostvars[item].cluster_ip_addr }} {{ item }} {{ hostvars[item].hostname | default('') }}"
     state: present
   loop: "{{ groups['cluster_machines'] | default([]) }}"
@@ -19,7 +19,7 @@
   # Ceph will use the public network instead.
   ansible.builtin.lineinfile:
     dest: /etc/hosts
-    regexp: ".*{{ hostvars[item].hostname | default(item) }}$"
+    regexp: "^\\S+\\s+{{ item }}(\\s|$)"
     line: "{{ hostvars[item].ip_addr }} {{ item }} {{ hostvars[item].hostname | default('') }}"
     state: present
   loop: "{{ groups['cluster_machines'] | default([]) }}"
