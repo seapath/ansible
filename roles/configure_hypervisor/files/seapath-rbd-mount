@@ -1,0 +1,116 @@
+#!/bin/bash
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+#
+# seapath-rbd-mount — map a Ceph RBD image and mount it.
+#
+# Usage: seapath-rbd-mount <image-name> [<size>]
+#
+# Maps rbd/<image-name> and mounts it at /mnt/rbd/<image-name>.
+#
+# Wraps the full lifecycle needed before a container can use an RBD-backed
+# volume: dirty-state cleanup, image creation on first use, device mapping,
+# filesystem creation on first use, and mounting.
+#
+# The script is idempotent: safe to call from ExecStartPre= even if a
+# previous service run was interrupted partway through (e.g. crash between
+# mount and umount).
+#
+# Arguments:
+#   image-name   Name of the RBD image (pool: rbd, mountpoint: /mnt/rbd/<name>)
+#   size         Image size passed to rbd create — only used if the image does
+#                not yet exist (default: 1G, accepts any rbd suffix: M, G, T)
+#
+# Filesystem: ext4.  The device is formatted only once, on first use, when
+# blkid reports no existing filesystem signature.
+#
+# Exit: 0 on success, non-zero on any failure in the map/format/mount steps.
+# The dirty-state cleanup steps are best-effort and never cause a non-zero exit.
+
+set -euo pipefail
+
+IMAGE="${1:?Usage: seapath-rbd-mount <image-name> [<size>]}"
+SIZE="${2:-1G}"
+
+RBD_IMAGE="rbd/${IMAGE}"
+MOUNTPOINT="/mnt/rbd/${IMAGE}"
+DEV_PATH="/dev/rbd/rbd/${IMAGE}"
+
+# ---------------------------------------------------------------------------
+# Dirty-state cleanup
+#
+# If a previous run of the service was interrupted (OOM kill, SIGKILL, host
+# crash with /run on tmpfs + late umount ordering), the device may still be
+# mapped and/or the mountpoint may still be active.  Clean that up before
+# proceeding so the rest of the script is deterministic.
+#
+# Both steps are || true: if they fail (e.g. the device is busy because
+# something else has it open) we let the subsequent map/mount steps surface
+# the real error with a clear message.
+# ---------------------------------------------------------------------------
+
+while findmnt -rn "$MOUNTPOINT" > /dev/null 2>&1; do
+    echo "seapath-rbd-mount: $MOUNTPOINT still mounted — unmounting (dirty cleanup)" >&2
+    umount "$MOUNTPOINT" || break
+done
+
+# Unmap ALL device nodes currently mapped to this image. The stable symlink
+# /dev/rbd/<pool>/<image> points only to the most recent mapping; previous
+# stale mappings from interrupted runs accumulate as /dev/rbdN and must be
+# removed by their device path. Match on (image, snap=="-") to avoid false
+# positives on pool or namespace names.
+while IFS= read -r stale_dev; do
+    echo "seapath-rbd-mount: unmapping stale $stale_dev (dirty cleanup)" >&2
+    rbd unmap "$stale_dev" || true
+done < <(rbd device list 2>/dev/null | awk -v img="$IMAGE" 'NR>1 && $(NF-1)=="-" && $(NF-2)==img {print $NF}')
+
+# ---------------------------------------------------------------------------
+# Create the RBD image on first use
+#
+# rbd info exits non-zero when the image does not exist.  We create it with
+# the layering feature (required for clone/snapshot, harmless otherwise) and
+# the caller-supplied size.  On subsequent runs the image already exists and
+# this block is skipped entirely.
+# ---------------------------------------------------------------------------
+
+if ! rbd info "$RBD_IMAGE" > /dev/null 2>&1; then
+    echo "seapath-rbd-mount: creating RBD image $RBD_IMAGE (size $SIZE)" >&2
+    rbd create "$RBD_IMAGE" --size "$SIZE" --image-feature layering
+fi
+
+# ---------------------------------------------------------------------------
+# Map the block device
+#
+# After a successful rbd map, the kernel exposes the device both as
+# /dev/rbdN (dynamically assigned number) and as the stable symlink
+# /dev/rbd/<pool>/<image>, which we use throughout this script.
+# ---------------------------------------------------------------------------
+
+rbd map "$RBD_IMAGE"
+
+# ---------------------------------------------------------------------------
+# Ensure mountpoint exists
+# ---------------------------------------------------------------------------
+
+mkdir -p "$MOUNTPOINT"
+
+# ---------------------------------------------------------------------------
+# Format on first use
+#
+# blkid exits non-zero when the device has no recognisable filesystem
+# signature, which is exactly the case for a freshly created RBD image.
+# We format with ext4 (quiet mode to suppress the progress output).
+# On subsequent runs the filesystem already exists and this step is skipped.
+# ---------------------------------------------------------------------------
+
+if ! blkid "$DEV_PATH" > /dev/null 2>&1; then
+    echo "seapath-rbd-mount: no filesystem on $DEV_PATH — formatting ext4" >&2
+    mkfs.ext4 -q "$DEV_PATH"
+fi
+
+# ---------------------------------------------------------------------------
+# Mount
+# ---------------------------------------------------------------------------
+
+mount "$DEV_PATH" "$MOUNTPOINT"
+echo "seapath-rbd-mount: $RBD_IMAGE mounted at $MOUNTPOINT" >&2

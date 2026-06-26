@@ -1,0 +1,18 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+- name: Install seapath-rbd-mount helper
+  ansible.builtin.copy:
+    src: seapath-rbd-mount
+    dest: /usr/bin/seapath-rbd-mount
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install seapath-rbd-unmount helper
+  ansible.builtin.copy:
+    src: seapath-rbd-unmount
+    dest: /usr/bin/seapath-rbd-unmount
+    owner: root
+    group: root
+    mode: "0755"
