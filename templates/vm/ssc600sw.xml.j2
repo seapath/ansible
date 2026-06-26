@@ -1,7 +1,7 @@
 <!--  Copyright (C) 2024 Savoir-faire Linux, Inc-->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 
-{% set cpu_nb = (vm.cpuset | length) if vm.cpuset is defined else vm.nb_cpu | default(1) %}
+{% set cpu_nb = vm.nb_cpu | default(1) %}
 
 <domain type="kvm">
     <name>{{ vm.inventory_hostname }}</name>
@@ -17,17 +17,6 @@
     <nosharepages/>
     <locked/>
     </memoryBacking>
-    <cputune>
-        {% if vm.cpuset is defined %}
-        {% for cpu in vm.cpuset %}
-        <vcpupin vcpu="{{ loop.index - 1 }}" cpuset="{{ cpu }}"/>
-        <vcpusched vcpus="{{ loop.index - 1 }}" scheduler="fifo" priority="{{ vm.rt_priority |default('1') }}" />
-        {% endfor %}
-        {% endif %}
-        {% if vm.emulatorpin is defined %}
-        <emulatorpin cpuset='{{ vm.emulatorpin }}'/>
-        {% endif %}
-    </cputune>
     <os>
         <type arch="x86_64" machine="q35">hvm</type>
         <boot dev="hd"/>

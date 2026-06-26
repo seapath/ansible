@@ -1,0 +1,7 @@
+#!/usr/bin/env python3
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+import sys
+sys.path.insert(0, '/usr/lib/seapath')
+from seapath_alloc.cli import main
+main()

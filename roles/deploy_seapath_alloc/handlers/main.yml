@@ -1,0 +1,8 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Restart libvirtd
+  ansible.builtin.systemd:
+    name: libvirtd
+    state: restarted

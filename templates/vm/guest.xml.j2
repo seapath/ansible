@@ -10,7 +10,7 @@
 
 {% set vm_features = vm.vm_features if "vm_features" in vm else [] %}
 {% set vm_legacy_bios = vm.legacy_bios if "legacy_bios" in vm else false %}
-{% set cpu_nb = (vm.cpuset | length) if vm.cpuset is defined else vm.nb_cpu | default(1) %}
+{% set cpu_nb = vm.nb_cpu | default(1) %}
 
 <domain type="{{ vm.vm_domain_type | default('kvm') }}">
     <name>{{ vm.inventory_hostname }}</name>
@@ -61,21 +61,6 @@
         <pmu state="off" />
 {% endif %}
     </features>
-    <cputune>
-{% if vm.cpuset is defined %}
-{%     for cpu in vm.cpuset %}
-{%         if "isolated" in vm_features %}
-            <vcpupin vcpu="{{ loop.index - 1 }}" cpuset="{{ cpu }}"/>
-{%         endif %}
-{%         if "rt" in vm_features %}
-            <vcpusched vcpus="{{ loop.index - 1 }}" scheduler="fifo" priority="{{ vm.rt_priority |default('1') }}" />
-{%         endif %}
-{%     endfor %}
-{% endif %}
-{% if vm.emulatorpin is defined %}
-        <emulatorpin cpuset="{{ vm.emulatorpin }}"/>
-{% endif %}
-    </cputune>
 {% if "rt" in vm_features %}
     <cpu mode="host-passthrough">
         <topology sockets="1" dies="1" cores="{{ cpu_nb }}" threads="1" />

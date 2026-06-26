@@ -73,6 +73,9 @@
 - name: Import seapath_setup_vmmgrapi playbook
   import_playbook: seapath_setup_vmmgrapi.yaml
 
+- name: Import seapath_setup_deploy_seapath_alloc playbook
+  import_playbook: seapath_setup_deploy_seapath_alloc.yaml
+
 - name: Restart all hosts
   hosts:
     - cluster_machines
