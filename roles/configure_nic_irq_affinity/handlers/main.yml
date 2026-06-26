@@ -2,9 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- name: Enable and start NIC irq affinity service
+- name: Restart NIC IRQ affinity service
   ansible.builtin.systemd:
-    name: setup_nic_irq_affinity.service
-    enabled: true
-    state: started
+    name: nic-irq-affinity.service
+    state: restarted
     daemon_reload: true
