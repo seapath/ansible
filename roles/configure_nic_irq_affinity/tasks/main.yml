@@ -6,23 +6,55 @@
 - name: Verify roles variable are defined
   ansible.builtin.import_tasks: validate.yml
 
-- name: Copy NIC irq affinity script
+- name: Disable legacy NIC IRQ affinity services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: false
+    state: stopped
+    daemon_reload: true
+  failed_when: false
+  loop:
+    - setup_nic_irq_affinity.service
+
+- name: Remove legacy NIC IRQ affinity files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/systemd/system/setup_nic_irq_affinity.py
+    - /etc/systemd/system/setup_nic_irq_affinity.service
+    - /etc/default/setup_nic_irq_affinity
+
+- name: Deploy IRQ affinity script
   ansible.builtin.copy:
-    src: setup_nic_irq_affinity.py
-    dest: /etc/systemd/system/setup_nic_irq_affinity.py
+    src: set_nic_irq_affinity.sh
+    dest: /usr/local/bin/set_nic_irq_affinity.sh
     mode: "0755"
-  notify: Enable and start NIC irq affinity service
+  notify: Restart NIC IRQ affinity service
 
-- name: Copy NIC irq affinity service
+- name: Deploy IRQ affinity monitor daemon
   ansible.builtin.copy:
-    src: setup_nic_irq_affinity.service
-    dest: /etc/systemd/system/setup_nic_irq_affinity.service
-    mode: "0644"
-  notify: Enable and start NIC irq affinity service
+    src: nic-irq-monitor.sh
+    dest: /usr/local/bin/nic-irq-monitor.sh
+    mode: "0755"
+  notify: Restart NIC IRQ affinity service
 
-- name: Copy NIC irq affinity environment file
+- name: Deploy IRQ affinity config
   ansible.builtin.template:
-    src: setup_nic_irq_affinity.j2
-    dest: /etc/default/setup_nic_irq_affinity
+    src: nic-irq-affinity.conf.j2
+    dest: /etc/nic-irq-affinity.conf
     mode: "0644"
-  notify: Enable and start NIC irq affinity service
+  notify: Restart NIC IRQ affinity service
+
+- name: Deploy IRQ affinity service
+  ansible.builtin.copy:
+    src: nic-irq-affinity.service
+    dest: /etc/systemd/system/nic-irq-affinity.service
+    mode: "0644"
+  notify: Restart NIC IRQ affinity service
+
+- name: Enable NIC IRQ affinity service
+  ansible.builtin.systemd:
+    name: nic-irq-affinity.service
+    enabled: true
+    daemon_reload: true

@@ -1,0 +1,6 @@
+# {{ ansible_managed }}
+{% for item in nics_affinity %}
+{% for nic, cpu in item.items() %}
+{{ nic }} {{ cpu }}
+{% endfor %}
+{% endfor %}
