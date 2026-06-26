@@ -21,6 +21,11 @@
   ansible.builtin.import_tasks: irqbalance.yml
 - name: Apply libvirt configurations
   ansible.builtin.import_tasks: libvirt.yml
+# On Yocto the root filesystem is read-only: the helpers must be shipped by
+# the image itself (meta-seapath).
+- name: Install RBD volume helpers for quadlet containers
+  ansible.builtin.import_tasks: rbd_helpers.yml
+  when: seapath_distro != "Yocto"
 
 - name: SEAPATH Debian specific hypervisor configuration
   when: seapath_distro == "Debian"

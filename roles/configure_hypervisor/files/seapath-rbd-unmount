@@ -1,0 +1,34 @@
+#!/bin/bash
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+#
+# seapath-rbd-unmount — unmount a filesystem and force-unmap all RBD device
+# mappings for a given image.
+#
+# Usage: seapath-rbd-unmount <image-name>
+#
+# Unmounts /mnt/rbd/<image-name> (if mounted) and then force-unmaps ALL kernel
+# RBD device nodes currently mapped to <image-name> in any pool.
+#
+# Force-unmapping (-o force) is required because devices left over from a
+# container crash may still be held by udevd, blkid, or other kernel
+# references even after the filesystem is unmounted.
+#
+# All steps are best-effort and exit 0, so the script is safe to use from
+# ExecStopPost=.
+#
+# Arguments:
+#   image-name   Name of the RBD image (mountpoint: /mnt/rbd/<image-name>)
+
+IMAGE="${1:?Usage: seapath-rbd-unmount <image-name>}"
+MOUNTPOINT="/mnt/rbd/${IMAGE}"
+
+while findmnt -rn "$MOUNTPOINT" > /dev/null 2>&1; do
+    umount "$MOUNTPOINT" || break
+    echo "seapath-rbd-unmount: $MOUNTPOINT unmounted" >&2
+done
+
+while IFS= read -r dev; do
+    echo "seapath-rbd-unmount: unmapping $dev" >&2
+    rbd unmap -o force "$dev" 2>/dev/null || rbd unmap "$dev" || true
+done < <(rbd device list 2>/dev/null | awk -v img="$IMAGE" 'NR>1 && $(NF-2)==img {print $NF}')
