@@ -1,0 +1,210 @@
+#!/bin/bash
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+#
+# seapath-rbd-mount - map a Ceph RBD image and mount it.
+#
+# Usage: seapath-rbd-mount <image-name> [<size>]
+#
+# Maps rbd/<image-name> and mounts it at /mnt/rbd/<image-name>.
+#
+# Wraps the full lifecycle needed before a container can use an RBD-backed
+# volume: dirty-state cleanup, image creation on first use, device mapping,
+# filesystem creation on first use, and mounting.
+#
+# The script is idempotent: calling it again while the image is already
+# correctly mapped and mounted is a no-op, and it is safe to call from
+# ExecStartPre= even if a previous service run was interrupted partway
+# through (e.g. crash between mount and umount).
+#
+# Arguments:
+#   image-name   Name of the RBD image (pool: rbd, mountpoint: /mnt/rbd/<name>)
+#   size         Image size passed to rbd create, only used if the image does
+#                not yet exist (default: 1G, accepts any rbd suffix: M, G, T)
+#
+# Filesystem: ext4.  The device is formatted only once, on first use, when
+# blkid reports no existing filesystem signature.
+#
+# Requires: rbd, jq, blkid, mkfs.ext4, findmnt, mount, and coreutils
+# (readlink, wc, tr).
+#
+# Exit: 0 on success, non-zero on any failure in the map/format/mount steps.
+# The individual cleanup commands are best-effort, but the script aborts if the
+# mountpoint or the device mappings cannot be cleared, rather than stacking a
+# second mount or mapping on top of ones still in use.
+
+set -euo pipefail
+
+IMAGE="${1:?Usage: seapath-rbd-mount <image-name> [<size>]}"
+SIZE="${2:-1G}"
+
+POOL="rbd"
+RBD_IMAGE="${POOL}/${IMAGE}"
+MOUNTPOINT="/mnt/rbd/${IMAGE}"
+DEV_PATH="/dev/rbd/${POOL}/${IMAGE}"
+
+log() { echo "seapath-rbd-mount: $*" >&2; }
+die() { log "$*"; exit 1; }
+count_lines() { printf '%s\n' "$1" | wc -l; }
+
+command -v jq > /dev/null 2>&1 || die "jq is required but not installed"
+
+# ---------------------------------------------------------------------------
+# mapped_devices - print the device node of every kernel mapping of this image
+#
+# `rbd device list --format json` returns one object per mapping:
+#
+#   [{"id":"0","pool":"rbd","namespace":"","image":"foo",
+#     "snap":"-","device":"/dev/rbd0"}]
+#
+# All four identity fields are matched rather than the image name alone, so a
+# different pool or namespace holding an image of the same name is never
+# touched.  snap == "-" selects read-write mappings, the only kind these
+# helpers ever create: a snapshot mapping of the same image was made by
+# something else and is none of our business.
+#
+# Enumerating the list is required because the stable symlink
+# /dev/rbd/<pool>/<image> points only to the most recent mapping.  Earlier
+# stale mappings from interrupted runs accumulate as /dev/rbdN and can only be
+# found here.
+# ---------------------------------------------------------------------------
+
+mapped_devices() {
+    rbd device list --format json 2> /dev/null | jq -r \
+        --arg pool "$POOL" --arg image "$IMAGE" '
+            .[]
+            | select(.pool == $pool and .namespace == ""
+                     and .image == $image and .snap == "-")
+            | .device
+        '
+}
+
+# ---------------------------------------------------------------------------
+# is_already_mounted - true when the image is mapped exactly once and the
+# mountpoint is served by that very device.
+#
+# Guards a re-run against a healthy, in-use mount (ExecStartPre= firing again
+# before ExecStopPost= tore anything down): the cleanup below would unmount it
+# from under the running container.  Anything ambiguous (no mapping, several
+# mappings, stacked mounts, mounted from a stale device) returns false and
+# goes through the cleanup.
+#
+# Both sides are resolved with readlink -f because findmnt may report either
+# the stable symlink or /dev/rbdN, and the resolved value must be non-empty:
+# comparing two failed resolutions would otherwise match.
+# ---------------------------------------------------------------------------
+
+is_already_mounted() {
+    local devs mount_src mounted_real mapped_real
+
+    devs="$1"
+    [ -n "$devs" ] && [ "$(count_lines "$devs")" -eq 1 ] || return 1
+
+    mount_src="$(findmnt -rn -o SOURCE "$MOUNTPOINT" 2> /dev/null || true)"
+    [ -n "$mount_src" ] && [ "$(count_lines "$mount_src")" -eq 1 ] || return 1
+
+    mounted_real="$(readlink -f "$mount_src" 2> /dev/null || true)"
+    mapped_real="$(readlink -f "$devs" 2> /dev/null || true)"
+    [ -n "$mounted_real" ] && [ "$mounted_real" = "$mapped_real" ]
+}
+
+# Tolerate a failing rbd/jq here: the guard is only an optimisation, and a
+# broken rbd must surface on the map step below, not as a silent early exit.
+current_devs="$(mapped_devices || true)"
+
+if is_already_mounted "$current_devs"; then
+    log "$RBD_IMAGE already mapped and mounted at $MOUNTPOINT, nothing to do"
+    exit 0
+fi
+
+# ---------------------------------------------------------------------------
+# Dirty-state cleanup
+#
+# If a previous run of the service was interrupted (OOM kill, SIGKILL, host
+# crash with /run on tmpfs + late umount ordering), the device may still be
+# mapped and/or the mountpoint may still be active.  Clean that up before
+# proceeding so the rest of the script is deterministic.
+#
+# The individual commands are best-effort; the check right after them verifies
+# the state is actually clear and aborts if it is not.
+# ---------------------------------------------------------------------------
+
+while findmnt -rn "$MOUNTPOINT" > /dev/null 2>&1; do
+    log "$MOUNTPOINT still mounted, unmounting (dirty cleanup)"
+    umount "$MOUNTPOINT" || break
+done
+
+while IFS= read -r stale_dev; do
+    log "unmapping stale $stale_dev (dirty cleanup)"
+    rbd unmap "$stale_dev" || true
+done < <(mapped_devices)
+
+# ---------------------------------------------------------------------------
+# Refuse to stack if the cleanup did not clear the state
+#
+# rbd map does not refuse a second mapping of the same image, and mount does
+# not refuse an over-mount.  So a cleanup blocked by a busy device or
+# mountpoint (a process still holding files open) would otherwise be followed
+# by a silent second mapping and a second, shadowing mount.  Abort instead.
+# ---------------------------------------------------------------------------
+
+if findmnt -rn "$MOUNTPOINT" > /dev/null 2>&1; then
+    die "$MOUNTPOINT still mounted after cleanup, refusing to stack a second mount"
+fi
+
+remaining="$(mapped_devices || true)"
+if [ -n "$remaining" ]; then
+    die "$RBD_IMAGE still mapped after cleanup" \
+        "($(printf '%s' "$remaining" | tr '\n' ' ')), refusing to stack a second mapping"
+fi
+
+# ---------------------------------------------------------------------------
+# Create the RBD image on first use
+#
+# rbd info exits non-zero when the image does not exist.  We create it with
+# the layering feature (required for clone/snapshot, harmless otherwise) and
+# the caller-supplied size.  On subsequent runs the image already exists and
+# this block is skipped entirely.
+# ---------------------------------------------------------------------------
+
+if ! rbd info "$RBD_IMAGE" > /dev/null 2>&1; then
+    log "creating RBD image $RBD_IMAGE (size $SIZE)"
+    rbd create "$RBD_IMAGE" --size "$SIZE" --image-feature layering
+fi
+
+# ---------------------------------------------------------------------------
+# Map the block device
+#
+# After a successful rbd map, the kernel exposes the device both as
+# /dev/rbdN (dynamically assigned number) and as the stable symlink
+# /dev/rbd/<pool>/<image>, which we use throughout this script.
+# ---------------------------------------------------------------------------
+
+rbd map "$RBD_IMAGE"
+
+# ---------------------------------------------------------------------------
+# Ensure mountpoint exists
+# ---------------------------------------------------------------------------
+
+mkdir -p "$MOUNTPOINT"
+
+# ---------------------------------------------------------------------------
+# Format on first use
+#
+# blkid exits non-zero when the device has no recognisable filesystem
+# signature, which is exactly the case for a freshly created RBD image.
+# We format with ext4 (quiet mode to suppress the progress output).
+# On subsequent runs the filesystem already exists and this step is skipped.
+# ---------------------------------------------------------------------------
+
+if ! blkid "$DEV_PATH" > /dev/null 2>&1; then
+    log "no filesystem on $DEV_PATH, formatting ext4"
+    mkfs.ext4 -q "$DEV_PATH"
+fi
+
+# ---------------------------------------------------------------------------
+# Mount
+# ---------------------------------------------------------------------------
+
+mount "$DEV_PATH" "$MOUNTPOINT"
+log "$RBD_IMAGE mounted at $MOUNTPOINT"

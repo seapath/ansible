@@ -1,0 +1,72 @@
+#!/bin/bash
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+#
+# seapath-rbd-unmount - unmount a filesystem and force-unmap all RBD device
+# mappings for a given image.
+#
+# Usage: seapath-rbd-unmount <image-name>
+#
+# Unmounts /mnt/rbd/<image-name> (if mounted) and then force-unmaps every
+# kernel RBD device node currently mapped read-write to rbd/<image-name>.
+#
+# Force-unmapping (-o force) is required because devices left over from a
+# container crash may still be held by udevd, blkid, or other kernel
+# references even after the filesystem is unmounted.
+#
+# All steps are best-effort and exit 0, so the script is safe to use from
+# ExecStopPost=.
+#
+# Arguments:
+#   image-name   Name of the RBD image (mountpoint: /mnt/rbd/<image-name>)
+#
+# Requires: rbd, jq, findmnt, umount.
+
+IMAGE="${1:?Usage: seapath-rbd-unmount <image-name>}"
+
+POOL="rbd"
+MOUNTPOINT="/mnt/rbd/${IMAGE}"
+
+log() { echo "seapath-rbd-unmount: $*" >&2; }
+
+# ---------------------------------------------------------------------------
+# mapped_devices - print the device node of every kernel mapping of this image
+#
+# Same selection as seapath-rbd-mount, deliberately kept identical: match on
+# pool, namespace, image and snap rather than on the image name alone, so
+# neither a same-named image in another pool/namespace nor a snapshot mapping
+# made by something else is force-unmapped from under its user.
+#
+# Enumerating the list is required because the stable symlink
+# /dev/rbd/<pool>/<image> points only to the most recent mapping, while
+# repeated interrupted starts leave several /dev/rbdN behind.
+# ---------------------------------------------------------------------------
+
+mapped_devices() {
+    rbd device list --format json 2> /dev/null | jq -r \
+        --arg pool "$POOL" --arg image "$IMAGE" '
+            .[]
+            | select(.pool == $pool and .namespace == ""
+                     and .image == $image and .snap == "-")
+            | .device
+        '
+}
+
+# Interrupted previous runs can stack several mounts on the same path, so
+# unmount until findmnt reports the mountpoint clear.
+while findmnt -rn "$MOUNTPOINT" > /dev/null 2>&1; do
+    umount "$MOUNTPOINT" || break
+    log "$MOUNTPOINT unmounted"
+done
+
+if ! command -v jq > /dev/null 2>&1; then
+    log "jq is not installed, cannot enumerate mappings, skipping unmap"
+    exit 0
+fi
+
+while IFS= read -r dev; do
+    log "unmapping $dev"
+    rbd unmap -o force "$dev" 2> /dev/null || rbd unmap "$dev" || true
+done < <(mapped_devices)
+
+exit 0
