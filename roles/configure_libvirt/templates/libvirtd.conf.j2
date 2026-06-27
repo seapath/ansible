@@ -11,5 +11,6 @@ unix_sock_rw_perms = "0770"
 # Allow members of the libvirt group to access the socket
 unix_sock_group = "libvirt"
 
-# Set a UUID if the dmidecode command is unavailable
-host_uuid = "{{ inventory_hostname | to_uuid }}"
+# Derive the host UUID from /etc/machine-id for a stable identity across
+# libvirtd restarts without depending on dmidecode or inventory-computed values.
+host_uuid_source = "machine-id"
