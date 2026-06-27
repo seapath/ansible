@@ -21,6 +21,13 @@ kernel.printk=3 1 1 7
 [bootloader]
 cmdline_srh=+processor.max_cstate=1 intel_idle.max_cstate=1 cpufreq.default_governor=performance rcu_nocb_poll
 
+[net]
+# Prevent tuned from calling ethtool -L to change NIC queue counts. The
+# network-latency base profile sets channels=combined N, which briefly resets
+# the NIC and loses Corosync heartbeats. NIC queue affinity is managed
+# explicitly by nic-irq-monitor.
+enabled=0
+
 [irqbalance]
 # Prevent tuned from stopping and restarting irqbalance when applying this
 # profile. The realtime base profile's [irqbalance] plugin causes a ~1s IRQ
