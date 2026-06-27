@@ -36,6 +36,23 @@
     - deploy_vms_cluster_maintenance_check.stdout is defined
     - "'true' == deploy_vms_cluster_maintenance_check.stdout"
 
+# seapath-alloc leaves a thread with an unknown isolation on housekeeping and
+# only says so in its log when the VM starts: catch the typo here instead.
+- name: Check the isolation levels of the VM pinning profile
+  ansible.builtin.assert:
+    that: _isolations | difference(['none', 'exclusive_logical', 'exclusive_physical']) | length == 0
+    fail_msg: >-
+      {{ item }}: seapath_alloc has an unknown isolation
+      {{ _isolations | difference(['none', 'exclusive_logical', 'exclusive_physical']) | join(', ') }};
+      valid values are none, exclusive_logical and exclusive_physical.
+    quiet: true
+  vars:
+    _profile: "{{ hostvars[item].seapath_alloc }}"
+    _isolations: >-
+      {{ ((_profile if _profile is string else _profile | to_yaml)
+      | regex_findall('isolation:\s*\W?(\w+)')) | unique }}
+  when: hostvars[item].seapath_alloc is defined
+
 - name: Check presence of vm before copy
   cluster_vm:
     command: status
@@ -118,6 +135,7 @@
               | map('regex_replace', '^(.+)$', deploy_vms_cluster_qcow2tmpuploadfolder ~ '/additional_\1.qcow2') | list)
              + ([deploy_vms_cluster_qcow2tmpuploadfolder ~ '/cloudinit-seed.qcow2']
                 if hostvars[item].cloud_init is defined else []) }}
+        seapath_alloc: "{{ hostvars[item].seapath_alloc | default(omit) }}"
         xml: >-
           {{ lookup('file', hostvars[item].xml_path)
                if hostvars[item].xml_path is defined
