@@ -1,0 +1,10 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Stop and mask irqbalance.service
+  ansible.builtin.systemd:
+    name: irqbalance.service
+    state: stopped
+    enabled: false
+    masked: true
