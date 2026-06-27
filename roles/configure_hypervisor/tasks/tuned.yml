@@ -20,6 +20,7 @@
     group: root
     owner: root
     mode: "0644"
+  register: configure_hypervisor_tuned_conf
 
 - name: Remove tuned dynamic tuning
   ansible.builtin.lineinfile:
@@ -27,16 +28,32 @@
     state: present
     regexp: "^#?dynamic_tuning = .*$"
     line: "dynamic_tuning = 0"
+  register: configure_hypervisor_tuned_main_conf
 
 - name: Enable tuned.service
   ansible.builtin.systemd:
     name: tuned.service
     enabled: true
+    state: started
+
+- name: Restart tuned after config change
+  when: configure_hypervisor_tuned_main_conf.changed
+  ansible.builtin.systemd:
+    name: tuned.service
     state: restarted
+
+- name: Get active tuned profile
+  ansible.builtin.command: tuned-adm active
+  changed_when: false
+  register: configure_hypervisor_tuned_active
+  when: isolcpus is defined
 
 - name: Load seapath-rt-host tuned profile
   ansible.builtin.command: tuned-adm profile seapath-rt-host
-  when: isolcpus is defined
+  when: >
+    isolcpus is defined and
+    (configure_hypervisor_tuned_conf.changed or
+     'seapath-rt-host' not in configure_hypervisor_tuned_active.stdout)
   changed_when: true
 
 - name: Unload tuned profile
