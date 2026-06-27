@@ -5,6 +5,12 @@ summary=Seapath profile for RT host (Seapath Rt Host = SRH)
 [variables]
 isolated_cores={{ isolcpus | default('') }}
 non_isolated_cores_expanded=${f:cpulist_unpack:${non_isolated_cores}}
+# Prevent runtime workqueue thread migration (realtime base profile uses this
+# variable for writeback/workqueue cpumask sysfs writes). Set to all-CPUs so
+# the writes are no-ops: no workqueue migration, no network freeze, no
+# Corosync heartbeat loss. Safe because isolcpus= already prevents the
+# scheduler from assigning normal tasks to isolated cores.
+not_isolated_cpumask=ffffffffffffffff
 
 [sysctl]
 kernel.printk=3 1 1 7
