@@ -22,3 +22,8 @@
     state: restarted
     daemon_reload: true
     name: ovs-vswitchd
+
+- name: Restart libvirtd
+  ansible.builtin.systemd:
+    name: libvirtd.service
+    state: restarted
