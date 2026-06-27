@@ -24,5 +24,10 @@ cmdline_srh=+processor.max_cstate=1 intel_idle.max_cstate=1 cpufreq.default_gove
 enabled=0
 
 [scheduler]
+# isolcpus= in the kernel cmdline already prevents the scheduler from
+# assigning tasks to isolated cores. Disable tuned's own process-affinity
+# management (isolated_cores=) to avoid conflicts with QEMU threads pinned
+# by the seapath hook and containers pinned at the cgroup level.
+isolated_cores=
 # for i in `pgrep rcuc` ; do grep Cpus_allowed_list /proc/$i/status ; done
 group.rcuc=0:f:10:*:^\[rcuc
