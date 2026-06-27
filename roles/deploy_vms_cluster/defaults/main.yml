@@ -5,3 +5,21 @@
 deploy_vms_cluster_disk_copy: true
 deploy_vms_cluster_qcow2tmpuploadfolder: "/tmp"
 deploy_vms_cluster_vms_disks_directory: ""
+
+# CPU pinning profile for seapath-alloc (per-VM host variable, optional).
+# Set in the VM's host_vars as a YAML string. If absent, no pinning profile
+# is applied and seapath-alloc falls back to /etc/seapath/hook-defaults.yaml.
+#
+# Example (host_vars/myvm.yaml):
+#   vm_pinning_profile: |
+#     version: 1
+#     vcpus:
+#       isolation: exclusive_physical
+#       scheduler: FIFO
+#       priority: 90
+#     emulator:
+#       isolation: exclusive_logical
+#       scheduler: FIFO
+#       priority: 50
+#
+# vm_pinning_profile:

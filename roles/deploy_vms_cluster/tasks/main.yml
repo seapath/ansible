@@ -99,6 +99,7 @@
         crm_config_cmd: "{{ hostvars[item].crm_config_cmd | default(omit) }}"
         disk_bus: "{{ hostvars[item].disk_bus | default(omit) }}"
         additional_disks: "{{ range(hostvars[item].additional_disk | default([]) | length) | map('string') | map('regex_replace', '^(.+)$', deploy_vms_cluster_qcow2tmpuploadfolder ~ '/additional_\\1.qcow2') | list }}"
+        pinning_profile: "{{ hostvars[item].vm_pinning_profile | default(omit) }}"
         xml: >-
           {{ lookup('file', hostvars[item].xml_path)
                if hostvars[item].xml_path is defined
