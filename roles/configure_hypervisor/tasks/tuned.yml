@@ -30,31 +30,31 @@
     line: "dynamic_tuning = 0"
   register: configure_hypervisor_tuned_main_conf
 
+- name: Set seapath-rt-host as active tuned profile
+  ansible.builtin.copy:
+    content: "seapath-rt-host\n"
+    dest: /etc/tuned/active_profile
+    owner: root
+    group: root
+    mode: "0644"
+  register: configure_hypervisor_tuned_profile_set
+  when: isolcpus is defined
+
 - name: Enable tuned.service
   ansible.builtin.systemd:
     name: tuned.service
     enabled: true
     state: started
 
-- name: Restart tuned after config change
-  when: configure_hypervisor_tuned_main_conf.changed
+- name: Restart tuned to apply profile without rollback
   ansible.builtin.systemd:
     name: tuned.service
     state: restarted
-
-- name: Get active tuned profile
-  ansible.builtin.command: tuned-adm active
-  changed_when: false
-  register: configure_hypervisor_tuned_active
-  when: isolcpus is defined
-
-- name: Load seapath-rt-host tuned profile
-  ansible.builtin.command: tuned-adm profile seapath-rt-host
   when: >
-    isolcpus is defined and
-    (configure_hypervisor_tuned_conf.changed or
-     'seapath-rt-host' not in configure_hypervisor_tuned_active.stdout)
-  changed_when: true
+    configure_hypervisor_tuned_main_conf.changed or
+    (isolcpus is defined and
+     (configure_hypervisor_tuned_conf.changed or
+      configure_hypervisor_tuned_profile_set.changed))
 
 - name: Unload tuned profile
   ansible.builtin.command: tuned-adm off
