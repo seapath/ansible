@@ -519,3 +519,28 @@ def test_reports_a_vm_manager_failure_with_its_traceback(run, monkeypatch):
 
     assert excinfo.value.kwargs["msg"] == "libvirt is unreachable"
     assert "RuntimeError" in excinfo.value.kwargs["exception"]
+
+
+def test_create_carries_the_pinning_profile(run, vm_manager, image):
+    profile = "vcpus:\n  isolation: exclusive_physical\n"
+
+    run(command="create", name="vm0", xml="<domain/>", system_image=image,
+        pinning_profile=profile)
+
+    assert only_call(vm_manager)[1][0]["pinning_profile"] == profile
+
+
+def test_clone_carries_the_pinning_profile(run, vm_manager):
+    profile = "vcpus:\n  isolation: exclusive_logical\n"
+
+    run(command="clone", name="vm1", src_name="vm0", pinning_profile=profile)
+
+    assert only_call(vm_manager)[1][0]["pinning_profile"] == profile
+
+
+def test_clone_without_a_profile_lets_vm_manager_copy_the_source_one(
+    run, vm_manager
+):
+    run(command="clone", name="vm1", src_name="vm0")
+
+    assert only_call(vm_manager)[1][0]["pinning_profile"] is None
