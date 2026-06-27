@@ -118,6 +118,7 @@
               | map('regex_replace', '^(.+)$', deploy_vms_cluster_qcow2tmpuploadfolder ~ '/additional_\1.qcow2') | list)
              + ([deploy_vms_cluster_qcow2tmpuploadfolder ~ '/cloudinit-seed.qcow2']
                 if hostvars[item].cloud_init is defined else []) }}
+        pinning_profile: "{{ hostvars[item].vm_pinning_profile | default(omit) }}"
         xml: >-
           {{ lookup('file', hostvars[item].xml_path)
                if hostvars[item].xml_path is defined
