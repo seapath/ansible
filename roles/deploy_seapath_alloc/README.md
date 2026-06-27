@@ -187,7 +187,39 @@ Both trigger `record_fallback()` and increment the `seapath_alloc_allocation_fal
 The hook `/etc/libvirt/hooks/qemu.d/10-seapath-pinning` is called automatically
 by libvirt on every VM start and migration.
 
-Pinning is configured per VM via Ceph RBD image metadata:
+Pinning is configured per VM by a profile stored as Ceph RBD image metadata
+under the key `_seapath_alloc`. The profile travels with the disk, so a VM
+migrating to another node is re-allocated there against that node's own
+topology, with nothing to configure per node.
+
+**From the inventory (recommended).** Set `vm_pinning_profile` in the VM's
+host variables; `deploy_vms_cluster` passes it to `vm_manager`, which writes
+the RBD metadata at VM creation and propagates it on clone:
+
+```yaml
+# host_vars/myvm.yaml
+vm_pinning_profile: |
+  version: 1
+  vcpus:
+    isolation: exclusive_physical
+    scheduler: FIFO
+    priority: 90
+  emulator:
+    isolation: exclusive_logical
+    scheduler: FIFO
+    priority: 50
+  vhost:
+    isolation: exclusive_logical
+    scheduler: FIFO
+    priority: 50
+```
+
+The inventory stays the place where everything is authored, exactly as for
+every other VM setting: RBD is where the profile lives and travels, not where
+it is written.
+
+**Directly on an existing VM.** The same profile can be set or updated on a
+VM that already exists, without redeploying it:
 
 ```bash
 rbd image-meta set rbd/<image> _seapath_alloc '
@@ -196,16 +228,10 @@ vcpus:
   isolation: exclusive_physical
   scheduler: FIFO
   priority: 90
-emulator:
-  isolation: exclusive_logical
-  scheduler: FIFO
-  priority: 50
-vhost:
-  isolation: exclusive_logical
-  scheduler: FIFO
-  priority: 50
 '
 ```
+
+The VM picks up the new profile at its next start or migration.
 
 If no metadata is present for a VM, all thread groups run on housekeeping
 cores with no RT scheduling (`isolation: none, scheduler: OTHER`). This is the

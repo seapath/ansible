@@ -158,6 +158,14 @@ options:
       - Name of a metadata key
       - This option is required if I(command) is C(get_metadata)
     type: str
+  pinning_profile:
+    description:
+      - CPU pinning profile for seapath-alloc, as a YAML string.
+      - Stored as RBD image metadata under the key C(_seapath_alloc).
+      - Optional parameter relevant only if I(command) is C(create) or C(clone).
+      - For C(clone), if omitted the profile is copied automatically from the
+        source VM by vm_manager.
+    type: str
   metadata:
     description:
       - Metadata in format key, value to store in the VM
@@ -612,6 +620,7 @@ def run_module():
             type="bool", required=False, default=False
         ),
         disk_bus=dict(type="str", required=False, default="virtio"),
+        pinning_profile=dict(type="str", required=False),
     )
     result = {}
     required = [
@@ -686,6 +695,7 @@ def run_module():
     )
     disk_bus = args.get("disk_bus", "virtio")
     additional_disks = args.get("additional_disks", [])
+    pinning_profile = args.get("pinning_profile", None)
 
     vm_name_command_list = commands_list.copy()
     vm_name_command_list.remove("list_vms")
@@ -736,6 +746,7 @@ def run_module():
                 "pacemaker_utilization": pacemaker_utilization,
                 "disk_bus": disk_bus,
                 "additional_disks": additional_disks,
+                "pinning_profile": pinning_profile,
             }
             vm_manager.create(vm_options)
         elif command == "clone":
@@ -762,6 +773,7 @@ def run_module():
                 "clear_pacemaker_meta": clear_pacemaker_meta,
                 "clear_pacemaker_params": clear_pacemaker_params,
                 "clear_pacemaker_utilization": clear_pacemaker_utilization,
+                "pinning_profile": pinning_profile,
             }
             vm_manager.clone(vm_options)
         elif command == "remove":
