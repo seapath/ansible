@@ -22,6 +22,15 @@
     mode: "0644"
   register: configure_hypervisor_tuned_conf
 
+- name: Copy seapath-rt-host tuned profile script
+  ansible.builtin.copy:
+    src: tuned-script.sh
+    dest: "{{ configure_hypervisor_tuned_profiles_dir }}/seapath-rt-host/script.sh"
+    owner: root
+    group: root
+    mode: "0755"
+  register: configure_hypervisor_tuned_script
+
 - name: Remove tuned dynamic tuning
   ansible.builtin.lineinfile:
     path: /etc/tuned/tuned-main.conf
@@ -54,6 +63,7 @@
     configure_hypervisor_tuned_main_conf.changed or
     (isolcpus is defined and
      (configure_hypervisor_tuned_conf.changed or
+      configure_hypervisor_tuned_script.changed or
       configure_hypervisor_tuned_profile_set.changed))
 
 - name: Unload tuned profile
