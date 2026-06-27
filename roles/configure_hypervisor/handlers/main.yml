@@ -27,9 +27,3 @@
     - "machine-rt"
     - "machine-nort"
     - "ovs"
-
-- name: Restart irqbalance
-  ansible.builtin.systemd:
-    name: irqbalance.service
-    enabled: true
-    state: restarted

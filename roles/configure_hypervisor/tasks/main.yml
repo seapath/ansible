@@ -17,6 +17,8 @@
   ansible.builtin.import_tasks: slices.yml
 - name: Apply tuned configurations
   ansible.builtin.import_tasks: tuned.yml
+- name: Disable irqbalance
+  ansible.builtin.import_tasks: irqbalance.yml
 - name: Apply libvirt configurations
   ansible.builtin.import_tasks: libvirt.yml
 - name: Install RBD volume helpers for quadlet containers
@@ -33,7 +35,5 @@
 - name: SEAPATH CentOS specific hypervisor configuration
   when: seapath_distro == "CentOS"
   block:
-    - name: Apply CentOS irqbalance configurations
-      ansible.builtin.include_tasks: centos/irqbalance.yml
     - name: Apply CentOS libvirt configurations
       ansible.builtin.include_tasks: centos/libvirt.yml
