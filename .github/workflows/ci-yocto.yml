@@ -3,8 +3,6 @@
 
 name: CI Yocto
 
-env:
-  WORK_DIR: /tmp/seapath_ci_${{ github.run_id }}_${{ github.run_attempt }}_${{ github.sha }}
 on:
   workflow_call:
     inputs:
