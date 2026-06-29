@@ -45,6 +45,13 @@ on:
           Path to a private SSH key to use to connect to Ansible hosts.
           Should be a path relative to the Ansible directory.
           e.g. 'inventories_private/ci_rsa'
+      compliance_matrices_folder:
+        type: string
+        required: false
+        description: |
+          Name of the folder containing the compliance matrices .csv files.
+          If empty, no matrices will be created.
+          e.g. 'yocto'
 
 env:
   # TODO make this better
@@ -385,6 +392,15 @@ jobs:
       - name: Generate test report
         working-directory: test-report-pdf
         run: |
+          compliance_matrices=()
+          if [[ ${{ inputs.compliance_matrices_folder }} != '' ]]; then
+            for matrix in ../ansible/.github/test-report/bp28-compliance-matrices/${{ inputs.compliance_matrices_folder }}/*; do
+              matrix_name="$(basename $matrix)"
+              echo "Found compliance matrix $matrix_name"
+              compliance_matrices+=(--compliance_matrix "/report/bp28-compliance-matrices/${{ inputs.compliance_matrices_folder }}/$matrix_name")
+            done
+          fi
+
           CQFD_EXTRA_RUN_ARGS="-v $(realpath ../ansible/.github/test-report):/report" \
           cqfd exec ./compile.py \
             --contact_email "seapath@savoirfairelinux.com" \
@@ -394,9 +410,7 @@ jobs:
             --add_machine_name \
             --pdf_themes_dir "/report/seapath-themes" \
             --include_dir "./include" \
-            --compliance_matrix "/report/bp28-compliance-matrices/ANSSI-BP28-M-Recommendations.csv" \
-            --compliance_matrix "/report/bp28-compliance-matrices/ANSSI-BP28-MI-Recommendations.csv" \
-            --compliance_matrix "/report/bp28-compliance-matrices/ANSSI-BP28-MIE-Recommendations.csv" \
+            ${compliance_matrices[@]} \
             --allow_absent \
             --merge_compliance_matrices \
             --show_failed_cdata

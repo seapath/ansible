@@ -39,6 +39,7 @@ jobs:
     name: Run tests on ${{ matrix.name }}
     with:
       seapath-flavor: "Yocto ${{ matrix.name }}"
+      compliance_matrices_folder: yocto
       runner-label: "runner-SFL"
       inventories-repository: "git@github.com:seapath-ci/ci-seapath-yocto-inventories.git"
       hyp-inventories: ${{ matrix.hyp-inventories }}
