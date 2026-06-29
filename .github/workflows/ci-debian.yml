@@ -3,9 +3,6 @@
 
 name: CI Debian
 
-env:
-  WORK_DIR: /tmp/seapath_ci_${{ github.run_id }}_${{ github.run_attempt }}_${{ github.sha }}
-
 on:
   workflow_call:
   workflow_dispatch:
@@ -14,45 +11,44 @@ permissions:
   checks: write
 
 jobs:
-  Integration-tests:
-    runs-on: [self-hosted, runner-RTE-13]
-    steps:
-
-      - name: Initialize sources
-        run: mkdir ${{ env.WORK_DIR }}; cd ${{ env.WORK_DIR }};
-             git clone -q --depth 1 --recurse-submodules -b main https://github.com/seapath/ci ci;
-             echo "CI sources downloaded successfully";
-             ci/launch-debian.sh init;
-
-      - name: Configure Debian
-        id: conf
-        run: cd ${{ env.WORK_DIR }};
-             ci/launch-debian.sh conf;
-
-      - name: Launch system tests
-        if: ${{ always() && steps.conf.conclusion == 'success' }}
-        run: cd ${{ env.WORK_DIR }};
-             ci/launch-debian.sh system;
-
-      - name: Launch VM tests
-        if: ${{ always() && steps.conf.conclusion == 'success' }}
-        run: cd ${{ env.WORK_DIR }};
-             ci/launch-debian.sh vm;
-
-      - name: Generate test report
-        if: ${{ always() && steps.conf.conclusion == 'success' }}
-        run: cd ${{ env.WORK_DIR }};
-             git -C ci/test-report-pdf checkout 0156f2d35ba7d5983f22b6054aa83f92a42f0f2d;
-             ci/launch-debian.sh report;
-
-      - name: Upload test report
-        if: ${{ always() && steps.conf.conclusion == 'success' }}
-        uses: actions/upload-artifact@v7
-        with:
-            name: seapath-test-report-debian-cluster
-            path: ${{ env.WORK_DIR }}/seapath-test-report.pdf
-            if-no-files-found: error
-
-      - name: Clean
-        if: always()
-        run: rm -rf $WORK_DIR;
+  call-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Standalone
+            hyp-inventories: >-
+              --inventory inventories_private/standalone13.yml
+            vms-inventories: >-
+              --inventory inventories_private/vm13standalone.yml
+            vms-deployment-playbooks: >-
+              playbooks/deploy_vms_standalone.yaml
+          - name: Cluster
+            hyp-inventories: >-
+              --inventory inventories_private/cluster13.yml
+            vms-inventories: >-
+              --inventory inventories_private/vm13cluster.yml
+            vms-deployment-playbooks: >-
+              playbooks/deploy_vms_cluster.yaml
+    uses: ./.github/workflows/_tests.yml
+    name: Run tests on ${{ matrix.name }}
+    with:
+      seapath-flavor: "Debian ${{ matrix.name }}"
+      compliance_matrices_folder: debian
+      runner-label: "runner-RTE-13"
+      inventories-repository: "git@github.com:insatomcat/seapath_inventories_ci.git"
+      ansible_ssh_keyfile: "inventories_private/ci_rsa"
+      skip_cyclictest: true # the inventories don't have the expected skip_cyclictest variables
+      hyp-inventories: ${{ matrix.hyp-inventories }}
+      hyp-configure-playbooks: >-
+        playbooks/ci_configure.yaml
+      hyp-test-playbooks: >-
+        playbooks/ci_test.yaml
+      vms-inventories: ${{ matrix.vms-inventories }}
+      vms-deploy-playbooks: ${{ matrix.vms-deployment-playbooks }}
+      vms-configure-playbooks: >-
+        playbooks/seapath_setup_prerequisdebian.yaml
+        playbooks/seapath_setup_hardening.yaml
+        playbooks/ci_prepare_VMs.yaml
+      vms-test-playbooks: >-
+        playbooks/ci_test.yaml

@@ -192,11 +192,11 @@ jobs:
 
           for hyp in $(echo $INVENTORY_HYP | jq -r 'map_values(select(.skip_cyclictest == false)) | keys | join(" ")'); do
             file="${{ env.RESULTS_FOLDER }}/cyclictest_${hyp}.txt"
-            if [[ -f $file ]]; then
+            if [[ -f "$file" ]]; then
               max_latency=$(grep "Max Latencies" "$file" | tr " " "\n" | sort -n | tail -1 | sed s/^0*//)
               echo "LATENCY_HYP_${hyp}=${max_latency}" >> "$GITHUB_ENV"
               echo "::notice title=${{ inputs.seapath-flavor }} Hypervisor $hyp::Max latency: $max_latency µs"
-              if [ "$max_latency" -gt "${{ env.LATENCY_MAXIMAL_HYP }}" ]; then
+              if [[ "$max_latency" -gt "${{ env.LATENCY_MAXIMAL_HYP }}" ]]; then
                 echo "::error title=${{ inputs.seapath-flavor }} Hypervisor $hyp::Max latency $max_latency exceeded limit ${{ env.LATENCY_MAXIMAL_HYP }} µs"
                 echo "FAILED=true" >> "$GITHUB_ENV"
               fi
@@ -241,7 +241,7 @@ jobs:
             | jq -c '. as $root | ._meta.hostvars | with_entries(.value = {
                 rt: (.value.vm_features // []) | contains(["rt"]),
                 skip_cyclictest: (.value.skip_cyclictest // ${{ inputs.skip_cyclictest }}),
-                sv_subscriber: (.key as $key | $root.subscriber.hosts | any(select(. == $key))), # works only if members of group subscriber are not transitive
+                sv_subscriber: (.key as $key | ($root.subscriber.hosts // []) | any(select(. == $key))), # works only if members of group subscriber are not transitive
             })'
           )
 
@@ -277,11 +277,11 @@ jobs:
 
           for vm in $(echo $INVENTORY_VMS | jq -r 'map_values(select(.skip_cyclictest == false and .rt == true)) | keys | join(" ")'); do
             file="${{ env.RESULTS_FOLDER }}/cyclictest_${vm}.txt"
-            if [[ -f $file ]]; then
+            if [[ -f "$file" ]]; then
               max_latency=$(grep "Max Latencies" "$file" | tr " " "\n" | sort -n | tail -1 | sed s/^0*//)
               echo "LATENCY_VM_${vm}=${max_latency}" >> "$GITHUB_ENV"
               echo "::notice title=${{ inputs.seapath-flavor }} VM $vm::Max latency: $max_latency µs"
-              if [ "$max_latency" -gt "${{ env.LATENCY_MAXIMAL_VM }}" ]; then
+              if [[ "$max_latency" -gt "${{ env.LATENCY_MAXIMAL_VM }}" ]]; then
                 echo "::error title=${{ inputs.seapath-flavor }} VM $vm::Max latency $max_latency exceeded limit ${{ env.LATENCY_MAXIMAL_VM }} µs"
                 echo "FAILED=true" >> "$GITHUB_ENV"
               fi
@@ -335,7 +335,7 @@ jobs:
           for vm in $(echo $INVENTORY_VMS | jq -r 'map_values(select(.sv_subscriber == true and .rt == true)) | keys | join(" ")'); do
             latency_test_dir=tests_results/data/ci_latency_tests_${vm}
 
-            if [ ! -d "$latency_test_dir" ]; then
+            if [[ ! -d "$latency_test_dir" ]]; then
               echo "::error::Test results not found for VM $vm"
               exit 1
             fi
