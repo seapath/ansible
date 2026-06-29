@@ -38,6 +38,13 @@ on:
         type: string
         required: false
         description: List of playbooks used to test the VMs, separated by space.
+      ansible_ssh_keyfile:
+        type: string
+        required: false
+        description: |
+          Path to a private SSH key to use to connect to Ansible hosts.
+          Should be a path relative to the Ansible directory.
+          e.g. 'inventories_private/ci_rsa'
 
 env:
   # TODO make this better
@@ -82,7 +89,14 @@ jobs:
           cqfd -b prepare
 
           mkdir ${{ env.RESULTS_FOLDER }}
-          echo "CQFD_EXTRA_RUN_ARGS=-v ${{ env.RESULTS_FOLDER }}:/results" >> "$GITHUB_ENV"
+          CQFD_EXTRA_RUN_ARGS="$CQFD_EXTRA_RUN_ARGS -v ${{ env.RESULTS_FOLDER }}:/results"
+
+          if [[ -n "${{ inputs.ansible_ssh_keyfile }}" ]]; then
+            chmod 0600 "${{ inputs.ansible_ssh_keyfile }}"
+            CQFD_EXTRA_RUN_ARGS="$CQFD_EXTRA_RUN_ARGS -e ANSIBLE_PRIVATE_KEY_FILE=${{ inputs.ansible_ssh_keyfile }}"
+          fi
+
+          echo "CQFD_EXTRA_RUN_ARGS=$CQFD_EXTRA_RUN_ARGS" >> "$GITHUB_ENV"
 
       - name: Configure SEAPATH on hypervisors
         id: configure-hyp
@@ -110,6 +124,7 @@ jobs:
         run: |
           # Those run args allow to have a clean JSON output that can be parsed.
           CQFD_EXTRA_RUN_ARGS="\
+            $CQFD_EXTRA_RUN_ARGS \
             -e ANSIBLE_HOST_PATTERN_MISMATCH=ignore \
             -e ANSIBLE_LOAD_CALLBACK_PLUGINS=true \
             -e ANSIBLE_STDOUT_CALLBACK=json \
@@ -164,7 +179,10 @@ jobs:
         working-directory: ansible
         if: "${{ inputs.vms-inventories != '' }}"
         run: |
-          CQFD_EXTRA_RUN_ARGS="-v /etc/seapath-ci/vm_file:$(pwd)/vm_images" \
+          CQFD_EXTRA_RUN_ARGS="\
+            $CQFD_EXTRA_RUN_ARGS \
+            -v /etc/seapath-ci/vm_file:$(pwd)/vm_images \
+          " \
           cqfd exec ansible-playbook \
             ${{ inputs.vms-deploy-playbooks }} \
             ${{ inputs.hyp-inventories }} \
@@ -235,7 +253,11 @@ jobs:
           git clone -q "${{ inputs.inventories-repository }}" inventories_private
           cqfd init
 
-          export CQFD_EXTRA_RUN_ARGS="-v /var/run/docker.sock:/var/run/docker.sock"
+          export CQFD_EXTRA_RUN_ARGS=" \
+            $CQFD_EXTRA_RUN_ARGS \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+          "
+
           cqfd exec ansible-playbook \
             playbooks/configure_latency_tests.yaml \
             --limit "localhost,sv_publisher,VMs" \
