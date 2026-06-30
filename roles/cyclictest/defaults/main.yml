@@ -4,3 +4,5 @@
 ---
 cyclictest_result_folder: ".."
 cyclictest_duration: 20
+cyclictest_priority: 90
+cyclictest_affinity: "smp"
