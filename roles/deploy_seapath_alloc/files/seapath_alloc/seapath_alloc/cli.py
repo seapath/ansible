@@ -56,6 +56,11 @@ def main():
         help="Print planned moves without applying them",
     )
 
+    # export
+    sub.add_parser("export",
+                   help="Write Prometheus metrics to"
+                        " /var/lib/prometheus/node_exporter/seapath-alloc.prom")
+
     args = parser.parse_args()
 
     if args.command == "status" or args.command is None:
@@ -129,6 +134,10 @@ def main():
                 print(f"Spread: applied {len(moves)} move(s).")
                 for move in moves:
                     print(_fmt(move))
+
+    elif args.command == "export":
+        from .exporter import write_prom
+        write_prom()
 
     else:
         parser.print_help()
