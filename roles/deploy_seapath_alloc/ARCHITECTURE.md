@@ -50,24 +50,26 @@ seapath_alloc/
 │  ── orchestration ──────────────────────────────────────────────────────
 ├── config.py         RBD metadata + /etc/seapath/alloc.yaml loading
 ├── scheduler.py      single pipeline: strategy + repacking + AllocationEngine
-│                     + reserved-sibling registration
+│                     + reserved-sibling registration + fallback recording
 │
 │  ── application paths (one per caller type) ───────────────────────────
 ├── threads.py        /proc QEMU PID + TID discovery (VM path only)
 ├── applier.py        taskset + chrt application (VM path only)
 ├── cgroup.py         cgroup helpers (container path + repacker)
 ├── claim.py          claim/release logic for containers and seapath-run
-└── hook.py           libvirt QEMU hook entry point
+├── hook.py           libvirt QEMU hook entry point
 │
 │  ── observability ──────────────────────────────────────────────────────
-├── status.py         pool state collection, no side effects
+├── status.py         pool state collection, no side effects; shared by
+│                     CLI (seapath-alloc status) and Prometheus exporter
+├── exporter.py       Prometheus textfile writer + fallback persistence
 └── cli.py            entry points for all CLI binaries
 ```
 
 `scheduler.py` is the single convergence point: every allocation path
 (VM hook, container pin, `seapath-run`) calls `allocate_cores()` and gets the
-same strategy and repacking behaviour.  Callers only differ in how
-they discover threads and register their result.
+same strategy, repacking, and fallback-recording behaviour.  Callers only
+differ in how they discover threads and register their result.
 
 ---
 
@@ -97,6 +99,8 @@ hook.py
               │    pure: free_logical/free_physical snapshot → Allocation list
               │
               └─ record reserved siblings → pool
+                 record_fallback() on warnings → exporter.py
+                                                 (fallbacks.json, active_fallbacks.json)
 
   apply_all(threads, allocations) ──► applier.py     ← outside flock window
         taskset + chrt per TID, order: vCPUs → emulator → vhost → iothreads
@@ -120,6 +124,25 @@ claim(label, isolation, scheduler, priority, target_pid) ──► claim.py
   apply_cpuset + chrt ──► cgroup.py
 ```
 
+### 3 — Prometheus export (`seapath-alloc export`)
+
+```
+exporter.generate()
+  │
+  ├─ status.collect() ──► pool.py (flock) + topology.py
+  │    reads /proc, /sys, claims.json, .reserved_siblings
+  │    returns structured dict (actors, free_logical, free_physical, ...)
+  │
+  ├─ _load_state()   → fallbacks.json     (cumulative counter)
+  └─ _load_active()  → active_fallbacks.json
+        expire entries where /proc/{pid} no longer exists
+        expose seapath_alloc_active_fallbacks{severity} gauges
+
+  write .prom via atomic rename → /var/lib/prometheus/node_exporter/seapath-alloc.prom
+```
+
+---
+
 ## Allocation result anatomy
 
 `AllocationEngine.allocate()` returns an `AllocationResult`:
@@ -131,8 +154,11 @@ claim(label, isolation, scheduler, priority, target_pid) ──► claim.py
 
 `scheduler.py` inspects `alloc.warning` to determine fallback severity:
 
-- `"housekeeping"` in warning → **hard** fallback: no RT isolation, actor runs on shared cores
-- any other non-empty warning → **soft** fallback: `exclusive_physical` degraded to `exclusive_logical`, RT isolation preserved
+- `"housekeeping"` in warning → **hard** fallback: no RT isolation, actor runs on shared cores; `record_fallback(..., severity="hard")`
+- any other non-empty warning → **soft** fallback: `exclusive_physical` degraded to `exclusive_logical`, RT isolation preserved; `record_fallback(..., severity="soft")`
+
+Fallback tracking in `active_fallbacks.json` is PID-keyed so entries
+auto-expire when the process exits, without any cleanup step.
 
 ---
 
@@ -143,11 +169,15 @@ claim(label, isolation, scheduler, priority, target_pid) ──► claim.py
 | `/run/seapath/alloc/.lock` | `pool.py` | `pool.py` (flock) |
 | `/run/seapath/alloc/claims.json` | `claim.py` | `pool.py` |
 | `/run/seapath/alloc/.reserved_siblings` | `pool.py` | `pool.py` |
+| `/var/lib/seapath/alloc/fallbacks.json` | `exporter.py` | `exporter.py` |
+| `/var/lib/seapath/alloc/active_fallbacks.json` | `exporter.py` | `exporter.py` |
+| `/var/lib/prometheus/node_exporter/seapath-alloc.prom` | `exporter.py` | node_exporter |
 | `/etc/seapath/alloc.yaml` | Ansible | `config.py` |
 | `/var/log/seapath/alloc.log` | all entry points | — |
 
 `/run/` paths are `tmpfs` — they are lost on reboot and rebuilt on first
-invocation.
+invocation.  `/var/lib/` paths survive reboots (cumulative counters,
+active-fallback tracking).
 
 ---
 
