@@ -386,3 +386,58 @@ def test_collect_merges_vm_irq_and_claim_actors(node, monkeypatch):
     assert by_type["claim"]["pid"] == 4242
 
 
+# --- degraded actors ------------------------------------------------------
+
+
+@pytest.fixture
+def active_fallbacks(tmp_path, monkeypatch):
+    """Point the exporter's active-fallback state at a scratch file."""
+    from seapath_alloc import exporter as exporter_mod
+
+    path = tmp_path / "active_fallbacks.json"
+    monkeypatch.setattr(exporter_mod, "_ACTIVE_PATH", str(path))
+
+    def install(entries):
+        exporter_mod._write_json(str(path), entries)
+
+    return install
+
+
+def fallback(label, group, requested, severity, pid):
+    return {"label": label, "group": group, "requested": requested,
+            "severity": severity, "since": 0, "pid": pid}
+
+
+def test_read_fallbacks_tells_a_typo_from_an_exhausted_pool(
+    tmp_path, active_fallbacks
+):
+    proc = tmp_path / "proc"
+    (proc / "100").mkdir(parents=True)
+    active_fallbacks({
+        "a": fallback("VM vm0", "vcpu/2", "exclusive_phyical", "hard", 100),
+        "b": fallback("VM vm0", "vcpu/1", "exclusive_physical", "soft", 100),
+        "c": fallback("VM vm1", "vcpu/0", "exclusive_logical", "hard", 100),
+    })
+
+    reasons = [(f["group"], f["reason"])
+               for f in status_mod._read_fallbacks(str(proc))]
+
+    assert reasons == [
+        ("vcpu/1", "no free physical pair, HT-pair guarantee lost"),
+        ("vcpu/2", "unknown isolation 'exclusive_phyical', no RT isolation"),
+        ("vcpu/0", "no core left, no RT isolation"),
+    ]
+
+
+def test_read_fallbacks_skips_exited_processes(tmp_path, active_fallbacks):
+    proc = tmp_path / "proc"
+    proc.mkdir()
+    active_fallbacks({
+        "a": fallback("VM vm0", "vcpu/1", "exclusive_physical", "soft", 100),
+    })
+
+    assert status_mod._read_fallbacks(str(proc)) == []
+
+
+def test_read_fallbacks_without_state(tmp_path, active_fallbacks):
+    assert status_mod._read_fallbacks(str(tmp_path)) == []

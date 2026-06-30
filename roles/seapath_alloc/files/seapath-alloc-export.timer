@@ -1,0 +1,11 @@
+[Unit]
+Description=Run seapath-alloc Prometheus exporter every 15 seconds
+Requires=seapath-alloc-export.service
+
+[Timer]
+OnBootSec=15s
+OnUnitActiveSec=15s
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target
