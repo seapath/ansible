@@ -13,7 +13,12 @@
     dest: "{{ cyclictest_tmp_test_dir.path }}/run_cyclictest.py"
     mode: "0644"
 - name: Execute cyclitect script
-  ansible.builtin.command: /usr/bin/env python3 {{ cyclictest_tmp_test_dir.path }}/run_cyclictest.py -d {{ cyclictest_duration }} '{{ cyclictest_tmp_test_dir.path }}/cyclictest.txt'
+  ansible.builtin.command: >-
+    /usr/bin/env python3 {{ cyclictest_tmp_test_dir.path }}/run_cyclictest.py
+    -d {{ cyclictest_duration }}
+    -p {{ cyclictest_priority }}
+    -a {{ cyclictest_affinity }}
+    '{{ cyclictest_tmp_test_dir.path }}/cyclictest.txt'
   changed_when: true
 - name: Fetch results
   ansible.builtin.fetch:
