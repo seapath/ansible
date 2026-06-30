@@ -60,6 +60,12 @@ on:
           Name of the folder containing the compliance matrices .csv files.
           If empty, no matrices will be created.
           e.g. 'yocto'
+      skip_cyclictest:
+        type: boolean
+        default: false
+        description: |
+          Don't expect the test playbooks to run Cyclictests. Can be overriden
+          per host with the 'skip_cyclictest' Ansible variable.
 
 env:
   # TODO make this better
@@ -127,7 +133,7 @@ jobs:
             --limit "standalone_machine,cluster_machines" \
             2> /dev/null \
             | jq -c '._meta.hostvars | map_values({
-                skip_cyclictest: (.skip_cyclictest // false),
+                skip_cyclictest: (.skip_cyclictest // ${{ inputs.skip_cyclictest }}),
             })'
           )
           hyp_pretty_list=$(echo "$hyp" | jq -r 'keys | join(", ")')
@@ -216,7 +222,7 @@ jobs:
             2> /dev/null \
             | jq -c '. as $root | ._meta.hostvars | with_entries(.value = {
                 rt: (.value.vm_features // []) | contains(["rt"]),
-                skip_cyclictest: (.value.skip_cyclictest // false),
+                skip_cyclictest: (.value.skip_cyclictest // ${{ inputs.skip_cyclictest }}),
                 sv_subscriber: (.key as $key | $root.subscriber.hosts | any(select(. == $key))), # works only if members of group subscriber are not transitive
             })'
           )
