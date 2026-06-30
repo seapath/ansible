@@ -167,13 +167,19 @@ def collect(proc_path: str = "/proc", sys_path: str = "/sys") -> dict:
         free_l = pool.free_logical()
         free_p = pool.free_physical()
         claims = pool.all_claims()
+        reserved = pool.active_reserved_siblings()
 
     vm_actors = _read_qemu_actors(proc_path, isolated)
     irq_actors = _read_irq_actors(proc_path, isolated, sys_path=sys_path)
     claim_actors = [
-        {"type": "claim", "label": c["label"], "pid": c.get("pid"),
-         "cpus": format_cpu_list(c.get("cores", [])),
-         "scheduler": c.get("scheduler", ""), "priority": c.get("priority", 0)}
+        {
+            "type": c.get("kind") or "claim",
+            "label": c["label"],
+            "pid": c.get("pid"),
+            "cpus": format_cpu_list(c.get("cores", [])),
+            "scheduler": c.get("scheduler", ""),
+            "priority": c.get("priority", 0),
+        }
         for c in claims
     ]
 
@@ -182,4 +188,5 @@ def collect(proc_path: str = "/proc", sys_path: str = "/sys") -> dict:
         "free_logical": format_cpu_list(free_l),
         "free_physical": format_cpu_list(free_p),
         "actors": vm_actors + irq_actors + claim_actors,
+        "reserved_siblings": reserved,
     }

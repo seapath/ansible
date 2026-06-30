@@ -230,3 +230,17 @@ def test_spread_lists_every_tid_sharing_the_donor_core(spread, capsys):
     main(["spread", "--dry-run"])
 
     assert "tids 100,101,102" in capsys.readouterr().out
+
+
+# --- export ---------------------------------------------------------------
+
+
+def test_export_writes_the_prometheus_file(monkeypatch):
+    written = []
+    monkeypatch.setattr(
+        "seapath_alloc.exporter.write_prom", lambda: written.append(True)
+    )
+
+    main(["export"])
+
+    assert written == [True]

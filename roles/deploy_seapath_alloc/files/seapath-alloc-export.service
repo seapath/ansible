@@ -1,0 +1,10 @@
+[Unit]
+Description=Write seapath-alloc Prometheus metrics
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/seapath-alloc export
+Nice=10
+StandardOutput=journal
+StandardError=journal

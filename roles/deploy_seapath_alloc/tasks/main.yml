@@ -107,3 +107,40 @@
     owner: root
     group: root
     mode: "0644"
+
+- name: Ensure /var/lib/seapath/alloc exists for persistent fallback state
+  ansible.builtin.file:
+    path: /var/lib/seapath/alloc
+    state: directory
+    mode: "0755"
+
+- name: Ensure /var/lib/prometheus/node_exporter exists for textfile collector
+  ansible.builtin.file:
+    path: /var/lib/prometheus/node_exporter
+    state: directory
+    mode: "0755"
+
+- name: Deploy Prometheus exporter service unit
+  ansible.builtin.copy:
+    src: seapath-alloc-export.service
+    dest: /etc/systemd/system/seapath-alloc-export.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart seapath-alloc-export timer
+
+- name: Deploy Prometheus exporter timer unit
+  ansible.builtin.copy:
+    src: seapath-alloc-export.timer
+    dest: /etc/systemd/system/seapath-alloc-export.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart seapath-alloc-export timer
+
+- name: Enable and start Prometheus exporter timer
+  ansible.builtin.systemd:
+    name: seapath-alloc-export.timer
+    enabled: true
+    state: started
+    daemon_reload: true
