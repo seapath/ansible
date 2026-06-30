@@ -15,6 +15,7 @@ import logging
 
 from .allocator import AllocationEngine, AllocationStrategy
 from .config import load_strategy
+from .exporter import record_fallback
 from .repacker import execute_repack, find_repack_moves
 
 log = logging.getLogger(__name__)
@@ -78,11 +79,14 @@ def allocate_cores(pool, specs: list, topo, *,
     for spec, alloc in zip(specs, result.allocations):
         if not alloc.warning:
             continue
+        requested = spec.get("isolation", "")
         if "housekeeping" in alloc.warning:
             log.error("%s: %s — no RT isolation, running on housekeeping cores",
                       label, alloc.name)
+            record_fallback(label, alloc.name, requested, pid=pid, severity="hard")
         else:
             log.warning("%s: %s — RT isolation preserved, HT-pair guarantee lost",
                         label, alloc.name)
+            record_fallback(label, alloc.name, requested, pid=pid, severity="soft")
 
     return result

@@ -114,6 +114,29 @@ def test_status_lists_other_actors_with_their_pid(status, capsys):
     assert "process sv" in out and "pid=4243" in out
 
 
+def test_status_lists_degraded_actors_with_their_reason(status, capsys):
+    status(fallbacks=[{
+        "label": "VM debian14", "group": "vcpu/1",
+        "requested": "exclusive_phyical", "severity": "hard",
+        "reason": "unknown isolation 'exclusive_phyical', no RT isolation",
+    }])
+
+    main(["status"])
+
+    out = capsys.readouterr().out
+    assert "Degraded:" in out
+    assert "hard  VM debian14  vcpu/1" in out
+    assert "unknown isolation 'exclusive_phyical'" in out
+
+
+def test_status_omits_the_degraded_section_when_all_is_well(status, capsys):
+    status(fallbacks=[])
+
+    main(["status"])
+
+    assert "Degraded" not in capsys.readouterr().out
+
+
 # --- claim and release ----------------------------------------------------
 
 
@@ -230,3 +253,17 @@ def test_spread_lists_every_tid_sharing_the_donor_core(spread, capsys):
     main(["spread", "--dry-run"])
 
     assert "tids 100,101,102" in capsys.readouterr().out
+
+
+# --- export ---------------------------------------------------------------
+
+
+def test_export_writes_the_prometheus_file(monkeypatch):
+    written = []
+    monkeypatch.setattr(
+        "seapath_alloc.exporter.write_prom", lambda: written.append(True)
+    )
+
+    main(["export"])
+
+    assert written == [True]

@@ -1,0 +1,290 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 0,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 10,
+      "panels": [],
+      "title": "CPU Map",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Topology des cœurs : ligne = cœur physique, colonne = thread HT. Couleur = état. Texte = acteur ou numéro CPU.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 15,
+        "w": 24,
+        "x": 0,
+        "y": 1
+      },
+      "id": 11,
+      "maxPerRow": 3,
+      "options": {
+        "vegaSpec": {
+          "parsedSpec": {
+            "mode": "vega-lite",
+            "text": "{\"$schema\":\"https://vega.github.io/schema/vega-lite/v5.json\",\"data\":{\"name\":\"A\"},\"transform\":[{\"calculate\":\"toNumber(datum.ht_pair)\",\"as\":\"core_num\"},{\"calculate\":\"toNumber(datum.cpu) <= toNumber(datum.ht_sibling) ? 'T0' : 'T1'\",\"as\":\"thread_label\"},{\"calculate\":\"datum.state === 'reserved' ? 'rsv' : (datum.state === 'free' || datum.state === 'housekeeping') ? datum.cpu : (datum.label != null && datum.label !== '' ? datum.label : datum.cpu)\",\"as\":\"cell_text\"}],\"layer\":[{\"mark\":{\"type\":\"rect\",\"stroke\":\"#111827\",\"strokeWidth\":1,\"cornerRadius\":4,\"width\":{\"expr\":\"bandwidth('x')\"},\"height\":{\"expr\":\"bandwidth('y')\"}},\"encoding\":{\"x\":{\"field\":\"thread_label\",\"type\":\"ordinal\",\"title\":null,\"sort\":[\"T0\",\"T1\"],\"axis\":{\"orient\":\"top\",\"labelFontSize\":13,\"labelFontWeight\":\"bold\",\"labelAngle\":0,\"ticks\":false,\"domain\":false}},\"y\":{\"field\":\"ht_pair\",\"type\":\"ordinal\",\"title\":\"Physical Core\",\"sort\":{\"field\":\"core_num\",\"order\":\"ascending\"},\"axis\":{\"labelExpr\":\"'Core ' + datum.value\",\"labelFontSize\":11,\"ticks\":false,\"domain\":false}},\"color\":{\"field\":\"state\",\"type\":\"nominal\",\"scale\":{\"domain\":[\"free\",\"vm\",\"irq\",\"quadlet\",\"run\",\"claim\",\"reserved\",\"housekeeping\"],\"range\":[\"#37872d\",\"#1f60c4\",\"#e0752d\",\"#2eb8ae\",\"#ff7383\",\"#8f3bb8\",\"#5c1a1a\",\"#3d3d3d\"]},\"legend\":{\"title\":\"State\",\"orient\":\"right\",\"labelFontSize\":12,\"titleFontSize\":12}},\"tooltip\":[{\"field\":\"cpu\",\"title\":\"CPU #\",\"type\":\"nominal\"},{\"field\":\"state\",\"title\":\"State\",\"type\":\"nominal\"},{\"field\":\"label\",\"title\":\"Actor\",\"type\":\"nominal\"},{\"field\":\"group\",\"title\":\"Thread Group\",\"type\":\"nominal\"},{\"field\":\"scheduler\",\"title\":\"Scheduler\",\"type\":\"nominal\"},{\"field\":\"priority\",\"title\":\"Priority\",\"type\":\"nominal\"}]}},{\"data\":{\"name\":\"B\"},\"transform\":[{\"window\":[{\"op\":\"min\",\"field\":\"Time\",\"as\":\"min_t\"},{\"op\":\"max\",\"field\":\"Time\",\"as\":\"max_t\"}],\"groupby\":[\"cpu\"],\"sort\":[{\"field\":\"Time\",\"order\":\"ascending\"}],\"frame\":[null,null]},{\"calculate\":\"datum.max_t > datum.min_t ? (datum.Time - datum.min_t) / (datum.max_t - datum.min_t) : 0.5\",\"as\":\"t_norm\"},{\"calculate\":\"clamp(datum[\\\"Value #B\\\"], 0, 1)\",\"as\":\"v_norm\"},{\"loess\":\"v_norm\",\"on\":\"t_norm\",\"groupby\":[\"cpu\"],\"bandwidth\":0.15,\"as\":[\"t_norm\",\"v_norm\"]},{\"lookup\":\"cpu\",\"from\":{\"data\":{\"name\":\"A\"},\"key\":\"cpu\",\"fields\":[\"ht_pair\",\"ht_sibling\"]}},{\"calculate\":\"toNumber(datum.ht_pair)\",\"as\":\"core_num\"},{\"calculate\":\"toNumber(datum.cpu) <= toNumber(datum.ht_sibling) ? 'T0' : 'T1'\",\"as\":\"thread_label\"}],\"mark\":{\"type\":\"area\",\"interpolate\":\"monotone\",\"line\":false,\"opacity\":0.9,\"blend\":\"soft-light\",\"clip\":true,\"color\":\"#ffffff\"},\"encoding\":{\"x\":{\"field\":\"thread_label\",\"type\":\"ordinal\",\"sort\":[\"T0\",\"T1\"]},\"xOffset\":{\"field\":\"t_norm\",\"type\":\"quantitative\",\"scale\":{\"domain\":[0,1]}},\"y\":{\"field\":\"ht_pair\",\"type\":\"ordinal\",\"sort\":{\"field\":\"core_num\",\"order\":\"ascending\"},\"bandPosition\":1},\"y2\":{\"field\":\"ht_pair\",\"bandPosition\":1},\"yOffset\":{\"field\":\"v_norm\",\"type\":\"quantitative\",\"scale\":{\"domain\":[1,0]}},\"detail\":{\"field\":\"cpu\",\"type\":\"nominal\"}}},{\"mark\":{\"type\":\"text\",\"fontSize\":11,\"fontWeight\":\"bold\",\"align\":\"center\",\"baseline\":\"middle\",\"limit\":140},\"encoding\":{\"x\":{\"field\":\"thread_label\",\"type\":\"ordinal\",\"sort\":[\"T0\",\"T1\"]},\"y\":{\"field\":\"ht_pair\",\"type\":\"ordinal\",\"sort\":{\"field\":\"core_num\",\"order\":\"ascending\"}},\"text\":{\"field\":\"cell_text\",\"type\":\"nominal\"},\"color\":{\"value\":\"#ffffff\"}}}],\"width\":\"container\",\"height\":\"container\",\"config\":{\"view\":{\"stroke\":null},\"background\":\"transparent\",\"axis\":{\"grid\":false}}}"
+          },
+          "text": "{\n  \"$schema\": \"https://vega.github.io/schema/vega-lite/v5.json\",\n  \"data\": {\n    \"name\": \"A\"\n  },\n  \"transform\": [\n    {\n      \"calculate\": \"toNumber(datum.ht_pair)\",\n      \"as\": \"core_num\"\n    },\n    {\n      \"calculate\": \"toNumber(datum.cpu) <= toNumber(datum.ht_sibling) ? 'T0' : 'T1'\",\n      \"as\": \"thread_label\"\n    },\n    {\n      \"calculate\": \"datum.state === 'reserved' ? 'rsv' : (datum.state === 'free' || datum.state === 'housekeeping') ? datum.cpu : (datum.label != null && datum.label !== '' ? datum.label : datum.cpu)\",\n      \"as\": \"cell_text\"\n    }\n  ],\n  \"layer\": [\n    {\n      \"mark\": {\n        \"type\": \"rect\",\n        \"stroke\": \"#111827\",\n        \"strokeWidth\": 1,\n        \"cornerRadius\": 4,\n        \"width\": {\n          \"expr\": \"bandwidth('x')\"\n        },\n        \"height\": {\n          \"expr\": \"bandwidth('y')\"\n        }\n      },\n      \"encoding\": {\n        \"x\": {\n          \"field\": \"thread_label\",\n          \"type\": \"ordinal\",\n          \"title\": null,\n          \"sort\": [\n            \"T0\",\n            \"T1\"\n          ],\n          \"axis\": {\n            \"orient\": \"top\",\n            \"labelFontSize\": 13,\n            \"labelFontWeight\": \"bold\",\n            \"labelAngle\": 0,\n            \"ticks\": false,\n            \"domain\": false\n          }\n        },\n        \"y\": {\n          \"field\": \"ht_pair\",\n          \"type\": \"ordinal\",\n          \"title\": \"Physical Core\",\n          \"sort\": {\n            \"field\": \"core_num\",\n            \"order\": \"ascending\"\n          },\n          \"axis\": {\n            \"labelExpr\": \"'Core ' + datum.value\",\n            \"labelFontSize\": 11,\n            \"ticks\": false,\n            \"domain\": false\n          }\n        },\n        \"color\": {\n          \"field\": \"state\",\n          \"type\": \"nominal\",\n          \"scale\": {\n            \"domain\": [\n              \"free\",\n              \"vm\",\n              \"irq\",\n              \"quadlet\",\n              \"run\",\n              \"claim\",\n              \"reserved\",\n              \"housekeeping\"\n            ],\n            \"range\": [\n              \"#37872d\",\n              \"#1f60c4\",\n              \"#e0752d\",\n              \"#2eb8ae\",\n              \"#ff7383\",\n              \"#8f3bb8\",\n              \"#5c1a1a\",\n              \"#3d3d3d\"\n            ]\n          },\n          \"legend\": {\n            \"title\": \"State\",\n            \"orient\": \"right\",\n            \"labelFontSize\": 12,\n            \"titleFontSize\": 12\n          }\n        },\n        \"tooltip\": [\n          {\n            \"field\": \"cpu\",\n            \"title\": \"CPU #\",\n            \"type\": \"nominal\"\n          },\n          {\n            \"field\": \"state\",\n            \"title\": \"State\",\n            \"type\": \"nominal\"\n          },\n          {\n            \"field\": \"label\",\n            \"title\": \"Actor\",\n            \"type\": \"nominal\"\n          },\n          {\n            \"field\": \"group\",\n            \"title\": \"Thread Group\",\n            \"type\": \"nominal\"\n          },\n          {\n            \"field\": \"scheduler\",\n            \"title\": \"Scheduler\",\n            \"type\": \"nominal\"\n          },\n          {\n            \"field\": \"priority\",\n            \"title\": \"Priority\",\n            \"type\": \"nominal\"\n          }\n        ]\n      }\n    },\n    {\n      \"data\": {\n        \"name\": \"B\"\n      },\n      \"transform\": [\n        {\n          \"window\": [\n            {\n              \"op\": \"min\",\n              \"field\": \"Time\",\n              \"as\": \"min_t\"\n            },\n            {\n              \"op\": \"max\",\n              \"field\": \"Time\",\n              \"as\": \"max_t\"\n            }\n          ],\n          \"groupby\": [\n            \"cpu\"\n          ],\n          \"sort\": [\n            {\n              \"field\": \"Time\",\n              \"order\": \"ascending\"\n            }\n          ],\n          \"frame\": [\n            null,\n            null\n          ]\n        },\n        {\n          \"calculate\": \"datum.max_t > datum.min_t ? (datum.Time - datum.min_t) / (datum.max_t - datum.min_t) : 0.5\",\n          \"as\": \"t_norm\"\n        },\n        {\n          \"calculate\": \"clamp(datum[\\\"Value #B\\\"], 0, 1)\",\n          \"as\": \"v_norm\"\n        },\n        {\n          \"loess\": \"v_norm\",\n          \"on\": \"t_norm\",\n          \"groupby\": [\n            \"cpu\"\n          ],\n          \"bandwidth\": 0.15,\n          \"as\": [\n            \"t_norm\",\n            \"v_norm\"\n          ]\n        },\n        {\n          \"lookup\": \"cpu\",\n          \"from\": {\n            \"data\": {\n              \"name\": \"A\"\n            },\n            \"key\": \"cpu\",\n            \"fields\": [\n              \"ht_pair\",\n              \"ht_sibling\"\n            ]\n          }\n        },\n        {\n          \"calculate\": \"toNumber(datum.ht_pair)\",\n          \"as\": \"core_num\"\n        },\n        {\n          \"calculate\": \"toNumber(datum.cpu) <= toNumber(datum.ht_sibling) ? 'T0' : 'T1'\",\n          \"as\": \"thread_label\"\n        }\n      ],\n      \"mark\": {\n        \"type\": \"area\",\n        \"interpolate\": \"monotone\",\n        \"line\": false,\n        \"opacity\": 0.9,\n        \"blend\": \"soft-light\",\n        \"clip\": true,\n        \"color\": \"#ffffff\"\n      },\n      \"encoding\": {\n        \"x\": {\n          \"field\": \"thread_label\",\n          \"type\": \"ordinal\",\n          \"sort\": [\n            \"T0\",\n            \"T1\"\n          ]\n        },\n        \"xOffset\": {\n          \"field\": \"t_norm\",\n          \"type\": \"quantitative\",\n          \"scale\": {\n            \"domain\": [\n              0,\n              1\n            ]\n          }\n        },\n        \"y\": {\n          \"field\": \"ht_pair\",\n          \"type\": \"ordinal\",\n          \"sort\": {\n            \"field\": \"core_num\",\n            \"order\": \"ascending\"\n          },\n          \"bandPosition\": 1\n        },\n        \"y2\": {\n          \"field\": \"ht_pair\",\n          \"bandPosition\": 1\n        },\n        \"yOffset\": {\n          \"field\": \"v_norm\",\n          \"type\": \"quantitative\",\n          \"scale\": {\n            \"domain\": [\n              1,\n              0\n            ]\n          }\n        },\n        \"detail\": {\n          \"field\": \"cpu\",\n          \"type\": \"nominal\"\n        }\n      }\n    },\n    {\n      \"mark\": {\n        \"type\": \"text\",\n        \"fontSize\": 11,\n        \"fontWeight\": \"bold\",\n        \"align\": \"center\",\n        \"baseline\": \"middle\",\n        \"limit\": 140\n      },\n      \"encoding\": {\n        \"x\": {\n          \"field\": \"thread_label\",\n          \"type\": \"ordinal\",\n          \"sort\": [\n            \"T0\",\n            \"T1\"\n          ]\n        },\n        \"y\": {\n          \"field\": \"ht_pair\",\n          \"type\": \"ordinal\",\n          \"sort\": {\n            \"field\": \"core_num\",\n            \"order\": \"ascending\"\n          }\n        },\n        \"text\": {\n          \"field\": \"cell_text\",\n          \"type\": \"nominal\"\n        },\n        \"color\": {\n          \"value\": \"#ffffff\"\n        }\n      }\n    }\n  ],\n  \"width\": \"container\",\n  \"height\": \"container\",\n  \"config\": {\n    \"view\": {\n      \"stroke\": null\n    },\n    \"background\": \"transparent\",\n    \"axis\": {\n      \"grid\": false\n    }\n  }\n}"
+        }
+      },
+      "pluginVersion": "1.1.0",
+      "repeat": "host",
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "seapath_alloc_cpu_detail{cluster=\"$cluster\",host=~\"^$host$\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "",
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "expr": "1 - rate(node_cpu_seconds_total{job=\"node\", mode=\"idle\", host=~\"^$host$\"}[1m])",
+          "format": "table",
+          "legendFormat": "",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "$host",
+      "type": "akdor1154-vega-panel"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Actors currently running on housekeeping cores with no RT isolation. Non-zero requires admin action (free cores, then restart or remigrate the actor).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*Hard.*/"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": 0
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*Soft.*/"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": 0
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "id": 15,
+      "maxPerRow": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.3.1",
+      "repeat": "host",
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "editorMode": "code",
+          "expr": "seapath_alloc_active_fallbacks{host=~\"^$host$\",severity=\"hard\"}",
+          "legendFormat": "{{host}} - Hard",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "seapath_alloc_active_fallbacks{host=~\"^$host$\",severity=\"soft\"}",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "{{host}} - Soft",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Active Fallbacks - $host",
+      "type": "stat"
+    }
+  ],
+  "preload": false,
+  "refresh": "10s",
+  "schemaVersion": 42,
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "text": "prometheus",
+          "value": "fetyx4a55qq68d"
+        },
+        "includeAll": false,
+        "label": "Datasource",
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "type": "datasource"
+      },
+      {
+        "current": {
+          "text": "ccv",
+          "value": "ccv"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(seapath_alloc_cpu_detail,cluster)",
+        "includeAll": false,
+        "label": "cluster",
+        "name": "cluster",
+        "options": [],
+        "query": {
+          "qryType": 1,
+          "query": "label_values(seapath_alloc_cpu_detail,cluster)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 2,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "allowCustomValue": false,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "definition": "label_values(seapath_alloc_cpu_detail{cluster=\"$cluster\"},host)",
+        "hide": 2,
+        "includeAll": true,
+        "name": "host",
+        "options": [],
+        "query": {
+          "qryType": 1,
+          "query": "label_values(seapath_alloc_cpu_detail{cluster=\"$cluster\"},host)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-5m",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "SEAPATH CPU Allocation cluster",
+  "uid": "adc966q",
+  "version": 27
+}
