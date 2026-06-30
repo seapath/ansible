@@ -281,3 +281,117 @@ each one (VM name, container service name, IRQ number, or claim label).
 The libvirt hook writes to `/var/log/seapath/alloc.log` (rotated weekly via
 `/etc/logrotate.d/seapath-alloc`). Container pin/unpin and `seapath-run` write
 to stderr (captured by journald when run from a systemd unit).
+
+## Prometheus monitoring
+
+### Textfile collector
+
+The role deploys a systemd timer (`seapath-alloc-export.timer`) that runs
+`seapath-alloc export` every 15 seconds and writes
+`/var/lib/prometheus/node_exporter/seapath-alloc.prom` in Prometheus textfile
+format.  Configure your Prometheus node_exporter with
+`--collector.textfile.directory=/var/lib/prometheus/node_exporter` (the default
+for most packages) to pick it up automatically.
+
+```bash
+systemctl status seapath-alloc-export.timer   # check timer state
+systemctl start seapath-alloc-export.service  # force an immediate run
+journalctl -u seapath-alloc-export            # exporter logs
+```
+
+### Grafana dashboard
+
+Import `roles/deploy_seapath_alloc/files/grafana-seapath-alloc.json` into
+Grafana (Dashboards → Import).  The dashboard shows:
+
+- **Pool Overview** — free cores, free pairs, active VM/IRQ/claim counts,
+  fallback counter, metrics age (all with colour thresholds)
+- **CPU Map** — one row per CPU with topology (isolated, HT pair, HT
+  sibling), state, actor label, thread group, scheduler and priority;
+  state column is colour-coded (green=free, blue=vm, orange=irq,
+  purple=claim, gray=housekeeping)
+- **VM Threads** — one row per QEMU thread with VM name, kernel comm,
+  CPU(s), scheduler and RT priority
+- **NIC IRQs** — interface, IRQ range, CPU
+- **Claims** — label, CPU, scheduler, priority, PID
+- **Allocation Failures** — rate graph + last-fallback context panel
+
+### Exported metrics
+
+**Summary gauges** (for alerting rules):
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `seapath_alloc_isolated_cpus` | gauge | Total isolated CPUs on the node |
+| `seapath_alloc_free_logical_cpus` | gauge | Free isolated logical cores |
+| `seapath_alloc_free_physical_pairs` | gauge | Free isolated physical core pairs |
+| `seapath_alloc_actors{type}` | gauge | Active actor count by type (`vm`, `irq`, `claim`) |
+| `seapath_alloc_occupied_cpus{type}` | gauge | Occupied isolated CPUs by actor type |
+| `seapath_alloc_vm_threads{vm}` | gauge | Pinned thread count per running VM |
+| `seapath_alloc_active_fallbacks{severity}` | gauge | Actors **currently** running degraded: `severity=hard` (housekeeping, no RT isolation) or `severity=soft` (exclusive_logical instead of physical, RT preserved); auto-expires when the process exits |
+| `seapath_alloc_active_fallback_info{label,group,requested,severity}` | gauge | One series per currently degraded actor (info metric, value=1) |
+| `seapath_alloc_allocation_fallbacks_total` | counter | Cumulative degradation events (hard + soft) since last reset |
+| `seapath_alloc_last_fallback_timestamp_seconds` | gauge | Timestamp of the most recent degradation event |
+| `seapath_alloc_last_fallback_info{label,group,requested,severity}` | gauge | Context of the most recent degradation event (info metric) |
+| `seapath_alloc_scrape_timestamp_seconds` | gauge | Timestamp when the timer last wrote the file |
+
+**Detailed per-entity metrics** (for the Grafana CPU map):
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `seapath_alloc_cpu_detail{cpu,isolated,ht_pair,ht_sibling,state,label,group,scheduler,priority}` | gauge | One series per CPU — full topology and occupancy context; `state` ∈ `free\|vm\|irq\|claim\|housekeeping` |
+| `seapath_alloc_vm_thread_info{vm,thread,cpu,scheduler,priority}` | gauge | One series per QEMU thread pinned on isolated cores |
+| `seapath_alloc_irq_info{iface,irq_range,cpu}` | gauge | One series per NIC/IRQ group pinned on isolated cores |
+| `seapath_alloc_claim_info{label,cpu,scheduler,priority,pid}` | gauge | One series per active claim (container or seapath-run process) |
+
+Fallback state persists across reboots in
+`/var/lib/seapath/alloc/fallbacks.json`.
+
+### Recommended alerting rules
+
+```yaml
+groups:
+  - name: seapath_alloc
+    rules:
+      - alert: SeapathAllocPoolExhausted
+        expr: seapath_alloc_free_logical_cpus == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No free isolated logical cores on {{ $labels.instance }}"
+          description: >
+            All isolated logical cores are occupied. New VMs or containers
+            will run on housekeeping cores without RT guarantees.
+
+      - alert: SeapathAllocNoPhysicalPairs
+        expr: seapath_alloc_free_physical_pairs == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No free isolated physical pairs on {{ $labels.instance }}"
+          description: >
+            No full physical core pair is available. VMs requesting
+            exclusive_physical isolation will fall back to housekeeping.
+
+      - alert: SeapathAllocFallback
+        expr: increase(seapath_alloc_allocation_fallbacks_total[5m]) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: "RT allocation fallback on {{ $labels.instance }}"
+          description: >
+            At least one VM or process could not get isolated cores and is
+            running without RT guarantees. Check hook.log for details.
+
+      - alert: SeapathAllocMetricsStale
+        expr: time() - seapath_alloc_scrape_timestamp_seconds > 120
+        labels:
+          severity: warning
+        annotations:
+          summary: "seapath-alloc metrics stale on {{ $labels.instance }}"
+          description: >
+            The seapath-alloc-export timer has not run for more than 2 minutes.
+            Check: systemctl status seapath-alloc-export.timer
+```
