@@ -87,6 +87,15 @@
     - deploy_vms_standalone_disk_copy | bool
     - item not in deploy_vms_standalone_all_vms.list_vms or (item in deploy_vms_standalone_all_vms.list_vms and hostvars[item].force is defined and hostvars[item].force)
 
+- name: Build cloud-init seed disks on target
+  ansible.builtin.include_tasks: cloud_init_seed.yml
+  vars:
+    _vm_name: "{{ item }}"
+  loop: "{{ groups['VMs'] }}"
+  when:
+    - hostvars[item].cloud_init is defined
+    - item not in deploy_vms_standalone_all_vms.list_vms or (item in deploy_vms_standalone_all_vms.list_vms and hostvars[item].force is defined and hostvars[item].force)
+
 - name: Add main disk to disk list
   # This is only done in standalone because the disk is handled by vm-manager in the cluster
   ansible.builtin.set_fact:

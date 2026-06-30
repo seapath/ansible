@@ -1,0 +1,24 @@
+# Copyright (C) 2026, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: "Generate cloud-init seed for {{ _vm_name }}"
+  ansible.builtin.include_role:
+    name: cloud_init_seed
+  vars:
+    cloud_init_seed_vm_name: "{{ _vm_name }}"
+    cloud_init_seed_vm: "{{ hostvars[_vm_name] }}"
+
+- name: "Copy cloud-init seed on target for {{ _vm_name }}"
+  ansible.builtin.copy:
+    src: "{{ cloud_init_seed_path }}"
+    dest: "{{ deploy_vms_standalone_disk_pool }}/{{ _vm_name }}-seed.qcow2"
+    mode: "0644"
+  vars:
+    ansible_remote_tmp: "{{ deploy_vms_standalone_qcow2tmpuploadfolder | default(omit) }}"
+
+- name: "Register cloud-init seed disk for {{ _vm_name }}"
+  ansible.builtin.set_fact:
+    standalone_cloud_init_seed: "{{ _vm_name }}-seed.qcow2" # noqa: var-naming[no-role-prefix]
+  delegate_to: "{{ _vm_name }}"
+  delegate_facts: true
