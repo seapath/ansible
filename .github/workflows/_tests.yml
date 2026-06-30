@@ -33,7 +33,15 @@ on:
       vms-deploy-playbooks:
         type: string
         required: false
-        description: List of playbooks used to deploy the VMs, separated by space.
+        description: |
+          List of playbooks used to deploy the VMs, separated by space.
+          Those playbooks are launched with both the hypervisor and VMs inventories.
+      vms-configure-playbooks:
+        type: string
+        required: false
+        description: |
+          List of playbooks used to configure the VMs, separated by space.
+          Those playbooks are launched with the VMs inventories only.
       vms-test-playbooks:
         type: string
         required: false
@@ -194,6 +202,12 @@ jobs:
             ${{ inputs.vms-deploy-playbooks }} \
             ${{ inputs.hyp-inventories }} \
             ${{ inputs.vms-inventories }}
+
+          if [[ -n "${{ inputs.vms-configure-playbooks }}" ]]; then
+            cqfd exec ansible-playbook \
+              ${{ inputs.vms-configure-playbooks }} \
+              ${{ inputs.vms-inventories }}
+          fi
 
           # Create a JSON object with data about the VMs
           vms=$(cqfd exec ansible-inventory --list \
