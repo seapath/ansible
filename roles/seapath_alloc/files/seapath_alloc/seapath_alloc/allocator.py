@@ -172,8 +172,11 @@ class AllocationEngine:
             return cpus, "", reserved
 
         log.warning("%s: unknown isolation %r, using none", name, isolation)
-        # Treat a typo'd isolation as "none": leave the thread unpinned.
-        return [], f"unknown isolation {isolation!r}", []
+        # Treat a typo'd isolation as "none": leave the thread unpinned. The
+        # warning names housekeeping so that callers classify it as a hard
+        # fallback: the thread asked for RT isolation and got none.
+        return [], (f"unknown isolation {isolation!r}, left on housekeeping"
+                    " (no RT isolation)"), []
 
     def _take_logical(self) -> Optional[int]:
         for i, cpu in enumerate(self._logical):

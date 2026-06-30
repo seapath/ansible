@@ -159,6 +159,42 @@ def _read_irq_actors(proc_path: str, isolated: set,
     return actors
 
 
+_KNOWN_ISOLATIONS = ("none", "exclusive_logical", "exclusive_physical")
+
+
+def _read_fallbacks(proc_path: str) -> list:
+    """
+    Actors currently running degraded, as recorded by the allocation pipeline.
+
+    Entries whose process has exited are skipped here and purged by the
+    exporter, which owns the state file. Each entry gets a human-readable
+    reason: an unknown isolation (typically a typo in the profile) is told
+    apart from a pool that ran out of cores, since the fix differs.
+    """
+    from .exporter import _load_active
+
+    fallbacks = []
+    for entry in _load_active().values():
+        pid = entry.get("pid")
+        if pid and not os.path.exists(os.path.join(proc_path, str(pid))):
+            continue
+        requested = entry.get("requested", "")
+        if requested not in _KNOWN_ISOLATIONS:
+            reason = f"unknown isolation {requested!r}, no RT isolation"
+        elif entry.get("severity") == "hard":
+            reason = "no core left, no RT isolation"
+        else:
+            reason = "no free physical pair, HT-pair guarantee lost"
+        fallbacks.append({
+            "label": entry.get("label", ""),
+            "group": entry.get("group", ""),
+            "requested": requested,
+            "severity": entry.get("severity", ""),
+            "reason": reason,
+        })
+    return sorted(fallbacks, key=lambda f: (f["label"], f["group"]))
+
+
 def collect(proc_path: str = "/proc", sys_path: str = "/sys") -> dict:
     topo = Topology()
     isolated = set(topo.isolated_cpus())
@@ -167,13 +203,19 @@ def collect(proc_path: str = "/proc", sys_path: str = "/sys") -> dict:
         free_l = pool.free_logical()
         free_p = pool.free_physical()
         claims = pool.all_claims()
+        reserved = pool.active_reserved_siblings()
 
     vm_actors = _read_qemu_actors(proc_path, isolated)
     irq_actors = _read_irq_actors(proc_path, isolated, sys_path=sys_path)
     claim_actors = [
-        {"type": "claim", "label": c["label"], "pid": c.get("pid"),
-         "cpus": format_cpu_list(c.get("cores", [])),
-         "scheduler": c.get("scheduler", ""), "priority": c.get("priority", 0)}
+        {
+            "type": c.get("kind") or "claim",
+            "label": c["label"],
+            "pid": c.get("pid"),
+            "cpus": format_cpu_list(c.get("cores", [])),
+            "scheduler": c.get("scheduler", ""),
+            "priority": c.get("priority", 0),
+        }
         for c in claims
     ]
 
@@ -182,4 +224,6 @@ def collect(proc_path: str = "/proc", sys_path: str = "/sys") -> dict:
         "free_logical": format_cpu_list(free_l),
         "free_physical": format_cpu_list(free_p),
         "actors": vm_actors + irq_actors + claim_actors,
+        "reserved_siblings": reserved,
+        "fallbacks": _read_fallbacks(proc_path),
     }
