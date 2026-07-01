@@ -2,7 +2,7 @@
 # Copyright (C) 2025 RTE
 # SPDX-License-Identifier: Apache-2.0
 
-- name: Prerequis machine oraclelinux
+- name: OracleLinux machine prerequisites
   gather_facts: true
   hosts:
     - cluster_machines
@@ -15,7 +15,7 @@
       vars:
         configure_seapath_distro_vim_config_dir: /etc
         configure_seapath_distro_grub_update_command: grub2-mkconfig -o /boot/grub2/grub.cfg
-- name: Prerequis physical machine oraclelinux
+- name: OracleLinux physical machine prerequisites
   hosts:
     - cluster_machines
     - standalone_machine
@@ -25,7 +25,7 @@
       vars:
         configure_physical_machine_distro_extra_modules:
           - br_netfilter
-- name: Prerequis physical machine oraclelinux
+- name: Backup_restore on cluster machines
   hosts:
     - cluster_machines
   become: true

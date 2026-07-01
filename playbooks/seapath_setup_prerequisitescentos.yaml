@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- name: Prerequis machine centos
+- name: CentOS machine prerequisites
   gather_facts: true
   hosts:
     - cluster_machines
@@ -15,7 +15,7 @@
       vars:
         configure_seapath_distro_vim_config_dir: /etc
         configure_seapath_distro_grub_update_command: grub2-mkconfig -o /boot/grub2/grub.cfg
-- name: Prerequis physical machine centos
+- name: CentOS physical machine prerequisites
   hosts:
     - cluster_machines
     - standalone_machine
@@ -27,7 +27,7 @@
           - br_netfilter
           - raid6_pq
         configure_physical_machine_initramfs: dracut
-- name: Prerequis hypervisor centos
+- name: CentOS hypervisor prerequisites
   hosts:
     - hypervisors
     - standalone_machine
