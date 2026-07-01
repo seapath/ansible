@@ -88,16 +88,16 @@ You can use default SEAPATH playbooks or write your own.
 - `deploy_vms_cluster`: Deploy all VMs under the `VMs` group on the SEAPATH cluster
 - `deploy_vms_standalone`: Deploy all VMs under the `VMs` group on all standalone machines
 
-## Debian specific SEAPATH configuration
+## SEAPATH distribution configuration
 
-All these roles configure the bare Debian distribution for SEAPATH requirements.
+All these roles configure the bare requirements for a SEAPATH distribution, excepts for SEAPATH Yocto.
 They should always be called together. We strongly advise relying on the associated prerequisites playbook to avoid errors.
 
-Note: For the Yocto based SEAPATH, this configuration is done at build time
+Note: For SEAPATH Yocto, these roles shouldn't be used as this configuration is done at build time.
 
-- `debian`
-- `debian_hypervisor`
-- `debian_physical_machine`
+- `configure_seapath_distro`
+- `configure_hypervisor`
+- `configure_physical_machine`
 - `backup_restore`
 - `deploy_python3_setup_ovs`
 - `deploy_vm_manager`
@@ -107,19 +107,20 @@ Note: For the Yocto based SEAPATH, this configuration is done at build time
 - `update`: Update a SEAPATH machine (Yocto only)
 - `yocto`: Specify additional kernel parameters and SR-IOV configuration (Yocto only)
 - `debian_grub_bootcount`: Setup a rollback system in GRUB (Debian only)
-- `deploy_cukinia`: Deploy the testing system on a Debian machine (Debian only)
-- `debian_tests`: Launch the system tests on a Debian machine (Debian only)
-- `deploy_cockpit_plugins`: Deploy the SEAPATH specific cockpit plugins (Debian only)
+- `deploy_cukinia`: Deploy the testing system on a machine (all but Yocto)
+- `deploy_cukinia_tests`: Launch the system tests on a machine (all but Yocto)
+- `deploy_cockpit_plugins`: Deploy the SEAPATH specific cockpit plugins (all but Yocto)
 - `hardware_customization_welotec`: Configure network cards on the Welotec machines
-- `detect_seapath_distro`: Detect the SEAPATH distro base (Debian/Yocto) and set the `seapath_distro` variable.
+- `detect_seapath_distro`: Detect the SEAPATH distro flavor and set the `seapath_distro` variable.
 
-## Debian hardening
+## Hardening
 
-Apply the SEAPATH cybersecurity layer on SEAPATH Debian. On Yocto, this is done at compile time.
-This two roles should always be called together, we advise using the `seapath_setup_hardened_debian.yaml` playbook.
+Apply the SEAPATH cybersecurity layer. On Yocto, this role shouldn't be used as this done at compile time.
+These roles should be called together, we advise using the `seapath_setup_hardening.yaml` playbook.
 
-- `debian_hardening`
-- `debian_hardening_physical_machine`
+- `configure_hardening`
+- `configure_hardening_physical_machine`
+- `configure_hardening_oscap` (SLES only)
 
 ## Management
 
@@ -142,11 +143,6 @@ They should be moved in a specific CI collection in a future release.
 
 This section concerns roles for under development SEAPATH distributions. They are not described in this README.
 
-- `centos`
-- `centos_hypervisor`
-- `centos_physical_machine`
-- `oraclelinux`
-- `oraclelinux_physical_machine`
 - `oraclelinux_tests`
 
 # Playbooks
@@ -178,12 +174,13 @@ The other playbooks can be called alone to re-configure a specific part, when yo
 
 ## Prerequisites per distribution
 
-- `seapath_setup_prerequisdebian.yaml`: Apply required SEAPATH modifications to bare Debian machine.
-- `seapath_setup_prerequisyocto.yaml`: Call Yocto specific role (configure kernel params + hugepages)
-- `seapath_setup_hardened_debian.yaml`: Apply cybersecurity features on Debian
-- `seapath_setup_unhardened_debian.yaml`: Remove cybersecurity features on Debian (useful for testing)
-- `seapath_setup_prerequiscentos.yaml`: Apply required SEAPATH modification to bare CentOS machine.
-- `seapath_setup_prerequisoraclelinux.yaml`: Apply required SEAPATH modification to bare OracleLinux machine.
+- `seapath_setup_prerequisitesdebian.yaml`: Apply required SEAPATH modifications to bare Debian machine.
+- `seapath_setup_prerequisitesyocto.yaml`: Call Yocto specific role: configure kernel params + hugepages
+- `seapath_setup_hardening.yaml`: Apply cybersecurity features (all but Yocto)
+- `seapath_revert_hardening.yaml`: Remove cybersecurity features. Useful for testing. (all but Yocto)
+- `seapath_setup_prerequisitescentos.yaml`: Apply required SEAPATH modification to bare CentOS machine.
+- `seapath_setup_prerequisitesoraclelinux.yaml`: Apply required SEAPATH modification to bare OracleLinux machine.
+- `seapath_setup_prerequisitessles.yaml`: Apply required SEAPATH modification to bare SLES machine.
 
 ## Utility
 
@@ -205,7 +202,7 @@ The other playbooks can be called alone to re-configure a specific part, when yo
 
 ## Test
 
-- `test_deploy_cukinia_tests.yaml`: Deploy the tests on all machine (Debian only, on Yocto the tests are natively present)
+- `test_deploy_cukinia_tests.yaml`: Deploy the tests on all machine (Debian and SLES, on Yocto the tests are natively present)
 - `test_run_cukinia.yaml`: Run functional tests and export a CSV.
 
 ## CI
