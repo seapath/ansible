@@ -43,11 +43,11 @@ More information on the roles README :
 
 Examples of cluster, standalone, and VMs inventories are available on GitHub: https://github.com/seapath/ansible/tree/main/inventories/examples
 
-Note: On he SEAPATH machine, the user that executes the Ansible commands is called "ansible".
+Note: On a SEAPATH machine, the user that executes the Ansible commands is called "ansible".
 
 # Roles
 
-This section listed all the roles available in the collection by sections.
+This section lists all the roles available in the collection by sections.
 
 Customization and extension variables are available in the README of each role. Remember that the role needs to be called by a playbook to be applied.
 You can use default SEAPATH playbooks or write your own.
