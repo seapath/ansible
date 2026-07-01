@@ -11,7 +11,7 @@
   roles:
     - detect_seapath_distro
 
-- name: SLES machines prerequisites
+- name: SLES machine prerequisites
   gather_facts: true
   hosts:
     - cluster_machines

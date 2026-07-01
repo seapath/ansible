@@ -10,7 +10,7 @@
     - VMs
   roles:
     - detect_seapath_distro
-- name: Prerequis machine debian
+- name: Debian machine prerequisites
   gather_facts: true
   hosts:
     - cluster_machines
@@ -23,7 +23,7 @@
       vars:
         configure_seapath_distro_vim_config_dir: /etc/vim
         configure_seapath_distro_grub_update_command: update-grub
-- name: Prerequis physical machine debian
+- name: Debian physical machine prerequisites
   hosts:
     - cluster_machines
     - standalone_machine
@@ -41,7 +41,7 @@
   become: true
   roles:
     - backup_restore
-- name: Prerequis hypervisor debian
+- name: Debian hypervisor prerequisites
   hosts:
     - hypervisors
     - standalone_machine

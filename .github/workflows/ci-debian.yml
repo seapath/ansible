@@ -47,7 +47,7 @@ jobs:
       vms-inventories: ${{ matrix.vms-inventories }}
       vms-deploy-playbooks: ${{ matrix.vms-deployment-playbooks }}
       vms-configure-playbooks: >-
-        playbooks/seapath_setup_prerequisdebian.yaml
+        playbooks/seapath_setup_prerequisitesdebian.yaml
         playbooks/seapath_setup_hardening.yaml
         playbooks/ci_prepare_VMs.yaml
       vms-test-playbooks: >-
