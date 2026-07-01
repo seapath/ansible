@@ -123,9 +123,13 @@ jobs:
         id: configure-hyp
         working-directory: ansible
         run: |
+          echo "::group::Hypervisor configuration playbooks"
+
           cqfd exec ansible-playbook \
             ${{ inputs.hyp-configure-playbooks }} \
             ${{ inputs.hyp-inventories }}
+
+          echo "::endgroup::"
 
           # Create a JSON object with data about the hypervisors
           hyp=$(cqfd exec ansible-inventory --list \
@@ -162,6 +166,8 @@ jobs:
         id: test-hyp
         working-directory: ansible
         run: |
+          echo "::group::Hypervisor test playbooks"
+
           cqfd exec ansible-playbook \
             ${{ inputs.hyp-test-playbooks }} \
             ${{ inputs.hyp-inventories }} \
@@ -170,15 +176,17 @@ jobs:
             --extra-vars "cyclictest_result_folder=/results" \
             --extra-vars "cyclictest_duration=${{ env.CYCLICTEST_DURATION }}" \
 
+          echo "::endgroup::"
+
           # Check for kernel backtrace error. This is a random error so it must not
           # stop the CI but just display a warning
           # See https://github.com/seapath/ansible/issues/164
           if grep '<failure' ${{ env.RESULTS_FOLDER }}/*.xml | grep -q '00080'; then
-            echo "::warning title=Hypervisor::kernel back trace detected, see https://github.com/seapath/ansible/issues/164"
+            echo "::warning title=${{ inputs.seapath-flavor }} Hypervisor::kernel back trace detected, see https://github.com/seapath/ansible/issues/164"
           fi
 
           if grep '<failure' ${{ env.RESULTS_FOLDER }}/*.xml | grep -q -v '00080'; then
-            echo "::error title=Hypervisor::Test fails, see associated test report"
+            echo "::error title=${{ inputs.seapath-flavor }} Hypervisor::Test fails, see associated test report"
             echo "FAILED=true" >> "$GITHUB_ENV"
           fi
 
@@ -187,9 +195,9 @@ jobs:
             if [[ -f $file ]]; then
               max_latency=$(grep "Max Latencies" "$file" | tr " " "\n" | sort -n | tail -1 | sed s/^0*//)
               echo "LATENCY_HYP_${hyp}=${max_latency}" >> "$GITHUB_ENV"
-              echo "::notice title=Hypervisor $hyp::Max latency: $max_latency µs"
+              echo "::notice title=${{ inputs.seapath-flavor }} Hypervisor $hyp::Max latency: $max_latency µs"
               if [ "$max_latency" -gt "${{ env.LATENCY_MAXIMAL_HYP }}" ]; then
-                echo "::error title=Hypervisor $hyp::Max latency $max_latency exceeded limit ${{ env.LATENCY_MAXIMAL_HYP }} µs"
+                echo "::error title=${{ inputs.seapath-flavor }} Hypervisor $hyp::Max latency $max_latency exceeded limit ${{ env.LATENCY_MAXIMAL_HYP }} µs"
                 echo "FAILED=true" >> "$GITHUB_ENV"
               fi
             fi
@@ -200,6 +208,8 @@ jobs:
         working-directory: ansible
         if: "${{ inputs.vms-inventories != '' }}"
         run: |
+          echo "::group::VM deployment playbooks"
+
           CQFD_EXTRA_RUN_ARGS="\
             $CQFD_EXTRA_RUN_ARGS \
             -v /etc/seapath-ci/vm_file:$(pwd)/vm_images \
@@ -209,11 +219,19 @@ jobs:
             ${{ inputs.hyp-inventories }} \
             ${{ inputs.vms-inventories }}
 
+          echo "::endgroup::"
+
+
           if [[ -n "${{ inputs.vms-configure-playbooks }}" ]]; then
+            echo "::group::VM configuration playbooks"
+
             cqfd exec ansible-playbook \
               ${{ inputs.vms-configure-playbooks }} \
               ${{ inputs.vms-inventories }}
+
+            echo "::endgroup::"
           fi
+
 
           # Create a JSON object with data about the VMs
           vms=$(cqfd exec ansible-inventory --list \
@@ -240,6 +258,8 @@ jobs:
         if: "${{ steps.deploy-vms.outcome == 'success' }}"
         working-directory: ansible
         run: |
+          echo "::group::VM test playbooks"
+
           cqfd exec ansible-playbook \
             ${{ inputs.vms-test-playbooks }} \
             ${{ inputs.vms-inventories }} \
@@ -248,8 +268,10 @@ jobs:
             --extra-vars "cyclictest_result_folder=/results" \
             --extra-vars "cyclictest_duration=${{ env.CYCLICTEST_DURATION }}" \
 
+          echo "::endgroup::"
+
           if grep '<failure' ${{ env.RESULTS_FOLDER }}/*.xml | grep -q -v '00080'; then
-            echo "::error title=VMs::Test fails, see associated test report"
+            echo "::error title=${{ inputs.seapath-flavor }} VMs::Test fails, see associated test report"
             echo "FAILED=true" >> "$GITHUB_ENV"
           fi
 
@@ -258,9 +280,9 @@ jobs:
             if [[ -f $file ]]; then
               max_latency=$(grep "Max Latencies" "$file" | tr " " "\n" | sort -n | tail -1 | sed s/^0*//)
               echo "LATENCY_VM_${vm}=${max_latency}" >> "$GITHUB_ENV"
-              echo "::notice title=VM $vm::Max latency: $max_latency µs"
+              echo "::notice title=${{ inputs.seapath-flavor }} VM $vm::Max latency: $max_latency µs"
               if [ "$max_latency" -gt "${{ env.LATENCY_MAXIMAL_VM }}" ]; then
-                echo "::error title=VM $vm::Max latency $max_latency exceeded limit ${{ env.LATENCY_MAXIMAL_VM }} µs"
+                echo "::error title=${{ inputs.seapath-flavor }} VM $vm::Max latency $max_latency exceeded limit ${{ env.LATENCY_MAXIMAL_VM }} µs"
                 echo "FAILED=true" >> "$GITHUB_ENV"
               fi
             fi
@@ -278,18 +300,26 @@ jobs:
         if: "${{ steps.deploy-vms.outcome == 'success' && env.DO_LATENCY_TESTS == 'true' }}"
         run: |
           git clone -q "${{ inputs.inventories-repository }}" inventories_private
+
+          echo "::group::Initialize svtrace-ansible"
           cqfd init
+          echo "::endgroup::"
 
           export CQFD_EXTRA_RUN_ARGS=" \
             $CQFD_EXTRA_RUN_ARGS \
             -v /var/run/docker.sock:/var/run/docker.sock \
           "
 
+          echo "::group::Configure latency tests"
+
           cqfd exec ansible-playbook \
             playbooks/configure_latency_tests.yaml \
             --limit "localhost,sv_publisher,VMs" \
             --inventory ${{ env.INVENTORY_PUBLISHER }} \
             ${{ inputs.vms-inventories }} \
+
+          echo "::endgroup::"
+          echo "::group::Run latency tests"
 
           cqfd exec ansible-playbook \
             playbooks/run_latency_tests.yaml \
@@ -298,7 +328,9 @@ jobs:
             ${{ inputs.vms-inventories }} \
             --extra-vars "pcap=${{ env.PCAP }}" \
             --extra-vars "pcap_cycles=${{ env.PCAP_LOOP }}" \
-            --extra-vars "stream_to_log=0000" # TODO check maybe wrong quoting here
+            --extra-vars "stream_to_log=0000"
+
+          echo "::endgroup::"
 
           for vm in $(echo $INVENTORY_VMS | jq -r 'map_values(select(.sv_subscriber == true and .rt == true)) | keys | join(" ")'); do
             latency_test_dir=tests_results/data/ci_latency_tests_${vm}
@@ -312,16 +344,16 @@ jobs:
             cp "${latency_test_dir}/results/latency_tests.adoc" "${{ env.RESULTS_FOLDER }}/latency_tests_${vm}.adoc"
 
             if grep -q "FAILED" "${latency_test_dir}/results/latency_tests.adoc"; then
-              echo "::error title=VM $vm::Latency test failed, see associated test report"
+              echo "::error title=${{ inputs.seapath-flavor }} VM $vm::Latency test failed, see associated test report"
               echo "FAILED=true" >> "$GITHUB_ENV"
             fi
           done
 
-      - name: Upload raw results
+      - name: Upload raw results # used for debugging
         id: raw-results-artifact
         uses: actions/upload-artifact@v7
         with:
-          name: raw-results
+          name: raw-results-${{ inputs.seapath-flavor }}
           path: ${{ env.RESULTS_FOLDER }}
           include-hidden-files: true
           retention-days: 1
