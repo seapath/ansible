@@ -80,12 +80,6 @@
     state: directory
     mode: "0755"
 
-- name: Ensure /etc/seapath/containers directory exists
-  ansible.builtin.file:
-    path: /etc/seapath/containers
-    state: directory
-    mode: "0755"
-
 - name: Deploy alloc settings
   ansible.builtin.template:
     src: alloc.yaml.j2

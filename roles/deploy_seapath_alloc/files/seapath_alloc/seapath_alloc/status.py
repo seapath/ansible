@@ -159,6 +159,83 @@ def _read_irq_actors(proc_path: str, isolated: set,
     return actors
 
 
+def _slot_warnings(members: list) -> list:
+    """
+    Risky-but-allowed colocation patterns, as stable reason identifiers.
+
+    equal_rt_priority — two distinct actors with the same FIFO/RR priority
+      share the slot: neither ever preempts the other, so whichever runs
+      first can starve the other indefinitely.
+    rt_priority_ge_irq — a FIFO/RR member at priority >= 50 shares the slot
+      with NIC IRQs, whose irq threads run at the kernel default FIFO/50:
+      a CPU-hungry member can starve interrupt handling.
+    vcpu_shared — a vCPU shares the slot with other actors: preempting a
+      vCPU while the guest kernel holds a spinlock can cause guest-visible
+      stalls (RCU, soft lockups).
+    """
+    warnings = []
+    rt = [m for m in members if m.get("scheduler") in ("FIFO", "RR")]
+
+    prio_actors: dict = {}
+    for m in rt:
+        prio_actors.setdefault(m.get("priority", 0), set()).add(
+            (m["label"], m["group"]))
+    if any(len(actors) > 1 for actors in prio_actors.values()):
+        warnings.append("equal_rt_priority")
+
+    has_irq = any(m["kind"] == "irq" for m in members)
+    if has_irq and any(m.get("priority", 0) >= 50 for m in rt):
+        warnings.append("rt_priority_ge_irq")
+
+    has_vcpu = any(m["kind"] == "vm" and m["group"].startswith("CPU ")
+                   for m in members)
+    if has_vcpu and len(members) > 1:
+        warnings.append("vcpu_shared")
+
+    return warnings
+
+
+def _build_slots(slots: list, actors: list) -> list:
+    """
+    Attach members to each active slot by intersecting the slot's cores with
+    the actors' pinned CPUs. Membership is purely observational — derived
+    from the same live data as the actor list, never stored.
+    """
+    result = []
+    for slot in slots:
+        cores = set(slot.get("cores", []))
+        members = []
+        for actor in actors:
+            if actor["type"] == "vm":
+                for th in actor.get("threads", []):
+                    if set(parse_cpu_list(th["cpus"])) & cores:
+                        members.append({
+                            "kind": "vm",
+                            "label": actor["label"],
+                            "group": th["comm"],
+                            "scheduler": th.get("scheduler", ""),
+                            "priority": th.get("priority", 0),
+                            "cpus": th["cpus"],
+                        })
+            elif set(parse_cpu_list(actor.get("cpus", ""))) & cores:
+                members.append({
+                    "kind": actor["type"],
+                    "label": actor["label"],
+                    "group": actor["type"],
+                    "scheduler": actor.get("scheduler", ""),
+                    "priority": actor.get("priority", 0),
+                    "cpus": actor.get("cpus", ""),
+                })
+        result.append({
+            "name": slot["name"],
+            "cores": format_cpu_list(sorted(cores)),
+            "isolation": slot.get("isolation", ""),
+            "members": members,
+            "warnings": _slot_warnings(members),
+        })
+    return result
+
+
 def collect(proc_path: str = "/proc", sys_path: str = "/sys") -> dict:
     topo = Topology()
     isolated = set(topo.isolated_cpus())
@@ -168,6 +245,7 @@ def collect(proc_path: str = "/proc", sys_path: str = "/sys") -> dict:
         free_p = pool.free_physical()
         claims = pool.all_claims()
         reserved = pool.active_reserved_siblings()
+        slots = pool.slots()
 
     vm_actors = _read_qemu_actors(proc_path, isolated)
     irq_actors = _read_irq_actors(proc_path, isolated, sys_path=sys_path)
@@ -179,14 +257,17 @@ def collect(proc_path: str = "/proc", sys_path: str = "/sys") -> dict:
             "cpus": format_cpu_list(c.get("cores", [])),
             "scheduler": c.get("scheduler", ""),
             "priority": c.get("priority", 0),
+            "slot": c.get("slot", ""),
         }
         for c in claims
     ]
+    actors = vm_actors + irq_actors + claim_actors
 
     return {
         "isolated": format_cpu_list(sorted(isolated)),
         "free_logical": format_cpu_list(free_l),
         "free_physical": format_cpu_list(free_p),
-        "actors": vm_actors + irq_actors + claim_actors,
+        "actors": actors,
         "reserved_siblings": reserved,
+        "slots": _build_slots(slots, actors),
     }

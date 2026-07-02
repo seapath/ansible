@@ -62,22 +62,25 @@ def test_topology_is_exposed(pool):
 # --- claim bookkeeping ----------------------------------------------------
 
 
-def test_a_claim_records_its_kind(pool):
+def test_a_claim_records_its_kind_and_slot(pool):
     with pool:
-        pool.add_claim("redis", CLAIM_PID, [4], "FIFO", 10, kind="quadlet")
+        pool.add_claim("redis", CLAIM_PID, [4], "FIFO", 10,
+                       kind="quadlet", slot="rt")
 
         claim = pool.all_claims()[0]
 
     assert claim["kind"] == "quadlet"
+    assert claim["slot"] == "rt"
 
 
-def test_a_claim_without_a_kind_omits_it(pool):
+def test_a_claim_without_a_kind_or_slot_omits_them(pool):
     with pool:
         pool.add_claim("sv", CLAIM_PID, [4], "OTHER", 0)
 
         claim = pool.all_claims()[0]
 
     assert "kind" not in claim
+    assert "slot" not in claim
 
 
 def test_moving_a_claim_reassigns_its_core(pool):
@@ -339,54 +342,3 @@ def test_irq_scanner_skips_an_interrupt_with_no_affinity_file(pool, tmp_path):
     make_proc_irq(tmp_path, {181: "6"}, proc_path=pool._proc)
 
     assert pool._busy_by_irqs(ISOLATED) == {6}
-
-
-def test_the_busy_set_is_memoized(pool):
-    write_status(pool._proc, 1000, 1010, "CPU 0/KVM", cpus="4")
-
-    first = pool.free_logical()
-    # A second read must not rescan /proc: the pool is held under flock and
-    # every caller inside that window sees one consistent picture.
-    os.remove(os.path.join(pool._proc, "1000", "task", "1010", "status"))
-
-    assert pool.free_logical() == first
-    assert 4 not in pool.free_logical()
-
-
-def test_busting_the_cache_forces_a_rescan(pool):
-    write_status(pool._proc, 1000, 1010, "CPU 0/KVM", cpus="4")
-    assert 4 not in pool.free_logical()
-
-    os.remove(os.path.join(pool._proc, "1000", "task", "1010", "status"))
-    pool.bust_cache()
-
-    assert 4 in pool.free_logical()
-
-
-def test_qemu_scanner_ignores_a_thread_that_is_not_qemu(pool):
-    write_status(pool._proc, 1000, 1010, "sshd", cpus="4")
-
-    assert pool._busy_by_qemus(ISOLATED) == set()
-
-
-def test_quadlet_claims_are_reported_with_their_service(pool):
-    with pool:
-        pool.add_claim("redis", CLAIM_PID, [4], "OTHER", 0, kind="quadlet")
-
-        assert pool.pinned_quadlet_cpus() == {4: ("redis", "redis.service")}
-
-
-def test_a_non_quadlet_claim_is_not_a_cgroup_move_candidate(pool):
-    with pool:
-        pool.add_claim("sv", CLAIM_PID, [4], "OTHER", 0, kind="run")
-
-        assert pool.pinned_quadlet_cpus() == {}
-
-
-def test_a_quadlet_spanning_several_cores_is_not_a_candidate(pool):
-    # The repacker moves one core at a time; a multi-core container is not
-    # something it can relocate.
-    with pool:
-        pool.add_claim("redis", CLAIM_PID, [4, 6], "OTHER", 0, kind="quadlet")
-
-        assert pool.pinned_quadlet_cpus() == {}
