@@ -1,0 +1,21 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Get mgr prometheus server_addr
+  ansible.builtin.command: >-
+    ceph config get {{ mgr_daemon.daemon_name }} mgr/prometheus/server_addr
+  register: cephadm_mgr_prometheus_server_addr
+  failed_when: false
+  changed_when: false
+  delegate_to: "{{ cephadm_first_node }}"
+
+- name: Set mgr prometheus server_addr to administration IP
+  ansible.builtin.command: >-
+    ceph config set {{ mgr_daemon.daemon_name }}
+    mgr/prometheus/server_addr {{ listen_address }}
+  when: >-
+    cephadm_mgr_prometheus_server_addr.rc != 0
+    or cephadm_mgr_prometheus_server_addr.stdout | trim != listen_address
+  changed_when: true
+  delegate_to: "{{ cephadm_first_node }}"

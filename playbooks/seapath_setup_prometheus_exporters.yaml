@@ -1,0 +1,12 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Deploy prometheus exporters
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  become: true
+  roles:
+    - detect_seapath_distro
+    - deploy_prometheus_exporters
