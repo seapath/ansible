@@ -8,7 +8,11 @@
   register: cyclictest_tmp_test_dir
 
 - name: Execute cyclitect script
-  ansible.builtin.script: run_cyclictest.py -d {{ cyclictest_duration }} '{{ cyclictest_tmp_test_dir.path }}/cyclictest.txt'
+  ansible.builtin.script: run_cyclictest.py
+    -d {{ cyclictest_duration }}
+    -p {{ cyclictest_priority }}
+    -a {{ cyclictest_affinity }}
+    '{{ cyclictest_tmp_test_dir.path }}/cyclictest.txt'
 - name: Fetch results
   ansible.builtin.fetch:
     src: "{{ cyclictest_tmp_test_dir.path }}/cyclictest.txt"
