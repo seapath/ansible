@@ -162,12 +162,37 @@ def test_main_claims_cores_then_runs_the_command(harness, capsys):
         "target_pid": 0,
         "no_apply": False,
         "kind": "run",
+        "slot": "",
     }
     assert record["cmd"] == ["/usr/bin/sv-sim"]
     assert record["child"].waited
     assert record["exit"] == 0
     err = capsys.readouterr().err
     assert "claimed core(s) 4 for 'sv' (FIFO/80)" in err
+
+
+def test_main_joins_a_named_slot(harness):
+    record = harness(
+        ["sv", "slot:sv0:exclusive_physical", "FIFO", "10", "--", "true"]
+    )
+
+    assert record["claim"]["slot"] == "sv0"
+    assert record["claim"]["isolation"] == "exclusive_physical"
+
+
+def test_main_defaults_a_slot_to_exclusive_logical(harness):
+    record = harness(["sv", "slot:sv0", "FIFO", "10", "--", "true"])
+
+    assert record["claim"]["slot"] == "sv0"
+    assert record["claim"]["isolation"] == "exclusive_logical"
+
+
+def test_main_rejects_an_empty_slot_name(harness, capsys):
+    record = harness(["sv", "slot:", "FIFO", "10", "--", "true"])
+
+    assert record["exit"] == 1
+    assert "empty slot name" in capsys.readouterr().err
+    assert record["claim"] is None
 
 
 def test_main_reports_an_allocation_failure(harness, monkeypatch, capsys):

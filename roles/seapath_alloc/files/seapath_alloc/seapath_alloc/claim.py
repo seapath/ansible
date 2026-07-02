@@ -25,6 +25,22 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
+def parse_isolation_arg(value: str):
+    """
+    Parse a positional CLI isolation argument, which is either a plain
+    isolation level or a slot reference "slot:<name>[:<isolation>]".
+
+    Returns (isolation, slot_name); slot_name is "" for plain levels.
+    Raises ValueError on an empty slot name.
+    """
+    if not value.startswith("slot:"):
+        return value, ""
+    name, _, isolation = value[len("slot:"):].partition(":")
+    if not name:
+        raise ValueError(f"empty slot name in {value!r}")
+    return (isolation or "exclusive_logical"), name
+
+
 def _load_profile_file(path: str) -> dict:
     if yaml is None:
         log.warning("pyyaml not available, ignoring profile file %s", path)
@@ -45,12 +61,17 @@ def claim(label: str,
           profile_path: str = "",
           target_pid: int = 0,
           no_apply: bool = False,
-          kind: str = "") -> list:
+          kind: str = "",
+          slot: str = "") -> list:
     """
     Allocate isolated cores for label and register the claim.
 
     Unless no_apply is True, also applies the allocation to target_pid
     (or the calling process if target_pid is 0) via taskset + chrt.
+
+    slot: name of a host-global shared-core slot. The claim then joins the
+    slot's cores (creating the slot if needed, with `isolation` as the slot's
+    level) instead of consuming its own cores.
 
     Returns the list of allocated cores.
     """
@@ -62,14 +83,21 @@ def claim(label: str,
         isolation = raw.get("isolation", isolation)
         scheduler = raw.get("scheduler", scheduler)
         priority = raw.get("priority", priority)
+        slot = raw.get("slot", slot)
 
-    spec = [{"name": "claim", "isolation": isolation,
-             "scheduler": scheduler, "priority": priority}]
+    spec_dict = {"name": "claim", "isolation": isolation,
+                 "scheduler": scheduler, "priority": priority}
+    if slot:
+        spec_dict["slot"] = slot
 
     with CorePool(topology=topo) as pool:
-        result = allocate_cores(pool, spec, topo, label=label, pid=pid)
+        result = allocate_cores(pool, [spec_dict], topo, label=label, pid=pid)
         alloc = result.allocations[0]
-        pool.add_claim(label, pid, alloc.cpus, alloc.scheduler, alloc.priority, kind=kind)
+        # Only record the slot if it actually exists after allocation — a
+        # creation that fell back to housekeeping does not persist the slot.
+        in_slot = slot if any(s["name"] == slot for s in pool.slots()) else ""
+        pool.add_claim(label, pid, alloc.cpus, alloc.scheduler, alloc.priority,
+                       kind=kind, slot=in_slot)
 
     if not no_apply:
         if alloc.cpus:
