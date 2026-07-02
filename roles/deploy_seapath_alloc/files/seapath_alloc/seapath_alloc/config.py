@@ -56,10 +56,26 @@ iothread:
   scheduler: OTHER
   priority: 0
 
+# Any group may reference a named slot instead of requesting its own cores.
+# A slot is a host-global named group of isolated cores: the first actor
+# referencing the name allocates it (isolation describes the SLOT's level,
+# default exclusive_logical), later actors share its cores with their own
+# scheduler/priority. Example — emulator in TS and vhost in FIFO/1 on the
+# same core:
+# emulator:
+#   slot: housework
+#   scheduler: OTHER
+# vhost:
+#   slot: housework
+#   scheduler: FIFO
+#   priority: 1
+
 All keys are optional — missing keys are filled from built-in defaults.
 count (vhost/iothread only): when present, a single allocation of <count>
   cores is made for the whole group; all threads of that group share them.
   Without count, each thread receives its own core.
+slot (any group): name of a host-global shared-core slot. isolation then
+  applies to the slot at creation time and must not be none.
 """
 
 import logging
@@ -218,8 +234,17 @@ def _normalize_group(spec) -> dict:
         spec = {}
     merged = dict(_BUILTIN_DEFAULT)
     merged.update(spec)
+    # A slot reference without an explicit isolation means "a shared isolated
+    # core" — the slot's isolation level defaults to exclusive_logical, never
+    # none (a housekeeping slot would have no cores to share).
+    if merged.get("slot"):
+        merged["slot"] = str(merged["slot"])
+        if "isolation" not in spec:
+            merged["isolation"] = "exclusive_logical"
+    else:
+        merged.pop("slot", None)
     # Non-none isolation without an explicit scheduler implies RT intent → FIFO.
-    if spec.get("isolation", "none") != "none" and "scheduler" not in spec:
+    if merged["isolation"] != "none" and "scheduler" not in spec:
         merged["scheduler"] = "FIFO"
     # RT schedulers without an explicit priority default to 1 (minimum valid RT).
     if merged["scheduler"] in ("FIFO", "RR") and "priority" not in spec:

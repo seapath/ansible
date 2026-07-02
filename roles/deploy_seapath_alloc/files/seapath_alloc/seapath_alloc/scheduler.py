@@ -32,8 +32,11 @@ def allocate_cores(pool, specs: list, topo, *,
       2. Load the allocation strategy from /etc/seapath/alloc.yaml.
       3. If REPACKING and there is a shortfall of free physical pairs,
          compact existing threads to free enough pairs before allocating.
-      4. Run AllocationEngine with the active strategy.
-      5. Register reserved HT siblings for exclusive_physical allocations.
+      4. Run AllocationEngine with the active strategy and the live slot map
+         (specs referencing a known slot join its cores instead of consuming
+         new ones).
+      5. Register reserved HT siblings for exclusive_physical allocations and
+         any slots created during this round.
       6. Log and record any fallback-to-housekeeping warnings.
 
     The caller must hold the pool lock (i.e. call this inside a
@@ -48,9 +51,26 @@ def allocate_cores(pool, specs: list, topo, *,
 
     strategy = load_strategy()
 
+    slots_map = {
+        s["name"]: {"cores": s.get("cores", []),
+                    "isolation": s.get("isolation", "")}
+        for s in pool.slots()
+    }
+
     if strategy == AllocationStrategy.REPACKING:
-        needed = sum(s.get("count", 1) for s in specs
-                     if s.get("isolation") == "exclusive_physical")
+        # A spec joining an existing slot consumes nothing; a slot created in
+        # this round consumes its pair(s) once, however many specs reference it.
+        needed = 0
+        seen_slots = set(slots_map)
+        for s in specs:
+            if s.get("isolation") != "exclusive_physical":
+                continue
+            slot = s.get("slot")
+            if slot:
+                if slot in seen_slots:
+                    continue
+                seen_slots.add(slot)
+            needed += s.get("count", 1)
         shortfall = max(0, needed - len(pool.free_physical()))
         if shortfall > 0:
             log.info("%s: repacking — %d pair(s) short, attempting compaction",
@@ -70,11 +90,15 @@ def allocate_cores(pool, specs: list, topo, *,
         housekeeping=topo.housekeeping_cpus(),
         sibling_of_fn=topo.siblings_of,
         strategy=strategy,
+        existing_slots=slots_map,
     )
     result = engine.allocate(specs)
 
     for idle, active in result.reserved_siblings:
         pool.add_reserved_sibling(idle, active)
+
+    for name, cores, isolation in result.new_slots:
+        pool.add_slot(name, cores, isolation)
 
     for spec, alloc in zip(specs, result.allocations):
         if not alloc.warning:

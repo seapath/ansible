@@ -27,6 +27,14 @@ racing with a VM start) are serialised by an exclusive lock on
 A claim whose PID no longer appears in `/proc` is dropped silently on the next
 pool read — no explicit release protocol needed after a crash or OOM kill.
 
+**Self-healing slots.**
+A slot (named shared-core group, `slots.json`) expires once no live actor —
+QEMU thread, claim or NIC IRQ — occupies any of its cores. A memberless slot
+younger than 60 s is kept: this grace period covers the window between
+`seapath-alloc slot` returning and the caller actually pinning (e.g. the IRQ
+monitor). Slot cores count as busy for every normal allocation; only specs
+referencing the slot by name land on them.
+
 **The hook must always exit 0.**
 A non-zero exit causes libvirt to abort the VM.  Pinning failures are logged
 as errors but never interrupt a VM start or migration.
@@ -97,15 +105,17 @@ hook.py
               │
               ├─ AllocationEngine.allocate(specs) ──► allocator.py
               │    pure: free_logical/free_physical snapshot → Allocation list
+              │    specs with slot: join existing slot cores, or create the
+              │    slot through the normal isolation paths
               │
-              └─ record reserved siblings → pool
+              └─ record reserved siblings + new slots → pool
                  record_fallback() on warnings → exporter.py
                                                  (fallbacks.json, active_fallbacks.json)
 
   apply_all(threads, allocations) ──► applier.py     ← outside flock window
         taskset + chrt per TID, order: vCPUs → emulator → vhost → iothreads
 
-State written inside flock: .reserved_siblings
+State written inside flock: .reserved_siblings, slots.json
 ```
 
 ### 2 — Container pin (`seapath-container-pin`)
@@ -124,7 +134,25 @@ claim(label, isolation, scheduler, priority, target_pid) ──► claim.py
   apply_cpuset + chrt ──► cgroup.py
 ```
 
-### 3 — Prometheus export (`seapath-alloc export`)
+### 3 — Slot resolution for IRQs (`seapath-alloc slot`)
+
+```
+cli.py slot <name>
+  │
+  └─ with CorePool(topo) as pool:
+        │
+        ├─ slot exists in pool.slots() ──► print its cores (sticky placement)
+        │
+        └─ otherwise allocate_cores() with a slot spec ──► scheduler.py
+             slot registered in slots.json, cores printed
+             (housekeeping fallback → nothing printed, caller falls back)
+
+The caller (nic-irq-monitor.sh) pins the IRQs after the command returns; the
+60 s memberless grace in pool._live_slots() covers that window, after which
+the pinned IRQs keep the slot alive through the passive /proc/irq source.
+```
+
+### 4 — Prometheus export (`seapath-alloc export`)
 
 ```
 exporter.generate()
@@ -151,6 +179,7 @@ exporter.generate()
 |-------|------|---------|
 | `allocations` | `list[Allocation]` | one per spec: `name`, `cpus`, `warning` |
 | `reserved_siblings` | `list[(idle, active)]` | idle HT partners of `exclusive_physical` |
+| `new_slots` | `list[(name, cores, isolation)]` | slots created during this round, written back via `pool.add_slot()`; joins of existing slots produce nothing here |
 
 `scheduler.py` inspects `alloc.warning` to determine fallback severity:
 
@@ -169,6 +198,7 @@ auto-expire when the process exits, without any cleanup step.
 | `/run/seapath/alloc/.lock` | `pool.py` | `pool.py` (flock) |
 | `/run/seapath/alloc/claims.json` | `claim.py` | `pool.py` |
 | `/run/seapath/alloc/.reserved_siblings` | `pool.py` | `pool.py` |
+| `/run/seapath/alloc/slots.json` | `pool.py` | `pool.py` |
 | `/var/lib/seapath/alloc/fallbacks.json` | `exporter.py` | `exporter.py` |
 | `/var/lib/seapath/alloc/active_fallbacks.json` | `exporter.py` | `exporter.py` |
 | `/var/lib/prometheus/node_exporter/seapath-alloc.prom` | `exporter.py` | node_exporter |

@@ -23,7 +23,8 @@ from seapath_alloc.allocator import AllocationEngine, AllocationStrategy
 
 
 def make_engine(free_logical, free_physical, housekeeping, pairs,
-                strategy=AllocationStrategy.SPREADING):
+                strategy=AllocationStrategy.SPREADING,
+                existing_slots=None):
     sibling_map = {}
     for lo, hi in pairs:
         for c in range(lo, hi + 1):
@@ -38,6 +39,7 @@ def make_engine(free_logical, free_physical, housekeeping, pairs,
         housekeeping=housekeeping,
         sibling_of_fn=sibling_of,
         strategy=strategy,
+        existing_slots=existing_slots,
     )
 
 
@@ -316,7 +318,7 @@ def test_count_zero_pairs_falls_back_to_housekeeping():
 def test_repacking_treated_as_spreading():
     """
     The REPACKING enum value reaches AllocationEngine as SPREADING-order
-    (the compaction step is done externally by hook.py before calling the engine).
+    (the compaction step is done by scheduler.py before the engine runs).
     """
     engine = make_engine(
         free_logical=[4, 5, 6, 7],
@@ -333,3 +335,102 @@ def test_repacking_treated_as_spreading():
     result = engine.allocate(specs)
     cpus = [a.cpus[0] for a in result.allocations]
     assert cpus == [4, 5, 6, 7]
+
+
+# ------------------------------------------------------------------ slots
+
+def test_slot_created_then_joined_same_round():
+    """emulator creates the slot, vhost joins it: one core for both."""
+    engine = make_engine([4, 5, 6, 7, 8, 9, 10, 11], [4, 6, 8, 10],
+                          HOUSEKEEPING, ISOLATED_PAIRS)
+    result = engine.allocate([
+        {"name": "emulator", "slot": "x", "isolation": "exclusive_logical",
+         "scheduler": "OTHER", "priority": 0},
+        {"name": "vhost/0", "slot": "x", "isolation": "exclusive_logical",
+         "scheduler": "FIFO", "priority": 1},
+    ])
+    assert result.allocations[0].cpus == [4]
+    assert result.allocations[1].cpus == [4]
+    assert result.new_slots == [["x", [4], "exclusive_logical"]]
+    assert result.warnings == []
+
+
+def test_slot_join_existing_consumes_nothing():
+    """Joining a pool-registered slot leaves the free lists untouched."""
+    engine = make_engine([6], [6], HOUSEKEEPING, ISOLATED_PAIRS,
+                          existing_slots={
+                              "x": {"cores": [4],
+                                    "isolation": "exclusive_logical"}})
+    result = engine.allocate([
+        {"name": "a", "slot": "x", "isolation": "exclusive_logical",
+         "scheduler": "FIFO", "priority": 10},
+        {"name": "b", "isolation": "exclusive_logical",
+         "scheduler": "FIFO", "priority": 20},
+    ])
+    assert result.allocations[0].cpus == [4]
+    assert result.allocations[1].cpus == [6]
+    assert result.new_slots == []
+    assert result.warnings == []
+
+
+def test_slot_physical_creation_reserves_sibling():
+    engine = make_engine([4, 5, 6, 7], [4, 6], HOUSEKEEPING, ISOLATED_PAIRS)
+    result = engine.allocate([
+        {"name": "a", "slot": "x", "isolation": "exclusive_physical",
+         "scheduler": "FIFO", "priority": 10},
+    ])
+    assert result.allocations[0].cpus == [4]
+    assert result.reserved_siblings == [[5, 4]]
+    assert result.new_slots == [["x", [4], "exclusive_physical"]]
+
+
+def test_slot_creation_degraded_records_effective_isolation():
+    """No free pair: the slot is created on a logical core and recorded as
+    exclusive_logical (the effective level), with a soft warning."""
+    engine = make_engine([5, 7], [], HOUSEKEEPING, ISOLATED_PAIRS)
+    result = engine.allocate([
+        {"name": "a", "slot": "x", "isolation": "exclusive_physical",
+         "scheduler": "FIFO", "priority": 10},
+    ])
+    assert result.allocations[0].cpus == [5]
+    assert "degraded" in result.allocations[0].warning
+    assert result.new_slots == [["x", [5], "exclusive_logical"]]
+
+
+def test_slot_housekeeping_fallback_not_persisted():
+    """Pool exhausted: the member degrades individually, no slot is created."""
+    engine = make_engine([], [], HOUSEKEEPING, ISOLATED_PAIRS)
+    result = engine.allocate([
+        {"name": "a", "slot": "x", "isolation": "exclusive_logical",
+         "scheduler": "FIFO", "priority": 10},
+    ])
+    assert result.allocations[0].cpus == HOUSEKEEPING
+    assert "housekeeping" in result.allocations[0].warning
+    assert result.new_slots == []
+
+
+def test_slot_with_isolation_none_is_ignored():
+    engine = make_engine([4, 5], [4], HOUSEKEEPING, ISOLATED_PAIRS)
+    result = engine.allocate([
+        {"name": "a", "slot": "x", "isolation": "none",
+         "scheduler": "OTHER", "priority": 0},
+    ])
+    assert result.allocations[0].cpus == []
+    assert "slot" in result.allocations[0].warning
+    assert result.new_slots == []
+
+
+def test_slot_join_with_conflicting_attributes_joins_anyway():
+    """Attributes are fixed by the creator: a conflicting joiner still joins
+    and no new sibling reservation is made."""
+    engine = make_engine([6, 7], [6], HOUSEKEEPING, ISOLATED_PAIRS,
+                          existing_slots={
+                              "x": {"cores": [4],
+                                    "isolation": "exclusive_logical"}})
+    result = engine.allocate([
+        {"name": "a", "slot": "x", "isolation": "exclusive_physical",
+         "scheduler": "FIFO", "priority": 10, "count": 2},
+    ])
+    assert result.allocations[0].cpus == [4]
+    assert result.reserved_siblings == []
+    assert result.new_slots == []

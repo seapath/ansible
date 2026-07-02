@@ -466,3 +466,45 @@ def test_execute_repack_thread_move_all_tids(tmp_path, monkeypatch):
 def test_execute_repack_empty(tmp_path):
     """Empty move list completes without error."""
     execute_repack([])
+
+
+# ------------------------------------------------------------------ slot exclusion
+
+def test_repack_never_moves_slot_core(tmp_path):
+    """A workload on a slot core is colocated with other actors: compaction
+    must not select it as a donor even when it is the only candidate."""
+    make_proc_qemu(tmp_path, pid=1000, vm_name="guest1", vcpu_count=1,
+                   vcpu_cpus=[4])
+    pool = _make_pool(tmp_path)
+    pool.add_slot("s", [4], "exclusive_logical")
+
+    moves = find_repack_moves(pool, needed_pairs=1)
+    assert moves == []
+
+
+def test_spread_never_moves_slot_core(tmp_path):
+    """Two threads on the same pair, the upper one on a slot core: spreading
+    must evacuate the non-slot thread instead of the slot member."""
+    make_proc_qemu(tmp_path, pid=1000, vm_name="guest1", vcpu_count=2,
+                   vcpu_cpus=[4, 5])
+    pool = _make_pool(tmp_path)
+    pool.add_slot("s", [5], "exclusive_logical")
+
+    moves = find_spread_moves(pool)
+    assert len(moves) == 1
+    assert moves[0].from_cpu == 4
+
+
+def test_spread_treats_slot_as_interferer(tmp_path):
+    """A workload alone on its pair but with a slot on the HT sibling suffers
+    the same interference as with a NIC IRQ: it must be moved to a free pair."""
+    make_proc_qemu(tmp_path, pid=1000, vm_name="guest1", vcpu_count=1,
+                   vcpu_cpus=[4])
+    pool = _make_pool(tmp_path)
+    pool.add_slot("s", [5], "exclusive_logical")
+
+    moves = find_spread_moves(pool)
+    assert len(moves) == 1
+    assert moves[0].from_cpu == 4
+    # Landing zone is a fully-free pair, away from the slot.
+    assert moves[0].to_cpu in (6, 8, 10)

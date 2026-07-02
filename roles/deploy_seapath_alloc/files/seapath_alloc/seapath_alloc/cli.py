@@ -4,7 +4,7 @@
 """
 seapath-alloc CLI entry point.
 
-Subcommands: status, claim, release, spread, export.
+Subcommands: status, claim, release, slot, spread, export.
 Data collection is in status.py; this module only contains argument parsing
 and subcommand dispatch.
 """
@@ -41,10 +41,27 @@ def main():
                          help="Register the claim without pinning the calling process"
                               " via taskset/chrt (use with --target-pid to set the"
                               " owning PID explicitly)")
+    claim_p.add_argument("--slot", default="", metavar="NAME",
+                         help="Join (or create) the named shared-core slot"
+                              " instead of consuming dedicated cores")
 
     # release
     rel_p = sub.add_parser("release", help="Release a claim")
     rel_p.add_argument("--label", required=True)
+
+    # slot
+    slot_p = sub.add_parser(
+        "slot",
+        help="Print the cores of a named shared-core slot, creating and"
+             " registering it on first use",
+    )
+    slot_p.add_argument("name", metavar="NAME")
+    slot_p.add_argument("--count", type=int, default=1, metavar="N",
+                        help="Slot size in cores at creation (ignored if the"
+                             " slot already exists)")
+    slot_p.add_argument("--isolation", default="exclusive_logical",
+                        help="Isolation level used when creating the slot"
+                             " (ignored if the slot already exists)")
 
     # spread
     spread_p = sub.add_parser(
@@ -89,6 +106,19 @@ def main():
                         prio = actor.get('priority', 0)
                         sched_str = f"  {sched}/{prio}" if sched else ""
                         print(f"  {t:7s} {actor['label']:18s}  cpus={actor['cpus']}  pid={actor.get('pid')}{sched_str}")
+            if data.get('slots'):
+                print("\nSlots:")
+                for slot in data['slots']:
+                    print(f"  {slot['name']:18s}  cpus={slot['cores']}"
+                          f"  isolation={slot['isolation']}")
+                    for m in slot['members']:
+                        sched = m.get('scheduler', '')
+                        prio = m.get('priority', 0)
+                        sched_str = f"  {sched}/{prio}" if sched else ""
+                        print(f"    {m['kind']:7s} {m['label']}/{m['group']}"
+                              f"  cpus={m['cpus']}{sched_str}")
+                    for reason in slot.get('warnings', []):
+                        print(f"    warning: {reason}")
 
     elif args.command == "claim":
         from .claim import claim as do_claim
@@ -100,12 +130,36 @@ def main():
             profile_path=args.profile,
             target_pid=args.target_pid,
             no_apply=args.no_apply,
+            slot=args.slot,
         )
         print(format_cpu_list(cores))
 
     elif args.command == "release":
         from .claim import release as do_release
         do_release(args.label)
+
+    elif args.command == "slot":
+        from .pool import CorePool
+        from .scheduler import allocate_cores
+        from .topology import Topology as _Topo
+
+        topo = _Topo()
+        with CorePool(topology=topo) as pool:
+            existing = next(
+                (s for s in pool.slots() if s["name"] == args.name), None)
+            if existing:
+                cores = existing["cores"]
+            else:
+                spec = {"name": f"slot/{args.name}", "slot": args.name,
+                        "isolation": args.isolation, "count": args.count,
+                        "scheduler": "OTHER", "priority": 0}
+                result = allocate_cores(pool, [spec], topo,
+                                        label=f"slot/{args.name}")
+                # A creation that fell back to housekeeping does not
+                # persist the slot — print nothing so callers fall back.
+                created = any(s["name"] == args.name for s in pool.slots())
+                cores = result.allocations[0].cpus if created else []
+        print(format_cpu_list(cores))
 
     elif args.command == "spread":
         from .pool import CorePool

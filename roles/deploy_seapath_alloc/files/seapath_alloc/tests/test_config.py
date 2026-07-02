@@ -283,3 +283,49 @@ def test_get_rbd_source_virsh_no_rbd_disk(monkeypatch):
     )
     monkeypatch.setattr(config, "_run", lambda cmd, timeout=5: out)
     assert config.get_rbd_source("vm") == ""
+
+
+# ------------------------------------------------------------------ slots
+
+def test_slot_defaults_to_exclusive_logical_and_fifo():
+    profile = normalize_profile({"emulator": {"slot": "x"}})
+    e = profile["emulator"]
+    assert e["slot"] == "x"
+    assert e["isolation"] == "exclusive_logical"
+    assert e["scheduler"] == "FIFO"
+    assert e["priority"] == 1
+
+
+def test_slot_with_explicit_ts_scheduler():
+    profile = normalize_profile({"emulator": {"slot": "x",
+                                              "scheduler": "OTHER"}})
+    e = profile["emulator"]
+    assert e["isolation"] == "exclusive_logical"
+    assert e["scheduler"] == "OTHER"
+    assert e["priority"] == 0
+
+
+def test_slot_explicit_isolation_kept():
+    profile = normalize_profile({"vhost": {"slot": "x",
+                                           "isolation": "exclusive_physical"}})
+    assert profile["vhost"]["isolation"] == "exclusive_physical"
+    assert profile["vhost"]["slot"] == "x"
+
+
+def test_no_slot_key_when_absent():
+    profile = normalize_profile({})
+    for key in ("vcpus", "emulator", "vhost", "iothread"):
+        assert "slot" not in profile[key]
+
+
+def test_expand_group_specs_propagates_slot():
+    profile = normalize_profile({
+        "emulator": {"slot": "x", "scheduler": "OTHER"},
+        "vhost": {"slot": "x", "priority": 1},
+    })
+    specs = expand_group_specs(profile, vcpu_count=1,
+                               vhost_count=1, iothread_count=0)
+    by_name = {s["name"]: s for s in specs}
+    assert by_name["emulator"]["slot"] == "x"
+    assert by_name["vhost/0"]["slot"] == "x"
+    assert "slot" not in by_name["vcpu/0"]

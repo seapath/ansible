@@ -39,6 +39,61 @@ release is needed after a crash.
 | `exclusive_physical` | 1 logical core | sibling reserved (idle) |
 | `none` | none (left unpinned; runs on housekeeping cores) | n/a |
 
+### Shared-core slots (colocation)
+
+`exclusive_*` means alone on the core: the RT priority never arbitrates
+between actors, and a whole core is wasted on actors that use very little CPU
+(an IRQ thread, an emulator). A **slot** is a named group of isolated cores
+that several actors share, each with its own scheduler and priority:
+
+- the **first** actor referencing the name allocates the slot's cores through
+  the normal isolation paths (`isolation` then describes the *slot's* level,
+  default `exclusive_logical`; the usual degradation chain applies);
+- **later** actors referencing the same name run on the same cores without
+  consuming anything from the pool;
+- the slot's cores stay busy for every normal allocation, and the slot
+  expires automatically once no live actor occupies any of its cores.
+
+Slot names are **host-global**: the same name in a VM profile, a quadlet, a
+`seapath-run` call or `/etc/nic-irq-affinity.conf` designates the same cores.
+That is the coordination mechanism — and also why generic names copy-pasted
+between unrelated profiles will colocate them by accident. Pick explicit
+names.
+
+Attributes (`isolation`, `count`) are fixed by the creator; a joiner
+requesting something different joins anyway with a logged warning. If the
+slot's creation fell back to housekeeping, the slot is not persisted and each
+member degrades individually.
+
+Two canonical use cases:
+
+```yaml
+# VM profile: emulator in TS and vhost in FIFO/1 on the same single core
+emulator:
+  slot: housework
+  scheduler: OTHER
+vhost:
+  slot: housework
+  scheduler: FIFO
+  priority: 1
+```
+
+```bash
+# Share the core of eth0's IRQs (declared as slot=sv0 in
+# /etc/nic-irq-affinity.conf) below the FIFO/50 irq threads:
+seapath-run sv-proc slot:sv0 FIFO 10 -- /usr/bin/sv-consumer -i eth0
+```
+
+Anything may join a slot, including vCPUs — the logic is fully generic.
+Risky combinations are never refused, but they are logged and exported as
+`seapath_alloc_slot_warning_info` metrics:
+
+| Reason | Pattern |
+|--------|---------|
+| `equal_rt_priority` | two distinct actors with the same FIFO/RR priority — neither preempts the other, mutual starvation is possible |
+| `rt_priority_ge_irq` | a FIFO/RR member at priority ≥ 50 shares the slot with NIC IRQs (irq threads run FIFO/50) — interrupt handling can starve |
+| `vcpu_shared` | a vCPU shares the slot — preempting a guest CPU while its kernel holds a spinlock can stall the guest (RCU, soft lockups) |
+
 ### Fallback hierarchy
 
 When a requested level cannot be satisfied the allocator degrades gracefully rather than aborting the VM:
@@ -112,7 +167,10 @@ in order:
    with an empty body — all sub-keys filled from the built-in defaults below.
 2. **Isolation without scheduler**: if `isolation` is anything other than `none`
    and `scheduler` is not specified, `scheduler` defaults to `FIFO` (non-none
-   isolation implies RT intent).
+   isolation implies RT intent). A `slot` reference without an explicit
+   `isolation` implies `isolation: exclusive_logical` (a slot always has
+   isolated cores to share; `isolation: none` with a slot is a warning and the
+   slot is ignored).
 3. **RT scheduler without priority**: if `scheduler` is `FIFO` or `RR` and
    `priority` is not specified, `priority` defaults to `1` (minimum valid RT
    priority — avoids `chrt` failure).
@@ -202,6 +260,10 @@ ExecStopPost=-seapath-container-unpin %p
 
 `seapath-container-pin <service> <isolation> <scheduler> <priority>`
 
+`<isolation>` also accepts `slot:<name>[:<isolation>]` to join a named
+shared-core slot instead of consuming a dedicated core (same grammar as
+`seapath-run`).
+
 - Allocates one isolated core via the pool.
 - Writes `cpuset.cpus` at every level of the service cgroup tree (including
   Podman's `libpod-payload` sub-cgroup).
@@ -214,22 +276,26 @@ The service name may be given with or without the `.service` suffix.
 ### 3. NIC IRQ threads
 
 The `configure_nic_irq_affinity` role deploys a monitor daemon
-(`nic-irq-monitor.sh`) that pins NIC MSI-IRQ threads to isolated cores
-whenever a managed interface comes up. When `seapath-alloc` is installed, the
-daemon calls:
+(`nic-irq-monitor.sh`) that pins NIC MSI-IRQ threads to the CPU configured in
+`/etc/nic-irq-affinity.conf` whenever a managed interface comes up.
+
+An interface's value may be either a static CPU list, or `slot=<name>` — the
+daemon then resolves the CPU through:
 
 ```bash
-seapath-alloc suggest --count <queue_count>
+seapath-alloc slot <name>
 ```
 
-to obtain free isolated cores at that moment. If `seapath-alloc` is not
-installed or returns nothing, it falls back to the static CPU list from
-`/etc/nic-irq-affinity.conf`.
+which allocates the named slot from the isolated-core pool on first use and
+returns the same core(s) on every later call. The IRQs therefore land back on
+the same core after a link bounce, and any other actor referencing the slot
+name shares that core with them. If `seapath-alloc` is missing or the pool is
+exhausted, the interface's IRQs are left unpinned and a message is logged.
 
-`suggest` does not register a claim — it only reports which cores are currently
-free. NIC IRQ occupancy is tracked **passively**: the pool reads
-`/proc/irq/<n>/smp_affinity_list` on every invocation and treats any isolated
-core already pinned by an IRQ as occupied, with no explicit registration step.
+The slot registration only marks the cores busy; NIC IRQ occupancy itself is
+still tracked **passively**: the pool reads `/proc/irq/<n>/smp_affinity_list`
+on every invocation and treats any isolated core already pinned by an IRQ as
+occupied, with no explicit registration step.
 
 Only IRQs belonging to a physical NIC (enumerated via
 `/sys/class/net/*/device/msi_irqs/`) are counted. Kernel-managed MSI IRQs
@@ -247,6 +313,9 @@ For any binary that cannot be modified, use `seapath-run` as a wrapper:
 ```bash
 seapath-run <label> <isolation> <scheduler> <priority> -- <command> [args...]
 ```
+
+`<isolation>` also accepts `slot:<name>[:<isolation>]` to join a named
+shared-core slot (see [Shared-core slots](#shared-core-slots-colocation)).
 
 `seapath-run`:
 1. Allocates cores from the pool and registers the claim under `label`.
@@ -274,7 +343,18 @@ seapath-alloc status
 ```
 
 Prints a table of all currently occupied isolated cores and the actor holding
-each one (VM name, container service name, IRQ number, or claim label).
+each one (VM name, container service name, IRQ number, or claim label), plus
+the active slots with their members.
+
+Other subcommands:
+
+| Subcommand | Purpose |
+|------------|---------|
+| `claim --label <l> [--isolation ...] [--scheduler ...] [--priority N] [--slot NAME] [--target-pid PID] [--no-apply]` | Register a claim manually (what `seapath-container-pin` and `seapath-run` use internally) |
+| `release --label <l>` | Release a claim |
+| `slot <name> [--count N] [--isolation ...]` | Print the cores of a named shared-core slot, creating it on first use |
+| `spread [--dry-run]` | Move threads out of shared HT pairs into fully-free pairs (inverse of repacking compaction) |
+| `export` | Write the Prometheus textfile (run by the systemd timer) |
 
 ## Log output
 
@@ -309,11 +389,14 @@ Grafana (Dashboards → Import).  The dashboard shows:
 - **CPU Map** — one row per CPU with topology (isolated, HT pair, HT
   sibling), state, actor label, thread group, scheduler and priority;
   state column is colour-coded (green=free, blue=vm, orange=irq,
-  purple=claim, gray=housekeeping)
+  teal=quadlet, pink=run, purple=claim, dark red=reserved, gold=slot,
+  gray=housekeeping)
 - **VM Threads** — one row per QEMU thread with VM name, kernel comm,
   CPU(s), scheduler and RT priority
 - **NIC IRQs** — interface, IRQ range, CPU
 - **Claims** — label, CPU, scheduler, priority, PID
+- **Slots** — one row per slot member (slot, kind, label, group, CPU,
+  scheduler, priority) + a table of active colocation warnings
 - **Allocation Failures** — rate graph + last-fallback context panel
 
 ### Exported metrics
@@ -328,6 +411,8 @@ Grafana (Dashboards → Import).  The dashboard shows:
 | `seapath_alloc_actors{type}` | gauge | Active actor count by type (`vm`, `irq`, `claim`) |
 | `seapath_alloc_occupied_cpus{type}` | gauge | Occupied isolated CPUs by actor type |
 | `seapath_alloc_vm_threads{vm}` | gauge | Pinned thread count per running VM |
+| `seapath_alloc_slots` | gauge | Active named shared-core slots |
+| `seapath_alloc_slot_members{slot}` | gauge | Actors currently sharing each slot's cores |
 | `seapath_alloc_active_fallbacks{severity}` | gauge | Actors **currently** running degraded: `severity=hard` (housekeeping, no RT isolation) or `severity=soft` (exclusive_logical instead of physical, RT preserved); auto-expires when the process exits |
 | `seapath_alloc_active_fallback_info{label,group,requested,severity}` | gauge | One series per currently degraded actor (info metric, value=1) |
 | `seapath_alloc_allocation_fallbacks_total` | counter | Cumulative degradation events (hard + soft) since last reset |
@@ -339,10 +424,12 @@ Grafana (Dashboards → Import).  The dashboard shows:
 
 | Metric | Type | Description |
 |--------|------|-------------|
-| `seapath_alloc_cpu_detail{cpu,isolated,ht_pair,ht_sibling,state,label,group,scheduler,priority}` | gauge | One series per CPU — full topology and occupancy context; `state` ∈ `free\|vm\|irq\|claim\|housekeeping` |
+| `seapath_alloc_cpu_detail{cpu,isolated,ht_pair,ht_sibling,state,slot,label,group,scheduler,priority}` | gauge | One series per CPU — full topology and occupancy context; `state` ∈ `free\|vm\|irq\|claim\|reserved\|slot\|housekeeping`; `slot` names the shared-core slot the CPU belongs to (empty otherwise) |
 | `seapath_alloc_vm_thread_info{vm,thread,cpu,scheduler,priority}` | gauge | One series per QEMU thread pinned on isolated cores |
 | `seapath_alloc_irq_info{iface,irq_range,cpu}` | gauge | One series per NIC/IRQ group pinned on isolated cores |
 | `seapath_alloc_claim_info{label,cpu,scheduler,priority,pid}` | gauge | One series per active claim (container or seapath-run process) |
+| `seapath_alloc_slot_member_info{slot,kind,label,group,cpu,scheduler,priority}` | gauge | One series per slot member — the full arbitration picture of each shared core |
+| `seapath_alloc_slot_warning_info{slot,reason}` | gauge | One series per risky colocation pattern (see [Shared-core slots](#shared-core-slots-colocation)) |
 
 Fallback state persists across reboots in
 `/var/lib/seapath/alloc/fallbacks.json`.
@@ -383,7 +470,8 @@ groups:
           summary: "RT allocation fallback on {{ $labels.instance }}"
           description: >
             At least one VM or process could not get isolated cores and is
-            running without RT guarantees. Check hook.log for details.
+            running without RT guarantees. Check /var/log/seapath/alloc.log
+            for details.
 
       - alert: SeapathAllocMetricsStale
         expr: time() - seapath_alloc_scrape_timestamp_seconds > 120
