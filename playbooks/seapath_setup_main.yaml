@@ -18,28 +18,28 @@
   roles:
     - detect_seapath_distro
 
-- name: Import seapath_setup_prerequiscentos playbook
-  import_playbook: seapath_setup_prerequiscentos.yaml
+- name: Import seapath_setup_prerequisitescentos playbook
+  import_playbook: seapath_setup_prerequisitescentos.yaml
   when: seapath_distro == "CentOS"
 
-- name: Import seapath_setup_prerequisoraclelinux playbook
-  import_playbook: seapath_setup_prerequisoraclelinux.yaml
+- name: Import seapath_setup_prerequisitesoraclelinux playbook
+  import_playbook: seapath_setup_prerequisitesoraclelinux.yaml
   when: seapath_distro == "OracleLinux"
 
-- name: Import seapath_setup_prerequisdebian playbook
-  import_playbook: seapath_setup_prerequisdebian.yaml
+- name: Import seapath_setup_prerequisitesdebian playbook
+  import_playbook: seapath_setup_prerequisitesdebian.yaml
   when: seapath_distro == "Debian"
 
-- name: Import seapath_setup_prerequissles playbook
-  import_playbook: seapath_setup_prerequissles.yaml
+- name: Import seapath_setup_prerequisitessles playbook
+  import_playbook: seapath_setup_prerequisitessles.yaml
   when: seapath_distro == "SLES"
 
 - name: Import seapath_setup_cockpit_plugins playbook
   import_playbook: seapath_setup_cockpit_plugins.yaml
   when: seapath_distro != "Yocto"
 
-- name: Import seapath_setup_prerequisyocto playbook
-  import_playbook: seapath_setup_prerequisyocto.yaml
+- name: Import seapath_setup_prerequisitesyocto playbook
+  import_playbook: seapath_setup_prerequisitesyocto.yaml
   when: seapath_distro == "Yocto"
 
 - name: Import seapath_setup_network playbook
