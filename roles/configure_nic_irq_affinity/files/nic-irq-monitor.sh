@@ -8,10 +8,28 @@ CONF=/etc/nic-irq-affinity.conf
 # Pin all IRQs for an interface to the CPU defined in the config file.
 # seapath-alloc tracks NIC IRQ occupancy passively by reading
 # /proc/irq/*/smp_affinity_list, so no claim registration is needed here.
+#
+# A value of "slot=<name>" resolves the CPU through a named seapath-alloc
+# shared-core slot instead: the slot is created on first use and returned
+# as-is afterwards, so the IRQs land back on the same core after a link
+# bounce and stay colocated with the other actors referencing the slot.
 apply() {
     iface=$1
     cpu=$(grep "^${iface} " "$CONF" | cut -d' ' -f2-)
     [ -n "$cpu" ] || return
+    case "$cpu" in
+        slot=*)
+            name=${cpu#slot=}
+            cpu=""
+            command -v seapath-alloc >/dev/null 2>&1 && \
+                cpu=$(seapath-alloc slot "$name")
+            if [ -z "$cpu" ]; then
+                logger -t nic-irq-monitor \
+                    "slot $name unavailable, $iface IRQs left unpinned"
+                return
+            fi
+            ;;
+    esac
     /usr/local/bin/set_nic_irq_affinity.sh "$iface" "$cpu"
     logger -t nic-irq-monitor "pinned $iface IRQs to cpu $cpu"
 }
