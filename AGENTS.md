@@ -1,5 +1,63 @@
 # SEAPATH Ansible — Agent Quick Reference
 
+## What is SEAPATH
+
+SEAPATH (LF Energy) is a real-time virtualization platform for **electrical
+substation automation**: it runs protection/automation functions (IEC 61850 —
+Sampled Values, GOOSE) as VMs and containers on standard servers, with hard
+latency guarantees. This repo is the **configuration layer**: Ansible playbooks
+that turn freshly imaged machines (Debian ISO or Yocto image, built in sibling
+repos) into standalone hypervisors or a highly-available cluster.
+
+## System architecture (mental model)
+
+A SEAPATH machine is a Linux KVM hypervisor with:
+
+- **libvirt/QEMU** guests, disks on **Ceph RBD** in cluster mode (deployed via
+  `cephadm`), local disks in standalone mode.
+- **Open vSwitch** networking (+ optional SR-IOV) for guest traffic; a separate
+  administration network.
+- **Real-time tuning**: isolated CPUs (`isolcpus`), tuned profiles, NIC IRQ
+  affinity pinning, dynamic per-VM CPU pinning (`deploy_seapath_alloc`).
+  Latency is validated with cyclictest/cukinia in CI.
+- **PTP time sync** (timemaster/linuxptp), propagated to guests.
+- Cluster mode: **3+ nodes** with **Corosync/Pacemaker** HA; VMs are cluster
+  resources managed through **vm_manager** (submodule, Python CLI).
+- Observability/admin: Cockpit, SNMP, syslog-ng, Prometheus node_exporter
+  textfile collectors.
+
+Inventory groups you will meet everywhere: `hypervisors`, `cluster_machines`,
+`standalone_machine`, `observers`, `mons`/`osds`/`clients` (Ceph), `VMs`.
+
+## Role map (roles/ — ~60 roles, grouped by prefix)
+
+| Prefix / role | Purpose |
+|---|---|
+| `network_*` | OVS bridges, systemd-networkd/netplan, cluster network, SR-IOV |
+| `cephadm*`, `ceph_*` | Ceph deployment and expansion |
+| `configure_*` | Host config: hypervisor RT tuning, libvirt, HA, hardening, NIC IRQ affinity |
+| `deploy_*` | Payloads: VMs, vm_manager, seapath_alloc (CPU pinning), cukinia tests, Cockpit |
+| `ci_*` | CI-only helpers (snapshots, test images) |
+| `timemaster`, `snmp`, `syslog_ng_client`, `iptables` | Time sync, monitoring, logging, firewall |
+| `update`, `backup_restore`, `vmmgrapi` | Lifecycle: updates, backup, VM manager REST API |
+
+Key playbooks: `seapath_setup_main.yaml` (full setup),
+`cluster_setup_{cephadm,ha,libvirt}.yaml`, `deploy_vms_{cluster,standalone}.yaml`,
+`replace_machine_*.yaml` (node replacement), `seapath_update_*.yaml`.
+
+## Domain invariants (read before hunting bugs)
+
+- **Real time is the product.** Anything touching isolated CPUs, tuned, IRQ
+  affinity, CPU pinning or PTP can silently break latency guarantees. The RT
+  invariants of dynamic pinning are documented in
+  `roles/deploy_seapath_alloc/ARCHITECTURE.md` — read it before touching that
+  role; it also has a pytest suite (see its README).
+- **Playbooks re-run on live substations.** Idempotence matters: unnecessary
+  `changed` states can trigger handlers that restart services under live VMs.
+- **A failing host aborts everything** (`any_errors_fatal = True`) and facts
+  are **not** gathered unless a play asks (`gathering = explicit`).
+- Licensing: SPDX headers, Apache-2.0 for code, CC-BY-4.0 for docs.
+
 ## Development Environment
 
 - **Primary toolchain**: `cqfd` (Docker wrapper). All commands should be prefixed with `cqfd run` unless running natively.
