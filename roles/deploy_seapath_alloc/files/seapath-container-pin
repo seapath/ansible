@@ -13,6 +13,8 @@ Usage:
     seapath-container-pin <service-name> <isolation> <scheduler> <priority>
 
     isolation   exclusive_logical | exclusive_physical | none
+                | slot:<name>[:<isolation>]  — join the named shared-core
+                slot (created on first use, default exclusive_logical)
     scheduler   FIFO | RR | OTHER
     priority    RT priority (0 for OTHER)
 
@@ -26,7 +28,7 @@ import sys
 sys.path.insert(0, '/usr/lib/seapath')
 
 from seapath_alloc.cgroup import apply_cpuset, chrt_procs, cgroup_procs, cgroup_root, taskset_procs
-from seapath_alloc.claim import claim
+from seapath_alloc.claim import claim, parse_isolation_arg
 from seapath_alloc.logging_setup import setup_logging
 from seapath_alloc.topology import format_cpu_list
 
@@ -57,7 +59,11 @@ def main():
         name = name[:-8]
     service = f"{name}.service"
 
-    isolation = sys.argv[2]
+    try:
+        isolation, slot = parse_isolation_arg(sys.argv[2])
+    except ValueError as exc:
+        sys.stderr.write(f"error: {exc}\n")
+        sys.exit(1)
     scheduler = sys.argv[3].upper()
     priority = int(sys.argv[4])
 
@@ -85,6 +91,7 @@ def main():
         target_pid=main_pid,
         no_apply=True,
         kind="quadlet",
+        slot=slot,
     )
 
     cpu_str = format_cpu_list(cores)

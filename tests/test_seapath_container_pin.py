@@ -108,6 +108,13 @@ def test_main_rejects_a_wrong_argument_count(harness, capsys):
     assert "usage:" in capsys.readouterr().err
 
 
+def test_main_rejects_an_empty_slot_name(harness, capsys):
+    record = harness(["sv.service", "slot:", "FIFO", "80"])
+
+    assert record["exit"] == 1
+    assert "empty slot name" in capsys.readouterr().err
+
+
 @pytest.mark.parametrize("name", ["sv", "sv.service"])
 def test_main_accepts_the_service_name_with_or_without_its_suffix(
         harness, name, capsys):
@@ -121,8 +128,7 @@ def test_main_accepts_the_service_name_with_or_without_its_suffix(
 # --- claim ownership --------------------------------------------------------
 
 def test_main_claims_on_behalf_of_the_container_main_pid(harness):
-    record = harness(["sv.service", "exclusive_logical", "FIFO", "80"],
-                     main_pid=4242)
+    record = harness(["sv.service", "slot:sv0", "FIFO", "80"], main_pid=4242)
 
     assert record["claim"] == {
         "label": "sv",
@@ -135,6 +141,7 @@ def test_main_claims_on_behalf_of_the_container_main_pid(harness):
         # The cgroup write below replaces the per-process taskset.
         "no_apply": True,
         "kind": "quadlet",
+        "slot": "sv0",
     }
 
 

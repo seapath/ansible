@@ -332,8 +332,9 @@ class _Topology:
 
 
 class FakePool:
-    def __init__(self, claims=()):
+    def __init__(self, claims=(), slots=()):
         self._claims = list(claims)
+        self._slots = list(slots)
 
     def __enter__(self):
         return self
@@ -353,6 +354,8 @@ class FakePool:
     def active_reserved_siblings(self):
         return [(5, 4)]
 
+    def slots(self):
+        return self._slots
 
 
 def test_collect_reports_the_pool_state(node, monkeypatch):
@@ -364,6 +367,7 @@ def test_collect_reports_the_pool_state(node, monkeypatch):
     assert data["isolated"] == "4-11"
     assert data["free_logical"] == "8-11"
     assert data["free_physical"] == "8,10"
+    assert data["reserved_siblings"] == [(5, 4)]
 
 
 def test_collect_merges_vm_irq_and_claim_actors(node, monkeypatch):
@@ -371,8 +375,8 @@ def test_collect_merges_vm_irq_and_claim_actors(node, monkeypatch):
     monkeypatch.setattr(
         status_mod, "CorePool",
         lambda **kw: FakePool(claims=[{
-            "label": "sv", "pid": 4242, "cores": [7],
-            "scheduler": "FIFO", "priority": 80,
+            "label": "sv", "pid": 4242, "cores": [7], "kind": "process",
+            "scheduler": "FIFO", "priority": 80, "slot": "",
         }]),
     )
 
@@ -381,8 +385,47 @@ def test_collect_merges_vm_irq_and_claim_actors(node, monkeypatch):
     by_type = {a["type"]: a for a in data["actors"]}
     assert by_type["vm"]["label"] == "vm0"
     assert by_type["irq"]["label"] == "eno1/181"
-    assert by_type["claim"]["label"] == "sv"
-    assert by_type["claim"]["cpus"] == "7"
-    assert by_type["claim"]["pid"] == 4242
+    assert by_type["process"]["label"] == "sv"
+    assert by_type["process"]["cpus"] == "7"
+    assert by_type["process"]["pid"] == 4242
 
 
+def test_collect_labels_a_claim_with_no_kind(node, monkeypatch):
+    proc, sys_path = node
+    monkeypatch.setattr(
+        status_mod, "CorePool",
+        lambda **kw: FakePool(claims=[{"label": "sv", "cores": [7]}]),
+    )
+
+    data = collect(proc_path=proc, sys_path=sys_path)
+
+    claim_actor = [a for a in data["actors"] if a["label"] == "sv"][0]
+    assert claim_actor["type"] == "claim"
+    assert claim_actor["pid"] is None
+
+
+def test_collect_attaches_actors_to_their_slot(node, monkeypatch):
+    proc, sys_path = node
+    monkeypatch.setattr(
+        status_mod, "CorePool",
+        lambda **kw: FakePool(
+            claims=[{"label": "sv", "cores": [4], "kind": "process"}],
+            slots=[{"name": "rt", "cores": [4], "isolation": "shared"}],
+        ),
+    )
+
+    data = collect(proc_path=proc, sys_path=sys_path)
+
+    slot = data["slots"][0]
+    assert slot["name"] == "rt"
+    assert slot["cores"] == "4"
+    assert {m["kind"] for m in slot["members"]} == {"vm", "process"}
+
+
+def test_collect_on_an_idle_node(node, monkeypatch):
+    proc, sys_path = node
+    monkeypatch.setattr(status_mod, "CorePool", lambda **kw: FakePool())
+
+    data = collect(proc_path=proc, sys_path=sys_path)
+
+    assert data["slots"] == []

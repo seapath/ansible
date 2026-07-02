@@ -16,7 +16,7 @@ import pytest
 from seapath_alloc import scheduler as scheduler_mod
 from seapath_alloc.allocator import AllocationStrategy
 from seapath_alloc.pool import CorePool
-from seapath_alloc.scheduler import allocate_cores
+from seapath_alloc.scheduler import allocate_cores, declare_slot
 from seapath_alloc.topology import Topology
 from .conftest import make_cpu_topology
 
@@ -48,7 +48,7 @@ def pool_at(tmp_path, monkeypatch):
 
 @pytest.fixture
 def fallbacks(monkeypatch):
-    """Capture record_fallback calls instead of writing the state files."""
+    """Capture record_fallback calls instead of writing state files."""
     recorded = []
     monkeypatch.setattr(
         scheduler_mod, "record_fallback",
@@ -69,7 +69,7 @@ def spec(name="claim", isolation="exclusive_logical", **extra):
 # --- PID exclusion --------------------------------------------------------
 
 
-def test_allocate_cores_excludes_the_callers_own_pids(pool_at):
+def test_allocate_cores_excludes_the_callers_own_pids(pool_at, fallbacks):
     pool, topo = pool_at()
     excluded = []
     pool.exclude_pids = excluded.append
@@ -79,7 +79,9 @@ def test_allocate_cores_excludes_the_callers_own_pids(pool_at):
     assert excluded == [{4242}]
 
 
-def test_allocate_cores_without_exclusions_leaves_the_pool_alone(pool_at):
+def test_allocate_cores_without_exclusions_leaves_the_pool_alone(
+    pool_at, fallbacks
+):
     pool, topo = pool_at()
     called = []
     pool.exclude_pids = called.append
@@ -92,7 +94,7 @@ def test_allocate_cores_without_exclusions_leaves_the_pool_alone(pool_at):
 # --- reserved siblings ----------------------------------------------------
 
 
-def test_allocate_cores_registers_the_idle_ht_sibling(pool_at):
+def test_allocate_cores_registers_the_idle_ht_sibling(pool_at, fallbacks):
     pool, topo = pool_at()
     registered = []
     pool.add_reserved_sibling = lambda idle, active: registered.append(
@@ -106,6 +108,50 @@ def test_allocate_cores_registers_the_idle_ht_sibling(pool_at):
     assert result.allocations[0].cpus == [4]
     # 5 is the HT partner of 4: blocked, so nothing else lands on the pair.
     assert registered == [(5, 4)]
+
+
+# --- fallback reporting ---------------------------------------------------
+
+
+def test_allocate_cores_reports_a_hard_fallback(pool_at, fallbacks, caplog):
+    # No isolated cores at all: everything lands on housekeeping.
+    pool, topo = pool_at(isolated="")
+
+    with caplog.at_level("ERROR", logger=scheduler_mod.log.name):
+        allocate_cores(pool, [spec(name="vcpu/0")], topo, label="VM vm0",
+                       pid=4242)
+
+    assert fallbacks == [("VM vm0", "vcpu/0", "exclusive_logical", 4242, "hard")]
+    assert "no RT isolation, running on housekeeping cores" in caplog.text
+
+
+def test_allocate_cores_reports_a_soft_fallback(pool_at, fallbacks, caplog):
+    # cpu6 is isolated but cpu7 is not, so 6 is a free logical core that is
+    # not part of any free pair: the second exclusive_physical spec keeps its
+    # RT isolation but loses the HT-pair guarantee.
+    pool, topo = pool_at(isolated="4-6")
+
+    with caplog.at_level("WARNING", logger=scheduler_mod.log.name):
+        allocate_cores(
+            pool,
+            [spec(name="a", isolation="exclusive_physical"),
+             spec(name="b", isolation="exclusive_physical")],
+            topo, label="VM vm0", pid=4242,
+        )
+
+    severities = [f[4] for f in fallbacks]
+    assert "soft" in severities
+    assert "HT-pair guarantee lost" in caplog.text
+
+
+def test_allocate_cores_reports_nothing_when_everything_fits(
+    pool_at, fallbacks
+):
+    pool, topo = pool_at()
+
+    allocate_cores(pool, [spec()], topo, label="t")
+
+    assert fallbacks == []
 
 
 # --- repacking ------------------------------------------------------------
@@ -169,7 +215,7 @@ def test_repacking_warns_when_nothing_can_be_moved(pool_at, fallbacks, repack,
 
 
 def test_repacking_does_nothing_when_there_are_enough_pairs(
-    pool_at, repack
+    pool_at, fallbacks, repack
 ):
     pool, topo = pool_at(strategy=AllocationStrategy.REPACKING)
     state = repack(moves=["a move"])
@@ -181,7 +227,7 @@ def test_repacking_does_nothing_when_there_are_enough_pairs(
 
 
 def test_repacking_ignores_specs_that_do_not_need_a_pair(
-    pool_at, repack
+    pool_at, fallbacks, repack
 ):
     pool, topo = pool_at(strategy=AllocationStrategy.REPACKING, isolated="4-5")
     state = repack(moves=[])
@@ -192,7 +238,41 @@ def test_repacking_ignores_specs_that_do_not_need_a_pair(
     assert state["asked"] == []
 
 
-def test_repacking_honours_the_spec_count(pool_at, repack):
+def test_repacking_counts_a_new_slot_once(pool_at, fallbacks, repack):
+    """
+    Several specs joining the same new slot consume its pair once, so the
+    shortfall must not be inflated by the number of joiners.
+    """
+    pool, topo = pool_at(strategy=AllocationStrategy.REPACKING, isolated="4-5")
+    state = repack(moves=[])
+
+    allocate_cores(
+        pool,
+        [spec(name="a", isolation="exclusive_physical", slot="rt"),
+         spec(name="b", isolation="exclusive_physical", slot="rt"),
+         spec(name="c", isolation="exclusive_physical", slot="rt")],
+        topo, label="t",
+    )
+
+    # One pair needed for the slot, one free: no shortfall at all.
+    assert state["asked"] == []
+
+
+def test_repacking_ignores_specs_joining_an_existing_slot(
+    pool_at, fallbacks, repack
+):
+    pool, topo = pool_at(strategy=AllocationStrategy.REPACKING, isolated="4-5")
+    pool.add_slot("rt", [4], "exclusive_physical")
+    state = repack(moves=[])
+
+    allocate_cores(
+        pool, [spec(isolation="exclusive_physical", slot="rt")], topo, label="t"
+    )
+
+    assert state["asked"] == []
+
+
+def test_repacking_honours_the_spec_count(pool_at, fallbacks, repack):
     pool, topo = pool_at(strategy=AllocationStrategy.REPACKING, isolated="4-5")
     state = repack(moves=[])
 
@@ -203,46 +283,16 @@ def test_repacking_honours_the_spec_count(pool_at, repack):
     assert state["asked"] == [2]
 
 
-# --- degradation reporting ------------------------------------------------
+# --- declare_slot ---------------------------------------------------------
 
 
-def test_allocate_cores_reports_a_hard_fallback(pool_at, fallbacks, caplog):
-    # No isolated cores at all: everything lands on housekeeping.
-    pool, topo = pool_at(isolated="")
-
-    with caplog.at_level("ERROR", logger=scheduler_mod.log.name):
-        allocate_cores(pool, [spec(name="vcpu/0")], topo, label="VM vm0",
-                       pid=4242)
-
-    assert "no RT isolation, running on housekeeping cores" in caplog.text
-    assert fallbacks == [("VM vm0", "vcpu/0", "exclusive_logical", 4242, "hard")]
-
-
-def test_allocate_cores_reports_a_soft_fallback(pool_at, fallbacks, caplog):
-    # cpu6 is isolated but cpu7 is not, so 6 is a free logical core that is
-    # not part of any free pair: the second exclusive_physical spec keeps its
-    # RT isolation but loses the HT-pair guarantee.
-    pool, topo = pool_at(isolated="4-6")
-
-    with caplog.at_level("WARNING", logger=scheduler_mod.log.name):
-        allocate_cores(
-            pool,
-            [spec(name="a", isolation="exclusive_physical"),
-             spec(name="b", isolation="exclusive_physical")],
-            topo, label="VM vm0",
-        )
-
-    assert "HT-pair guarantee lost" in caplog.text
-    assert "soft" in [f[4] for f in fallbacks]
-
-
-def test_allocate_cores_says_nothing_when_everything_fits(
-    pool_at, fallbacks, caplog
-):
+def test_declare_slot_warns_about_non_isolated_cores(pool_at, caplog):
     pool, topo = pool_at()
 
     with caplog.at_level("WARNING", logger=scheduler_mod.log.name):
-        allocate_cores(pool, [spec()], topo, label="t")
+        cores = declare_slot(pool, [2, 4], "irq-slot", topo)
 
-    assert caplog.text == ""
-    assert fallbacks == []
+    assert cores == [2, 4]
+    assert "cores [2] are not isolated" in caplog.text
+    # Declared anyway: the operator is the authority.
+    assert [s["name"] for s in pool.slots()] == ["irq-slot"]

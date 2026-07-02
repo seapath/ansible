@@ -13,6 +13,8 @@ from seapath_alloc.exporter import (
     _build_claim_info,
     _build_cpu_detail,
     _build_irq_info,
+    _build_slot_member_info,
+    _build_slot_warning_info,
     _build_vm_thread_info,
     _load_active,
     _load_state,
@@ -47,7 +49,7 @@ def state_files(tmp_path, monkeypatch):
     return state, active
 
 
-def data(actors=(), reserved=(), free_logical="8-11",
+def data(actors=(), slots=(), reserved=(), free_logical="8-11",
          free_physical="8,10"):
     return {
         "isolated": "4-11",
@@ -55,6 +57,7 @@ def data(actors=(), reserved=(), free_logical="8-11",
         "free_physical": free_physical,
         "actors": list(actors),
         "reserved_siblings": list(reserved),
+        "slots": list(slots),
     }
 
 
@@ -245,6 +248,32 @@ def test_claim_info_covers_every_non_vm_non_irq_actor():
     }, 1)]
 
 
+def test_slot_member_info_has_one_sample_per_member():
+    slots = [{
+        "name": "rt", "cores": "10", "isolation": "shared",
+        "members": [{"kind": "vm", "label": "vm0", "group": "CPU 0/KVM",
+                     "scheduler": "FIFO", "priority": 80, "cpus": "10"}],
+        "warnings": [],
+    }]
+
+    samples = _build_slot_member_info(data(slots=slots))
+
+    assert samples == [({
+        "slot": "rt", "kind": "vm", "label": "vm0", "group": "CPU 0/KVM",
+        "scheduler": "FIFO", "priority": "80", "cpu": "10",
+    }, 1)]
+
+
+def test_slot_warning_info_has_one_sample_per_reason():
+    slots = [{"name": "rt", "cores": "10", "members": [],
+              "warnings": ["equal_rt_priority", "vcpu_shared"]}]
+
+    samples = _build_slot_warning_info(data(slots=slots))
+
+    assert [s[0]["reason"] for s in samples] == ["equal_rt_priority",
+                                                 "vcpu_shared"]
+
+
 def test_occupied_cpu_counts_sums_vm_threads_and_other_actors():
     samples = _occupied_cpu_counts(data(actors=[VM, IRQ, CLAIM]))
 
@@ -312,6 +341,25 @@ def test_generate_counts_actors_by_type(node):
     assert out["seapath_alloc_vm_threads"] == [
         'seapath_alloc_vm_threads{vm="vm0"} 2'
     ]
+
+
+def test_generate_reports_slots_and_their_members(node):
+    slots = [{
+        "name": "rt", "cores": "10", "isolation": "shared",
+        "members": [{"kind": "vm", "label": "vm0", "group": "CPU 0/KVM",
+                     "scheduler": "FIFO", "priority": 80, "cpus": "10"}],
+        "warnings": ["vcpu_shared"],
+    }]
+    node(data(slots=slots))
+
+    out = families(generate())
+
+    assert out["seapath_alloc_slots"] == ["seapath_alloc_slots 1"]
+    assert out["seapath_alloc_slot_members"] == [
+        'seapath_alloc_slot_members{slot="rt"} 1'
+    ]
+    assert "seapath_alloc_slot_member_info" in out
+    assert 'reason="vcpu_shared"' in out["seapath_alloc_slot_warning_info"][0]
 
 
 def test_generate_always_stamps_the_scrape_time(node):

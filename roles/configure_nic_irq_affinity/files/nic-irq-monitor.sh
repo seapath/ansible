@@ -54,10 +54,30 @@ set_affinity() {
 #
 # seapath-alloc tracks NIC IRQ occupancy passively by reading
 # /proc/irq/*/smp_affinity_list, so no claim registration is needed here.
+#
+# A value of "slot=<name>:<cpu>" behaves like the plain static CPU list —
+# the CPU comes from the config (i.e. the inventory) and is pinned
+# unconditionally — but additionally informs seapath-alloc that a slot
+# exists on that core, so other actors can join it by name later.
+# Pinning never depends on seapath-alloc.
 apply() {
     iface=$1
     cpu=$(grep "^${iface} " "$CONF" | cut -d' ' -f2-)
     [ -n "$cpu" ] || return
+    case "$cpu" in
+        slot=*:*)
+            name=${cpu#slot=}
+            cpu=${name#*:}
+            name=${name%%:*}
+            command -v seapath-alloc >/dev/null 2>&1 && \
+                seapath-alloc slot "$name" --cpus "$cpu" >/dev/null
+            ;;
+        slot=*)
+            logger -t nic-irq-monitor \
+                "invalid '$cpu' for $iface: expected slot=<name>:<cpu>"
+            return
+            ;;
+    esac
     set_affinity "$iface" "$cpu"
     logger -t nic-irq-monitor "pinned $iface IRQs to cpu $cpu"
 }

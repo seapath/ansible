@@ -126,7 +126,8 @@ def _build_cpu_detail(data: dict, topo: Topology) -> list:
     topology (isolated, ht_pair, ht_sibling) + occupancy (state, actor,
     thread group, scheduler, priority).
 
-    state values: free | vm | irq | quadlet | run | claim | reserved | housekeeping
+    state values: free | vm | irq | quadlet | run | claim | reserved | slot
+    | irq_slot | housekeeping
     """
     isolated = set(topo.isolated_cpus())
 
@@ -188,11 +189,44 @@ def _build_cpu_detail(data: dict, topo: Topology) -> list:
                     "priority": str(actor.get("priority", 0)),
                 }
 
+    # A slot core hosts several actors but cpu_detail has one series per CPU,
+    # so a single label/group pair cannot represent it. Slot cores are
+    # therefore exposed as their own state with the member list summarised in
+    # the `members` label; the per-member series live in
+    # seapath_alloc_slot_member_info.
+    # (name, member_count, joined_members, state); slots hosting NIC IRQs get
+    # their own state so the CPU map can single them out.
+    slot_by_cpu: dict = {}
+    for slot in data.get("slots", []):
+        members = slot.get("members", [])
+        parts = []
+        for m in members:
+            sched = m.get("scheduler", "")
+            prio = m.get("priority", 0)
+            sched_str = f" {sched}/{prio}" if sched else ""
+            parts.append(f"{m['label']}/{m['group']}{sched_str}")
+        slot_state = ("irq_slot"
+                      if any(m.get("kind") == "irq" for m in members)
+                      else "slot")
+        info = (slot["name"], len(parts), ", ".join(parts), slot_state)
+        for cpu in parse_cpu_list(slot["cores"]):
+            slot_by_cpu[cpu] = info
+
     samples = []
     for cpu in topo.online_cpus():
         is_isolated = cpu in isolated
         occ = cpu_occ.get(cpu)
-        if occ:
+        slot_info = slot_by_cpu.get(cpu)
+        if slot_info:
+            name, count, joined, state = slot_info
+            occ = {
+                "state": state,
+                "label": name,
+                "group": "slot",
+                "scheduler": "",
+                "priority": "0",
+            }
+        elif occ:
             state = occ["state"]
         elif is_isolated:
             state = "free"
@@ -204,6 +238,9 @@ def _build_cpu_detail(data: dict, topo: Topology) -> list:
             "ht_pair":   str(pair_idx.get(cpu, 0)),
             "ht_sibling": str(sibling_map.get(cpu, cpu)),
             "state":     state,
+            "slot":      slot_info[0] if slot_info else "",
+            "member_count": str(slot_info[1]) if slot_info else "0",
+            "members":   slot_info[2] if slot_info else "",
             "label":     occ["label"]     if occ else "",
             "group":     occ["group"]     if occ else "",
             "scheduler": occ["scheduler"] if occ else "",
@@ -254,6 +291,33 @@ def _build_claim_info(data: dict) -> list:
             "pid":       str(actor.get("pid", "")),
         }, 1)
         for actor in data["actors"] if actor["type"] not in ("vm", "irq")
+    ]
+
+
+def _build_slot_member_info(data: dict) -> list:
+    """One sample per slot member with slot, label, group, kind, scheduler,
+    priority, cpu."""
+    samples = []
+    for slot in data.get("slots", []):
+        for m in slot["members"]:
+            samples.append(({
+                "slot":      slot["name"],
+                "kind":      m["kind"],
+                "label":     m["label"],
+                "group":     m["group"],
+                "scheduler": m.get("scheduler", ""),
+                "priority":  str(m.get("priority", 0)),
+                "cpu":       m.get("cpus", ""),
+            }, 1))
+    return samples
+
+
+def _build_slot_warning_info(data: dict) -> list:
+    """One sample per risky colocation pattern detected on a slot."""
+    return [
+        ({"slot": slot["name"], "reason": reason}, 1)
+        for slot in data.get("slots", [])
+        for reason in slot.get("warnings", [])
     ]
 
 
@@ -326,15 +390,52 @@ def generate() -> str:
             [({"vm": a["label"]}, len(a.get("threads", [])))
              for a in data["actors"] if a["type"] == "vm"])
 
+    # --- Shared-core slots ------------------------------------------------------
+    slots = data.get("slots", [])
+    _metric(buf,
+            "seapath_alloc_slots",
+            "Number of active named shared-core slots.",
+            "gauge",
+            [({}, len(slots))])
+
+    _metric(buf,
+            "seapath_alloc_slot_members",
+            "Number of actors currently sharing each slot's cores.",
+            "gauge",
+            [({"slot": s["name"]}, len(s["members"])) for s in slots])
+
+    _metric(buf,
+            "seapath_alloc_slot_member_info",
+            "One series per slot member (info metric)."
+            " Actors sharing a slot's cores are arbitrated by their"
+            " scheduler/priority.",
+            "gauge",
+            _build_slot_member_info(data))
+
+    _metric(buf,
+            "seapath_alloc_slot_warning_info",
+            "One series per risky colocation pattern detected on a slot."
+            " reason: equal_rt_priority (mutual starvation possible)"
+            " | rt_priority_ge_irq (member may starve FIFO/50 irq threads)"
+            " | vcpu_shared (vCPU preemption can stall the guest kernel).",
+            "gauge",
+            _build_slot_warning_info(data))
+
     # --- Detailed per-CPU / per-actor metrics ---------------------------------
     _metric(buf,
             "seapath_alloc_cpu_detail",
             "Per-CPU detail: topology (isolated, ht_pair, ht_sibling) and"
             " current occupancy (state, actor label, thread group,"
-            " scheduler, priority)."
-            " state: free|vm|irq|quadlet|run|claim|reserved|housekeeping."
+            " scheduler, priority, slot, member_count, members)."
+            " state:"
+            " free|vm|irq|quadlet|run|claim|reserved|slot|irq_slot|housekeeping."
             " reserved=idle HT sibling of an exclusive_physical allocation"
-            " (label=active sibling CPU).",
+            " (label=active sibling CPU)."
+            " slot=core belonging to a named shared-core slot; several actors"
+            " share it, so label names the slot and the colocated actors are"
+            " summarised in members (one series per member in"
+            " seapath_alloc_slot_member_info)."
+            " irq_slot=slot whose members include NIC IRQs.",
             "gauge",
             _build_cpu_detail(data, topo))
 
