@@ -11,8 +11,32 @@ permissions:
   checks: write
 
 jobs:
-  dummy:
-    runs-on: "runner-SFL"
-    steps:
-      - name: Dummy echo
-        run: echo "Kickstart placeholder"
+  call-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Advantech ECU 579 Standalone
+            hyp-inventories: >-
+              --inventory inventories_private/ci_sles_standalone.yaml
+            vms-inventories: >-
+              --inventory inventories_private/ci_sles_vms.yaml
+    uses: ./.github/workflows/_tests.yml
+    name: Run tests on ${{ matrix.name }}
+    with:
+      seapath-flavor: "SLES ${{ matrix.name }}"
+      compliance_matrices_folder: debian
+      runner-label: "runner-SFL"
+      inventories-repository: "git@github.com:seapath-ci/ci-seapath-sles-inventories.git"
+      hyp-inventories: ${{ matrix.hyp-inventories }}
+      hyp-configure-playbooks: >-
+        playbooks/ci_standalone_setup.yaml
+        playbooks/seapath_setup_hardening.yaml
+      hyp-test-playbooks: >-
+        playbooks/test_deploy_cukinia_tests.yaml
+        playbooks/ci_all_machines_tests.yaml
+      vms-inventories: ${{ matrix.vms-inventories }}
+      vms-deploy-playbooks: >-
+        playbooks/ci_vms_standalone_ptp.yaml
+      vms-test-playbooks: >-
+        playbooks/ci_all_machines_tests.yaml
