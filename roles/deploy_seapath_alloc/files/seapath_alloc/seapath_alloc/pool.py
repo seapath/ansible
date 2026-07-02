@@ -10,10 +10,12 @@ allocation database. The kernel is the source of truth:
   /proc/<pid>/task/<tid>/status   Cpus_allowed_list field
   /proc/irq/*/smp_affinity_list   NIC IRQ affinity
 
-The only persistent file we write is .reserved_siblings, which tracks the
-idle HT sibling of each exclusive_physical allocation. It self-heals: an
-entry is discarded the next time the pool is read if the active sibling is
-no longer pinned by a live QEMU thread.
+The only persistent files we write are .reserved_siblings, which tracks the
+idle HT sibling of each exclusive_physical allocation, and slots.json, which
+tracks named shared-core slots. Both self-heal: a reserved-sibling entry is
+discarded the next time the pool is read if the active sibling is no longer
+pinned by a live QEMU thread, and a slot is discarded once no live actor
+(QEMU thread, claim, NIC IRQ) occupies any of its cores.
 
 All reads and writes happen under a flock on .lock so concurrent hook
 invocations (two VMs starting simultaneously) see a consistent snapshot and
@@ -26,12 +28,18 @@ import json
 import logging
 import os
 import re
+import time
 
 from .topology import Topology, parse_cpu_list
 
 log = logging.getLogger(__name__)
 
 _DEFAULT_ALLOC_DIR = "/run/seapath/alloc"
+
+# A memberless slot younger than this is kept: it covers the window between
+# slot creation and the moment its first member becomes visible to the pool
+# (e.g. `seapath-alloc slot` returns before the IRQ is pinned).
+_SLOT_GRACE_SECONDS = 60
 
 
 def _is_qemu_comm(comm: str) -> bool:
@@ -59,6 +67,7 @@ class CorePool:
         self._lock_file = os.path.join(alloc_dir, ".lock")
         self._reserved_file = os.path.join(alloc_dir, ".reserved_siblings")
         self._claims_file = os.path.join(alloc_dir, "claims.json")
+        self._slots_file = os.path.join(alloc_dir, "slots.json")
 
         # Memoized after first call to _busy_cpus(); invalidated by mutations.
         self._busy_cache = None
@@ -130,7 +139,7 @@ class CorePool:
 
     def add_claim(self, label: str, pid: int, cores: list,
                   scheduler: str = "OTHER", priority: int = 0,
-                  kind: str = ""):
+                  kind: str = "", slot: str = ""):
         """Register a claim from a container or operator tool."""
         claims = self._load_claims()
         claims = [c for c in claims if c.get("label") != label]
@@ -143,6 +152,8 @@ class CorePool:
         }
         if kind:
             entry["kind"] = kind
+        if slot:
+            entry["slot"] = slot
         claims.append(entry)
         self._save_claims(claims)
         self.bust_cache()
@@ -167,6 +178,37 @@ class CorePool:
         """Return active (non-expired) claims."""
         return self._live_claims()
 
+    def add_slot(self, name: str, cores: list, isolation: str):
+        """
+        Register a named shared-core slot.
+
+        A slot's cores are counted busy for every normal allocation; actors
+        that reference the slot by name share them instead of consuming new
+        cores. The slot expires automatically once no live actor occupies any
+        of its cores (see _live_slots).
+        """
+        slots = self._load_slots()
+        slots = [s for s in slots if s.get("name") != name]
+        slots.append({
+            "name": name,
+            "cores": list(cores),
+            "isolation": isolation,
+            "created": int(time.time()),
+        })
+        self._save_slots(slots)
+        self.bust_cache()
+
+    def slots(self) -> list:
+        """Return active (non-expired) slots."""
+        return self._live_slots()
+
+    def slot_cores(self) -> set:
+        """All cores belonging to any active slot."""
+        cores = set()
+        for slot in self._live_slots():
+            cores.update(slot.get("cores", []))
+        return cores
+
     def active_reserved_siblings(self) -> list:
         """
         Return [(idle_cpu, active_cpu), ...] for live exclusive_physical reservations.
@@ -176,7 +218,9 @@ class CorePool:
         """
         isolated = set(self._topo.isolated_cpus())
         entries = self._load_reserved_siblings()
-        currently_pinned = self._busy_by_qemus(isolated) | self._busy_by_claims(isolated)
+        currently_pinned = (self._busy_by_qemus(isolated)
+                            | self._busy_by_claims(isolated)
+                            | self._busy_by_slots(isolated))
         return [(idle, active) for idle, active in entries
                 if active in currently_pinned]
 
@@ -191,6 +235,7 @@ class CorePool:
         busy.update(self._busy_by_irqs(isolated))
         busy.update(self._busy_by_claims(isolated))
         busy.update(self._busy_reserved_siblings(isolated))
+        busy.update(self._busy_by_slots(isolated))
         self._busy_cache = busy
         return busy
 
@@ -406,17 +451,60 @@ class CorePool:
                     busy.add(c)
         return busy
 
+    def _live_slots(self) -> list:
+        """
+        Slots that still have at least one live member on their cores.
+
+        Membership is derived from the actor sources only (QEMU threads,
+        claims, NIC IRQs) — never from the slot source itself, which would be
+        circular. A memberless slot within the creation grace period is kept
+        so that a freshly created slot survives until its first member is
+        pinned. Expired slots are pruned and the file rewritten.
+        """
+        slots = self._load_slots()
+        if not slots:
+            return []
+        isolated = set(self._topo.isolated_cpus())
+        occupied = (self._busy_by_qemus(isolated)
+                    | self._busy_by_claims(isolated)
+                    | self._busy_by_irqs(isolated))
+        now = int(time.time())
+        active = []
+        changed = False
+        for slot in slots:
+            cores = set(slot.get("cores", []))
+            in_grace = now - slot.get("created", 0) <= _SLOT_GRACE_SECONDS
+            if cores & occupied or in_grace:
+                active.append(slot)
+            else:
+                log.debug("slot %r: no live member, expiring", slot.get("name"))
+                changed = True
+        if changed:
+            self._save_slots(active)
+        return active
+
+    def _busy_by_slots(self, isolated: set) -> set:
+        busy = set()
+        for slot in self._live_slots():
+            for c in slot.get("cores", []):
+                if c in isolated:
+                    busy.add(c)
+        return busy
+
     def _busy_reserved_siblings(self, isolated: set) -> set:
         """
         Idle HT siblings reserved for exclusive_physical allocations.
 
         Each entry is [idle_cpu, active_cpu]. The reservation is valid only
-        while active_cpu is still occupied by a live actor — either a QEMU
-        thread (VM) or an active claim (seapath-run, quadlet, …). Stale
-        entries (actor gone) are dropped automatically.
+        while active_cpu is still occupied by a live actor — a QEMU thread
+        (VM), an active claim (seapath-run, quadlet, …), or an active slot
+        (whose members may be IRQs, invisible to the other two sources).
+        Stale entries (actor gone) are dropped automatically.
         """
         entries = self._load_reserved_siblings()
-        currently_pinned = self._busy_by_qemus(isolated) | self._busy_by_claims(isolated)
+        currently_pinned = (self._busy_by_qemus(isolated)
+                            | self._busy_by_claims(isolated)
+                            | self._busy_by_slots(isolated))
         valid = []
         changed = False
         busy = set()
@@ -462,3 +550,18 @@ class CorePool:
         os.makedirs(self._alloc_dir, exist_ok=True)
         with open(self._claims_file, 'w') as f:
             json.dump(claims, f, indent=2)
+
+    def _load_slots(self) -> list:
+        try:
+            with open(self._slots_file) as f:
+                data = json.load(f)
+            if isinstance(data, list):
+                return data
+        except (OSError, json.JSONDecodeError):
+            pass
+        return []
+
+    def _save_slots(self, slots: list):
+        os.makedirs(self._alloc_dir, exist_ok=True)
+        with open(self._slots_file, 'w') as f:
+            json.dump(slots, f, indent=2)

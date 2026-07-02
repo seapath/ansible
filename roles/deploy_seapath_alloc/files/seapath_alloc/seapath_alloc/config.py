@@ -56,10 +56,29 @@ iothread:
   scheduler: OTHER
   priority: 0
 
+# Any group may reference a named slot instead of requesting its own cores.
+# A slot is a host-global named group of isolated cores: the first actor
+# referencing the name allocates it (isolation describes the SLOT's level,
+# default exclusive_logical), later actors share its cores with their own
+# scheduler/priority. Example — emulator in TS and vhost in FIFO/1 on the
+# same core:
+# emulator:
+#   slot: housework
+#   scheduler: OTHER
+# vhost:
+#   slot: housework
+#   scheduler: FIFO
+#   priority: 1
+
 All keys are optional — missing keys are filled from built-in defaults.
 count (vhost/iothread only): when present, a single allocation of <count>
   cores is made for the whole group; all threads of that group share them.
   Without count, each thread receives its own core.
+slot (any group): name of a host-global shared-core slot. isolation then
+  applies to the slot at creation time and must not be none.
+Mode switch: slot or count moves the spec from exclusive per-thread mode
+  (default: one core per thread) to shared-group mode. A slot without count
+  defaults to ONE core — all threads of the group land on it together.
 """
 
 import logging
@@ -218,8 +237,17 @@ def _normalize_group(spec) -> dict:
         spec = {}
     merged = dict(_BUILTIN_DEFAULT)
     merged.update(spec)
+    # A slot reference without an explicit isolation means "a shared isolated
+    # core" — the slot's isolation level defaults to exclusive_logical, never
+    # none (a housekeeping slot would have no cores to share).
+    if merged.get("slot"):
+        merged["slot"] = str(merged["slot"])
+        if "isolation" not in spec:
+            merged["isolation"] = "exclusive_logical"
+    else:
+        merged.pop("slot", None)
     # Non-none isolation without an explicit scheduler implies RT intent → FIFO.
-    if spec.get("isolation", "none") != "none" and "scheduler" not in spec:
+    if merged["isolation"] != "none" and "scheduler" not in spec:
         merged["scheduler"] = "FIFO"
     # RT schedulers without an explicit priority default to 1 (minimum valid RT).
     if merged["scheduler"] in ("FIFO", "RR") and "priority" not in spec:
@@ -342,11 +370,15 @@ def expand_group_specs(profile: dict,
             entry = vcpu_spec[min(i, len(vcpu_spec) - 1)]
             s = dict(entry)
             s["name"] = f"vcpu/{i}"
+            # count is a vhost/iothread group key: on a per-vCPU spec it
+            # would allocate N cores to every single vCPU thread.
+            s.pop("count", None)
             specs.append(s)
     else:
         for i in range(vcpu_count):
             s = dict(vcpu_spec)
             s["name"] = f"vcpu/{i}"
+            s.pop("count", None)
             specs.append(s)
 
     s = dict(profile["emulator"])

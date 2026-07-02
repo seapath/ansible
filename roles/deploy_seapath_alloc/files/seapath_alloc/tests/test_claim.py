@@ -9,11 +9,12 @@ import yaml
 
 from seapath_alloc import claim as claim_mod
 from seapath_alloc.allocator import AllocationStrategy, GroupAllocation
-from seapath_alloc.claim import claim, release
+from seapath_alloc.claim import claim, parse_isolation_arg, release
 
 
 class FakePool:
-    def __init__(self):
+    def __init__(self, slots=()):
+        self._slots = list(slots)
         self.claims = []
         self.removed = []
         self.busted = False
@@ -24,10 +25,13 @@ class FakePool:
     def __exit__(self, *exc_info):
         return False
 
-    def add_claim(self, label, pid, cpus, scheduler, priority, kind=""):
+    def slots(self):
+        return self._slots
+
+    def add_claim(self, label, pid, cpus, scheduler, priority, kind="", slot=""):
         self.claims.append({
             "label": label, "pid": pid, "cpus": cpus, "scheduler": scheduler,
-            "priority": priority, "kind": kind,
+            "priority": priority, "kind": kind, "slot": slot,
         })
 
     def remove_claim(self, label):
@@ -42,8 +46,8 @@ def allocator(monkeypatch):
     """Replace the pool and the allocation engine, keep what they were asked."""
     state = {}
 
-    def install(cpus=(4,), scheduler="OTHER", priority=0):
-        pool = FakePool()
+    def install(cpus=(4,), scheduler="OTHER", priority=0, slots=()):
+        pool = FakePool(slots)
         state["pool"] = pool
         monkeypatch.setattr(claim_mod, "CorePool", lambda **kw: pool)
         monkeypatch.setattr(claim_mod, "Topology", lambda **kw: object())
@@ -69,6 +73,28 @@ def run_calls(monkeypatch):
         lambda cmd, **kw: calls.append(cmd) or subprocess.CompletedProcess(cmd, 0),
     )
     return calls
+
+
+# --- parse_isolation_arg --------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        ("exclusive_logical", ("exclusive_logical", "")),
+        ("none", ("none", "")),
+        ("slot:rt", ("exclusive_logical", "rt")),
+        ("slot:rt:shared", ("shared", "rt")),
+        ("slot:rt:", ("exclusive_logical", "rt")),
+    ],
+)
+def test_parse_isolation_arg(value, expected):
+    assert parse_isolation_arg(value) == expected
+
+
+def test_parse_isolation_arg_rejects_an_empty_slot_name():
+    with pytest.raises(ValueError, match="empty slot name"):
+        parse_isolation_arg("slot:")
 
 
 # --- profile files --------------------------------------------------------
@@ -128,7 +154,7 @@ def test_claim_registers_the_allocated_cores(allocator, run_calls):
     assert claim("sv", target_pid=4242) == [4, 5]
     assert state["pool"].claims == [{
         "label": "sv", "pid": 4242, "cpus": [4, 5], "scheduler": "OTHER",
-        "priority": 0, "kind": "",
+        "priority": 0, "kind": "", "slot": "",
     }]
 
 
@@ -164,13 +190,14 @@ def test_claim_builds_the_group_spec_from_its_arguments(allocator, run_calls):
 def test_claim_takes_its_settings_from_a_profile(allocator, run_calls, tmp_path):
     state = allocator()
     path = tmp_path / "p.yaml"
-    path.write_text("isolation: shared\nscheduler: FIFO\npriority: 80\n")
+    path.write_text("isolation: shared\nscheduler: FIFO\npriority: 80\nslot: rt\n")
 
     claim("sv", profile_path=str(path), target_pid=1)
 
     assert state["specs"][0]["isolation"] == "shared"
     assert state["specs"][0]["scheduler"] == "FIFO"
     assert state["specs"][0]["priority"] == 80
+    assert state["specs"][0]["slot"] == "rt"
 
 
 def test_claim_keeps_its_arguments_when_the_profile_is_silent(
@@ -183,6 +210,25 @@ def test_claim_keeps_its_arguments_when_the_profile_is_silent(
     claim("sv", isolation="shared", target_pid=1)
 
     assert state["specs"][0]["isolation"] == "shared"
+
+
+def test_claim_joins_an_existing_slot(allocator, run_calls):
+    state = allocator(slots=[{"name": "rt"}])
+
+    claim("sv", slot="rt", target_pid=1)
+
+    assert state["specs"][0]["slot"] == "rt"
+    assert state["pool"].claims[0]["slot"] == "rt"
+
+
+def test_claim_does_not_record_a_slot_that_was_not_created(allocator, run_calls):
+    # Slot creation that fell back to housekeeping leaves no slot behind, and
+    # recording one would make the claim point at something that isn't there.
+    state = allocator(slots=[])
+
+    claim("sv", slot="rt", target_pid=1)
+
+    assert state["pool"].claims[0]["slot"] == ""
 
 
 def test_claim_pins_and_schedules_the_target(allocator, run_calls):

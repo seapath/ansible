@@ -27,6 +27,13 @@ Arguments:
                   exclusive_logical   one logical core; HT siblings stay free
                   exclusive_physical  one physical core; all HT siblings reserved
                   none                housekeeping cores; no isolation guarantee
+                  slot:<name>[:<isolation>]
+                                      join the named shared-core slot: run on
+                                      the same core(s) as every other actor
+                                      referencing <name>, arbitrated by the RT
+                                      priorities.  The slot is created on
+                                      first use with the given isolation
+                                      (default exclusive_logical).
 
     scheduler   Linux scheduling policy: FIFO | RR | OTHER | BATCH
                 FIFO and RR are real-time policies; priority must be 1–99.
@@ -60,6 +67,10 @@ Examples:
 
     # Monitoring agent with no real-time requirements
     seapath-run monitor none OTHER 0 -- /opt/monitoring/agent --daemon
+
+    # Share the core of the eth0 NIC IRQs (slot "sv0" in nic-irq-affinity.conf)
+    # at a priority below the FF50 irq threads
+    seapath-run sv-proc slot:sv0 FIFO 10 -- /usr/bin/sv-consumer -i eth0
 """
 
 import os
@@ -69,7 +80,7 @@ import sys
 
 sys.path.insert(0, '/usr/lib/seapath')
 
-from seapath_alloc.claim import claim, release
+from seapath_alloc.claim import claim, parse_isolation_arg, release
 from seapath_alloc.logging_setup import setup_logging
 from seapath_alloc.topology import format_cpu_list
 
@@ -113,6 +124,10 @@ def _parse_args(argv: list) -> tuple:
 def main():
     setup_logging()
     label, isolation, scheduler, priority, cmd = _parse_args(sys.argv)
+    try:
+        isolation, slot = parse_isolation_arg(isolation)
+    except ValueError as exc:
+        _die(str(exc))
 
     # Allocate cores and apply the resulting affinity + scheduling policy to
     # this process.  The child launched below inherits both settings via
@@ -128,6 +143,7 @@ def main():
             target_pid=0,    # apply to self; child inherits
             no_apply=False,
             kind="run",
+            slot=slot,
         )
     except Exception as exc:
         _die(f"allocation failed: {exc}")

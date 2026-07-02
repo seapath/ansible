@@ -239,3 +239,123 @@ def test_expired_claim_auto_removed(pool_env):
         pool.unlock()
     assert 8 in free
     assert claims == []
+
+
+# ------------------------------------------------------------------ slots
+
+def test_slot_cores_are_busy(pool_env):
+    topo, alloc_dir, proc_path = pool_env
+    pool = make_pool(topo, alloc_dir, proc_path)
+    try:
+        pool.add_slot("s", [8], "exclusive_logical")
+        free = pool.free_logical()
+        cores = pool.slot_cores()
+    finally:
+        pool.unlock()
+    assert 8 not in free
+    assert cores == {8}
+
+
+def test_memberless_slot_survives_grace_period(pool_env):
+    """A freshly created slot with no member yet must not expire — it covers
+    the window between `seapath-alloc slot` and the actual IRQ pinning."""
+    topo, alloc_dir, proc_path = pool_env
+    pool = make_pool(topo, alloc_dir, proc_path)
+    try:
+        pool.add_slot("s", [8], "exclusive_logical")
+        slots = pool.slots()
+    finally:
+        pool.unlock()
+    assert [s["name"] for s in slots] == ["s"]
+
+
+def test_memberless_slot_expires_after_grace(pool_env):
+    topo, alloc_dir, proc_path = pool_env
+    import json
+    with open(os.path.join(alloc_dir, "slots.json"), 'w') as f:
+        json.dump([{"name": "s", "cores": [8],
+                    "isolation": "exclusive_logical", "created": 0}], f)
+    pool = make_pool(topo, alloc_dir, proc_path)
+    try:
+        slots = pool.slots()
+        free = pool.free_logical()
+    finally:
+        pool.unlock()
+    assert slots == []
+    assert 8 in free
+
+
+def test_slot_kept_alive_by_qemu_member(tmp_path, sys_path):
+    topo = Topology(sys_cpu_path=sys_path)
+    proc_path = make_proc_qemu(tmp_path, pid=1000, vm_name="vm1",
+                                vcpu_count=1, vcpu_cpus=[8])
+    alloc_dir = str(tmp_path / "alloc")
+    os.makedirs(alloc_dir)
+    import json
+    with open(os.path.join(alloc_dir, "slots.json"), 'w') as f:
+        json.dump([{"name": "s", "cores": [8],
+                    "isolation": "exclusive_logical", "created": 0}], f)
+    pool = make_pool(topo, alloc_dir, proc_path)
+    try:
+        slots = pool.slots()
+    finally:
+        pool.unlock()
+    assert [s["name"] for s in slots] == ["s"]
+
+
+def test_slot_kept_alive_by_irq_member(tmp_path, sys_path):
+    topo = Topology(sys_cpu_path=sys_path)
+    proc_path = str(tmp_path / "proc")
+    os.makedirs(proc_path)
+    make_proc_irq(tmp_path, {10: "8"}, proc_path=proc_path)
+    fake_sys = make_sys_nic_irqs(tmp_path, [10])
+    alloc_dir = str(tmp_path / "alloc")
+    os.makedirs(alloc_dir)
+    import json
+    with open(os.path.join(alloc_dir, "slots.json"), 'w') as f:
+        json.dump([{"name": "s", "cores": [8],
+                    "isolation": "exclusive_logical", "created": 0}], f)
+    pool = make_pool(topo, alloc_dir, proc_path, sys_path=fake_sys)
+    try:
+        slots = pool.slots()
+    finally:
+        pool.unlock()
+    assert [s["name"] for s in slots] == ["s"]
+
+
+def test_exclude_pids_lapses_vm_only_slot(tmp_path, sys_path):
+    """Re-pinning a running VM (exclude_pids) must also lapse a slot whose
+    only member is that VM, so the hook re-allocates it fresh."""
+    topo = Topology(sys_cpu_path=sys_path)
+    proc_path = make_proc_qemu(tmp_path, pid=1000, vm_name="vm1",
+                                vcpu_count=1, vcpu_cpus=[8])
+    alloc_dir = str(tmp_path / "alloc")
+    os.makedirs(alloc_dir)
+    import json
+    with open(os.path.join(alloc_dir, "slots.json"), 'w') as f:
+        json.dump([{"name": "s", "cores": [8],
+                    "isolation": "exclusive_logical", "created": 0}], f)
+    pool = make_pool(topo, alloc_dir, proc_path)
+    try:
+        assert [s["name"] for s in pool.slots()] == ["s"]
+        pool.exclude_pids({1000})
+        assert pool.slots() == []
+        assert 8 in pool.free_logical()
+    finally:
+        pool.unlock()
+
+
+def test_slot_keeps_reserved_sibling_alive(pool_env):
+    """An exclusive_physical slot keeps its idle HT sibling reserved even when
+    its members (e.g. IRQs) are invisible to the qemu/claim busy sources."""
+    topo, alloc_dir, proc_path = pool_env
+    pool = make_pool(topo, alloc_dir, proc_path)
+    try:
+        pool.add_slot("s", [8], "exclusive_physical")
+        pool.add_reserved_sibling(idle_cpu=9, active_cpu=8)
+        free_l = pool.free_logical()
+        free_p = pool.free_physical()
+    finally:
+        pool.unlock()
+    assert 9 not in free_l
+    assert 8 not in free_p

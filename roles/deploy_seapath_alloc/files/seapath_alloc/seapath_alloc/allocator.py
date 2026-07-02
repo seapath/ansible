@@ -43,6 +43,9 @@ class AllocationResult:
     warnings: List[str] = field(default_factory=list)
     # [[idle_cpu, active_cpu], ...] — to be written via pool.add_reserved_sibling()
     reserved_siblings: List[list] = field(default_factory=list)
+    # [[name, cores, isolation], ...] — slots created during this round, to be
+    # written via pool.add_slot()
+    new_slots: List[list] = field(default_factory=list)
 
 
 class AllocationEngine:
@@ -62,6 +65,7 @@ class AllocationEngine:
         housekeeping: list,
         sibling_of_fn,
         strategy: AllocationStrategy = AllocationStrategy.SPREADING,
+        existing_slots: dict = None,
     ):
         """
         free_logical:   isolated cores available for exclusive_logical
@@ -69,12 +73,18 @@ class AllocationEngine:
         housekeeping:   non-isolated fallback cores (scheduler decides placement)
         sibling_of_fn:  topology.siblings_of(cpu) → list of logical CPUs in the pair
         strategy:       controls how logical cores are ordered (see AllocationStrategy)
-                        REPACKING is handled externally by hook.py; the engine
-                        treats it identically to SPREADING.
+                        REPACKING's compaction step is done by scheduler.py
+                        before the engine runs; the engine treats it
+                        identically to SPREADING.
+        existing_slots: {name: {"cores": [...], "isolation": ...}} — named
+                        shared-core slots already registered in the pool.
+                        Specs referencing a known slot join its cores instead
+                        of consuming new ones.
         """
         self._physical = list(free_physical)
         self._housekeeping = list(housekeeping)
         self._sibling_of = sibling_of_fn
+        self._slots = dict(existing_slots or {})
 
         if strategy == AllocationStrategy.PACKING:
             self._logical = self._pair_order(list(free_logical))
@@ -83,6 +93,8 @@ class AllocationEngine:
 
         # Tracks cores assigned during this round (not yet in /proc).
         self._assigned: set = set()
+        # Round-wide slot definitions, computed at the top of allocate().
+        self._round_slot_defs: dict = {}
 
     def allocate(self, group_specs: list) -> AllocationResult:
         """
@@ -90,12 +102,18 @@ class AllocationEngine:
         and optional count (number of cores to allocate for a shared group).
         Returns AllocationResult.
         """
+        self._round_slot_defs = self._merge_slot_defs(group_specs)
         result = AllocationResult()
         for spec in group_specs:
             name = spec["name"]
             isolation = spec.get("isolation", "none")
             count = spec.get("count", 1)
-            cpus, warning, new_reserved = self._pick(name, isolation, count=count)
+            slot_name = spec.get("slot", "")
+            if slot_name:
+                cpus, warning, new_reserved = self._pick_slot(
+                    name, slot_name, isolation, spec, result)
+            else:
+                cpus, warning, new_reserved = self._pick(name, isolation, count=count)
             result.allocations.append(GroupAllocation(
                 name=name,
                 cpus=cpus,
@@ -107,6 +125,81 @@ class AllocationEngine:
             if warning:
                 result.warnings.append(f"{name}: {warning}")
         return result
+
+    def _merge_slot_defs(self, group_specs: list) -> dict:
+        """
+        Co-define each new slot from every spec of this round referencing it.
+
+        Within one allocation round (one VM profile), the spec order is an
+        implementation detail — vcpus → emulator → vhost — that the user does
+        not control, so "first reference fixes the attributes" would make the
+        slot's size depend on which group happens to be expanded first. All
+        specs of the round therefore contribute to the definition: size is
+        the largest count requested, isolation the strongest. First-creator
+        semantics only apply across rounds (between VMs, between actors).
+        """
+        defs: dict = {}
+        for spec in group_specs:
+            slot_name = spec.get("slot", "")
+            if not slot_name or slot_name in self._slots:
+                continue
+            if spec.get("isolation", "none") == "none":
+                continue
+            d = defs.setdefault(
+                slot_name, {"count": 1, "isolation": "exclusive_logical"})
+            d["count"] = max(d["count"], spec.get("count", 1))
+            if spec.get("isolation") == "exclusive_physical":
+                d["isolation"] = "exclusive_physical"
+        return defs
+
+    def _pick_slot(self, name: str, slot_name: str, isolation: str,
+                   spec: dict, result: AllocationResult):
+        """
+        Resolve a spec that references a named shared-core slot.
+
+        Join if the slot exists (in the pool or created earlier this round):
+        the slot's cores are returned as-is, nothing is consumed. Otherwise
+        create it — with the round-wide merged definition, see
+        _merge_slot_defs() — through the regular isolation paths and register
+        it in result.new_slots. A creation that falls back to housekeeping
+        does NOT persist the slot: there are no cores to share, so each member
+        degrades individually and the slot may still be created later if cores
+        free up.
+
+        Returns (cpus, warning, new_reserved_siblings).
+        """
+        if isolation == "none":
+            w = f"slot {slot_name!r} requested with isolation 'none', slot ignored"
+            log.warning("%s: %s", name, w)
+            return [], w, []
+
+        existing = self._slots.get(slot_name)
+        if existing is not None:
+            # Attributes were fixed when the slot was created; a joiner asking
+            # for something else joins anyway — the request cannot be honoured
+            # without moving every other member.
+            if "isolation" in spec and spec["isolation"] != existing["isolation"]:
+                log.warning(
+                    "%s: slot %r is %s, requested %s ignored",
+                    name, slot_name, existing["isolation"], spec["isolation"])
+            if "count" in spec and spec["count"] != len(existing["cores"]):
+                log.warning(
+                    "%s: slot %r has %d core(s), requested count %d ignored",
+                    name, slot_name, len(existing["cores"]), spec["count"])
+            return list(existing["cores"]), "", []
+
+        defn = self._round_slot_defs.get(
+            slot_name, {"count": spec.get("count", 1), "isolation": isolation})
+        cpus, warning, new_reserved = self._pick(
+            name, defn["isolation"], count=defn["count"])
+        if "housekeeping" in warning:
+            return cpus, warning, new_reserved
+        effective = "exclusive_logical" if warning else defn["isolation"]
+        self._slots[slot_name] = {"cores": list(cpus), "isolation": effective}
+        result.new_slots.append([slot_name, list(cpus), effective])
+        log.info("slot %r created: cores=%s isolation=%s (by %s)",
+                 slot_name, cpus, effective, name)
+        return cpus, warning, new_reserved
 
     def _pick(self, name: str, isolation: str, count: int = 1):
         """Returns (cpus, warning, new_reserved_siblings)."""

@@ -4,7 +4,7 @@
 """
 seapath-alloc CLI entry point.
 
-Subcommands: status, claim, release, spread, export.
+Subcommands: status, claim, release, slot, spread, export.
 Data collection is in status.py; this module only contains argument parsing
 and subcommand dispatch.
 """
@@ -41,10 +41,27 @@ def main(argv=None):
                          help="Register the claim without pinning the calling process"
                               " via taskset/chrt (use with --target-pid to set the"
                               " owning PID explicitly)")
+    claim_p.add_argument("--slot", default="", metavar="NAME",
+                         help="Join (or create) the named shared-core slot"
+                              " instead of consuming dedicated cores")
 
     # release
     rel_p = sub.add_parser("release", help="Release a claim")
     rel_p.add_argument("--label", required=True)
+
+    # slot
+    slot_p = sub.add_parser(
+        "slot",
+        help="Declare a named shared-core slot on operator-chosen cores"
+             " so other actors can join it by name",
+    )
+    slot_p.add_argument("name", metavar="NAME")
+    slot_p.add_argument("--cpus", required=True, metavar="LIST",
+                        help="Cores the slot covers (cpu-list notation, e.g."
+                             " \"14\" or \"7,10-13\"). Never fails; conflicts"
+                             " are logged.")
+    slot_p.add_argument("--isolation", default="exclusive_logical",
+                        help="Isolation level recorded on the slot")
 
     # spread
     spread_p = sub.add_parser(
@@ -89,6 +106,19 @@ def main(argv=None):
                         prio = actor.get('priority', 0)
                         sched_str = f"  {sched}/{prio}" if sched else ""
                         print(f"  {t:7s} {actor['label']:18s}  cpus={actor['cpus']}  pid={actor.get('pid')}{sched_str}")
+            if data.get('slots'):
+                print("\nSlots:")
+                for slot in data['slots']:
+                    print(f"  {slot['name']:18s}  cpus={slot['cores']}"
+                          f"  isolation={slot['isolation']}")
+                    for m in slot['members']:
+                        sched = m.get('scheduler', '')
+                        prio = m.get('priority', 0)
+                        sched_str = f"  {sched}/{prio}" if sched else ""
+                        print(f"    {m['kind']:7s} {m['label']}/{m['group']}"
+                              f"  cpus={m['cpus']}{sched_str}")
+                    for reason in slot.get('warnings', []):
+                        print(f"    warning: {reason}")
 
     elif args.command == "claim":
         from .claim import claim as do_claim
@@ -100,12 +130,24 @@ def main(argv=None):
             profile_path=args.profile,
             target_pid=args.target_pid,
             no_apply=args.no_apply,
+            slot=args.slot,
         )
         print(format_cpu_list(cores))
 
     elif args.command == "release":
         from .claim import release as do_release
         do_release(args.label)
+
+    elif args.command == "slot":
+        from .pool import CorePool
+        from .scheduler import declare_slot
+        from .topology import Topology as _Topo, parse_cpu_list
+
+        topo = _Topo()
+        with CorePool(topology=topo) as pool:
+            cores = declare_slot(pool, parse_cpu_list(args.cpus),
+                                 args.name, topo, isolation=args.isolation)
+        print(format_cpu_list(cores))
 
     elif args.command == "spread":
         from .pool import CorePool

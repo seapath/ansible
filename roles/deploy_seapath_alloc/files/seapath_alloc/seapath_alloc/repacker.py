@@ -27,6 +27,11 @@ Both operations work on all seapath-alloc managed actors:
 Design constraints shared by both:
   - Only moves actors exclusively on a single isolated CPU.  We never touch
     threads with broad affinity or multiple allowed CPUs.
+  - Slot cores are never moved: a named slot colocates several actors
+    (possibly including IRQs, which taskset cannot move) on the same core,
+    and moving one member would break the colocation.  Slot cores still
+    count as occupied for pair accounting, and spreading treats them as
+    HT interferers exactly like NIC IRQs.
   - A ThreadMove is a single taskset -cp call; it does not change the
     scheduler class or RT priority of the thread.
   - A CgroupMove writes a new cpuset.cpus to the full cgroup tree and
@@ -98,10 +103,19 @@ def find_repack_moves(pool, needed_pairs: int) -> List[RepackMove]:
     topo = pool._topo
     isolated = set(topo.isolated_cpus())
     free_l = set(pool.free_logical())
+    slot_cores = pool.slot_cores()
 
-    cpu_to_tids: dict = pool.pinned_workload_threads()
-    cpu_to_quadlet: dict = pool.pinned_quadlet_cpus()
-    occupied_cpus = set(cpu_to_tids.keys()) | set(cpu_to_quadlet.keys())
+    # Slot cores are unmoveable (colocation) but still occupy their pair.
+    cpu_to_tids: dict = {
+        c: t for c, t in pool.pinned_workload_threads().items()
+        if c not in slot_cores
+    }
+    cpu_to_quadlet: dict = {
+        c: q for c, q in pool.pinned_quadlet_cpus().items()
+        if c not in slot_cores
+    }
+    occupied_cpus = (set(cpu_to_tids.keys()) | set(cpu_to_quadlet.keys())
+                     | (slot_cores & isolated))
 
     pair_occupied: dict = {}
     for cpu in isolated:
@@ -116,6 +130,8 @@ def find_repack_moves(pool, needed_pairs: int) -> List[RepackMove]:
         free_in_pair = (siblings & free_l) - occupied_cpus
         if len(occupied) == 1 and free_in_pair:
             from_cpu = next(iter(occupied))
+            if from_cpu in slot_cores:
+                continue
             donors.append((lower, from_cpu))
 
     receivers = []
@@ -189,11 +205,20 @@ def find_spread_moves(pool) -> List[RepackMove]:
     """
     topo = pool._topo
     isolated = set(topo.isolated_cpus())
+    slot_cores = pool.slot_cores()
 
-    cpu_to_tids: dict = pool.pinned_workload_threads()
-    cpu_to_quadlet: dict = pool.pinned_quadlet_cpus()
+    # Slot cores are unmoveable (colocation); as HT-sibling neighbours they
+    # interfere like a NIC IRQ would, so treat them as interferers below.
+    cpu_to_tids: dict = {
+        c: t for c, t in pool.pinned_workload_threads().items()
+        if c not in slot_cores
+    }
+    cpu_to_quadlet: dict = {
+        c: q for c, q in pool.pinned_quadlet_cpus().items()
+        if c not in slot_cores
+    }
     workload_cpus = set(cpu_to_tids.keys()) | set(cpu_to_quadlet.keys())
-    irq_cpus = pool._busy_by_irqs(isolated)
+    interferer_cpus = pool._busy_by_irqs(isolated) | (slot_cores & isolated)
 
     pair_workload: dict = {}
     for cpu in isolated:
@@ -210,8 +235,8 @@ def find_spread_moves(pool) -> List[RepackMove]:
         if len(wl) == 2:
             # Dense: move the upper sibling's thread, keep the lower (T0).
             sources.append(max(wl))
-        elif len(wl) == 1 and (siblings & irq_cpus):
-            # Workload sharing its physical core with a NIC IRQ.
+        elif len(wl) == 1 and (siblings & interferer_cpus):
+            # Workload sharing its physical core with a NIC IRQ or a slot.
             sources.append(next(iter(wl)))
 
     # Landing zones: fully-free pairs only (no workload, no IRQ, no reservation).
