@@ -13,6 +13,11 @@ on:
         type: string
         required: true
         description: URL to clone the repository containing the private inventories.
+      inventories-repository-branch:
+        type: string
+        required: false
+        default: "main"
+        description: Branch to clone of the repository containing the private inventories.
       hyp-inventories:
         type: string
         required: true
@@ -104,7 +109,7 @@ jobs:
       - name: Prepare Ansible
         working-directory: ansible
         run: |
-          git clone -q "${{ inputs.inventories-repository }}" inventories_private
+          git clone -q -b ${{ inputs.inventories-repository-branch }} "${{ inputs.inventories-repository }}" inventories_private
 
           cqfd init
           cqfd -b prepare
@@ -299,7 +304,7 @@ jobs:
         working-directory: svtrace-ansible
         if: "${{ steps.deploy-vms.outcome == 'success' && env.DO_LATENCY_TESTS == 'true' }}"
         run: |
-          git clone -q "${{ inputs.inventories-repository }}" inventories_private
+          git clone -q -b ${{ inputs.inventories-repository-branch }} "${{ inputs.inventories-repository }}" inventories_private
 
           echo "::group::Initialize svtrace-ansible"
           cqfd init
