@@ -3,6 +3,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+- name: Load distribution-specific variables
+  ansible.builtin.include_vars: "{{ seapath_distro }}.yml"
+
 - name: Ensure group "cephadm" exists
   ansible.builtin.group:
     name: cephadm
