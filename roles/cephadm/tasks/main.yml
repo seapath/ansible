@@ -2,9 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- name: Load distribution-specific variables
-  ansible.builtin.include_vars: "{{ seapath_distro }}.yml"
-
 - name: Check if host is part of a Ceph cluster
   ansible.builtin.command: cephadm ls
   register: cephadm_ls_output

@@ -70,6 +70,12 @@
   changed_when: true
   when: cephadm_install_common is true
 
+- name: Remove ceph-common logrotate config (duplicates cephadm's own logrotate entry for /var/log/ceph/cephadm.log)
+  ansible.builtin.file:
+    path: "{{ cephadm_install_logrotateceph_path }}"
+    state: absent
+  when: cephadm_install_common is true
+
 - name: Ensure insecure registry localhost:5000 is in /etc/containers/registries.conf
   ansible.builtin.blockinfile:
     path: /etc/containers/registries.conf

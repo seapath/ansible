@@ -10,7 +10,6 @@ The `cephadm_install` role must have been applied to `cluster_machines` before t
 
 | Variable               | Required | Type   | Default      | Comments                                                                              |
 |------------------------|----------|--------|--------------|---------------------------------------------------------------------------------------|
-| seapath_distro         | No       | String | Not set      | SEAPATH distribution                                                                  |
 | cephadm_release        | No       | String | "20.2.0"     | Version of the ceph container image                                                   |
 | cephadm_spec_path      | No       | String | spec.yaml.j2 | Path to the spec file of cephadm. Use it to override the default config               |
 | cephadm_network        | Yes      | String |              | Ceph network (e.g. "192.168.55.0/24")                                                 |

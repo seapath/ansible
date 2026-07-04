@@ -3,3 +3,4 @@
 
 ---
 cephadm_install_containerized_ceph_enabled: false
+cephadm_install_logrotateceph_path: "/etc/logrotate.d/ceph"

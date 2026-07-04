@@ -7,3 +7,4 @@ cephadm_install_cephadm_gid: 1001
 cephadm_install_containerized_ceph_uid: 167
 cephadm_install_containerized_ceph_gid: 167
 cephadm_install_containerized_ceph_enabled: true
+cephadm_install_logrotateceph_path: "/etc/logrotate.d/ceph-common"
