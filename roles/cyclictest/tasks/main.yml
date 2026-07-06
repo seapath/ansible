@@ -7,8 +7,13 @@
     state: directory
   register: cyclictest_tmp_test_dir
 
+- name: Copy cyclictest script
+  ansible.builtin.copy:
+    src: run_cyclictest.py
+    dest: "{{ cyclictest_tmp_test_dir.path }}/run_cyclictest.py"
+    mode: "0644"
 - name: Execute cyclitect script
-  ansible.builtin.script: run_cyclictest.py -d {{ cyclictest_duration }} '{{ cyclictest_tmp_test_dir.path }}/cyclictest.txt'
+  ansible.builtin.command: /usr/bin/env python3 {{ cyclictest_tmp_test_dir.path }}/run_cyclictest.py -d {{ cyclictest_duration }} '{{ cyclictest_tmp_test_dir.path }}/cyclictest.txt'
 - name: Fetch results
   ansible.builtin.fetch:
     src: "{{ cyclictest_tmp_test_dir.path }}/cyclictest.txt"

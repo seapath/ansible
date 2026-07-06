@@ -5,9 +5,15 @@
 # This key will automatically reflash the machine
 
 ---
+- name: Copy configure_boot_next_usb_drive.sh script
+  ansible.builtin.copy:
+    src: configure_boot_next_usb_drive.sh
+    dest: /tmp/configure_boot_next_usb_drive.sh
+    mode: "0644"
+
 - name: Configure the EFI to boot on USB drive
   become: true
-  ansible.builtin.script: "configure_boot_next_usb_drive.sh"
+  ansible.builtin.command: sh /tmp/configure_boot_next_usb_drive.sh
   register: ci_yocto_result
   changed_when: ci_yocto_result.rc == 0
   failed_when: ci_yocto_result.rc == 1 or ci_yocto_result.rc > 2
