@@ -56,8 +56,6 @@ EXPECTED_GROUPS_COMMON=" \
 {% if inventory_hostname in groups.get('cluster_machines', []) %}
     ceph \
     haclient \
-{% endif %}
-{% if inventory_hostname in groups.get('cluster_machines', []) and (is_using_cephadm | default(false)) %}
     cephadm \
     containerized-ceph \
 {% endif %}

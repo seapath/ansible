@@ -3,39 +3,11 @@
 
 ---
 
-- name: Check for existing installation (ceph-ansible only)
-  when: not ceph_prepare_installation_is_using_cephadm
-  block:
-    - name: Create Ceph log directory
-      ansible.builtin.file:
-        path: /var/log/ceph
-        owner: ceph
-        group: ceph
-        mode: "0770"
-        state: directory
-    - name: Create Ceph crash directory
-      ansible.builtin.file:
-        path: /var/lib/ceph/crash/posted
-        owner: ceph
-        group: ceph
-        mode: "0770"
-        state: directory
-      register: ceph_prepare_installation_new_ceph_installation
-
-- name: Prepare OSD disk # noqa: no-handler
-  when:
-    - ceph_prepare_installation_new_ceph_installation.changed | default(false) or ceph_prepare_installation_is_using_cephadm
+- name: Prepare OSD disk
   block:
     - name: Refresh LVM VG
       ansible.builtin.command:
         cmd: vgchange --refresh
-      changed_when: true
-    - name: Cleanup LV if we are in existing LV situation
-      when:
-        - lvm_volumes is defined
-        - ansible_lvm['lvs'][lvm_volumes[0].data] is defined
-        - not ceph_prepare_installation_is_using_cephadm
-      ansible.builtin.command: "ceph-volume lvm zap /dev/{{ lvm_volumes[0].data_vg }}/{{ lvm_volumes[0].data }}"
       changed_when: true
     - name: Create Ceph LVM on full disk when lvm_volumes is not defined
       when:
@@ -59,7 +31,7 @@
             msg: "The OSD disk {{ ceph_osd_disk }} does not exist."
           when: not ceph_prepare_installation_disk_stat.stat.exists
         - name: Zap OSD disk for auto LVM
-          ansible.builtin.command: "{{ ceph_prepare_installation_ceph_volume_cmd }} lvm zap {{ ceph_prepare_installation_auto_ceph_osd_realdisk.stdout }} --destroy"
+          ansible.builtin.command: "cephadm ceph-volume lvm zap {{ ceph_prepare_installation_auto_ceph_osd_realdisk.stdout }} --destroy"
           changed_when: true
         - name: Create full disk partition with LVM flag
           community.general.parted:
@@ -95,7 +67,7 @@
           register: ceph_prepare_installation_ceph_osd_realdisk
           changed_when: false
         - name: Cleanup Ceph OSD disks with ceph-volume
-          ansible.builtin.command: "{{ ceph_prepare_installation_ceph_volume_cmd }} lvm zap {{ ceph_prepare_installation_ceph_osd_realdisk.stdout }} --destroy"
+          ansible.builtin.command: "cephadm ceph-volume lvm zap {{ ceph_prepare_installation_ceph_osd_realdisk.stdout }} --destroy"
           when:
             - lvm_volumes[0].device_number == 1
           changed_when: true

@@ -41,8 +41,6 @@ EXPECTED_USERS_COMMON=" \
     ceph \
     hacluster \
     libvirtadmin \
-{% endif %}
-{% if inventory_hostname in groups.get('cluster_machines', []) and (is_using_cephadm | default(false)) %}
     containerized-ceph \
     cephadm \
 {% endif %}

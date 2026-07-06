@@ -10,11 +10,9 @@ unlocked_users=" \
 "
 
 locked_users=" \
-{% if is_using_cephadm | default(false) %}
+{% if inventory_hostname in groups.get('cluster_machines', []) %}
     cephadm \
     containerized-ceph \
-{% endif %}
-{% if inventory_hostname in groups.get('cluster_machines', []) %}
     libvirtadmin \
 {% endif %}
     _apt \

@@ -136,8 +136,6 @@ osds:
       ceph_osd_disk: "/dev/disk/by-path/pci-0000:03:00.0-scsi-0:2:1:0" # TODO
     node3:
       ceph_osd_disk: "/dev/disk/by-path/pci-0000:03:00.0-scsi-0:2:1:0" # TODO
-  vars:
-    devices: "{{ ceph_osd_disk }}"
 
 # Ceph clients. All machines in the cluster must be part of clients groups
 clients:

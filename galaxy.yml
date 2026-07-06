@@ -35,7 +35,6 @@ build_ignore:
   - ansible-requirements.yaml
   - ansible.cfg
   - ansible.log
-  - ceph-ansible
   - cqfd
   - files
   - inventories

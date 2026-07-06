@@ -34,7 +34,6 @@
 - name: Increase OSD cephadm
   when:
     - ceph_expansion_lv_expand_lv | default(false)
-    - is_using_cephadm | default(false)
   block:
     - name: Gather systemd service facts
       ansible.builtin.service_facts:
@@ -78,48 +77,6 @@
             state: started
         - name: Wait for cluster to be HEALTH_OK
           ansible.builtin.command: /usr/bin/ceph status --format=json
-          register: ceph_expansion_lv_osdsdown
-          until: ceph_expansion_lv_osdsdown.stdout | from_json | community.general.json_query('health.status') == "HEALTH_OK"
-          retries: 20
-          delay: 2
-          changed_when: false
-
-- name: Increase OSD ceph-ansible
-  when:
-    - ceph_expansion_lv_expand_lv | default(false)
-    - not (is_using_cephadm | default(false))
-  block:
-    - name: Find the osd number
-      ansible.builtin.find:
-        paths: /var/lib/ceph/osd/
-        file_type: directory
-        patterns: "ceph-[0-9]"
-        use_regex: true
-      register: ceph_expansion_lv_ceph_osd_number
-    - name: Resize OSDs (ceph-ansible)
-      when:
-        - ceph_expansion_lv_lv_resized.changed
-        - ceph_expansion_lv_ceph_osd_number.files | length > 0
-      block:
-        - name: Stop ceph-osd
-          ansible.builtin.systemd:
-            name: ceph-osd.target
-            state: stopped
-        - name: Wait for 3 seconds
-          ansible.builtin.wait_for:
-            timeout: 3
-        - name: Resize ceph-osd
-          ansible.builtin.command: "{{ item }}"
-          with_items:
-            - "/usr/bin/ceph-bluestore-tool bluefs-bdev-expand --path {{ ceph_expansion_lv_ceph_osd_number.files[0].path }}"
-            - "/usr/bin/ceph-bluestore-tool bluefs-bdev-expand --path {{ ceph_expansion_lv_ceph_osd_number.files[0].path }}"
-          changed_when: true
-        - name: Start ceph-osd
-          ansible.builtin.systemd:
-            name: ceph-osd.target
-            state: started
-        - name: Wait for cluster to be HEALTH_OK
-          ansible.builtin.command: "/usr/bin/ceph status --format=json"
           register: ceph_expansion_lv_osdsdown
           until: ceph_expansion_lv_osdsdown.stdout | from_json | community.general.json_query('health.status') == "HEALTH_OK"
           retries: 20

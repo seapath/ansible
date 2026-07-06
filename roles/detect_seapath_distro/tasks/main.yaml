@@ -61,7 +61,3 @@
   ansible.builtin.set_fact:
     seapath_distro: "{{ detect_seapath_distro_distro }}" # noqa: var-naming[no-role-prefix]
   when: detect_seapath_distro_distro is defined
-
-- name: Set is_using_cephadm depending on distro and option
-  ansible.builtin.set_fact:
-    is_using_cephadm: "{{ force_cephadm | default(true) }}" # noqa: var-naming[no-role-prefix]

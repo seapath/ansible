@@ -1,6 +1,6 @@
 # Ceph Prepare Installation Role
 
-This role prepares the ceph installation by identifying if it's a new install and then prepare the disks
+This role prepares the disks used by Ceph OSDs before the cluster is deployed with cephadm
 
 ## Requirements
 

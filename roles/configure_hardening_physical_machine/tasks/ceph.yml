@@ -36,4 +36,3 @@
   when:
     - not revert
     - cluster_ip_addr is defined
-    - is_using_cephadm | default(false)

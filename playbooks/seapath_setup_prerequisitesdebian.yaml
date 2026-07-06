@@ -122,7 +122,6 @@
         state: absent
         purge: true
         autoremove: true
-      when: force_cephadm | default(true)
     - name: Uninstall apt packages not required after installation (all debian version)
       ansible.builtin.apt:
         name:
