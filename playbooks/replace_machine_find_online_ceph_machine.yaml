@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 ---
 - name: Try to find an online Ceph machine
-  hosts: "{{ mon_group_name|default('mons') }}"
+  hosts: cluster_machines
   gather_facts: false
   tasks:
     - name: Wait for machine to be online
@@ -18,14 +18,13 @@
 - name: Register the machine to use to control Ceph
   hosts: localhost
   vars:
-    mon_group_name: mons
     unvalid_machine_filter: ":!{{ machine_to_remove | default(mon_to_kill | default('fake')) }}"
   tasks:
     - name: Register online machines
       ansible.builtin.add_host:
         name: "{{ item }}"
         groups: online_host
-      loop: "{{ groups.get(mon_group_name) }}"
+      loop: "{{ groups.get('cluster_machines') }}"
       when: hostvars[item].machine_up
       changed_when: false
     - name: Check if a Ceph machine is up
@@ -36,7 +35,7 @@
       ansible.builtin.add_host:
         name: "{{ item }}"
         groups: offline_host
-      loop: "{{ groups.get(mon_group_name) }}"
+      loop: "{{ groups.get('cluster_machines') }}"
       when: not hostvars[item].machine_up
       changed_when: false
     - name: Register a machine to run Ceph commands

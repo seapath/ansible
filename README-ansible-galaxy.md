@@ -30,9 +30,10 @@ The following group must only be present in case of a standalone setup:
 The following groups must only be present in case of a cluster setup:
 - `observers`: The machine to be used as SEAPATH observers. Must be empty (or not present) in case of a cluster with three hypervisors.
 - `cluster_machines`: The machines to form the cluster. Must contain three and only three machines.
-- `mons`: Machines to use as Ceph monitors. All cluster machines should be part of this group.
-- `osds`: Machines to use as Ceph OSD. All hypervisors must be part of this group.
-- `clients`: All machines to use the Ceph storage. All cluster machines must be part of this group.
+
+All cluster machines provide the Ceph monitor and manager services. The
+machines that store data are the ones with a non-empty `ceph_osd_disks` host
+variable, listing the block devices given to Ceph (one OSD per device).
 
 ## Virtual machines
 

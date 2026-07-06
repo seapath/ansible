@@ -7,7 +7,7 @@
 # - choose which machine will be the observer (ex: node3)
 # - remove the machine from the hypervisors group
 # - add the machine to the observers group
-# - remove the machine from the osds group
+# - remove the ceph_osd_disks variable of the machine
 # - optionally, remove the ptp_interface variable of the machine
 
 ---
@@ -79,6 +79,10 @@ cluster_machines:
       cluster_ip_addr: "192.168.55.1" # IP address of this node on the cluster. TODO
       cluster_next_ip_addr: "192.168.55.2" # IP address of node2 on the cluster. TODO
       cluster_previous_ip_addr: "192.168.55.3" # IP address of node3 on the cluster. TODO
+      # Set this to the paths of the disks that will contain ceph data,
+      # one OSD per disk. The paths can be found in "/dev/disk/by-path/"
+      ceph_osd_disks:
+        - "/dev/disk/by-path/pci-0000:03:00.0-scsi-0:2:1:0" # TODO
 
     node2:
       team0_0: "eno2" # Cluster interface connected to node3. TODO
@@ -86,6 +90,8 @@ cluster_machines:
       cluster_ip_addr: "192.168.55.2" # IP address of this node on the cluster. TODO
       cluster_next_ip_addr: "192.168.55.3" # IP address of node3 on the cluster. TODO
       cluster_previous_ip_addr: "192.168.55.1" # IP address of node1 on the cluster. TODO
+      ceph_osd_disks:
+        - "/dev/disk/by-path/pci-0000:03:00.0-scsi-0:2:1:0" # TODO
 
     node3:
       team0_0: "enp2s0" # Cluster interface connected to node1. TODO
@@ -94,25 +100,14 @@ cluster_machines:
       cluster_next_ip_addr: "192.168.55.1" # IP address of node1 on the cluster. TODO
       cluster_previous_ip_addr: "192.168.55.2" # IP address of node2 on the cluster. TODO
       br_rstp_priority: 12288 # Do not modify, used by RSTP
+      ceph_osd_disks:
+        - "/dev/disk/by-path/pci-0000:03:00.0-scsi-0:2:1:0" # TODO
 
   vars:
     deploy_cephfs: false # Change to true to deploy cephfs on your cluster
 
-# Ceph monitor. All machines in the cluster must be part of mons groups
-mons:
-  hosts:
-    node1:
-    node2:
-    node3:
-  vars:
-    ceph_origin: distro
-    cluster_network: "192.168.55.0/24" # IP range of your cluster. TODO
-    public_network: "{{ cluster_network }}"
-    monitor_address: "{{ cluster_ip_addr }}"
-    cephadm_network: "{{ public_network }}"
-    configure_firewall: false
-    ntp_service_enabled: false
-    dashboard_enabled: false
+    # Ceph configuration
+    cephadm_network: "192.168.55.0/24" # IP range of your cluster. TODO
     ceph_conf_overrides:
       global:
         osd_pool_default_size: "{{ groups['hypervisors'] | length }}"
@@ -123,44 +118,6 @@ mons:
         auth_allow_insecure_global_id_reclaim: false
       osd:
         osd memory target: 8076326604
-
-# Ceph OSD. Machines that will be used as OSDs (which will store data)
-# Only hypervisors are part of the OSD group
-osds:
-  hosts:
-    node1:
-      # Set this to the paths of the disks that will contain ceph data,
-      # one OSD per disk. The paths can be found in "/dev/disk/by-path/"
-      ceph_osd_disks:
-        - "/dev/disk/by-path/pci-0000:03:00.0-scsi-0:2:1:0" # TODO
-    node2:
-      ceph_osd_disks:
-        - "/dev/disk/by-path/pci-0000:03:00.0-scsi-0:2:1:0" # TODO
-    node3:
-      ceph_osd_disks:
-        - "/dev/disk/by-path/pci-0000:03:00.0-scsi-0:2:1:0" # TODO
-
-# Ceph clients. All machines in the cluster must be part of clients groups
-clients:
-  hosts:
-    node1:
-    node2:
-    node3:
-  vars:
-    user_config: true
-    rbd:
-      name: "rbd"
-      application: "rbd"
-      pg_autoscale_mode: "on"
-      target_size_ratio: 1
-    pools:
-      - "{{ rbd }}"
-    keys:
-      - name: client.libvirt
-        caps:
-          mon: 'profile rbd, allow command "osd blacklist"'
-          osd: "allow class-read object_prefix rbd_children, profile rbd pool=rbd"
-        mode: "{{ ceph_keyring_permissions }}"
 
 # Empty groups to prevent warnings
 standalone_machine:

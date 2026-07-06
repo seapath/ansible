@@ -19,7 +19,7 @@
         name: cephadm_install
 
 - name: Prepare Ceph installation
-  hosts: osds
+  hosts: cluster_machines
   become: true
   gather_facts: true
   roles:
