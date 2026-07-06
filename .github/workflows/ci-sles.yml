@@ -1,0 +1,18 @@
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+name: CI SLES
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  checks: write
+
+jobs:
+  dummy:
+    runs-on: "runner-SFL"
+    steps:
+      - name: Dummy echo
+        run: echo "Kickstart placeholder"
