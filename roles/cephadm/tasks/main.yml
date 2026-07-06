@@ -185,35 +185,88 @@
   when: cephadm_mon_nodes_to_add | length > 0
 
 # === OSDs now ===
-- name: Get list of current OSD daemons and their hosts
-  ansible.builtin.command: ceph orch ps --daemon-type=osd --format json
-  register: cephadm_osd_ps
-  delegate_to: "{{ cephadm_first_node }}"
-  run_once: true
+# A volume is kept untouched if and only if it hosts an OSD that the
+# running cluster claims: the OSD uuid found in the LVM tags written by
+# ceph-volume must be registered in the cluster OSD map. Everything else
+# listed as an OSD volume belongs to Ceph and is zapped before being
+# added, which makes re-runs safe on live clusters and makes
+# reinstallations and machine replacements re-enroll leftover volumes
+# automatically.
+- name: Set OSD volume candidates for this host
+  ansible.builtin.set_fact:
+    cephadm_osd_disks: >-
+      {{ ['/dev/' ~ lvm_volumes[0].data_vg ~ '/' ~ lvm_volumes[0].data]
+         if lvm_volumes is defined
+         else ['/dev/vg_ceph/lv_ceph'] }}
+  when: inventory_hostname in (groups['hypervisors'] | intersect(groups['cluster_machines']))
+
+- name: Get the OSD map of the cluster
+  ansible.builtin.command: ceph osd dump --format json
+  register: cephadm_osd_dump
   changed_when: false
-- name: Set fact for existing OSD hosts
+  run_once: true
+  delegate_to: "{{ cephadm_first_node }}"
+
+- name: Set fact for OSD UUIDs registered in the cluster
   ansible.builtin.set_fact:
-    cephadm_existing_osd_hosts: "{{ cephadm_osd_ps.stdout | from_json | map(attribute='hostname') | list | unique }}"
-  run_once: true
-- name: Debug cephadm_existing_osd_hosts
-  ansible.builtin.debug:
-    msg: "Nodes with existing OSDs: {{ cephadm_existing_osd_hosts }}"
-  run_once: true
-- name: Set list of nodes that need OSDs
-  ansible.builtin.set_fact:
-    cephadm_nodes_needing_osds: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) | map('extract', hostvars, 'hostname') | difference(cephadm_existing_osd_hosts) }}"
-  run_once: true
-- name: Debug nodes needing OSDs
-  ansible.builtin.debug:
-    msg: "Nodes that need OSDs: {{ cephadm_nodes_needing_osds }}"
+    cephadm_cluster_osd_uuids: "{{ (cephadm_osd_dump.stdout | from_json).osds | map(attribute='uuid') | list }}"
   run_once: true
 
-- name: Zap the volume on nodes that need OSDs
-  ansible.builtin.command: "{{ cephadm_bin }} --image localhost:5000/ceph:v{{ cephadm_release }} ceph-volume lvm zap vg_ceph/lv_ceph"
-  delegate_to: "{{ item }}"
-  run_once: true
-  when: hostvars[item]['hostname'] in cephadm_nodes_needing_osds
-  loop: "{{ groups['hypervisors'] | intersect(groups['cluster_machines']) }}"
+- name: List ceph-volume OSDs of the host
+  ansible.builtin.command: "{{ cephadm_bin }} --image localhost:5000/ceph:v{{ cephadm_release }} ceph-volume lvm list --format json"
+  register: cephadm_cv_list
+  changed_when: false
+  failed_when: false
+  when: cephadm_osd_disks | default([]) | length > 0
+
+- name: Compute devices claimed by OSDs of the cluster
+  ansible.builtin.set_fact:
+    cephadm_claimed_devices: "{{ cephadm_osd_lvs | community.general.json_query(cephadm_claimed_query) | flatten }}"
+  vars:
+    cephadm_osd_lvs: >-
+      {{ ((cephadm_cv_list.stdout | default('{}'))
+          if (cephadm_cv_list.rc | default(1)) == 0 else '{}')
+         | from_json | dict2items | map(attribute='value') | flatten | list }}
+    cephadm_claimed_query: >-
+      [?contains(`{{ cephadm_cluster_osd_uuids | to_json }}`, tags."ceph.osd_fsid")].[lv_path, devices]
+  when: cephadm_osd_disks | default([]) | length > 0
+
+- name: Get the real path of OSD volumes
+  ansible.builtin.command: "realpath {{ item }}"
+  loop: "{{ cephadm_osd_disks | default([]) }}"
+  register: cephadm_osd_disks_realpath
+  changed_when: false
+  failed_when: false
+
+- name: List the block device tree of each OSD volume
+  ansible.builtin.command: "lsblk -lnpo NAME {{ item.stdout }}"
+  loop: "{{ cephadm_osd_disks_realpath.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item | default('') }}"
+  register: cephadm_osd_disks_tree
+  changed_when: false
+  when: item.rc | default(1) == 0
+
+- name: Select OSD volumes not claimed by the cluster
+  ansible.builtin.set_fact:
+    cephadm_osd_disks_to_zap: >-
+      {{ cephadm_osd_disks_to_zap | default([])
+         + ([item.item.item] if (item.rc | default(1)) == 0
+            and item.item.item not in cephadm_claimed_devices
+            and item.stdout_lines | intersect(cephadm_claimed_devices) | length == 0
+            else []) }}
+  loop: "{{ cephadm_osd_disks_tree.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.item | default('') }}"
+
+- name: Show OSD volumes that will be wiped
+  ansible.builtin.debug:
+    msg: "OSD volumes that will be wiped and given to Ceph: {{ cephadm_osd_disks_to_zap | default([]) }}"
+  when: cephadm_osd_disks_to_zap | default([]) | length > 0
+
+- name: Zap OSD volumes not claimed by the cluster
+  ansible.builtin.command: "{{ cephadm_bin }} --image localhost:5000/ceph:v{{ cephadm_release }} ceph-volume lvm zap {{ item }}"
+  loop: "{{ cephadm_osd_disks_to_zap | default([]) }}"
   changed_when: true
 
 - name: Copy ceph orch spec file
