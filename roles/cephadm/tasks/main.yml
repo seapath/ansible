@@ -195,10 +195,9 @@
 - name: Set OSD volume candidates for this host
   ansible.builtin.set_fact:
     cephadm_osd_disks: >-
-      {{ ['/dev/' ~ lvm_volumes[0].data_vg ~ '/' ~ lvm_volumes[0].data]
-         if lvm_volumes is defined
-         else ['/dev/vg_ceph/lv_ceph'] }}
-  when: inventory_hostname in (groups['hypervisors'] | intersect(groups['cluster_machines']))
+      {{ ceph_osd_disks
+         if ceph_osd_disks is defined
+         else ([ceph_osd_disk] if ceph_osd_disk is defined else []) }}
 
 - name: Get the OSD map of the cluster
   ansible.builtin.command: ceph osd dump --format json
@@ -264,9 +263,22 @@
     msg: "OSD volumes that will be wiped and given to Ceph: {{ cephadm_osd_disks_to_zap | default([]) }}"
   when: cephadm_osd_disks_to_zap | default([]) | length > 0
 
-- name: Zap OSD volumes not claimed by the cluster
-  ansible.builtin.command: "{{ cephadm_bin }} --image localhost:5000/ceph:v{{ cephadm_release }} ceph-volume lvm zap {{ item }}"
+# Logical volumes are wiped in place (the volume belongs to the user);
+# whole disks and partitions are destroyed so that ceph-volume can
+# create its own LVM layer on them.
+- name: Get the device type of OSD volumes to wipe
+  ansible.builtin.command: "lsblk -ndo TYPE {{ item }}"
   loop: "{{ cephadm_osd_disks_to_zap | default([]) }}"
+  register: cephadm_osd_zap_types
+  changed_when: false
+
+- name: Zap OSD volumes not claimed by the cluster
+  ansible.builtin.command: >-
+    {{ cephadm_bin }} --image localhost:5000/ceph:v{{ cephadm_release }}
+    ceph-volume lvm zap {{ item.item }}{{ '' if (item.stdout | trim) == 'lvm' else ' --destroy' }}
+  loop: "{{ cephadm_osd_zap_types.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"
   changed_when: true
 
 - name: Copy ceph orch spec file

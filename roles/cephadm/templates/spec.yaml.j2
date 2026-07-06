@@ -13,17 +13,22 @@ service_name: mon
 placement:
   host_pattern: '*'
 ---
-{% for host in groups['osds'] %}
+{% for host in groups['cluster_machines'] %}
+{% set osd_disks = hostvars[host]['cephadm_osd_disks'] | default([]) %}
+{% if osd_disks | length > 0 %}
 service_type: osd
-service_id: {{ 'osd' ~ (groups['osds'].index(host) + 1) }}
-service_name: osd.{{ 'osd' ~ (groups['osds'].index(host) + 1) }}
+service_id: {{ hostvars[host]['hostname'] }}
+service_name: osd.{{ hostvars[host]['hostname'] }}
 placement:
   host_pattern: {{ hostvars[host]['hostname'] }}
 spec:
   data_devices:
     paths:
-    - /dev/vg_ceph/lv_ceph
+{% for disk in osd_disks %}
+    - {{ disk }}
+{% endfor %}
   filter_logic: AND
   objectstore: bluestore
 ---
+{% endif %}
 {% endfor %}

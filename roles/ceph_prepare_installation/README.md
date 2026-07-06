@@ -1,6 +1,8 @@
 # Ceph Prepare Installation Role
 
-This role prepares the disks used by Ceph OSDs before the cluster is deployed with cephadm
+This role validates the disks given to Ceph OSDs before the cluster is
+deployed with cephadm, and translates deprecated inventory layouts into the
+`ceph_osd_disks` list consumed by the `cephadm` role.
 
 ## Requirements
 
@@ -8,44 +10,52 @@ no requirement.
 
 ## Role Variables
 
-| Variable      | Required | Type             | Comments                                                                                                          |
-|---------------|----------|------------------|-------------------------------------------------------------------------------------------------------------------|
-| lvm_volumes   | No       | List of one dict | LVM volumes to be used for Ceph OSD. To use one entire disk, use ceph_osd_disk variable                           |
-| ceph_osd_disk | No       | String           | Node device disk to use for Ceph OSD. The whole disk will be used.                                                |
-| ceph_prepare_installation_flush_osds | No       | Boolean          | Force re-creation of OSD LVM volumes even if they already exist. Defaults to false.                               |
+| Variable       | Required | Type            | Comments                                                                     |
+|----------------|----------|-----------------|-------------------------------------------------------------------------------|
+| ceph_osd_disks | No       | List of strings | Paths of the block devices to give to Ceph, one OSD per entry (see below)    |
+| ceph_osd_disk  | No       | String          | Shorthand for a one-element `ceph_osd_disks` list                             |
+| lvm_volumes    | No       | List of one dict| **Deprecated** shared-disk layout, kept for backward compatibility (see below) |
 
-When `ceph_osd_disk` is provided and `lvm_volumes` is **not** defined, the role automatically creates a single LVM volume group `vg_ceph` and logical volume `lv_ceph` using the full disk. This is skipped if `vg_ceph/lv_ceph` already exists, unless `ceph_prepare_installation_flush_osds` is set to `true`.
+### ceph_osd_disks
 
-lvm_volumes structure is a list of one dictionnary. All the variables available on the dictionnary are described as follow.
-**Warning** : lvm_volumes must only contain one element it its list. Multiple volumes is not handled by SEAPATH.
+Each entry is a path to a block device that entirely belongs to Ceph:
+
+- **Whole disks** (recommended): use stable paths such as
+  `/dev/disk/by-path/...`. cephadm creates its own LVM layer on the disk.
+- **Pre-existing logical volumes**: for setups where Ceph shares a disk with
+  the system, create the LV outside of these playbooks (installer, image or
+  manually) and list its `/dev/<vg>/<lv>` path here.
+
+The role checks that every listed device exists and does not hold mounted
+filesystems or swap, and fails otherwise. Whether a device must be wiped is
+decided later by the `cephadm` role: a device hosting an OSD claimed by the
+running cluster is never touched, anything else listed here is zapped and
+enrolled (see the `cephadm` role README).
+
+### lvm_volumes (deprecated)
+
+When `lvm_volumes` is defined, the role creates the described partition on
+`ceph_osd_disk` and the volume group and logical volume on top of it, then
+behaves as if `ceph_osd_disks: ["/dev/<data_vg>/<data>"]` had been given.
+New inventories should create the volume outside of these playbooks and use
+`ceph_osd_disks` instead.
 
 | Variable      | Type    | Comments                                                        |
 |---------------|---------|-----------------------------------------------------------------|
 | data          | String  | Name of the logical volume to use for the CEPH OSD              |
 | data_size     | Integer | Size of the logical volume, default in megabytes                |
 | data_vg       | String  | Name of the volume group to use for the CEPH OSD                |
-| device        | String  | Disk on which the logical volume and volume group are installed |
 | device_number | Integer | Number of the partition to use in the disk                      |
 | device_size   | Integer | Size of the partition                                           |
 
-Example :
-
-```yaml
-lvm_volumes:
-  - data: lv_ceph
-    data_size: 2000
-    data_vg: vg_ceph
-    device: /dev/disk/by-path/pci-0000:06:00.0
-    device_number: 3
-    device_size: 3000
-```
+**Warning**: lvm_volumes must only contain one element in its list.
 
 ## Example Playbook
 
 ```yaml
 - name: Prepare Ceph installation
   hosts:
-      osds
+      cluster_machines
   become: true
   gather_facts: yes
   roles:

@@ -4,12 +4,12 @@
 # ceph ALL=NOPASSWD: /usr/sbin/smartctl -a --json=o /dev/*
 # ceph ALL=NOPASSWD: /usr/sbin/nvme * smart-log-add --json /dev/*
 #
-# The first rule is modified to target the right disk instead of a wildcard
+# The first rule is modified to target the right disks instead of a wildcard
 # The second one is remove cause the needed packages are not installed
 #
 # The replace directive add an escape backslash before the colon character
 # for the file to be properly parsed.
 
-{% if ceph_osd_disk is defined %}
-ceph ALL=NOPASSWD: /usr/sbin/smartctl -a --json=o {{ configure_hardening_physical_machine_ceph_osd_disk_stat.stat.lnk_source | default(ceph_osd_disk) }}
-{% endif %}
+{% for disk in configure_hardening_physical_machine_ceph_osd_disk_stat.results | default([]) %}
+ceph ALL=NOPASSWD: /usr/sbin/smartctl -a --json=o {{ disk.stat.lnk_source | default(disk.item) }}
+{% endfor %}

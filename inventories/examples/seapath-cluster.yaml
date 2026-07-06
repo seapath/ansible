@@ -129,13 +129,16 @@ mons:
 osds:
   hosts:
     node1:
-      # Set this to the path of the disk that will contains ceph data.
-      # The path can be found in "/dev/disk/by-path/"
-      ceph_osd_disk: "/dev/disk/by-path/pci-0000:03:00.0-scsi-0:2:1:0" # TODO
+      # Set this to the paths of the disks that will contain ceph data,
+      # one OSD per disk. The paths can be found in "/dev/disk/by-path/"
+      ceph_osd_disks:
+        - "/dev/disk/by-path/pci-0000:03:00.0-scsi-0:2:1:0" # TODO
     node2:
-      ceph_osd_disk: "/dev/disk/by-path/pci-0000:03:00.0-scsi-0:2:1:0" # TODO
+      ceph_osd_disks:
+        - "/dev/disk/by-path/pci-0000:03:00.0-scsi-0:2:1:0" # TODO
     node3:
-      ceph_osd_disk: "/dev/disk/by-path/pci-0000:03:00.0-scsi-0:2:1:0" # TODO
+      ceph_osd_disks:
+        - "/dev/disk/by-path/pci-0000:03:00.0-scsi-0:2:1:0" # TODO
 
 # Ceph clients. All machines in the cluster must be part of clients groups
 clients:

@@ -3,11 +3,17 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+- name: Build the list of Ceph OSD disks
+  ansible.builtin.set_fact:
+    configure_hardening_physical_machine_ceph_osd_disks: >-
+      {{ ceph_osd_disks
+         if ceph_osd_disks is defined
+         else ([ceph_osd_disk] if ceph_osd_disk is defined else []) }}
 - name: Get ceph disk stats
   ansible.builtin.stat:
-    path: "{{ ceph_osd_disk }}"
+    path: "{{ item }}"
+  loop: "{{ configure_hardening_physical_machine_ceph_osd_disks }}"
   register: configure_hardening_physical_machine_ceph_osd_disk_stat
-  when: ceph_osd_disk is defined
 - name: Restrict ceph sudoers file
   ansible.builtin.template:
     src: sudoers/ceph.j2

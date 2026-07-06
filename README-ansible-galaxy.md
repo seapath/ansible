@@ -54,7 +54,7 @@ You can use default SEAPATH playbooks or write your own.
 
 ## Cluster
 
-- `ceph_prepare_installation`: Prepare the disk or LVM volume for Ceph
+- `ceph_prepare_installation`: Validate the disks given to Ceph OSDs
 - `add_libvirtadmin_user`: Configure the user that will perform VM live migration and console access
 - `cephadm`: Deploy Ceph on the cluster using cephadm
 - `configure_ha`: Configure pacemaker and Corosync
