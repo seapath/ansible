@@ -170,6 +170,9 @@
             <source bridge="{{ bridge.name }}"/>
             <mac address="{{ bridge.mac_address }}"/>
             <model type="virtio"/>
+{%         if bridge.rx_queue_size is defined %}
+            <driver rx_queue_size="{{ bridge.rx_queue_size }}"/>
+{%         endif %}
 {%         if bridge.type is defined %}
                 <virtualport type='{{ bridge.type }}'/>
 {%         endif %}
@@ -187,6 +190,9 @@
             <mac address="{{ bridge.mac_address }}"/>
             <target dev="{{ bridge.ovs_port }}" managed="no"/>
             <model type="virtio"/>
+{%         if bridge.rx_queue_size is defined %}
+            <driver rx_queue_size="{{ bridge.rx_queue_size }}"/>
+{%         endif %}
         </interface>
 {%     endfor %}
 {% endif %}

@@ -75,7 +75,7 @@ Below is a list of the VMs member variables that can be used with this XML file.
 | vm_features     |                  | List of strings |           | List of vm features to enable. Possible values are "rt", "isolated", "secure-boot", "dpdk", "memballoon", "graphic-console"              |
 |                 | rt               |                 |           | Enable real time tweaks (priority, cgroup, scheduler, etc ...). Depends on `cpuset`                                                      |
 |                 | isolated         |                 |           | Pin vCPU to hypervisor CPUs. Depends on `cpuset`                                                                                         |
-|                 | secure-boot      |                 |           | Enable secure boot. Works only with EFI firmware                                                                                        |
+|                 | secure-boot      |                 |           | Enable secure boot. Works only with EFI firmware                                                                                         |
 |                 | dpdk             |                 |           | Connect the VM to a DPDK OVS bridge port. Depends on `dpdk`                                                                              |
 |                 | memballoon       |                 |           | Enable memory ballooning for the VM.                                                                                                     |
 |                 | graphic-console  |                 |           | Add a graphic console (VNC) with video and tablet input to the VM                                                                        |
@@ -93,9 +93,11 @@ Below is a list of the VMs member variables that can be used with this XML file.
 | bridges         |                  | List of dicts   |           | List of Linux bridges to use. Each entry must define:                                                                                    |
 |                 | name             | String          |           | Name of the bridge to connect to                                                                                                         |
 |                 | mac_address      | String          |           | Mac address of the virtual NIC of the VM on this bridge                                                                                  |
+|                 | rx_queue_size    | Integer         |           | Size of virtio receive ring for each queue (optional)                                                                                    |
 | ovs             |                  | List of dicts   |           | List of OVS ports to use. Each element must contain:                                                                                     |
 |                 | ovs_port         | String          |           | OVS port to use for this interface                                                                                                       |
-|                 | mad_address      | String          |           | Mac address of this interface                                                                                                            |
+|                 | mac_address      | String          |           | Mac address of this interface                                                                                                            |
+|                 | rx_queue_size    | Integer         |           | Size of virtio receive ring for each queue (optional)                                                                                    |
 | dpdk            |                  | List of dicts   |           | List of Open vSwitch ports on which to enable dpdk. Depends on `dpdk` in `vm_features`. Each element must contain:                       |
 |                 | ovs_port         |                 |           | OVS port on which to enable DPDK                                                                                                         |
 |                 | cpu_nb           |                 |           | Hypervisor CPU to use for this port (100% of the cpu time will be used)                                                                  |
