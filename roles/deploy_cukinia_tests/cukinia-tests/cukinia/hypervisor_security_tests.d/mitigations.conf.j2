@@ -1,0 +1,35 @@
+#!/bin/sh
+
+# Copyright (C) 2023, RTE (http://www.rte-france.com)
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+cukinia_log "$(_colorize yellow "--- Check CPU vulnerabilities ---")"
+
+{% if seapath_distro == "SLES" %}
+SKIP_VULN="retbleed"
+{% else %}
+SKIP_VULN=""
+{% endif %}
+
+VULN_COUNT=0
+for i in /sys/devices/system/cpu/vulnerabilities/*; do
+
+	if [ -n "$SKIP_VULN" ] && echo $SKIP_VULN | grep -q -w $(basename $i); then
+		continue
+	fi
+
+	VULN_COUNT=$((VULN_COUNT+$(grep -c "Vulnerable" "$i")))
+
+done
+
+test_id "SEAPATH-00207" as "CPU has no known vulnerabilities" cukinia_test\
+		$VULN_COUNT -eq 0
+
+{% if seapath_distro == "SLES" %}
+if [ -f /sys/devices/system/cpu/vulnerabilities/retbleed ]; then
+	when "false" test_id "SEAPATH-00207" as "CPU has no RETBleed vulnerability" \
+		cukinia_test grep -q "Vulnerable" /sys/devices/system/cpu/vulnerabilities/retbleed
+
+fi
+{% endif %}
