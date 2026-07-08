@@ -6,6 +6,7 @@
 ## Estimating volume Backup
 ## ------------------------------
 from subprocess import check_output
+import re
 import sys
 
 FMT_LIG = "%-20s %10d"
@@ -41,26 +42,38 @@ def pr_table(d):
     print()
     pr_lig(" Estimating En GB",  int((total/1000)+0.5), " GB" )
 
+def image_to_guest(name):
+    """Map an image name (system_<guest> or data_<guest>_<n>) to its guest."""
+    if '@' in name:
+        name = name[0:name.index('@')]
+    if name.startswith("system_"):
+        return name[len("system_"):]
+    if name.startswith("data_"):
+        return name[len("data_"):].rsplit("_", 1)[0]
+    return None
+
 def read_du_rbd(data):
     volume={}
-    cmd = '/usr/bin/rbd du 2>/dev/null | grep system_'
-    if data["include_vm"] and data["include_vm"] != '""':
-        cmd += '| grep -E "(%s)"' % data["include_vm"].replace('"', '')
-    if data["exclude_vm"] and data["exclude_vm"] != '""':
-        cmd += '| grep -v -E "(%s)"' % data["exclude_vm"].replace('"', '')
+    include_vm = data["include_vm"].replace('"', '') or ".*"
+    exclude_vm = data["exclude_vm"].replace('"', '')
+    cmd = '/usr/bin/rbd du 2>/dev/null | grep -E "^(system|data)_"'
 
     out = check_output(cmd, shell=True, text=True, universal_newlines=True)
     for l in out.split('\n'):
         if l:
             name, prov, punit, used, uunit = l.split()
-            name = name.replace("system_","")
-            if '@' in name:
-                name = name[0:name.index('@')]
+            guest = image_to_guest(name)
+            if guest is None:
+                continue
+            if not re.search(include_vm, guest):
+                continue
+            if exclude_vm and re.search(exclude_vm, guest):
+                continue
             t = convert_mo(convert_size(used, uunit))
-            if name in volume:
-                volume[name] += t
+            if guest in volume:
+                volume[guest] += t
             else:
-                volume[name] = t
+                volume[guest] = t
     return volume
 
 
