@@ -70,7 +70,9 @@ clockClass               248
 tx_timestamp_timeout    10
 
 {% if timemaster_ptp_custom_options is not none %}
-{%- for line in timemaster_ptp_custom_options %}{{ line }}{% endfor %}
+{% for line in timemaster_ptp_custom_options %}
+{{ line }}
+{% endfor %}
 {% endif %}
 
 [chronyd]
