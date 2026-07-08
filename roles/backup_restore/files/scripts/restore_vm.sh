@@ -16,9 +16,6 @@ incdate=$6
 [ -z "$guest" ] && { echo "var guest empty"; exit 5; }
 [ -z "$incdate" ] && { echo "var incdate empty"; exit 6; }
 
-f="$local_tmp_dir""$d"
-mkdir -p $f
-
 #called with : ./restore_vm.sh /data2/tmp "ssh -p 22" cephbackup@ip:/mnt/nasopf/seapath/backups_ceph_cluster_lot1/ backup_ceph_202203110733 VM1 202203110836
 #local_tmp_dir=/data2/tmp
 #remote_dir=cephbackup@ip:/mnt/nasopf/seapath/backups_ceph_cluster/
@@ -50,21 +47,35 @@ echo creating vm xml with no disk
 echo python3 /usr/local/bin/remove_disk_xml.py $local_tmp_dir/system_"$guest"-"$incdate".xml $local_tmp_dir/system_"$guest"-"$incdate"-nodisk.xml
 python3 /usr/local/bin/remove_disk_xml.py $local_tmp_dir/system_"$guest"-"$incdate".xml $local_tmp_dir/system_"$guest"-"$incdate"-nodisk.xml
 echo
-echo creating base vm
-echo vm-mgr create -n $guest --force --disable --xml $local_tmp_dir/system_"$guest"-"$incdate"-nodisk.xml -i $local_tmp_dir/system_"$guest"_"$fulldate".qcow2
-vm-mgr create -n $guest --force --disable --xml $local_tmp_dir/system_"$guest"-"$incdate"-nodisk.xml -i $local_tmp_dir/system_"$guest"_"$fulldate".qcow2
-echo
-echo creating base snapshot
-echo rbd snap create system_"$guest"@$fulldate
-rbd snap create system_"$guest"@$fulldate
-echo
-for difffile in `ls $local_tmp_dir/*.diff`
+# Additional disks (data_<guest>_<n>) are restored from their full backup
+# qcow2, in index order so vm-mgr recreates them under their original names
+data_images=$(cd $local_tmp_dir && ls data_"$guest"_*_"$fulldate".qcow2 2>/dev/null | sed -e "s/_$fulldate\.qcow2$//" | sort -t_ -k3 -n)
+additional_disk_args=()
+for img in $data_images
 do
-  datediff=`echo $difffile | sed -e s/.*_// -e s/\.diff//`
+  additional_disk_args+=(--additional-disk "$local_tmp_dir/${img}_${fulldate}.qcow2")
+done
+echo creating base vm
+echo vm-mgr create -n $guest --force --disable --xml $local_tmp_dir/system_"$guest"-"$incdate"-nodisk.xml -i $local_tmp_dir/system_"$guest"_"$fulldate".qcow2 "${additional_disk_args[@]}"
+vm-mgr create -n $guest --force --disable --xml $local_tmp_dir/system_"$guest"-"$incdate"-nodisk.xml -i $local_tmp_dir/system_"$guest"_"$fulldate".qcow2 "${additional_disk_args[@]}"
+echo
+echo creating base snapshots
+for img in system_"$guest" $data_images
+do
+  echo rbd snap create "$img"@$fulldate
+  rbd snap create "$img"@$fulldate
+done
+echo
+for difffile in `ls $local_tmp_dir/*.diff 2>/dev/null`
+do
+  diffname=`basename $difffile .diff`
+  # diff files are named <image>_<from date>_<to date>.diff
+  image=`echo $diffname | sed -E "s/_[0-9]{12}_[0-9]{12}$//"`
+  datediff=`echo $diffname | sed -e s/.*_//`
   if [ $datediff -le $incdate ]; then
     echo $difffile
-    echo rbd import-diff $difffile rbd/system_"$guest"
-    rbd import-diff $difffile rbd/system_"$guest"
+    echo rbd import-diff $difffile rbd/$image
+    rbd import-diff $difffile rbd/$image
   fi
 done
 echo
