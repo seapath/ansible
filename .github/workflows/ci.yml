@@ -25,6 +25,10 @@ jobs:
     needs: ci-molecule
     uses: ./.github/workflows/ci-debian.yml
 
+  ci-sles:
+    needs: ci-molecule
+    uses: ./.github/workflows/ci-sles.yml
+
   ci-oraclelinux:
     needs: ci-molecule
     uses: ./.github/workflows/ci-oraclelinux.yml
