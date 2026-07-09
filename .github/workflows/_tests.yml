@@ -276,6 +276,13 @@ jobs:
           echo "::endgroup::"
 
           for vm in $(echo $INVENTORY_VMS | jq -r 'keys | join(" ")'); do
+            # Check for kernel backtrace error. This is a random error so it must not
+            # stop the CI but just display a warning
+            # See https://github.com/seapath/ansible/issues/164
+            if grep '<failure' ${{ env.RESULTS_FOLDER }}/cukinia_${vm}.xml | grep -q '00080'; then
+              echo "::warning title=${{ inputs.seapath-flavor }} VMs::kernel back trace detected, see https://github.com/seapath/ansible/issues/164"
+            fi
+
             if grep '<failure' ${{ env.RESULTS_FOLDER }}/cukinia_${vm}.xml | grep -q -v '00080'; then
               echo "::error title=${{ inputs.seapath-flavor }} VMs::Test fails for ${vm}, see associated test report"
               echo "FAILED=true" >> "$GITHUB_ENV"
