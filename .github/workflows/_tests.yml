@@ -275,10 +275,12 @@ jobs:
 
           echo "::endgroup::"
 
-          if grep '<failure' ${{ env.RESULTS_FOLDER }}/*.xml | grep -q -v '00080'; then
-            echo "::error title=${{ inputs.seapath-flavor }} VMs::Test fails, see associated test report"
-            echo "FAILED=true" >> "$GITHUB_ENV"
-          fi
+          for vm in $(echo $INVENTORY_VMS | jq -r 'keys | join(" ")'); do
+            if grep '<failure' ${{ env.RESULTS_FOLDER }}/cukinia_${vm}.xml | grep -q -v '00080'; then
+              echo "::error title=${{ inputs.seapath-flavor }} VMs::Test fails for ${vm}, see associated test report"
+              echo "FAILED=true" >> "$GITHUB_ENV"
+            fi
+          done
 
           for vm in $(echo $INVENTORY_VMS | jq -r 'map_values(select(.skip_cyclictest == false and .rt == true)) | keys | join(" ")'); do
             file="${{ env.RESULTS_FOLDER }}/cyclictest_${vm}.txt"
