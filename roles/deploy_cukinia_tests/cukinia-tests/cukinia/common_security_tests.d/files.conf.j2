@@ -40,7 +40,6 @@ test_id "SEAPATH-00195" as "Ceph OSD are owned by ceph" \
 
 SETUID_ALLOWLIST_DEBIAN="\
 /usr/bin/crontab|\
-/usr/bin/fusermount3|\
 /usr/bin/ksu|\
 /usr/bin/pkexec|\
 /usr/bin/wall|\
@@ -61,6 +60,7 @@ SETUID_ALLOWLIST_COMMON="\
 /usr/bin/chfn|\
 /usr/bin/chsh|\
 /usr/bin/expiry|\
+/usr/bin/fusermount3|\
 /usr/bin/gpasswd|\
 /usr/bin/mount|\
 /usr/bin/newgidmap|\
