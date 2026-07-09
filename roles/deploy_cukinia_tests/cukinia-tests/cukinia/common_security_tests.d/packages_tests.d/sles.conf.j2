@@ -87,6 +87,7 @@ EXPECTED_PACKAGES=" \
     python313-libvirt-python \
     python313-lxml \
     python313-pip \
+    python313-PyYAML \
     python313-setuptools \
     qemu-block-curl \
     qemu-block-rbd \
@@ -198,5 +199,5 @@ for p in $(zypper --no-remote -q se -i -t package | tail -n+4 | cut -d'|' -f2); 
     fi
 done
 
-test_id "SEAPATH-00198" as "No unneded packages installed" \
+test_id "SEAPATH-00198" as "No unneeded packages installed" \
     cukinia_test "$UNNEEDED_PACKAGES" = ""
