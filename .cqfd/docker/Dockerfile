@@ -17,6 +17,7 @@ RUN set -x \
         git \
         podman \
         python3-full \
+        python3-junitparser \
         python3-matplotlib \
         rstcheck \
         rsync \
