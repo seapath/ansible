@@ -1,0 +1,43 @@
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Get distribution variables
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  roles:
+    - detect_seapath_distro
+  tasks:
+    - name: Load distribution-specific variables
+      ansible.builtin.include_vars: "../vars/{{ seapath_distro }}_hardening.yml"
+
+- name: OpenSCAP analysis tests
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  gather_facts: true
+  become: true
+  pre_tasks:
+    - name: Create temporary directory for result files
+      ansible.builtin.tempfile:
+        state: directory
+      register: oscap_result_dir
+  roles:
+    - role: configure_hardening_oscap
+      vars:
+        configure_hardening_oscap_apply_remediation: false
+        configure_hardening_oscap_results_dir: "{{ oscap_result_dir.path }}"
+  post_tasks:
+    - name: Fetch HTML report file
+      ansible.builtin.fetch:
+        src: "{{ oscap_result_dir.path }}/oscap-report.html"
+        dest: "{{ oscap_test_prefix | default('..') }}/oscap-report-{{ inventory_hostname }}.html"
+        flat: true
+        fail_on_missing: false  # Prevents failing when a host doesn't not provide any OpenSCAP test file
+    - name: Fetch XML result file
+      ansible.builtin.fetch:
+        src: "{{ oscap_result_dir.path }}/oscap-results.xml"
+        dest: "{{ oscap_test_prefix | default('..') }}/oscap-results-{{ inventory_hostname }}.xml"
+        flat: true
+        fail_on_missing: false  # Prevents failing when a host doesn't not provide any OpenSCAP test file
