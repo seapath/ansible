@@ -1,8 +1,5 @@
 # Copyright (C) 2023-2024 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
-#
-# This role reboot the CI machine on the USB key.
-# This key will automatically reflash the machine
 
 ---
 - name: Copy configure_boot_next_usb_drive.sh script
@@ -14,11 +11,11 @@
 - name: Configure the EFI to boot on USB drive
   become: true
   ansible.builtin.command: sh /tmp/configure_boot_next_usb_drive.sh
-  register: ci_yocto_result
-  changed_when: ci_yocto_result.rc == 0
-  failed_when: ci_yocto_result.rc == 1 or ci_yocto_result.rc > 2
+  register: ci_reboot_on_usb_drive_configure_boot_result
+  changed_when: ci_reboot_on_usb_drive_configure_boot_result.rc == 0
+  failed_when: ci_reboot_on_usb_drive_configure_boot_result.rc == 1 or ci_reboot_on_usb_drive_configure_boot_result.rc > 2
 
 - name: Reboot the system
   become: true
   ansible.builtin.reboot:
-    reboot_timeout: "{{ ci_yocto_reboot_timeout }}"
+    reboot_timeout: "{{ ci_reboot_on_usb_drive_reboot_timeout }}"
