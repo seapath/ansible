@@ -6,10 +6,12 @@
   ansible.builtin.command:
     cmd: >
       oscap xccdf eval
+      {% if configure_hardening_oscap_apply_remediation %}
       --remediate
+      {% endif %}
       --fetch-remote-resources
-      --results /tmp/oscap-results.xml
-      --report /tmp/oscap-report.html
+      --results {{ configure_hardening_oscap_results_dir }}/oscap-results.xml
+      --report {{ configure_hardening_oscap_results_dir }}/oscap-report.html
       --profile {{ configure_hardening_oscap_profile }}
       {% if configure_hardening_oscap_tailoring_file is defined %}
       --tailoring-file {{ configure_hardening_oscap_tailoring_file }}

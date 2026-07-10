@@ -9,6 +9,8 @@ This role runs an OpenSCAP XCCDF remediation after the main hardening has been a
 | configure_hardening_oscap_ds_file        | Yes      | String  |         | Path to the SCAP data stream file on the target host  |
 | configure_hardening_oscap_profile        | Yes      | String  |         | XCCDF profile ID to apply                             |
 | configure_hardening_oscap_tailoring_file | No       | String  |         | Path to an optional XCCDF tailoring file on the host  |
+| configure_hardening_oscap_apply_remediation | No    | Boolean | true    | Set to false to only run tests                        |
+| configure_hardening_oscap_results_dir    | No       | String  | /tmp    | Directory where OpenSCAP result files are stored      |
 | revert                                   | No       | Boolean | false   | When true, skip the remediation                       |
 
 ## Example Playbook
