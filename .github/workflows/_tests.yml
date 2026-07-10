@@ -178,6 +178,7 @@ jobs:
             ${{ inputs.hyp-inventories }} \
             --limit "standalone_machine,cluster_machines" \
             --extra-vars "cukinia_test_prefix=/results" \
+            --extra-vars "oscap_test_prefix=/results" \
             --extra-vars "cyclictest_result_folder=/results" \
             --extra-vars "cyclictest_duration=${{ env.CYCLICTEST_DURATION }}" \
 
@@ -372,6 +373,16 @@ jobs:
           include-hidden-files: true
           retention-days: 1
           if-no-files-found: error
+
+      - name: Process OpenSCAP analysis results
+        working-directory: ansible
+        run: |
+          for f in $(find ${{ env.RESULTS_FOLDER }} -name "oscap-results*.xml"); do
+            cqfd exec .github/test-report/oscap2junit.py -o /results /results/$(basename $f)
+
+            # Remove original OpenSCAP XML file to prevent it from being included by test-report-pdf
+            rm $f
+          done
 
       - name: Checkout test-report-pdf
         uses: actions/checkout@v6
