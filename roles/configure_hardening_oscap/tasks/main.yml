@@ -21,6 +21,6 @@
   failed_when: configure_hardening_oscap_remediation.rc not in [0, 2]
   changed_when: configure_hardening_oscap_remediation.rc == 2
   when:
-    - not revert
+    - revert is not defined or not revert
     - configure_hardening_oscap_ds_file is defined
     - configure_hardening_oscap_profile is defined
