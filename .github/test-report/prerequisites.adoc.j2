@@ -1,0 +1,28 @@
+<<<
+== Introduction
+The purpose of this document is to certify the correct operation of the open source real-time operating system for virtualizing IEDs: SEAPATH, a project under the governance of the Linux Foundation Energy.
+
+A series of tests has been carried out on a range of equipment from several vendors, in order to certify SEAPATH on them. Certified in virtualization functions, security, real-time functionality and network latency of IEC61850 Sampled Values.
+
+{% if env.get("HAS_OSCAP_RESULTS", "false") == 'true' %}
+This report includes results of an OpenSCAP analysis with an ANSSI BP28 profile after application of the relevant and compatible remediation.
+Theses results are currently indicative as OpenSCAP is not yet fully integrated within SEAPATH.
+The SEAPATH system tests still represent the main certification results.
+Additional work is necessary to fully integrate the OpenSCAP BP28 analysis within SEAPATH.
+
+OpenSCAP tests marked as "FAIL" may be due to:
+
+* A hardening requirement not yet implemented in SEAPATH.
+* A hardening requirement conflicting with a stricter similar requirement already applied by SEAPATH Ansible.
+** Example: OpenSCAP BP28 profile expects the bash timeout to be set to 600 seconds, while SEAPATH Ansible sets it to 300 seconds.
+* A hardening requirement not yet implemented in SEAPATH that needs to be reviewed because it can have an impact on performances.
+* A false negative due to a non-matching string or an unexpected file name.
+* A hardening requirement that is not met by a component configured outside of SEAPATH.
+** Example: mssing kernel configuration in the kernel package for SEAPATH Debian or SEAPATH SLES.
+
+OpenSCAP tests marked as "SKIPPED" are either not applicable to or not checkable on the SEAPATH flavor.
+{% endif %}
+
+<<<
+== System Information
+include::system_info.adoc[]

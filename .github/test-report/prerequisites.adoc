@@ -1,9 +1,0 @@
-<<<
-== Introduction
-The purpose of this document is to certify the correct operation of the open source real-time operating system for virtualizing IEDs: SEAPATH, a project under the governance of the Linux Foundation Energy.
-
-A series of tests has been carried out on a range of equipment from several vendors, in order to certify SEAPATH on them. Certified in virtualization functions, security, real-time functionality and network latency of IEC61850 Sampled Values.
-
-<<<
-== System Information
-include::system_info.adoc[]

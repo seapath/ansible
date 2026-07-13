@@ -377,12 +377,16 @@ jobs:
       - name: Process OpenSCAP analysis results
         working-directory: ansible
         run: |
+          HAS_OSCAP_RESULTS="false"
           for f in $(find ${{ env.RESULTS_FOLDER }} -name "oscap-results*.xml"); do
             cqfd exec .github/test-report/oscap2junit.py -o /results /results/$(basename $f)
 
             # Remove original OpenSCAP XML file to prevent it from being included by test-report-pdf
             rm $f
+
+            HAS_OSCAP_RESULTS="true"
           done
+          echo "HAS_OSCAP_RESULTS=$HAS_OSCAP_RESULTS" >> "$GITHUB_ENV"
 
       - name: Checkout test-report-pdf
         uses: actions/checkout@v6
@@ -397,7 +401,6 @@ jobs:
 
           mkdir include
           cp -r ${{ env.RESULTS_FOLDER }}/* include/
-          cp ../ansible/.github/test-report/prerequisites.adoc include/
 
           latency_tests_duration=$(python3 -c "import datetime; print(datetime.timedelta(seconds=${{ env.PCAP_LOOP }}))")
           echo "LATENCY_TESTS_DURATION=$latency_tests_duration" >> "$GITHUB_ENV"
@@ -431,6 +434,14 @@ jobs:
               -o "include/cyclictest_${vm}.png" \
               -l "${{ env.LATENCY_MAXIMAL_VM }}"
           done
+
+      - name: Templatize prerequisites information
+        uses: cuchi/jinja2-action@8bd801365a8d36a0b20f45ee969161685de7785a # v1.3.0
+        with:
+          template: ansible/.github/test-report/prerequisites.adoc.j2
+          output_file: test-report-pdf/include/prerequisites.adoc
+          strict: true
+          # uses env variables to populate the document
 
       - name: Templatize system information
         uses: cuchi/jinja2-action@8bd801365a8d36a0b20f45ee969161685de7785a # v1.3.0
