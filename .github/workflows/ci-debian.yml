@@ -30,6 +30,9 @@ jobs:
               --inventory inventories_private/vm13cluster.yml
             vms-deployment-playbooks: >-
               playbooks/deploy_vms_cluster.yaml
+    concurrency:
+      group: ci-debian-${{ matrix.name }}
+      cancel-in-progress: false
     uses: ./.github/workflows/_tests.yml
     name: Run tests on ${{ matrix.name }}
     with:
