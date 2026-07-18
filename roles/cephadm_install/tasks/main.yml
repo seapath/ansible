@@ -3,6 +3,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+- name: Detect the ceph container image version when not set in the inventory
+  ansible.builtin.include_tasks: detect_release.yml
+  when: cephadm_release is not defined
+
 - name: Ensure group "cephadm" exists
   ansible.builtin.group:
     name: cephadm
