@@ -6,6 +6,10 @@
 - name: Load distribution-specific variables
   ansible.builtin.include_vars: "{{ seapath_distro }}.yml"
 
+- name: Detect the ceph container image version when not set in the inventory
+  ansible.builtin.include_tasks: detect_release.yml
+  when: cephadm_release is not defined
+
 - name: Ensure group "cephadm" exists
   ansible.builtin.group:
     name: cephadm

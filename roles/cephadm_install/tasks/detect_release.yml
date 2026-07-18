@@ -1,0 +1,67 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: List local ceph container images
+  ansible.builtin.command: podman image ls --format json quay.io/ceph/ceph
+  register: cephadm_install_local_images
+  changed_when: false
+
+- name: Extract ceph versions from local images
+  ansible.builtin.set_fact:
+    cephadm_install_detected_versions: >-
+      {{
+        cephadm_install_local_images.stdout | from_json
+        | selectattr('Names', 'defined')
+        | map(attribute='Names') | flatten
+        | select('match', '^quay\.io/ceph/ceph:v')
+        | map('regex_replace', '^quay\.io/ceph/ceph:v', '')
+        | unique | list
+      }}
+
+- name: Check that a single ceph image version is present on this node
+  ansible.builtin.assert:
+    that: cephadm_install_detected_versions | length <= 1
+    fail_msg: >-
+      Several ceph container image versions found on
+      {{ inventory_hostname }}: {{ cephadm_install_detected_versions | join(', ') }}.
+      Remove the unused images or set cephadm_release in the inventory to
+      select one.
+
+- name: Gather ceph image versions found across the cluster
+  ansible.builtin.set_fact:
+    cephadm_install_cluster_versions: >-
+      {{
+        ansible_play_hosts
+        | map('extract', hostvars, 'cephadm_install_detected_versions')
+        | flatten | unique | list
+      }}
+
+- name: Check that all cluster nodes have the same ceph image version
+  ansible.builtin.assert:
+    that: cephadm_install_cluster_versions | length <= 1
+    fail_msg: >-
+      The cluster nodes do not have the same ceph container image version:
+      {{
+        ansible_play_hosts
+        | zip(ansible_play_hosts | map('extract', hostvars, 'cephadm_install_detected_versions'))
+        | map('join', '=')
+        | join(', ')
+      }}.
+      Align the images on every node or set cephadm_release in the inventory.
+  run_once: true
+
+# The fact is named without the role prefix on purpose: it must override the
+# cephadm_release default used by the cephadm role in later plays.
+- name: Use the detected ceph image version # noqa: var-naming[no-role-prefix]
+  ansible.builtin.set_fact:
+    cephadm_release: "{{ cephadm_install_cluster_versions[0] }}"
+  when: cephadm_install_cluster_versions | length == 1
+
+- name: Warn that no local ceph image was found
+  ansible.builtin.debug:
+    msg: >-
+      No ceph container image found on the cluster nodes, falling back to the
+      default version {{ cephadm_install_release }}.
+  when: cephadm_install_cluster_versions | length == 0
+  run_once: true
