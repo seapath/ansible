@@ -1,0 +1,9 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+detect_seapath_distro_supported:
+  - Debian
+  - CentOS
+  - OracleLinux
+  - Yocto
+  - SLES

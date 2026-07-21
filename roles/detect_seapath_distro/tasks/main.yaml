@@ -1,63 +1,70 @@
 # Copyright (C) 2024 Savoir-faire Linux, Inc.
+# Copyright (C) 2026 RTE
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+# seapath_distro set by the user takes precedence over the detection: the whole
+# detection is then skipped. Facts are still gathered if needed, as other roles
+# rely on this role to provide the ansible_distribution* facts.
 - name: Gather only ansible_distribution facts
   ansible.builtin.setup:
     filter: ansible_distribution*
+  when: ansible_distribution is not defined
 
-- name: Set detect_seapath_distro_distro from seapath_distro if it exists
-  ansible.builtin.set_fact:
-    detect_seapath_distro_distro: "{{ seapath_distro }}"
-  when: seapath_distro is defined
-
-- name: Show detect_seapath_distro_distro
-  ansible.builtin.debug:
-    var: detect_seapath_distro_distro
-
-- name: Detect Debian distribution
-  ansible.builtin.set_fact:
-    detect_seapath_distro_distro: Debian
-  when: ansible_distribution | regex_search("Debian") != None
-
-- name: Detect Centos distribution
-  ansible.builtin.set_fact:
-    detect_seapath_distro_distro: CentOS
-  when: ansible_distribution | regex_search("CentOS|RedHat") != None
-
-- name: Detect OracleLinux distribution
-  ansible.builtin.set_fact:
-    detect_seapath_distro_distro: OracleLinux
-  when: ansible_distribution | regex_search("Oracle") != None
-
-- name: Detect SLES distribution
-  ansible.builtin.set_fact:
-    detect_seapath_distro_distro: SLES
-  when: ansible_distribution | regex_search("SLES") != None
-
-- name: Show detect_seapath_distro_distro
-  ansible.builtin.debug:
-    var: detect_seapath_distro_distro
-
-- name: Detect Yocto distribution
-  when: detect_seapath_distro_distro is not defined
-  block:
-    - name: Search CPE_NAME field of {{ ansible_distribution_file_path }}
-      ansible.builtin.command: grep 'CPE_NAME.*cpe:/o:openembedded' {{ ansible_distribution_file_path }}
-      register: detect_seapath_distro_ret
-      failed_when: detect_seapath_distro_ret.rc != 0 and detect_seapath_distro_ret.rc != 1
-      changed_when: false
-    - name: Set detect_seapath_distro_distro for Yocto distro
-      ansible.builtin.set_fact:
-        detect_seapath_distro_distro: Yocto
-      when: detect_seapath_distro_ret.rc == 0
-
-- name: Check distro detection
+- name: Check the seapath_distro override value
   ansible.builtin.fail:
-    msg: "The Seapath distribution could not be determined"
-  when: detect_seapath_distro_distro is not defined
+    msg: >-
+      seapath_distro is set to "{{ seapath_distro }}" but must be one of
+      {{ detect_seapath_distro_supported | join(", ") }}
+  when:
+    - seapath_distro is defined
+    - seapath_distro not in detect_seapath_distro_supported
 
-- name: Set seapath_distro for external use
-  ansible.builtin.set_fact:
-    seapath_distro: "{{ detect_seapath_distro_distro }}" # noqa: var-naming[no-role-prefix]
-  when: detect_seapath_distro_distro is defined
+- name: Detect the SEAPATH distribution
+  when: seapath_distro is not defined
+  block:
+    - name: Detect Debian distribution
+      ansible.builtin.set_fact:
+        detect_seapath_distro_distro: Debian
+      when: ansible_distribution | regex_search("Debian") != None
+
+    - name: Detect Centos distribution
+      ansible.builtin.set_fact:
+        detect_seapath_distro_distro: CentOS
+      when: ansible_distribution | regex_search("CentOS|RedHat") != None
+
+    - name: Detect OracleLinux distribution
+      ansible.builtin.set_fact:
+        detect_seapath_distro_distro: OracleLinux
+      when: ansible_distribution | regex_search("Oracle") != None
+
+    - name: Detect SLES distribution
+      ansible.builtin.set_fact:
+        detect_seapath_distro_distro: SLES
+      when: ansible_distribution | regex_search("SLES") != None
+
+    - name: Detect Yocto distribution
+      when: detect_seapath_distro_distro is not defined
+      block:
+        - name: Search CPE_NAME field of {{ ansible_distribution_file_path }}
+          ansible.builtin.command: grep 'CPE_NAME.*cpe:/o:openembedded' {{ ansible_distribution_file_path }}
+          register: detect_seapath_distro_ret
+          failed_when: detect_seapath_distro_ret.rc != 0 and detect_seapath_distro_ret.rc != 1
+          changed_when: false
+        - name: Set detect_seapath_distro_distro for Yocto distro
+          ansible.builtin.set_fact:
+            detect_seapath_distro_distro: Yocto
+          when: detect_seapath_distro_ret.rc == 0
+
+    - name: Check distro detection
+      ansible.builtin.fail:
+        msg: "The Seapath distribution could not be determined"
+      when: detect_seapath_distro_distro is not defined
+
+    - name: Set seapath_distro for external use
+      ansible.builtin.set_fact:
+        seapath_distro: "{{ detect_seapath_distro_distro }}" # noqa: var-naming[no-role-prefix]
+
+- name: Show seapath_distro
+  ansible.builtin.debug:
+    var: seapath_distro
