@@ -15,7 +15,7 @@ This role installs the cephadm binary, prerequisites (users, groups, sudo), pull
 | cephadm_install_package           | No       | Boolean | false                          | Install cephadm with "cephadm install" (fallback: `cephadm_installpackage`)                |
 | cephadm_install_common            | No       | Boolean | false                          | Install ceph-common with "cephadm install ceph-common" (fallback: `cephadm_installcommon`) |
 | cephadm_install_pullimages        | No       | Boolean | false                          | Pull ceph container images and start local registry (fallback: `cephadm_pullimages`)       |
-| cephadm_install_registryurl       | No       | String  | "docker.io/library/registry:2" | Name of the ceph release for repo install (fallback: `cephadm_release_name`)               |
+| cephadm_install_registryurl       | No       | String  | "docker.io/library/registry:2" | Image used to run the local Podman registry                                                |
 
 ## Example Playbook
 
