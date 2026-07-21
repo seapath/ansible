@@ -1,0 +1,13 @@
+# Copyright (C) 2025 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# "cephadm add-repo" takes a release name while the binary download URL takes a
+# version number, so both have to designate the same Ceph release. Derive the
+# name from the major version instead of pinning it separately.
+cephadm_install_release_names:
+  "17": "quincy"
+  "18": "reef"
+  "19": "squid"
+  "20": "tentacle"
+  "21": "umbrella"

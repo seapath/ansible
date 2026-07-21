@@ -62,6 +62,15 @@
     remote_src: true
   when: cephadm_install_binary is true
 
+- name: Check the Ceph release name is known
+  ansible.builtin.assert:
+    that: cephadm_install_release_name | length > 0
+    fail_msg: >-
+      No Ceph release name is known for version {{ cephadm_install_release }}.
+      Set cephadm_install_release_name explicitly, or add the major version
+      to the role's cephadm_install_release_names table.
+  when: cephadm_install_repo is true
+
 - name: Install cephadm repository
   ansible.builtin.command: "{{ '/tmp/cephadm' if not cephadm_install_binary else 'cephadm' }} add-repo --release {{ cephadm_install_release_name }}"
   changed_when: true

@@ -21,7 +21,7 @@ The detected version is set as a host fact, so it also applies to the `cephadm` 
 |-----------------------------------|----------|---------|--------------------------------|--------------------------------------------------------------------------------------------|
 | seapath_distro                    | No       | String  | Not set                        | SEAPATH distribution                                                                       |
 | cephadm_install_release           | No       | String  | Detected from the local ceph image (see above) | Version of the cephadm binary to download (fallback: `cephadm_release`)                    |
-| cephadm_install_release_name      | No       | String  | "tentacle"                     | Name of the ceph release for repo install (fallback: `cephadm_release_name`)               |
+| cephadm_install_release_name      | No       | String  | Derived from `cephadm_install_release` | Name of the ceph release for repo install; set it to override the derivation (fallback: `cephadm_release_name`) |
 | cephadm_install_downloadbinary    | No       | Boolean | false                          | Download cephadm to /tmp/cephadm (fallback: `cephadm_downloadbinary`)                      |
 | cephadm_install_binary            | No       | Boolean | false                          | Copy cephadm from /tmp to /usr/local/bin (fallback: `cephadm_installbinary`)               |
 | cephadm_install_repo              | No       | Boolean | false                          | Install cephadm repo with "cephadm add-repo" (fallback: `cephadm_installrepo`)             |
