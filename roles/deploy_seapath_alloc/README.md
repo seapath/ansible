@@ -242,6 +242,18 @@ vcpus:
 
 The VM picks up the new profile at its next start or migration.
 
+**Do not set both a profile and a static `cpuset` on the same VM.** With
+`cpuset` in the inventory and a profile in place, libvirt applies the XML
+`<cputune>` at VM start and the hook re-pins afterwards: the profile wins, but
+the inventory then describes something other than what runs. Pick one per VM.
+
+Static pinning stays fully supported and is not deprecated. It is the simpler
+answer when a VM needs fixed, documented core numbers, for instance to satisfy
+an acceptance procedure that names them. A statically pinned VM also takes part
+in the pool without any cooperation: occupancy is read from `/proc` for every
+QEMU thread, whoever pinned it, so its cores are counted as busy and will never
+be handed to a container or an operator tool.
+
 The hook looks for the profile in this order:
 
 | # | Source | Used by |
