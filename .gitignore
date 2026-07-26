@@ -27,7 +27,9 @@ inventories/*
 
 # Ignore python cache files
 __pycache__/
-.pyc
+*.pyc
+.pytest_cache/
+*.egg-info/
 
 # Python test and coverage artefacts
 .pytest_cache/
