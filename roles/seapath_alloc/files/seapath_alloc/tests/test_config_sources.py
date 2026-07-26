@@ -17,6 +17,7 @@ from seapath_alloc.config import (
     _rbd_source_from_xml,
     _run,
     _vcpu_count_from_xml,
+    get_local_profile,
     get_pinning_metadata,
     get_rbd_source,
     get_vcpu_count,
@@ -334,6 +335,38 @@ def test_an_unreadable_profile_is_logged_as_an_error(commands, caplog):
     assert profile["vcpus"]["isolation"] == "none"
     assert "could not read the pinning profile of vm0" in caplog.text
 
+# --- get_local_profile ----------------------------------------------------
+
+
+def test_local_profile_is_read_from_the_profile_directory(tmp_path):
+    (tmp_path / "vm0.yaml").write_text("vcpus:\n  isolation: none\n")
+
+    assert get_local_profile("vm0", str(tmp_path)) == "vcpus:\n  isolation: none"
+
+
+def test_local_profile_is_empty_when_there_is_no_file(tmp_path, caplog):
+    with caplog.at_level("DEBUG", logger=config_mod.log.name):
+        assert get_local_profile("vm0", str(tmp_path)) == ""
+
+    assert "no local profile at" in caplog.text
+
+
+def test_an_unreadable_local_profile_is_an_error(tmp_path, caplog):
+    # A directory in place of the file reproduces the OSError.
+    (tmp_path / "vm0.yaml").mkdir()
+
+    with pytest.raises(ProfileReadError, match="cannot read local profile"):
+        get_local_profile("vm0", str(tmp_path))
+
+    with caplog.at_level("ERROR", logger=config_mod.log.name):
+        profile = load_profile("vm0", profile_dir=str(tmp_path))
+
+    assert profile["vcpus"]["isolation"] == "none"
+    assert "could not read the pinning profile of vm0" in caplog.text
+
+
+# --- load_profile ---------------------------------------------------------
+
 
 PROFILE_YAML = "vcpus:\n  isolation: exclusive_physical\n  scheduler: FIFO\n"
 
@@ -342,17 +375,30 @@ def test_profile_comes_from_the_rbd_metadata_first(commands, tmp_path, caplog):
     commands(outputs={"image-meta": PROFILE_YAML})
 
     with caplog.at_level("INFO", logger=config_mod.log.name):
-        profile = load_profile("vm0", domain_xml=DOMAIN_XML)
+        profile = load_profile("vm0", profile_dir=str(tmp_path),
+                               domain_xml=DOMAIN_XML)
 
     assert profile["vcpus"]["isolation"] == "exclusive_physical"
     assert "loaded pinning profile from RBD metadata" in caplog.text
+
+
+def test_profile_falls_back_to_the_local_file(commands, tmp_path, caplog):
+    commands(fail=("image-meta",), stderr=RBD_NO_KEY)
+    (tmp_path / "vm0.yaml").write_text(PROFILE_YAML)
+
+    with caplog.at_level("INFO", logger=config_mod.log.name):
+        profile = load_profile("vm0", profile_dir=str(tmp_path),
+                               domain_xml=DOMAIN_XML)
+
+    assert profile["vcpus"]["isolation"] == "exclusive_physical"
+    assert "loaded pinning profile from" in caplog.text
 
 
 def test_profile_defaults_to_all_none(commands, tmp_path, caplog):
     commands(fail=("image-meta", "domblklist"))
 
     with caplog.at_level("INFO", logger=config_mod.log.name):
-        profile = load_profile("vm0")
+        profile = load_profile("vm0", profile_dir=str(tmp_path))
 
     assert profile["vcpus"]["isolation"] == "none"
     assert "running on housekeeping cores" in caplog.text
@@ -368,6 +414,21 @@ def test_profile_ignores_invalid_yaml_in_the_rbd_metadata(
 
     assert profile["vcpus"]["isolation"] == "none"
     assert "invalid YAML in RBD metadata" in caplog.text
+
+
+def test_profile_ignores_invalid_yaml_in_the_local_file(
+    commands, tmp_path, caplog
+):
+    commands(fail=("image-meta",), stderr=RBD_NO_KEY)
+    (tmp_path / "vm0.yaml").write_text("vcpus: [unclosed\n")
+
+    with caplog.at_level("WARNING", logger=config_mod.log.name):
+        profile = load_profile("vm0", profile_dir=str(tmp_path),
+                               domain_xml=DOMAIN_XML)
+
+    assert profile["vcpus"]["isolation"] == "none"
+    assert "invalid YAML in" in caplog.text
+    assert "vm0.yaml for vm0" in caplog.text
 
 
 def test_profile_ignores_metadata_that_is_not_a_mapping(
@@ -386,7 +447,7 @@ def test_profile_is_all_none_without_pyyaml(monkeypatch, tmp_path, caplog):
     monkeypatch.setattr(config_mod, "yaml", None)
 
     with caplog.at_level("WARNING", logger=config_mod.log.name):
-        profile = load_profile("vm0")
+        profile = load_profile("vm0", profile_dir=str(tmp_path))
 
     assert profile["vcpus"]["isolation"] == "none"
     assert "pyyaml not available" in caplog.text
@@ -467,6 +528,16 @@ def test_rbd_source_skips_a_network_disk_that_is_not_rbd():
     assert _rbd_source_from_xml(xml) == "rbd/system_vm0"
 
 
+def test_profile_ignores_a_local_file_that_is_not_a_mapping(commands, tmp_path):
+    commands(fail=("image-meta",))
+    (tmp_path / "vm0.yaml").write_text("- one\n- two\n")
+
+    profile = load_profile("vm0", profile_dir=str(tmp_path),
+                           domain_xml=DOMAIN_XML)
+
+    assert profile["vcpus"]["isolation"] == "none"
+
+
 def test_a_group_that_is_not_a_mapping_falls_back_to_the_defaults(
     commands, tmp_path
 ):
@@ -474,7 +545,8 @@ def test_a_group_that_is_not_a_mapping_falls_back_to_the_defaults(
     # built-in defaults rather than blow up the hook.
     commands(outputs={"image-meta": "vcpus: rt\n"})
 
-    profile = load_profile("vm0", domain_xml=DOMAIN_XML)
+    profile = load_profile("vm0", profile_dir=str(tmp_path),
+                           domain_xml=DOMAIN_XML)
 
     assert profile["vcpus"]["isolation"] == "none"
     assert profile["vcpus"]["scheduler"] == "OTHER"
