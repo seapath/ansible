@@ -124,6 +124,44 @@
   loop: "{{ deploy_vms_standalone_guests }}"
   when: item not in deploy_vms_standalone_all_vms.list_vms or (item in deploy_vms_standalone_all_vms.list_vms and hostvars[item].force is defined and hostvars[item].force)
 
+# seapath-alloc leaves a thread with an unknown isolation on housekeeping and
+# only says so in its log when the VM starts: catch the typo here instead.
+- name: Check the isolation levels of the VM pinning profiles
+  ansible.builtin.assert:
+    that: _isolations | difference(['none', 'exclusive_logical', 'exclusive_physical']) | length == 0
+    fail_msg: >-
+      {{ item }}: seapath_alloc has an unknown isolation
+      {{ _isolations | difference(['none', 'exclusive_logical', 'exclusive_physical']) | join(', ') }};
+      valid values are none, exclusive_logical and exclusive_physical.
+    quiet: true
+  vars:
+    _profile: "{{ hostvars[item].seapath_alloc }}"
+    _isolations: >-
+      {{ ((_profile if _profile is string else _profile | to_yaml)
+      | regex_findall('isolation:\s*\W?(\w+)')) | unique }}
+  loop: "{{ groups['VMs'] }}"
+  when: hostvars[item].seapath_alloc is defined
+
+# The profile is read by the seapath-alloc libvirt hook at every VM start.
+# In cluster mode vm_manager stores it as RBD image metadata; a standalone VM
+# has no shared image to carry it, so it is written to the host instead.
+- name: Deploy VM pinning profiles
+  ansible.builtin.copy:
+    content: "{{ hostvars[item].seapath_alloc }}"
+    dest: "/etc/seapath/alloc.d/{{ item }}.yaml"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ groups['VMs'] }}"
+  when: hostvars[item].seapath_alloc is defined
+
+- name: Remove pinning profiles of VMs that no longer define one
+  ansible.builtin.file:
+    path: "/etc/seapath/alloc.d/{{ item }}.yaml"
+    state: absent
+  loop: "{{ groups['VMs'] }}"
+  when: hostvars[item].seapath_alloc is not defined
+
 - name: Start VMs
   community.libvirt.virt:
     name: "{{ item }}"

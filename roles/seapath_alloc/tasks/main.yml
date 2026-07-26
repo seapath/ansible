@@ -80,6 +80,14 @@
     state: directory
     mode: "0755"
 
+# Standalone VM profiles: a VM on a local disk has no RBD image to carry its
+# pinning profile, so deploy_vms_standalone drops it here as <vm>.yaml.
+- name: Ensure /etc/seapath/alloc.d directory exists
+  ansible.builtin.file:
+    path: /etc/seapath/alloc.d
+    state: directory
+    mode: "0755"
+
 - name: Deploy alloc settings
   ansible.builtin.template:
     src: alloc.yaml.j2
