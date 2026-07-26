@@ -1,0 +1,13 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+# Deploy seapath-alloc on hypervisors: CPU allocation pool, QEMU hook,
+# Prometheus textfile exporter, and NIC IRQ affinity integration.
+
+---
+- name: Deploy seapath-alloc
+  hosts: hypervisors
+  gather_facts: false
+  become: true
+  roles:
+    - deploy_seapath_alloc
