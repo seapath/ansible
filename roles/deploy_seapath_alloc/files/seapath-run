@@ -1,0 +1,170 @@
+#!/usr/bin/env python3
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+"""
+Run a command under the seapath-alloc CPU allocation system.
+
+Allocates isolated cores from the pool, constrains this process to those cores
+via taskset and chrt, then launches the given command as a child.  Because CPU
+affinity and real-time scheduling are inherited across fork/exec, the child
+runs on the allocated cores at the requested priority without any modification
+to the child binary.
+
+The claim is registered in the pool for the lifetime of the child and released
+when the child exits, regardless of whether it returns normally, is killed by a
+signal, or crashes.
+
+Usage:
+    seapath-run <label> <isolation> <scheduler> <priority> -- <command> [args...]
+
+Arguments:
+    label       Unique name for this claim in the pool (e.g. "sv-simulator").
+                Must not conflict with an existing live claim for a different
+                process — the pool rejects duplicate labels.
+
+    isolation   Core isolation mode:
+                  exclusive_logical   one logical core; HT siblings stay free
+                  exclusive_physical  one physical core; all HT siblings reserved
+                  none                housekeeping cores; no isolation guarantee
+
+    scheduler   Linux scheduling policy: FIFO | RR | OTHER | BATCH
+                FIFO and RR are real-time policies; priority must be 1–99.
+                OTHER and BATCH are normal policies; priority must be 0.
+
+    priority    Real-time priority passed to chrt (1–99 for FIFO/RR, 0 for OTHER).
+
+    --          Mandatory separator between seapath-run's own arguments and the
+                command to execute.  Required even when the command takes no args.
+
+    command     Path to the executable (absolute or resolved via PATH).
+    args        Arguments forwarded verbatim to command.
+
+Signal handling:
+    SIGTERM and SIGINT are forwarded to the child process so it can perform its
+    own cleanup before seapath-run releases the claim.  The claim is always
+    released in a finally block, so it is freed even if the child ignores the
+    signal and has to be killed externally.
+
+Exit status:
+    Exits with the child's exit code.  If the child is terminated by a signal,
+    exits with 128 + signal_number (standard shell convention).
+    Exits 1 for argument errors or allocation failure before the child starts.
+
+Examples:
+    # IEC 61850 Sampled Values publisher, exclusive core, FIFO priority 80
+    seapath-run sv-sim exclusive_logical FIFO 80 -- /usr/bin/sv-simulator -i eth0
+
+    # GOOSE publisher on an exclusive physical core (reserves the HT sibling)
+    seapath-run goose exclusive_physical RR 50 -- goose-publisher --config /etc/goose.yaml
+
+    # Monitoring agent with no real-time requirements
+    seapath-run monitor none OTHER 0 -- /opt/monitoring/agent --daemon
+"""
+
+import os
+import signal
+import subprocess
+import sys
+
+sys.path.insert(0, '/usr/lib/seapath')
+
+from seapath_alloc.claim import claim, release
+from seapath_alloc.logging_setup import setup_logging
+from seapath_alloc.topology import format_cpu_list
+
+_PROG = os.path.basename(sys.argv[0])
+_USAGE = (
+    f"usage: {_PROG} <label> <isolation> <scheduler> <priority>"
+    " -- <command> [args...]\n"
+)
+
+
+def _die(msg: str) -> None:
+    sys.stderr.write(f"{_PROG}: {msg}\n")
+    sys.exit(1)
+
+
+def _parse_args(argv: list) -> tuple:
+    """Return (label, isolation, scheduler, priority, command_argv)."""
+    try:
+        sep = argv.index("--")
+    except ValueError:
+        _die("missing '--' separator between seapath-run arguments and command\n" + _USAGE)
+
+    own = argv[1:sep]
+    cmd = argv[sep + 1:]
+
+    if len(own) != 4:
+        _die(f"expected 4 arguments before '--', got {len(own)}\n" + _USAGE)
+    if not cmd:
+        _die("no command specified after '--'")
+
+    label, isolation, scheduler, raw_priority = own
+
+    try:
+        priority = int(raw_priority)
+    except ValueError:
+        _die(f"priority must be an integer, got '{raw_priority}'")
+
+    return label, isolation, scheduler.upper(), priority, cmd
+
+
+def main():
+    setup_logging()
+    label, isolation, scheduler, priority, cmd = _parse_args(sys.argv)
+
+    # Allocate cores and apply the resulting affinity + scheduling policy to
+    # this process.  The child launched below inherits both settings via
+    # fork/exec: the kernel propagates the cpuset affinity mask and the
+    # scheduling policy to all descendants automatically, so the child binary
+    # needs no awareness of seapath-alloc.
+    try:
+        cores = claim(
+            label=label,
+            isolation=isolation,
+            scheduler=scheduler,
+            priority=priority,
+            target_pid=0,    # apply to self; child inherits
+            no_apply=False,
+            kind="run",
+        )
+    except Exception as exc:
+        _die(f"allocation failed: {exc}")
+
+    cpu_str = format_cpu_list(cores)
+    sys.stderr.write(
+        f"seapath-run: claimed core(s) {cpu_str} for '{label}'"
+        f" ({scheduler}/{priority})\n"
+    )
+
+    child = None
+
+    def _forward_signal(signum, _frame):
+        # Forward to the child so it can clean up before we release the claim.
+        # Ignore ESRCH if the child is already gone.
+        if child is not None and child.poll() is None:
+            try:
+                child.send_signal(signum)
+            except ProcessLookupError:
+                pass
+
+    signal.signal(signal.SIGTERM, _forward_signal)
+    signal.signal(signal.SIGINT, _forward_signal)
+
+    try:
+        child = subprocess.Popen(cmd)
+        child.wait()
+    finally:
+        release(label)
+        sys.stderr.write(f"seapath-run: released claim for '{label}'\n")
+
+    # Mirror the child's exit status using the shell convention for signals:
+    # 128 + signal_number.  subprocess sets returncode to -(signal_number)
+    # for signal-terminated processes.
+    rc = child.returncode
+    sys.exit(128 + (-rc) if rc < 0 else rc)
+
+
+if __name__ == "__main__":
+    main()
