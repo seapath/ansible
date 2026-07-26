@@ -1,5 +1,7 @@
 # Ansible generated files
 collections/
+# ansible-lint cache directory (ansible-compat)
+.ansible/
 ansible.log
 seapath-ansible-*.tar.gz
 
@@ -27,7 +29,9 @@ inventories/*
 
 # Ignore python cache files
 __pycache__/
-.pyc
+*.pyc
+.pytest_cache/
+*.egg-info/
 
 # Python test and coverage artefacts
 .pytest_cache/
