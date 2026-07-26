@@ -49,7 +49,9 @@ seapath_alloc/
 │  ── application paths (one per caller type) ───────────────────────────
 ├── threads.py        /proc QEMU PID + TID discovery (VM path only)
 ├── applier.py        taskset + chrt application (VM path only)
-├── claim.py          claim/release logic for seapath-run processes
+├── cgroup.py         cpusets, per-thread affinity and policy
+│                     (container path + repacker)
+├── claim.py          claim/release logic for containers and seapath-run
 └── hook.py           libvirt QEMU hook entry point
 │
 │  ── observability ──────────────────────────────────────────────────────
@@ -95,6 +97,77 @@ hook.py
 
 State written inside flock: .reserved_siblings
 ```
+
+### 2 — Container pin (`seapath-container-pin`)
+
+```
+claim(label, isolation, scheduler, priority, target_pid) ──► claim.py
+  │
+  └─ with CorePool(topo) as pool:
+        │
+        └─ allocate_cores(pool, [spec], topo, pid=main_pid, kind="quadlet")
+              └─ AllocationEngine → scheduler.py
+
+        pool.add_claim(label, cpus, pid, ...)
+        write claims.json
+
+  place_service + schedule_payload ──► cgroup.py     ← outside flock window
+        cpuset.cpus per sub-cgroup, sched_setaffinity per thread
+        sched_setscheduler per payload thread (cgroup.threads)
+```
+
+The claim is owned by the service's `MainPID`. For a quadlet that is conmon,
+which lives exactly as long as the container, so the claim expires with it.
+
+**What gets what.**  quadlet generates `podman run --cgroups=split`, which
+splits the service cgroup in three: systemd's `.control/` (ExecStartPost=
+and friends), conmon's `runtime/`, and the container's `libpod-payload-<id>/`.
+Members of a quadlet pod keep their own service and the same layout.
+
+| Cgroup | `cpuset.cpus` | Threads' affinity | Scheduling policy |
+|--------|---------------|-------------------|-------------------|
+| service root (no process) | allocated + housekeeping | n/a | n/a |
+| `libpod-payload-*` and below | allocated | allocated | requested |
+| `runtime/`, `.control/` | housekeeping | housekeeping | untouched (SCHED_OTHER) |
+
+A service without a `libpod-payload-*` sub-cgroup (not podman, or another
+`--cgroups` mode) is taken as a whole: every level and every thread gets the
+allocated cores and the requested policy.
+
+**Per thread.**  `sched_setscheduler` and `sched_setaffinity` act on the one
+thread they name.  The threads already running when ExecStartPost= fires (an
+interpreter's helper threads, a JVM, a Go or Rust runtime pool) would
+otherwise keep SCHED_OTHER next to a SCHED_FIFO main thread on the same
+isolated core.  As soon as such a thread holds a lock the FIFO thread needs
+(the Python GIL, measured on a protection relay: trip time 15 ms, then
+22-27 ms with jitter), the FIFO thread waits for a thread that only runs when
+the FIFO thread blocks.  So the policy is applied to each TID listed in
+`cgroup.threads`, re-read until no new thread shows up (a thread created by a
+sibling not yet switched inherits SCHED_OTHER).  Threads created later
+inherit from their creator, which by then has the policy.  A thread vanishing
+between the read and the call is skipped, any other refusal is logged, and
+the pin carries on: a failing ExecStartPost= would fail the service.
+
+**conmon goes to the housekeeping cores.**  conmon wakes on every write the
+container makes to stdout/stderr.  With the workload's policy on the
+isolated core, it competes with the workload at equal priority.  In
+SCHED_OTHER on that core, it would still run there whenever the workload
+blocks and pollute its cache, and a busy workload could starve it and then
+block on a full log pipe.  So the isolated core carries the payload only.
+In cgroup v2 a child's effective CPUs are bounded by its parent's, hence the
+service root spanning both sets while holding no process.  `isolcpus` is not
+affected: nothing runs on the root's union, and a non-partition cpuset
+creates no scheduling domain.  Pool accounting is not affected either:
+quadlet occupancy comes from `claims.json` (`pinned_quadlet_cpus`) only.
+The same split keeps the pin and unpin scripts themselves (in `.control/`)
+off the isolated core.
+
+**Moving a container.**  The repacker's `CgroupMove` goes through the same
+`place_service()`, so a repack keeps the split.  The root is widened to
+old + new before the payload is rewritten, and narrowed after: a payload
+asking for a CPU its parent lacks falls back to the parent's whole set,
+housekeeping included.  A move leaves policies alone, as a `ThreadMove`
+does.
 
 ## Allocation result anatomy
 

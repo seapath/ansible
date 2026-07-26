@@ -22,15 +22,17 @@ Both operations work on all seapath-alloc managed actors:
   - QEMU threads (VMs): moved via taskset per thread ID
   - seapath-run processes: moved via taskset per thread ID (children included
     because they inherit affinity at exec time and appear on the same CPU)
-  - quadlet containers: moved via cgroup cpuset.cpus write + taskset per PID
+  - quadlet containers: moved via cgroup cpuset.cpus write + per-thread
+    affinity, with the same payload/housekeeping split as seapath-container-pin
 
 Design constraints shared by both:
   - Only moves actors exclusively on a single isolated CPU.  We never touch
     threads with broad affinity or multiple allowed CPUs.
   - A ThreadMove is a single taskset -cp call; it does not change the
     scheduler class or RT priority of the thread.
-  - A CgroupMove writes a new cpuset.cpus to the full cgroup tree and
-    calls taskset on every PID found in the cgroup.
+  - A CgroupMove goes through cgroup.place_service(), as the initial pin
+    did: the payload moves to the new core, conmon stays on the housekeeping
+    cores.  Like a ThreadMove it leaves the scheduling policy alone.
   - The caller must bust the pool cache (pool.bust_cache()) after
     execute_repack() so that subsequent free_logical()/free_physical() calls
     see the updated /proc state.
@@ -234,8 +236,9 @@ def execute_repack(moves: List[RepackMove], taskset_bin: str = "taskset",
                    pool=None) -> None:
     """Apply a list of repack moves.
 
-    Only ThreadMove entries are applied here. Quadlet containers move through
-    their cgroup, which arrives with the container integration.
+    pool must be provided when moves may include CgroupMove entries: it is
+    used to update claims.json so the pool state stays consistent after the
+    cgroup/taskset migration.
     """
     for move in moves:
         if isinstance(move, ThreadMove):
@@ -251,4 +254,17 @@ def execute_repack(moves: List[RepackMove], taskset_bin: str = "taskset",
                                  tid, move.from_cpu, move.to_cpu)
                 except (subprocess.TimeoutExpired, OSError) as exc:
                     log.warning("repacker: taskset error for tid %d: %s", tid, exc)
+
+        elif isinstance(move, CgroupMove):
+            from .cgroup import cgroup_root, place_service
+            root = cgroup_root(move.service)
+            if root is None:
+                log.warning("repacker: cgroup not found for %s", move.service)
+                continue
+            housekeeping = pool._topo.housekeeping_cpus() if pool is not None else []
+            place_service(root, [move.to_cpu], housekeeping)
+            if pool is not None:
+                pool.move_claim_cpu(move.label, move.to_cpu)
+            log.info("repacker: moved quadlet %r cpu %d → cpu %d",
+                     move.label, move.from_cpu, move.to_cpu)
 
