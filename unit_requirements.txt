@@ -11,4 +11,5 @@ pytest
 pytest-cov
 junitparser
 lxml
+pyyaml
 xmltodict

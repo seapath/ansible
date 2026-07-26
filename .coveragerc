@@ -22,6 +22,9 @@ omit =
     # than code the project ships, and each one only exists to fail on the
     # kernel it is pointed at.
     roles/deploy_cukinia_tests/cukinia-tests/includes/*
+    # seapath_alloc keeps its tests inside the package it ships, because the
+    # package is also installable on its own; they are test code all the same.
+    roles/deploy_seapath_alloc/files/seapath_alloc/tests/*
     # Three-line WSGI entrypoint whose body is an import of the vm_manager
     # Flask app; there is nothing to assert that the submodule does not
     # already cover.
