@@ -171,7 +171,8 @@ seapath_alloc/
 ├── repacker.py       thread-migration helpers for the REPACKING strategy
 │
 │  ── orchestration ──────────────────────────────────────────────────────
-├── config.py         RBD metadata + /etc/seapath/alloc.yaml loading
+├── config.py         profile loading (RBD metadata, /etc/seapath/alloc.d)
+│                     + /etc/seapath/alloc.yaml settings
 ├── scheduler.py      single pipeline: strategy + repacking + AllocationEngine
 │                     + reserved-sibling registration + fallback recording
 │
@@ -231,8 +232,9 @@ destination of a live migration.
 hook.py
   │
   ├─ load_profile(vm_name, domain_xml) ──► config.py
-  │    system disk from the domain XML → rbd image-meta get _seapath_alloc
-  │    all-none profile if the key is not set; an rbd error is logged as one
+  │    system disk from the domain XML → rbd image-meta get _seapath_alloc (cluster)
+  │    → /etc/seapath/alloc.d/<vm>.yaml                                  (standalone)
+  │    all-none profile if neither exists; a read error is logged as one
   │
   ├─ discover(vm_name) ──► threads.py            ← before the flock
   │    scan /proc/*/cmdline for the QEMU PID

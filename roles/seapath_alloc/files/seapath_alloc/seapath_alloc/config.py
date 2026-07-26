@@ -8,9 +8,16 @@ Priority chain (highest wins):
   1. Ceph RBD image metadata: key _seapath_alloc on the VM's system disk,
      the RBD image named system_<vm> (vm_manager's naming), or else the
      first RBD disk of the domain
-  2. Built-in all-none profile: safe no-op on any host
+  2. Local file: /etc/seapath/alloc.d/<vm>.yaml
+  3. Built-in all-none profile: safe no-op on any host
 
-A VM with no RBD metadata is treated as non-RT: all thread groups get
+The two sources are the same profile carried differently. RBD is the cluster
+carrier: the profile follows the disk, so a migrating VM finds it on whatever
+node it lands on. The local file is the standalone carrier, written by Ansible
+for VMs whose disk is local and can carry nothing. RBD wins when both exist,
+so a leftover local file cannot override a profile that is meant to travel.
+
+A VM with no profile at all is treated as non-RT: all thread groups get
 isolation=none, scheduler=OTHER, priority=0.
 
 Host-wide settings (allocation_strategy) live in /etc/seapath/alloc.yaml
@@ -98,6 +105,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 _SETTINGS_FILE = "/etc/seapath/alloc.yaml"
+_PROFILE_DIR = "/etc/seapath/alloc.d"
 
 _BUILTIN_DEFAULT = {
     "isolation": "none",
@@ -267,6 +275,25 @@ def get_pinning_metadata(vm_name: str,
     raise ProfileReadError(f"{' '.join(cmd)}: {r.stderr.strip()}")
 
 
+def get_local_profile(vm_name: str, profile_dir: str = _PROFILE_DIR) -> str:
+    """
+    Read the raw YAML of a locally-stored profile for vm_name.
+
+    Used in standalone mode, where the VM's disk is local and cannot carry
+    the profile the way an RBD image does.  Returns '' if there is no file.
+    An unreadable file raises ProfileReadError, like an rbd failure.
+    """
+    path = os.path.join(profile_dir, vm_name + ".yaml")
+    try:
+        with open(path, encoding="utf-8") as fp:
+            return fp.read().strip()
+    except FileNotFoundError:
+        log.debug("no local profile at %s", path)
+        return ""
+    except OSError as exc:
+        raise ProfileReadError(f"cannot read local profile {path}: {exc}") from exc
+
+
 def _normalize_group(spec, name: str = "") -> dict:
     """
     Fill one group from the defaults and validate it. A value that makes no
@@ -359,13 +386,14 @@ def normalize_profile(raw: dict) -> dict:
 def load_profile(vm_name: str,
                  virsh_bin: str = "virsh",
                  rbd_bin: str = "rbd",
-                 domain_xml: str = "") -> dict:
+                 domain_xml: str = "",
+                 profile_dir: str = _PROFILE_DIR) -> dict:
     """
     Load and normalise the pinning profile for vm_name.
 
-    Falls through: RBD metadata → built-in all-none.
+    Falls through: RBD metadata → local file → built-in all-none.
 
-    A VM with no RBD metadata is treated as non-RT (isolation=none everywhere).
+    A VM with no profile is treated as non-RT (isolation=none everywhere).
 
     domain_xml: full libvirt domain XML string (passed on stdin by the hook).
     When provided, disk discovery and vCPU count are read from the XML directly
@@ -376,31 +404,38 @@ def load_profile(vm_name: str,
         log.warning("pyyaml not available; using built-in all-none for %s", vm_name)
         return normalize_profile({})
 
-    # 1. RBD image metadata
-    try:
-        raw_yaml = get_pinning_metadata(vm_name, virsh_bin, rbd_bin,
-                                        domain_xml=domain_xml)
-    except ProfileReadError as exc:
-        # Typically Ceph degraded during a failover: the VM may well be RT,
-        # so this is an error, never the quiet "no profile" case.
-        log.error("could not read the pinning profile of %s, starting it"
-                  " unpinned: %s", vm_name, exc)
-        return normalize_profile({})
-    if raw_yaml:
+    # 1. RBD image metadata, 2. local profile file (standalone: the disk
+    # carries nothing). A source that fails is an error, never the quiet
+    # "no profile" case: typically Ceph degraded during a failover, and the
+    # VM may well be RT.
+    sources = (
+        ("RBD metadata", lambda: get_pinning_metadata(
+            vm_name, virsh_bin, rbd_bin, domain_xml=domain_xml)),
+        (f"{profile_dir}/{vm_name}.yaml",
+         lambda: get_local_profile(vm_name, profile_dir)),
+    )
+    for where, read in sources:
+        try:
+            raw_yaml = read()
+        except ProfileReadError as exc:
+            log.error("could not read the pinning profile of %s, starting it"
+                      " unpinned: %s", vm_name, exc)
+            return normalize_profile({})
+        if not raw_yaml:
+            continue
         try:
             raw = yaml.safe_load(raw_yaml)
         except yaml.YAMLError as exc:
-            log.error("invalid YAML in RBD metadata for %s, starting it"
-                      " unpinned: %s", vm_name, exc)
+            log.error("invalid YAML in %s for %s, starting it unpinned: %s",
+                      where, vm_name, exc)
             return normalize_profile({})
         if isinstance(raw, dict):
-            log.info("loaded pinning profile from RBD metadata for %s", vm_name)
+            log.info("loaded pinning profile from %s for %s", where, vm_name)
             return normalize_profile(raw)
-        log.error("RBD metadata of %s is not a mapping, starting it unpinned",
-                  vm_name)
+        log.error("%s of %s is not a mapping, starting it unpinned", where, vm_name)
         return normalize_profile({})
 
-    # 2. Built-in all-none
+    # 3. Built-in all-none
     log.info("no pinning profile for %s, running on housekeeping cores", vm_name)
     return normalize_profile({})
 
