@@ -1,0 +1,27 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+#
+# For local development and testing only.
+# The Ansible role deploys seapath_alloc/ as plain files — no pip at deploy time.
+#
+# Usage:
+#   pip install -e .[test]
+#   pytest tests/ -v
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "seapath-alloc"
+version = "1.0.0"
+description = "Dynamic CPU allocation for SEAPATH hypervisors"
+requires-python = ">=3.8"
+dependencies = ["pyyaml"]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["seapath_alloc*"]
