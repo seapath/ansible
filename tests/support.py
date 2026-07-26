@@ -40,7 +40,7 @@ def load_script(relpath, name=None):
 
     Every script under test guards its entry point with ``if __name__ ==
     "__main__"``, so importing one runs its definitions and nothing else. The
-    seapath-alloc shims are the exception: they call their entry point at
+    two exceptions are the seapath-alloc shims, which call their entry point at
     import time; see ``test_seapath_entrypoints.py``.
 
     The loader is named explicitly because several of these scripts are
