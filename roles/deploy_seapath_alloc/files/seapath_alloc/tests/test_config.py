@@ -5,6 +5,8 @@ import pytest
 from seapath_alloc.config import (
     normalize_profile,
     expand_group_specs,
+    get_local_profile,
+    load_profile,
     _vcpu_count_from_xml,
     _rbd_source_from_xml,
 )
@@ -344,3 +346,54 @@ def test_count_is_dropped_from_vcpu_specs():
     assert "count" not in by_name["vcpu/0"]
     assert "count" not in by_name["vcpu/1"]
     assert by_name["vhost"]["count"] == 2
+
+
+# ------------------------------------------------------------------ local profile
+
+
+def test_get_local_profile_missing_file_returns_empty(tmp_path):
+    assert get_local_profile("myvm", str(tmp_path)) == ""
+
+
+def test_get_local_profile_reads_file(tmp_path):
+    (tmp_path / "myvm.yaml").write_text("version: 1\n")
+    assert get_local_profile("myvm", str(tmp_path)) == "version: 1"
+
+
+def test_load_profile_falls_back_to_local_file(tmp_path, monkeypatch):
+    """Standalone: no RBD disk, so the local file is what defines the VM."""
+    monkeypatch.setattr("seapath_alloc.config.get_pinning_metadata",
+                        lambda *a, **k: "")
+    (tmp_path / "myvm.yaml").write_text(
+        "version: 1\nvcpus:\n  isolation: exclusive_physical\n")
+    profile = load_profile("myvm", profile_dir=str(tmp_path))
+    assert profile["vcpus"]["isolation"] == "exclusive_physical"
+    assert profile["vcpus"]["scheduler"] == "FIFO"
+
+
+def test_load_profile_rbd_wins_over_local_file(tmp_path, monkeypatch):
+    """A leftover local file must not override a profile that travels."""
+    monkeypatch.setattr(
+        "seapath_alloc.config.get_pinning_metadata",
+        lambda *a, **k: "version: 1\nvcpus:\n  isolation: exclusive_logical\n")
+    (tmp_path / "myvm.yaml").write_text(
+        "version: 1\nvcpus:\n  isolation: exclusive_physical\n")
+    profile = load_profile("myvm", profile_dir=str(tmp_path))
+    assert profile["vcpus"]["isolation"] == "exclusive_logical"
+
+
+def test_load_profile_invalid_local_yaml_falls_back_to_none(tmp_path, monkeypatch):
+    monkeypatch.setattr("seapath_alloc.config.get_pinning_metadata",
+                        lambda *a, **k: "")
+    (tmp_path / "myvm.yaml").write_text("vcpus: [unclosed\n")
+    profile = load_profile("myvm", profile_dir=str(tmp_path))
+    assert profile["vcpus"]["isolation"] == "none"
+
+
+def test_load_profile_no_source_is_all_none(tmp_path, monkeypatch):
+    monkeypatch.setattr("seapath_alloc.config.get_pinning_metadata",
+                        lambda *a, **k: "")
+    profile = load_profile("myvm", profile_dir=str(tmp_path))
+    for group in ("vcpus", "emulator", "vhost", "iothread"):
+        assert profile[group]["isolation"] == "none"
+        assert profile[group]["scheduler"] == "OTHER"

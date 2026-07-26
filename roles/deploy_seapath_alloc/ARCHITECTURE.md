@@ -166,7 +166,8 @@ seapath_alloc/
 ├── repacker.py       thread-migration helpers for the REPACKING strategy
 │
 │  ── orchestration ──────────────────────────────────────────────────────
-├── config.py         RBD metadata + /etc/seapath/alloc.yaml loading
+├── config.py         profile loading (RBD metadata, /etc/seapath/alloc.d)
+│                     + /etc/seapath/alloc.yaml settings
 ├── scheduler.py      single pipeline: strategy + repacking + AllocationEngine
 │                     + reserved-sibling registration + fallback recording
 │
@@ -199,8 +200,9 @@ differ in how they discover threads and register their result.
 hook.py
   │
   ├─ load_profile(vm_name) ──► config.py
-  │    virsh domblklist → rbd image-meta get _seapath_alloc
-  │    falls back to all-none profile if no metadata
+  │    virsh domblklist → rbd image-meta get _seapath_alloc   (cluster)
+  │    → /etc/seapath/alloc.d/<vm>.yaml                       (standalone)
+  │    falls back to all-none profile if neither exists
   │
   └─ with CorePool(topo) as pool:          ← acquires flock
         │
