@@ -124,6 +124,26 @@
   loop: "{{ groups['VMs'] }}"
   when: item not in deploy_vms_standalone_all_vms.list_vms or (item in deploy_vms_standalone_all_vms.list_vms and hostvars[item].force is defined and hostvars[item].force)
 
+# The profile is read by the seapath-alloc libvirt hook at every VM start.
+# In cluster mode vm_manager stores it as RBD image metadata; a standalone VM
+# has no shared image to carry it, so it is written to the host instead.
+- name: Deploy VM pinning profiles
+  ansible.builtin.copy:
+    content: "{{ hostvars[item].vm_pinning_profile }}"
+    dest: "/etc/seapath/alloc.d/{{ item }}.yaml"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ groups['VMs'] }}"
+  when: hostvars[item].vm_pinning_profile is defined
+
+- name: Remove pinning profiles of VMs that no longer define one
+  ansible.builtin.file:
+    path: "/etc/seapath/alloc.d/{{ item }}.yaml"
+    state: absent
+  loop: "{{ groups['VMs'] }}"
+  when: hostvars[item].vm_pinning_profile is not defined
+
 - name: Start VMs
   community.libvirt.virt:
     name: "{{ item }}"
