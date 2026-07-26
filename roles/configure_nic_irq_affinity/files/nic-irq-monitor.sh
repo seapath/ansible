@@ -51,11 +51,15 @@ set_affinity() {
 # Look up the interface in the config and apply its affinity if it has an entry.
 # Config format: one "<iface> <cpulist>" line per interface; '#' and blank
 # lines are ignored.
+#
+# seapath-alloc tracks NIC IRQ occupancy passively by reading
+# /proc/irq/*/smp_affinity_list, so no claim registration is needed here.
 apply() {
     iface=$1
     cpu=$(grep "^${iface} " "$CONF" | cut -d' ' -f2-)
     [ -n "$cpu" ] || return
     set_affinity "$iface" "$cpu"
+    logger -t nic-irq-monitor "pinned $iface IRQs to cpu $cpu"
 }
 
 # Startup pass: apply to managed interfaces that are already up, so a manual
@@ -75,6 +79,7 @@ ip monitor link | while IFS= read -r line; do
         [0-9]*:\ *:\ \<*)
             iface=$(printf '%s' "$line" | cut -d' ' -f2 | tr -d ':')
             flags=$(printf '%s' "$line" | grep -o '<[^>]*>')
+            grep -q "^${iface} " "$CONF" 2>/dev/null || continue
             printf '%s' "$flags" | grep -qE '[<,]UP[,>]' && apply "$iface"
             ;;
     esac

@@ -1,0 +1,7 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+# Controls how isolated cores are distributed across VM thread groups and
+# seapath-run / container claims.  See README.md for a description of each
+# strategy.  Valid values: spreading, packing, repacking.
+seapath_alloc_strategy: spreading
