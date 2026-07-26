@@ -234,8 +234,9 @@ def execute_repack(moves: List[RepackMove], taskset_bin: str = "taskset",
                    pool=None) -> None:
     """Apply a list of repack moves.
 
-    Only ThreadMove entries are applied here. Quadlet containers move through
-    their cgroup, which arrives with the container integration.
+    pool must be provided when moves may include CgroupMove entries: it is
+    used to update claims.json so the pool state stays consistent after the
+    cgroup/taskset migration.
     """
     for move in moves:
         if isinstance(move, ThreadMove):
@@ -251,4 +252,19 @@ def execute_repack(moves: List[RepackMove], taskset_bin: str = "taskset",
                                  tid, move.from_cpu, move.to_cpu)
                 except (subprocess.TimeoutExpired, OSError) as exc:
                     log.warning("repacker: taskset error for tid %d: %s", tid, exc)
+
+        elif isinstance(move, CgroupMove):
+            from .cgroup import apply_cpuset, cgroup_procs, cgroup_root, taskset_procs
+            cpu_str = str(move.to_cpu)
+            root = cgroup_root(move.service)
+            if root is None:
+                log.warning("repacker: cgroup not found for %s", move.service)
+                continue
+            apply_cpuset(root, cpu_str)
+            pids = cgroup_procs(root)
+            taskset_procs(pids, cpu_str)
+            if pool is not None:
+                pool.move_claim_cpu(move.label, move.to_cpu)
+            log.info("repacker: moved quadlet %r cpu %d → cpu %d",
+                     move.label, move.from_cpu, move.to_cpu)
 
