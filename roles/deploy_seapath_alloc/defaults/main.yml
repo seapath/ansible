@@ -1,0 +1,11 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+# Controls how isolated cores are distributed across VM thread groups and
+# seapath-run / container claims.  See README.md for a description of each
+# strategy.  Valid values: spreading, packing, repacking.
+#
+# The one variable of this role without the role name as a prefix, which is
+# what the noqa silences. It is the one an inventory sets, and inventories
+# already carry it under this name.
+seapath_alloc_strategy: spreading # noqa: var-naming[no-role-prefix]
