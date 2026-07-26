@@ -1,0 +1,105 @@
+#!/usr/bin/env python3
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+"""
+Pin a systemd container service to an isolated CPU core.
+
+Allocates the requested cores via the seapath-alloc pool, then writes
+cpuset.cpus at every level of the service cgroup tree (which includes
+Podman's libpod-payload sub-cgroup) and applies taskset + chrt per PID.
+
+Usage:
+    seapath-container-pin <service-name> <isolation> <scheduler> <priority>
+
+    isolation   exclusive_logical | exclusive_physical | none
+    scheduler   FIFO | RR | OTHER
+    priority    RT priority (0 for OTHER)
+
+<service-name> may be given with or without the .service suffix.
+The script is designed to be called from ExecStartPost= in a quadlet.
+"""
+
+import subprocess
+import sys
+
+sys.path.insert(0, '/usr/lib/seapath')
+
+from seapath_alloc.cgroup import apply_cpuset, chrt_procs, cgroup_procs, cgroup_root, taskset_procs
+from seapath_alloc.claim import claim
+from seapath_alloc.logging_setup import setup_logging
+from seapath_alloc.topology import format_cpu_list
+
+
+def _service_main_pid(service):
+    try:
+        out = subprocess.check_output(
+            ["systemctl", "show", "--property=MainPID", "--value", service],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+        pid = int(out)
+        return pid if pid > 1 else 0
+    except (subprocess.CalledProcessError, ValueError):
+        return 0
+
+
+def main():
+    setup_logging()
+    if len(sys.argv) != 5:
+        sys.stderr.write(
+            f"usage: {sys.argv[0]} <service-name> <isolation> <scheduler> <priority>\n"
+        )
+        sys.exit(1)
+
+    name = sys.argv[1]
+    if name.endswith(".service"):
+        name = name[:-8]
+    service = f"{name}.service"
+
+    isolation = sys.argv[2]
+    scheduler = sys.argv[3].upper()
+    priority = int(sys.argv[4])
+
+    root = cgroup_root(service)
+
+    # The claim's owning PID must belong to the container, not to this
+    # short-lived script: a claim keyed on a dead PID self-expires on the
+    # next pool read, silently freeing cores the container still occupies.
+    main_pid = _service_main_pid(service)
+    if not main_pid and root:
+        cgroup_pids = cgroup_procs(root)
+        main_pid = cgroup_pids[0] if cgroup_pids else 0
+    if not main_pid:
+        sys.stderr.write(
+            f"error: no live PID found for {service} (MainPID unset and cgroup"
+            " empty) — refusing to register a claim that would instantly expire\n"
+        )
+        sys.exit(1)
+
+    cores = claim(
+        label=name,
+        isolation=isolation,
+        scheduler=scheduler,
+        priority=priority,
+        target_pid=main_pid,
+        no_apply=True,
+        kind="quadlet",
+    )
+
+    cpu_str = format_cpu_list(cores)
+
+    if root:
+        pids = cgroup_procs(root)
+        if cores:
+            apply_cpuset(root, cpu_str)
+            taskset_procs(pids, cpu_str)
+        # isolation=none still honours an RT scheduler request.
+        if cores or scheduler in ("FIFO", "RR"):
+            chrt_procs(pids, scheduler, priority)
+
+    print(f"pinned {service} to core(s) {cpu_str} ({scheduler}/{priority})")
+
+
+if __name__ == "__main__":
+    main()

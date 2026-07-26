@@ -55,7 +55,8 @@ seapath_alloc/
 │  ── application paths (one per caller type) ───────────────────────────
 ├── threads.py        /proc QEMU PID + TID discovery (VM path only)
 ├── applier.py        taskset + chrt application (VM path only)
-├── claim.py          claim/release logic for seapath-run processes
+├── cgroup.py         cgroup helpers (container path + repacker)
+├── claim.py          claim/release logic for containers and seapath-run
 └── hook.py           libvirt QEMU hook entry point
 │
 │  ── observability ──────────────────────────────────────────────────────
@@ -101,6 +102,22 @@ hook.py
         taskset + chrt per TID, order: vCPUs → emulator → vhost → iothreads
 
 State written inside flock: .reserved_siblings
+```
+
+### 2 — Container pin (`seapath-container-pin`)
+
+```
+claim(label, isolation, scheduler, priority, target_pid) ──► claim.py
+  │
+  └─ with CorePool(topo) as pool:
+        │
+        └─ allocate_cores(pool, [spec], topo, pid=main_pid, kind="quadlet")
+              └─ AllocationEngine → scheduler.py
+
+        pool.add_claim(label, cpus, pid, ...)
+        write claims.json
+
+  apply_cpuset + chrt ──► cgroup.py
 ```
 
 ## Allocation result anatomy
