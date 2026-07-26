@@ -27,7 +27,9 @@ inventories/*
 
 # Ignore python cache files
 __pycache__/
-.pyc
+*.pyc
+.pytest_cache/
+*.egg-info/
 
 # Module documentation
 module_documentation
