@@ -218,6 +218,18 @@ The inventory stays the place where everything is authored, exactly as for
 every other VM setting: RBD is where the profile lives and travels, not where
 it is written.
 
+**In standalone mode.** A standalone VM's disk is local and carries nothing,
+so the same `vm_pinning_profile` variable is written by `deploy_vms_standalone`
+to a file on the host instead:
+
+```
+/etc/seapath/alloc.d/<vm name>.yaml
+```
+
+The profile itself is identical: only the carrier differs, and the hook, the
+pool and the allocator behave exactly the same. The file is deployed with the
+VM and removed when the variable disappears from the inventory.
+
 **Directly on an existing VM.** The same profile can be set or updated on a
 VM that already exists, without redeploying it:
 
@@ -233,10 +245,21 @@ vcpus:
 
 The VM picks up the new profile at its next start or migration.
 
-If no metadata is present for a VM, all thread groups run on housekeeping
-cores with no RT scheduling (`isolation: none, scheduler: OTHER`). This is the
-intended behaviour for non-RT VMs: no configuration is needed to leave a VM
-unpinned.
+The hook looks for the profile in this order:
+
+| # | Source | Used by |
+|---|--------|---------|
+| 1 | RBD image metadata `_seapath_alloc` | cluster VMs; travels with the disk across nodes |
+| 2 | `/etc/seapath/alloc.d/<vm>.yaml` | standalone VMs; written by Ansible on the host |
+| 3 | built-in all-none | any VM with neither |
+
+RBD wins when both exist, so a leftover local file on one node cannot override
+a profile that is meant to follow the VM.
+
+If no profile is found, all thread groups run on housekeeping cores with no RT
+scheduling (`isolation: none, scheduler: OTHER`). This is the intended
+behaviour for non-RT VMs: no configuration is needed to leave a VM unpinned,
+and a VM pinned by a static `<cputune>` block in its XML keeps exactly that.
 
 The hook acts on `started/begin` (normal start) and `started/incoming` (live
 migration arrival). It always exits 0: if pinning fails the VM starts anyway
