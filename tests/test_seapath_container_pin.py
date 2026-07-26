@@ -1,0 +1,365 @@
+# Copyright (C) 2026, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+"""Tests for roles/seapath_alloc/files/seapath-container-pin."""
+
+import subprocess
+
+import pytest
+
+from support import add_seapath_alloc_to_path, load_script
+
+add_seapath_alloc_to_path()
+
+from seapath_alloc.allocator import GroupAllocation  # noqa: E402
+from seapath_alloc.cgroup import Placement  # noqa: E402
+from seapath_alloc.claim import ClaimError  # noqa: E402
+
+pin = load_script(
+    "roles/seapath_alloc/files/seapath-container-pin",
+    "seapath_container_pin",
+)
+
+
+@pytest.fixture
+def harness(monkeypatch):
+    """
+    Drive main() with the pool, the cgroup helpers and systemd replaced.
+
+    ``record`` holds the claim keyword arguments and every cgroup write the
+    script attempted, in order.
+    """
+    record = {"claim": None, "cpuset": [], "chrt": []}
+
+    monkeypatch.setattr(pin, "setup_logging", lambda: None)
+
+    def fake_claim(**kwargs):
+        record["claim"] = kwargs
+        if record.get("refuse"):
+            raise ClaimError(record["refuse"])
+        sched, prio = record.get("applied") or (kwargs["scheduler"],
+                                                kwargs["priority"])
+        return GroupAllocation(name="claim", cpus=record["cores"],
+                               scheduler=sched, priority=prio,
+                               warning=record.get("warning", ""))
+
+    monkeypatch.setattr(pin, "claim_allocation", fake_claim)
+    def fake_place(root, cpus, hk):
+        record["cpuset"].append((root, cpus, hk))
+        return Placement(record["placed"], record["affinity_refused"])
+
+    def fake_schedule(root, sched, prio):
+        record["chrt"].append((root, sched, prio))
+        return [200, 201], record["policy_refused"]
+
+    monkeypatch.setattr(pin, "place_service", fake_place)
+    monkeypatch.setattr(pin, "schedule_payload", fake_schedule)
+
+    class FakeTopology:
+        def housekeeping_cpus(self):
+            return [0, 1, 2, 3]
+
+    monkeypatch.setattr(pin, "Topology", FakeTopology)
+
+    def run(argv, cores=(4,), root="/sys/fs/cgroup/system.slice/sv.service",
+            main_pid=1234, cgroup_pids=(1234,), applied=None, placed=True,
+            refuse="", affinity_refused=0, policy_refused=0, warning=""):
+        record["cores"] = list(cores)
+        record["applied"] = applied
+        record["placed"] = placed
+        record["refuse"] = refuse
+        record["affinity_refused"] = affinity_refused
+        record["policy_refused"] = policy_refused
+        record["warning"] = warning
+        monkeypatch.setattr(pin, "cgroup_root", lambda service: root)
+        monkeypatch.setattr(pin, "cgroup_procs", lambda r: list(cgroup_pids))
+        monkeypatch.setattr(pin, "_service_main_pid", lambda service: main_pid)
+        monkeypatch.setattr(pin.sys, "argv", ["seapath-container-pin"] + argv)
+        try:
+            pin.main()
+        except SystemExit as exc:
+            record["exit"] = exc.code
+        else:
+            record["exit"] = 0
+        return record
+
+    return run
+
+
+# --- MainPID lookup ---------------------------------------------------------
+
+def test_service_main_pid_returns_the_systemd_main_pid(monkeypatch):
+    seen = {}
+
+    def fake_check_output(argv, **kwargs):
+        seen["argv"] = argv
+        return "4242\n"
+
+    monkeypatch.setattr(pin.subprocess, "check_output", fake_check_output)
+
+    assert pin._service_main_pid("sv.service") == 4242
+    assert seen["argv"] == ["systemctl", "show", "--property=MainPID",
+                            "--value", "sv.service"]
+
+
+@pytest.mark.parametrize("value", ["0", "1"])
+def test_service_main_pid_rejects_a_pid_that_owns_nothing(monkeypatch, value):
+    # 0 is "no main process"; 1 is systemd itself, which would keep the claim
+    # alive forever.
+    monkeypatch.setattr(pin.subprocess, "check_output", lambda *a, **k: value)
+
+    assert pin._service_main_pid("sv.service") == 0
+
+
+def test_service_main_pid_survives_a_failed_systemctl(monkeypatch):
+    def boom(*_a, **_k):
+        raise subprocess.CalledProcessError(1, "systemctl")
+
+    monkeypatch.setattr(pin.subprocess, "check_output", boom)
+
+    assert pin._service_main_pid("sv.service") == 0
+
+
+def test_service_main_pid_survives_a_non_numeric_answer(monkeypatch):
+    monkeypatch.setattr(pin.subprocess, "check_output", lambda *a, **k: "n/a")
+
+    assert pin._service_main_pid("sv.service") == 0
+
+
+# --- argument handling ------------------------------------------------------
+
+def test_main_rejects_a_wrong_argument_count(harness, capsys):
+    record = harness(["sv.service", "exclusive_logical"])
+
+    assert record["exit"] == 1
+    assert "usage:" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("name", ["sv", "sv.service"])
+def test_main_accepts_the_service_name_with_or_without_its_suffix(
+        harness, name, capsys):
+    record = harness([name, "exclusive_logical", "FIFO", "80"])
+
+    # The claim is labelled with the bare name, the cgroup with the unit name.
+    assert record["claim"]["label"] == "sv"
+    assert "pinned sv.service to core(s) 4" in capsys.readouterr().out
+
+
+# --- claim ownership --------------------------------------------------------
+
+def test_main_claims_on_behalf_of_the_container_main_pid(harness):
+    record = harness(["sv.service", "exclusive_logical", "FIFO", "80"],
+                     main_pid=4242)
+
+    assert record["claim"] == {
+        "label": "sv",
+        "isolation": "exclusive_logical",
+        "scheduler": "FIFO",
+        "priority": 80,
+        # The claim must be keyed on the container PID: keyed on this
+        # short-lived script it would expire on the next pool read.
+        "target_pid": 4242,
+        # The cgroup write below replaces the per-process taskset.
+        "no_apply": True,
+        "kind": "quadlet",
+    }
+
+
+def test_main_falls_back_to_the_first_cgroup_pid(harness):
+    record = harness(["sv.service", "exclusive_logical", "FIFO", "80"],
+                     main_pid=0, cgroup_pids=(999, 1000))
+
+    assert record["claim"]["target_pid"] == 999
+
+
+def test_main_refuses_to_claim_for_an_empty_cgroup(harness, capsys):
+    record = harness(["sv.service", "exclusive_logical", "FIFO", "80"],
+                     main_pid=0, cgroup_pids=())
+
+    assert record["exit"] == 1
+    assert "no live PID found" in capsys.readouterr().err
+    assert record["claim"] is None
+
+
+def test_main_refuses_to_claim_without_a_cgroup(harness, capsys):
+    record = harness(["sv.service", "exclusive_logical", "FIFO", "80"],
+                     main_pid=0, root=None)
+
+    assert record["exit"] == 1
+    assert "no live PID found" in capsys.readouterr().err
+
+
+# --- cgroup application -----------------------------------------------------
+
+ROOT = "/sys/fs/cgroup/system.slice/sv.service"
+
+
+def test_main_places_the_service_then_schedules_the_payload(harness):
+    record = harness(["sv.service", "exclusive_physical", "FIFO", "80"],
+                     cores=(4, 5), cgroup_pids=(1234, 1235))
+
+    assert record["cpuset"] == [(ROOT, [4, 5], [0, 1, 2, 3])]
+    assert record["chrt"] == [(ROOT, "FIFO", 80)]
+
+
+def test_main_lowercase_scheduler_is_normalised(harness):
+    record = harness(["sv.service", "exclusive_logical", "fifo", "80"])
+
+    assert record["claim"]["scheduler"] == "FIFO"
+    assert record["chrt"] == [(ROOT, "FIFO", 80)]
+
+
+def test_main_applies_an_rt_policy_without_isolation(harness):
+    # isolation=none allocates no core, but the RT priority is still honoured.
+    record = harness(["sv.service", "none", "FIFO", "80"], cores=())
+
+    assert record["cpuset"] == []
+    assert record["chrt"] == [(ROOT, "FIFO", 80)]
+
+
+def test_main_touches_nothing_for_a_plain_unisolated_service(harness, capsys):
+    record = harness(["sv.service", "none", "OTHER", "0"], cores=())
+
+    assert record["cpuset"] == []
+    assert record["chrt"] == []
+    assert "pinned sv.service to core(s) housekeeping (OTHER/0)" in (
+        capsys.readouterr().out)
+
+
+def test_main_skips_the_cgroup_when_the_service_has_none(harness, capsys):
+    # No cgroup means nothing to write to; the claim is still registered so
+    # the cores are not handed to somebody else, and the journal says so.
+    record = harness(["sv.service", "exclusive_logical", "FIFO", "80"],
+                     root=None)
+
+    assert record["exit"] == 0
+    assert record["claim"]["label"] == "sv"
+    assert record["cpuset"] == []
+    assert record["chrt"] == []
+    out = capsys.readouterr()
+    assert "no cgroup found" in out.err
+    assert "pinned" not in out.out
+
+
+# --- end to end on a quadlet cgroup tree ------------------------------------
+
+def test_main_on_a_quadlet_tree_leaves_conmon_on_housekeeping(
+        tmp_path, monkeypatch, capsys):
+    """
+    The real cgroup helpers on the tree podman --cgroups=split produces:
+    every payload thread, including those started before the pin, gets the
+    core and the policy; conmon gets the housekeeping cores and no policy.
+    """
+    root = tmp_path / "sv.service"
+    tree = {
+        root: (),
+        root / ".control": (),
+        root / "runtime": (100,),
+        root / "libpod-payload-abc": (200, 201, 202),
+    }
+    for d, tids in tree.items():
+        d.mkdir(parents=True, exist_ok=True)
+        (d / "cpuset.cpus").write_text("")
+        (d / "cgroup.threads").write_text("".join(f"{t}\n" for t in tids))
+        (d / "cgroup.procs").write_text(f"{tids[0]}\n" if tids else "")
+
+    calls = []
+    monkeypatch.setattr(pin, "setup_logging", lambda: None)
+    monkeypatch.setattr(pin, "claim_allocation",
+                        lambda **kw: GroupAllocation(name="claim", cpus=[6],
+                                                     scheduler="FIFO", priority=50))
+    monkeypatch.setattr(pin, "cgroup_root", lambda service: str(root))
+    monkeypatch.setattr(pin, "_service_main_pid", lambda service: 100)
+
+    class FakeTopology:
+        def housekeeping_cpus(self):
+            return [0, 1]
+
+    monkeypatch.setattr(pin, "Topology", FakeTopology)
+    monkeypatch.setattr(pin.sys, "argv",
+                        ["seapath-container-pin", "sv", "exclusive_logical",
+                         "FIFO", "50"])
+    monkeypatch.setattr("os.sched_setaffinity",
+                        lambda tid, cpus: calls.append(("cpus", tid, sorted(cpus))),
+                        raising=False)
+    monkeypatch.setattr("os.sched_setscheduler",
+                        lambda tid, pol, prm: calls.append(("policy", tid, prm)),
+                        raising=False)
+    monkeypatch.setattr("os.sched_param", lambda prio: prio, raising=False)
+
+    pin.main()
+
+    assert (root / "libpod-payload-abc" / "cpuset.cpus").read_text() == "6"
+    assert (root / "runtime" / "cpuset.cpus").read_text() == "0-1"
+    assert (root / ".control" / "cpuset.cpus").read_text() == "0-1"
+    assert (root / "cpuset.cpus").read_text() == "0-1,6"
+    assert calls == [
+        ("cpus", 200, [6]), ("cpus", 201, [6]), ("cpus", 202, [6]),
+        ("cpus", 100, [0, 1]),
+        ("policy", 200, 50), ("policy", 201, 50), ("policy", 202, 50),
+    ]
+    assert "pinned sv.service to core(s) 6 (FIFO/50)" in capsys.readouterr().out
+
+
+def test_main_applies_the_policy_of_the_allocation(harness):
+    # Pool exhausted: the allocator put the container on the housekeeping
+    # cores and dropped FIFO to OTHER; FIFO must not come back here.
+    record = harness(["sv", "exclusive_logical", "FIFO", "90"],
+                     cores=(0, 1, 2, 3), applied=("OTHER", 0))
+
+    assert record["chrt"] == [("/sys/fs/cgroup/system.slice/sv.service", "OTHER", 0)]
+
+
+def test_main_rejects_a_priority_that_is_not_a_number(harness, capsys):
+    record = harness(["sv", "exclusive_logical", "FIFO", "high"])
+
+    assert record["exit"] == 1
+    assert "priority must be an integer" in capsys.readouterr().err
+    assert record["claim"] is None
+
+
+def test_main_warns_when_the_cpuset_cannot_be_written(harness, capsys):
+    record = harness(["sv", "exclusive_logical", "FIFO", "90"], placed=False)
+
+    assert record["exit"] == 0
+    assert "cpuset not written" in capsys.readouterr().err
+
+
+def test_main_warns_when_threads_refuse_the_policy(harness, capsys):
+    # EPERM from sched_setscheduler, as without RT runtime for the cgroup
+    # under CONFIG_RT_GROUP_SCHED: the unit keeps running, the journal says.
+    record = harness(["sv", "exclusive_logical", "FIFO", "90"],
+                     policy_refused=2)
+
+    assert record["exit"] == 0
+    out = capsys.readouterr()
+    assert "2 of 2 thread(s) refused FIFO/90" in out.err
+    assert "partly pinned sv.service to core(s) 4 (FIFO/90)" in out.out
+
+
+def test_main_warns_when_threads_refuse_the_affinity(harness, capsys):
+    record = harness(["sv", "exclusive_logical", "FIFO", "90"],
+                     affinity_refused=1)
+
+    out = capsys.readouterr()
+    assert record["exit"] == 0
+    assert "1 thread(s) refused the affinity 4" in out.err
+    assert out.out.startswith("partly pinned")
+
+
+def test_main_says_when_the_allocation_was_degraded(harness, capsys):
+    harness(["sv", "exclusive_logical", "FIFO", "90"], cores=(0, 1, 2, 3),
+            applied=("OTHER", 0), warning="no free isolated core")
+
+    out = capsys.readouterr()
+    assert "warning: sv.service: no free isolated core" in out.err
+    assert "pinned sv.service to core(s) 0-3 (OTHER/0)" in out.out
+
+
+def test_main_reports_a_refused_claim(harness, capsys):
+    record = harness(["sv", "exclusive_logical", "FIFO", "90"],
+                     refuse="label 'sv' is held by live pid 9")
+
+    assert record["exit"] == 1
+    assert "held by live pid 9" in capsys.readouterr().err
+    assert record["cpuset"] == []

@@ -66,6 +66,8 @@ Each degradation is logged to `/var/log/seapath/alloc.log` with its severity:
 | `/usr/lib/seapath/seapath_alloc/` | Python package (topology, pool, allocator, ...) |
 | `/usr/bin/seapath-alloc` | CLI status tool |
 | `/usr/bin/seapath-qemu-hook` | libvirt hook entry point |
+| `/usr/bin/seapath-container-pin` | Pin a systemd service to an isolated core |
+| `/usr/bin/seapath-container-unpin` | Release the pin for a systemd service |
 | `/usr/bin/seapath-run` | Launch a third-party binary on an isolated core |
 | `/etc/libvirt/hooks/qemu.d/10-seapath-pinning` | Symlink → seapath-qemu-hook |
 | `/etc/seapath/alloc.yaml` | Host-wide settings (`allocation_strategy`) |
@@ -194,7 +196,7 @@ vcpus:
 
 The strategy is set host-wide via the `seapath_alloc_strategy` Ansible variable
 (written to `/etc/seapath/alloc.yaml`).  It applies to both VM thread groups
-and `seapath-run` claims.
+and `seapath-run` / container claims.
 
 | Strategy | Behaviour |
 |----------|-----------|
@@ -216,7 +218,38 @@ Or per host:
 seapath_alloc_strategy: packing
 ```
 
-### 2. NIC IRQ threads
+### 2. Containers (systemd quadlets)
+
+Use `seapath-container-pin` and `seapath-container-unpin` from `ExecStartPost=`
+and `ExecStopPost=` in the quadlet unit file:
+
+```ini
+[Container]
+Image=...
+
+[Service]
+ExecStartPost=seapath-container-pin %p exclusive_logical FIFO 80
+ExecStopPost=-seapath-container-unpin %p
+```
+
+`seapath-container-pin <service> <isolation> <scheduler> <priority>`
+
+- Allocates one isolated core via the pool.
+- Confines the container (Podman's `libpod-payload-*` sub-cgroup) to that
+  core, and conmon and systemd's `.control` to the housekeeping cores, by
+  writing `cpuset.cpus` at each level and the affinity of each thread.
+- Applies the scheduling policy to every thread of the container, including
+  those it started before the pin. conmon keeps SCHED_OTHER.
+- A service without a `libpod-payload-*` sub-cgroup is pinned as a whole:
+  every thread of its cgroup tree gets the core and the policy.
+
+Rationale in [ARCHITECTURE.md](ARCHITECTURE.md), data flow 2.
+
+`seapath-container-unpin <service>` releases the claim.
+
+The service name may be given with or without the `.service` suffix.
+
+### 3. NIC IRQ threads
 
 NIC IRQ occupancy is tracked **passively**: the pool reads the affinity of
 each NIC IRQ on every invocation (`/proc/irq/<n>/effective_affinity_list`,
@@ -234,7 +267,7 @@ This means that once the `configure_nic_irq_affinity` monitor daemon pins a
 NIC queue to an isolated core, that core is automatically unavailable to VMs
 without any coordination between the two roles.
 
-### 3. Third-party processes (seapath-run)
+### 4. Third-party processes (seapath-run)
 
 For any binary that cannot be modified, use `seapath-run` as a wrapper:
 
@@ -283,5 +316,5 @@ listed as `pinned`, `<comm>[<pid>]`.
 ## Log output
 
 The libvirt hook writes to `/var/log/seapath/alloc.log` (rotated weekly via
-`/etc/logrotate.d/seapath-alloc`). `seapath-run` writes to stderr
-(captured by journald when run from a systemd unit).
+`/etc/logrotate.d/seapath-alloc`). Container pin/unpin and `seapath-run` write
+to stderr (captured by journald when run from a systemd unit).

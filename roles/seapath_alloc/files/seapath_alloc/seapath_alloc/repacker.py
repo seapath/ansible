@@ -22,15 +22,17 @@ Both operations work on all seapath-alloc managed actors:
   - QEMU threads (VMs): moved via taskset per thread ID
   - seapath-run processes: moved via taskset per thread ID (children included
     because they inherit affinity at exec time and appear on the same CPU)
-  - quadlet containers: moved via cgroup cpuset.cpus write + taskset per PID
+  - quadlet containers: moved via cgroup cpuset.cpus write + per-thread
+    affinity, with the same payload/housekeeping split as seapath-container-pin
 
 Design constraints shared by both:
   - Only moves actors exclusively on a single isolated CPU.  We never touch
     threads with broad affinity or multiple allowed CPUs.
   - A ThreadMove is a single taskset -cp call; it does not change the
     scheduler class or RT priority of the thread.
-  - A CgroupMove writes a new cpuset.cpus to the full cgroup tree and
-    calls taskset on every PID found in the cgroup.
+  - A CgroupMove goes through cgroup.place_service(), as the initial pin
+    did: the payload moves to the new core, conmon stays on the housekeeping
+    cores.  Like a ThreadMove it leaves the scheduling policy alone.
   - The caller must bust the pool cache (pool.bust_cache()) after
     execute_repack() so that subsequent free_logical()/free_physical() calls
     see the updated /proc state.
@@ -242,14 +244,13 @@ def execute_repack(moves: List[RepackMove], taskset_bin: str = "taskset",
                    pool=None) -> None:
     """Apply a list of repack moves.
 
-    Only ThreadMove entries are applied here. Quadlet containers move through
-    their cgroup, which arrives with the container integration.
-
-    When the pool is given, a seapath-run claim on the donor core follows
-    its threads once they have all moved; otherwise the claim would keep the
-    donor core busy and the pair would never be freed. If a thread stays
-    behind, the claim stays too, so the donor core is never seen as free
-    while a thread still runs on it.
+    pool must be provided when moves may include CgroupMove entries: it is
+    used to update claims.json so the pool state stays consistent after the
+    cgroup/taskset migration: a seapath-run claim on the donor core follows
+    its threads once they have all moved, a quadlet claim its container.
+    Otherwise the claim would keep the donor core busy and the pair would
+    never be freed. If a thread stays behind, its claim stays too, so the
+    donor core is never seen as free while a thread still runs on it.
     """
     for move in moves:
         if isinstance(move, ThreadMove):
@@ -273,4 +274,25 @@ def execute_repack(moves: List[RepackMove], taskset_bin: str = "taskset",
                     if (claim.get("kind") == "run"
                             and claim.get("cores") == [move.from_cpu]):
                         pool.move_claim_cpu(claim["label"], move.to_cpu)
+
+        else:  # CgroupMove
+            from .cgroup import cgroup_root, place_service
+            root = cgroup_root(move.service)
+            if root is None:
+                log.warning("repacker: cgroup not found for %s", move.service)
+                continue
+            housekeeping = pool.topology().housekeeping_cpus() if pool is not None else []
+            placement = place_service(root, [move.to_cpu], housekeeping)
+            if not placement.moved:
+                # As for a ThreadMove: the claim follows only a container
+                # that did move, or its old core would look free.
+                log.warning("repacker: quadlet %r not moved cpu %d → cpu %d"
+                            " (cpuset not written, %d thread(s) refused)",
+                            move.label, move.from_cpu, move.to_cpu,
+                            placement.refused)
+                continue
+            if pool is not None:
+                pool.move_claim_cpu(move.label, move.to_cpu)
+            log.info("repacker: moved quadlet %r cpu %d → cpu %d",
+                     move.label, move.from_cpu, move.to_cpu)
 

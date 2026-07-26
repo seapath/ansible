@@ -85,3 +85,19 @@
       ansible.builtin.assert:
         that:
           - "'isolated' in (seapath_alloc_status.stdout | from_json)"
+
+    - name: Read the container pinning helpers
+      ansible.builtin.stat:
+        path: "/usr/bin/{{ item }}"
+      loop:
+        - seapath-container-pin
+        - seapath-container-unpin
+      register: seapath_alloc_container_bins
+
+    - name: Assert the container pinning helpers are installed
+      ansible.builtin.assert:
+        that:
+          - item.stat.mode == "0755"
+      loop: "{{ seapath_alloc_container_bins.results }}"
+      loop_control:
+        label: "{{ item.item }}"
