@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+"""
+Release the CPU pin for a systemd container service.
+
+Removes the claim from the seapath-alloc pool and resets the cgroup
+CPUAffinity override so the freed cores become available to other actors.
+
+Usage:
+    seapath-container-unpin <service-name>
+
+<service-name> may be given with or without the .service suffix.
+The script is designed to be called from ExecStopPost= in a quadlet.
+"""
+
+import subprocess
+import sys
+
+sys.path.insert(0, '/usr/lib/seapath')
+
+from seapath_alloc.claim import release
+from seapath_alloc.logging_setup import setup_logging
+
+
+def main():
+    setup_logging()
+    if len(sys.argv) != 2:
+        sys.stderr.write(f"usage: {sys.argv[0]} <service-name>\n")
+        sys.exit(1)
+
+    name = sys.argv[1]
+    if name.endswith(".service"):
+        name = name[:-8]
+    service = f"{name}.service"
+
+    release(name)
+
+    # Reset the runtime CPUAffinity override so freed cores are immediately
+    # available — best-effort, fails silently if the service is already gone.
+    subprocess.run(
+        ["systemctl", "set-property", "--runtime", service, "CPUAffinity="],
+        check=False,
+        stderr=subprocess.DEVNULL,
+    )
+
+    print(f"released claim for {service}")
+
+
+if __name__ == "__main__":
+    main()
