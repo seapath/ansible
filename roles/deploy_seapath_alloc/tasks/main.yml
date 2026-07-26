@@ -26,6 +26,22 @@
     group: root
     mode: "0755"
 
+- name: Install seapath-alloc entry point
+  ansible.builtin.copy:
+    src: seapath-alloc
+    dest: /usr/bin/seapath-alloc
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install seapath-run helper
+  ansible.builtin.copy:
+    src: seapath-run
+    dest: /usr/bin/seapath-run
+    owner: root
+    group: root
+    mode: "0755"
+
 - name: Ensure /etc/libvirt/hooks/qemu.d exists
   ansible.builtin.file:
     path: /etc/libvirt/hooks/qemu.d

@@ -55,7 +55,12 @@ seapath_alloc/
 │  ── application paths (one per caller type) ───────────────────────────
 ├── threads.py        /proc QEMU PID + TID discovery (VM path only)
 ├── applier.py        taskset + chrt application (VM path only)
+├── claim.py          claim/release logic for seapath-run processes
 └── hook.py           libvirt QEMU hook entry point
+│
+│  ── observability ──────────────────────────────────────────────────────
+├── status.py         pool state collection, no side effects
+└── cli.py            entry points for all CLI binaries
 ```
 
 `scheduler.py` is the single convergence point: every allocation path
@@ -119,6 +124,7 @@ State written inside flock: .reserved_siblings
 | Path | Written by | Read by |
 |------|-----------|---------|
 | `/run/seapath/alloc/.lock` | `pool.py` | `pool.py` (flock) |
+| `/run/seapath/alloc/claims.json` | `claim.py` | `pool.py` |
 | `/run/seapath/alloc/.reserved_siblings` | `pool.py` | `pool.py` |
 | `/etc/seapath/alloc.yaml` | Ansible | `config.py` |
 | `/var/log/seapath/alloc.log` | all entry points | — |
