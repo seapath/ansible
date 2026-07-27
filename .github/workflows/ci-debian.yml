@@ -17,6 +17,7 @@ jobs:
       matrix:
         include:
           - name: Standalone
+            runner-label: runner-RTE-13-standalone
             hyp-inventories: >-
               --inventory inventories_private/standalone13.yml
             vms-inventories: >-
@@ -24,21 +25,19 @@ jobs:
             vms-deployment-playbooks: >-
               playbooks/deploy_vms_standalone.yaml
           - name: Cluster
+            runner-label: runner-RTE-13-cluster
             hyp-inventories: >-
               --inventory inventories_private/cluster13.yml
             vms-inventories: >-
               --inventory inventories_private/vm13cluster.yml
             vms-deployment-playbooks: >-
               playbooks/deploy_vms_cluster.yaml
-    concurrency:
-      group: ci-debian-${{ matrix.name }}
-      cancel-in-progress: false
     uses: ./.github/workflows/_tests.yml
     name: Run tests on ${{ matrix.name }}
     with:
       seapath-flavor: "Debian ${{ matrix.name }}"
       compliance_matrices_folder: debian
-      runner-label: "runner-RTE-13"
+      runner-label: ${{ matrix.runner-label }}
       inventories-repository: "git@github.com:insatomcat/seapath_inventories_ci.git"
       ansible_ssh_keyfile: "inventories_private/ci_rsa"
       skip_cyclictest: true # the inventories don't have the expected skip_cyclictest variables
