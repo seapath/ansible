@@ -213,7 +213,11 @@ jobs:
       - name: Deploy SEAPATH VMs
         id: deploy-vms
         working-directory: ansible
-        if: "${{ inputs.vms-inventories != '' }}"
+        # A failing test does not fail its own step, it only raises FAILED.
+        # Check it here so that a red hypervisor stage skips the VM stage
+        # instead of spending another ten minutes on a run already known to
+        # fail. The report is still generated with the hypervisor results.
+        if: "${{ inputs.vms-inventories != '' && env.FAILED != 'true' }}"
         run: |
           echo "::group::VM deployment playbooks"
 
@@ -412,7 +416,11 @@ jobs:
           latency_tests_duration=$(python3 -c "import datetime; print(datetime.timedelta(seconds=${{ env.PCAP_LOOP }}))")
           echo "LATENCY_TESTS_DURATION=$latency_tests_duration" >> "$GITHUB_ENV"
 
-          echo "$INVENTORY_HYP" "$INVENTORY_VMS" | jq --slurp '{hypervisors: .[0], vms: .[1]}' > ${{ env.RESULTS_FOLDER }}/data.json
+          # INVENTORY_VMS is unset when the VM stage did not run. Default it to
+          # an empty object, otherwise the DO_CYCLIC_TESTS query below fails on
+          # "Cannot iterate over null" and silently drops the cyclictest
+          # section from the report.
+          echo "$INVENTORY_HYP" "$INVENTORY_VMS" | jq --slurp '{hypervisors: .[0], vms: (.[1] // {})}' > ${{ env.RESULTS_FOLDER }}/data.json
 
           echo "DO_CYCLIC_TESTS=$(jq \
             'any(.vms[]; .skip_cyclictest == false and .rt == true)
