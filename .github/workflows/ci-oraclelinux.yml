@@ -3,9 +3,6 @@
 
 name: CI OracleLinux
 
-env:
-  WORK_DIR: /tmp/seapath_ci_${{ github.run_id }}_${{ github.run_attempt }}_${{ github.sha }}
-
 on:
   workflow_call:
   workflow_dispatch:
@@ -14,45 +11,45 @@ permissions:
   checks: write
 
 jobs:
-  Integration-tests:
-    runs-on: [self-hosted, runner-RTE-OL9]
-    steps:
-
-      - name: Initialize sources
-        run: mkdir ${{ env.WORK_DIR }}; cd ${{ env.WORK_DIR }};
-             git clone -q --depth 1 --recurse-submodules -b main https://github.com/seapath/ci ci;
-             echo "CI sources downloaded successfully";
-             ci/launch-oraclelinux.sh init;
-
-      - name: Configure OracleLinux
-        id: conf
-        run: cd ${{ env.WORK_DIR }};
-             ci/launch-oraclelinux.sh conf;
-
-      - name: Launch system tests
-        if: ${{ always() && steps.conf.conclusion == 'success' }}
-        run: cd ${{ env.WORK_DIR }};
-             ci/launch-oraclelinux.sh system;
-
-      - name: Launch VM tests
-        if: ${{ always() && steps.conf.conclusion == 'success' }}
-        run: cd ${{ env.WORK_DIR }};
-             ci/launch-oraclelinux.sh vm;
-
-      - name: Generate test report
-        if: ${{ always() && steps.conf.conclusion == 'success' }}
-        run: cd ${{ env.WORK_DIR }};
-             git -C ci/test-report-pdf checkout 0156f2d35ba7d5983f22b6054aa83f92a42f0f2d;
-             ci/launch-oraclelinux.sh report;
-
-      - name: Upload test report
-        if: ${{ always() && steps.conf.conclusion == 'success' }}
-        uses: actions/upload-artifact@v7
-        with:
-            name: seapath-test-report-oraclelinux-cluster
-            path: ${{ env.WORK_DIR }}/seapath-test-report.pdf
-            if-no-files-found: error
-
-      - name: Clean
-        if: always()
-        run: rm -rf $WORK_DIR;
+  call-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Cluster
+            runner-label: runner-RTE-OL9-cluster
+            hyp-inventories: >-
+              --inventory inventories_private/clusterol9.yml
+            vms-inventories: >-
+              --inventory inventories_private/vmol9cluster.yml
+            vms-deployment-playbooks: >-
+              playbooks/deploy_vms_cluster.yaml
+          - name: Standalone
+            runner-label: runner-RTE-OL9-standalone
+            hyp-inventories: >-
+              --inventory inventories_private/standaloneol9.yml
+            vms-inventories: >-
+              --inventory inventories_private/vmol9standalone.yml
+            vms-deployment-playbooks: >-
+              playbooks/deploy_vms_standalone.yaml
+    uses: ./.github/workflows/_tests.yml
+    name: Run tests on ${{ matrix.name }}
+    with:
+      seapath-flavor: "OracleLinux ${{ matrix.name }}"
+      runner-label: ${{ matrix.runner-label }}
+      inventories-repository: "git@github.com:insatomcat/seapath_inventories_ci.git"
+      ansible_ssh_keyfile: "inventories_private/ci_rsa"
+      skip_cyclictest: true # ci_test.yaml does not run cyclictests
+      hyp-inventories: ${{ matrix.hyp-inventories }}
+      hyp-configure-playbooks: >-
+        playbooks/ci_configure.yaml
+      hyp-test-playbooks: >-
+        playbooks/ci_test.yaml
+      vms-inventories: ${{ matrix.vms-inventories }}
+      vms-deploy-playbooks: ${{ matrix.vms-deployment-playbooks }}
+      vms-configure-playbooks: >-
+        playbooks/seapath_setup_prerequisitesdebian.yaml
+        playbooks/seapath_setup_hardening.yaml
+        playbooks/ci_prepare_VMs.yaml
+      vms-test-playbooks: >-
+        playbooks/ci_test.yaml
