@@ -1,0 +1,24 @@
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+#
+# This file will execute the SLES ci on the main branch every saturday.
+# This ensure the main branch is always tested properly.
+# A badge is derived from this workflow.
+
+name: CI SLES weekly
+
+on:
+  schedule:
+    - cron: '30 22 * * 6'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  checks: write
+
+jobs:
+  call-workflow:
+    uses: ./.github/workflows/ci-sles.yml
+    with:
+      pcap_loop: 900 # 15 min
+      weekly: true
