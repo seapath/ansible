@@ -19,6 +19,3 @@ permissions:
 jobs:
   call-workflow:
     uses: ./.github/workflows/ci-sles.yml
-    with:
-      pcap_loop: 900 # 15 min
-      weekly: true
