@@ -107,6 +107,7 @@ jobs:
           path: ansible
 
       - name: Prepare Ansible
+        id: prepare
         working-directory: ansible
         run: |
           git clone -q -b ${{ inputs.inventories-repository-branch }} "${{ inputs.inventories-repository }}" inventories_private
@@ -366,13 +367,19 @@ jobs:
 
       - name: Upload raw results # used for debugging
         id: raw-results-artifact
+        # Those results are the only material available to investigate a run
+        # that broke in the middle, so upload them even when an earlier step
+        # failed. They only require the results folder to have been created.
+        if: "${{ !cancelled() && steps.prepare.conclusion == 'success' }}"
         uses: actions/upload-artifact@v7
         with:
           name: raw-results-${{ inputs.seapath-flavor }}
           path: ${{ env.RESULTS_FOLDER }}
           include-hidden-files: true
           retention-days: 1
-          if-no-files-found: error
+          # An early failure can leave the folder empty. Do not report that as
+          # yet another failure on top of the one being investigated.
+          if-no-files-found: warn
 
       - name: Process OpenSCAP analysis results
         working-directory: ansible
