@@ -475,6 +475,10 @@ to stderr (captured by journald when run from a systemd unit).
 
 ## Prometheus monitoring
 
+For the Prometheus scrape configuration needed to feed the cluster-wide
+dashboard (file-based service discovery, required `cluster`/`nodename`
+labels, one job per exporter), see [PROMETHEUS.md](PROMETHEUS.md).
+
 ### Textfile collector
 
 The role deploys a systemd timer (`seapath-alloc-export.timer`) that runs
@@ -518,7 +522,9 @@ map per node (repeated panels, `cluster`/`nodename` template variables).
 Its gutter additionally carries the list of VMs running on the node and
 a per-node health block (RAM, disk and swap usage, failed systemd units)
 with the usual colour thresholds, so the first row only keeps the
-cluster-wide indicators (Ceph, Corosync, Pacemaker).
+cluster-wide indicators (Ceph, Corosync, Pacemaker). It requires the
+`cluster` and `nodename` labels on every scraped target; see
+[PROMETHEUS.md](PROMETHEUS.md) for the scrape configuration.
 
 ### Exported metrics
 
