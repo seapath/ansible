@@ -12,6 +12,9 @@ collections:
   - name: "ansible.posix"
   - name: "ansible.utils"
   - name: openstack.config_template
-    source: https://opendev.org/openstack/ansible-config_template
+    # GitHub mirror of https://opendev.org/openstack/ansible-config_template.
+    # Both serve the same commits, but opendev suffers from regular outages
+    # that break the CI, while GitHub is already a hard requirement here.
+    source: https://github.com/openstack/ansible-config_template
     type: git
     version: 2.1.1
