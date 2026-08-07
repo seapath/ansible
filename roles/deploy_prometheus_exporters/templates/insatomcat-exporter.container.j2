@@ -1,0 +1,19 @@
+[Unit]
+Description=Prometheus insatomcat Exporter (vhost CPU monitoring)
+After=network-online.target {{ deploy_prometheus_exporters_libvirt_systemd_unit }}
+Wants=network-online.target
+
+[Container]
+Image={{ deploy_prometheus_exporters_insatomcat_exporter_image }}
+PublishPort={{ deploy_prometheus_exporters_listen_address }}:9184:9184
+Volume={{ deploy_prometheus_exporters_insatomcat_libvirt_socket }}:{{ deploy_prometheus_exporters_insatomcat_libvirt_socket }}:ro
+Volume={{ deploy_prometheus_exporters_insatomcat_qemu_dir }}:{{ deploy_prometheus_exporters_insatomcat_qemu_dir }}:ro
+PodmanArgs=--pid=host
+SecurityLabelDisable=true
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
