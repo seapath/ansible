@@ -9,6 +9,11 @@ Unit tests for every Python file this repository ships: the `cluster_vm`
 Ansible module, the scripts deployed as role `files/` payloads, and the
 OpenSCAP report converter used by the CI.
 
+The `seapath_alloc` package keeps its own suite inside
+`roles/deploy_seapath_alloc/files/seapath_alloc/tests/`, because the package is
+also installable on its own. `tox -e unit` collects both directories and
+reports them together.
+
 ## Running them
 
 ```bash
@@ -35,6 +40,15 @@ at 0% rather than not appearing at all. Coverage skips directories without an
 `__init__.py`, and none of these are importable packages, hence
 `include_namespace_packages`.
 
+Coverage finds files by their `.py` suffix, and five of the shipped scripts
+have none: `seapath-alloc`, `seapath-qemu-hook`, `seapath-run`,
+`seapath-container-pin` and `seapath-container-unpin` are installed in
+`/usr/bin` under those names. They appear in the report because the suite
+imports them; delete their tests and they leave the report altogether instead
+of falling to 0%. `test_seapath_run.py`, `test_seapath_container_pin.py`,
+`test_seapath_container_unpin.py` and `test_seapath_entrypoints.py` cover all
+five.
+
 Excluded from the denominator, with the reason in `.coveragerc`: the three git
 submodules (upstream projects with their own suites), the ctypes probes under
 `deploy_cukinia_tests` (test material, not shipped code), and the three-line
@@ -50,6 +64,13 @@ free tool that reports statement coverage over Ansible tasks.
 so `tests/support.py` provides `load_script("relative/path.py")`, which imports
 one by path. Every script guards its entry point with `if __name__ ==
 "__main__"`, so importing one defines its functions and does nothing else.
+The same helper loads the extensionless entry points, naming a
+`SourceFileLoader` explicitly because importlib will not guess one from a file
+with no suffix. The two shims among them, `seapath-alloc` and
+`seapath-qemu-hook`, call `main()` at import time: loading one is running it,
+which is what `test_seapath_entrypoints.py` asserts on.
+`add_seapath_alloc_to_path()` puts the `seapath_alloc` package on `sys.path`,
+standing in for the `/usr/lib/seapath` those scripts prepend at runtime.
 
 **Stubbing what cannot be installed.** `install_stub_module(name)` registers an
 empty module so a script importing it can load: `rados` and `rbd` ship with
@@ -77,6 +98,10 @@ The badge thresholds this suite answers to:
 | `test_statement_coverage90` | gold | 90% statements |
 | `test_branch_coverage80` | gold | 80% branches |
 
-Current: **100% of statements, 98.7% of branches**. The remaining partial
-branches are the unreachable fall-through of the last `elif` in the three
-index-driven dispatch loops of `snmp_getdata.py`.
+Current: **99.9% of statements, 98.3% of branches**, over 724 tests.
+
+What is left is unreachable rather than untested: the fall-through of the last
+`elif` in the index-driven dispatch loops of `snmp_getdata.py` and of
+`seapath_alloc`, and the `else` at the end of `seapath_alloc/cli.py`, which
+argparse's subparser choices make impossible to reach. That one is kept as a
+guard for a subcommand added without a matching branch.
