@@ -22,6 +22,10 @@
 
 ## Testing
 
+- **Python unit tests**: `tox -e unit` runs the `tests/` suite with statement and
+  branch coverage. Fails below the `COV_FAIL_UNDER` ratchet in `tox.ini` (99%);
+  raise it when coverage improves, never lower it. Writes `coverage.xml` and
+  `htmlcov/` at the repo root. Scope and exclusions live in `.coveragerc`.
 - **Run all molecule tests**: `tox -m molecule`
 - **Role tests only**: `tox -ie molecule-roles`  (runs `scripts/run-molecule-roles.sh`)
 - **Playbook tests only**: `tox -e molecule-playbooks`  (runs from `playbooks/` dir)
@@ -31,7 +35,7 @@
 ## CI Pipeline (PRs to `main`)
 
 ```
-qa (ansible-lint) → molecule → debian / yocto / centos / oraclelinux integration
+qa (ansible-lint) → unit (pytest + coverage) → molecule → debian / yocto / centos / oraclelinux integration
 ```
 
 Integration tests run on self-hosted runners and use the external `seapath/ci` repo.
