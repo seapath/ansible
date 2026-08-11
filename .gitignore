@@ -29,6 +29,14 @@ inventories/*
 __pycache__/
 .pyc
 
+# Python test and coverage artefacts
+.pytest_cache/
+.tox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
 # Module documentation
 module_documentation
 

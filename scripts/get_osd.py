@@ -42,7 +42,7 @@ def print_osd_on_host(hostname):
         print(found_ods)
 
 
-if __name__ == "__main__":
+def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Print OSD daemons found inside the given machine"
     )
@@ -51,5 +51,9 @@ if __name__ == "__main__":
         help="The Machine hostname to seach OSD",
         type=str,
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     print_osd_on_host(args.hostname)
+
+
+if __name__ == "__main__":
+    main()

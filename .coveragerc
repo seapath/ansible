@@ -1,0 +1,40 @@
+# Copyright (C) 2026, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+#
+# Coverage scope for the Python shipped by this repository.
+# Everything listed under "source" is reported even when no test imports it,
+# so a new untested script shows up as 0% instead of silently disappearing.
+
+[run]
+branch = True
+source =
+    .github/test-report
+    plugins/modules
+    roles
+    scripts
+
+omit =
+    # Git submodules: separate upstream projects, tested in their own repos.
+    roles/deploy_cukinia/files/cukinia/*
+    roles/deploy_python3_setup_ovs/files/python3-setup-ovs/*
+    roles/deploy_vm_manager/files/vm_manager/*
+    # ctypes syscall probes run by cukinia. They are test material rather
+    # than code the project ships, and each one only exists to fail on the
+    # kernel it is pointed at.
+    roles/deploy_cukinia_tests/cukinia-tests/includes/*
+    # Three-line WSGI entrypoint whose body is an import of the vm_manager
+    # Flask app; there is nothing to assert that the submodule does not
+    # already cover.
+    roles/vmmgrapi/files/wsgi.py
+
+[report]
+# None of the directories above are importable packages: the scripts are
+# deployed as plain files. Without this, coverage prunes every subdirectory
+# that has no __init__.py, and an untested script silently vanishes from the
+# report instead of showing up at 0%.
+include_namespace_packages = True
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:
+show_missing = True
+precision = 1
