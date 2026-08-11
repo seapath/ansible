@@ -342,6 +342,9 @@ done
             command = f""" /usr/sbin/crm status --as-xml """
             title = "crm status json"
             xml_status = run_command(command)
+            # Reported as-is by the generic write below if the parsing fails,
+            # rather than whatever the previous iteration left in `data`.
+            data = xml_status
             try:
                 dict_status = xmltodict.parse(xml_status, attr_prefix='')
                 data = json.dumps(dict_status)

@@ -477,10 +477,10 @@ def test_collect_multilines_survives_an_unparsable_crm_status(out, commands):
 
     written = oids(out)
     assert ".1.11.0.1.1" not in written
-    # Known defect: on a parse error the loop falls through to the generic
-    # write with `data` still holding the previous iteration's output, so
-    # .1.11 repeats the lvs status instead of reporting the crm one.
-    assert written[".1.11.1"] == "lvs output"
+    # The raw crm output is reported instead of the parsed sub-trees, and in
+    # particular instead of the lvs status the previous iteration produced.
+    assert written[".1.11.1"] == "<crm_mon><unclosed>"
+    assert written[".1.10.1"] == "lvs output"
 
 
 # --- disk replacement summary ---------------------------------------------
