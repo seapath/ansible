@@ -341,6 +341,13 @@ what the CI runs, and it fails below the `COV_FAIL_UNDER` ratchet in `tox.ini`.
 The tests stay inside the package because it is also installable on its own;
 `.coveragerc` keeps them out of the coverage denominator.
 
+The five entry points installed in `/usr/bin` (`seapath-alloc`,
+`seapath-qemu-hook`, `seapath-run`, `seapath-container-pin`,
+`seapath-container-unpin`) sit outside the package, so their tests live with
+the repository's other script tests, in `tests/test_seapath_run.py`,
+`tests/test_seapath_container_pin.py`, `tests/test_seapath_container_unpin.py`
+and `tests/test_seapath_entrypoints.py`.
+
 `conftest.py` provides two fixtures: `sys_path`, a fake `/sys` CPU tree with
 the reference topology (12 cores, 0-3 housekeeping, 4-11 isolated, 2-way HT),
 and `std_topology`, a `Topology` backed by it.  Building a different tree is
