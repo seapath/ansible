@@ -360,7 +360,9 @@ def write_disk_replacement_status(status):
     if 1 in status.replacedisk:
         status.globalreplacedisk = "Problem on one disk"
     for i in range(1,5):
-        singlelinetooid(base_oid + ".5." + str(i), "replace disk " + str(i), status.replacedisk[i-1])
+        # The SMART and array-device checks flag a disk with the integer 1,
+        # while the RAID check stores a message, so the value is coerced here.
+        singlelinetooid(base_oid + ".5." + str(i), "replace disk " + str(i), str(status.replacedisk[i-1]))
     singlelinetooid(base_oid + ".5.5", "replace disk global",status.globalreplacedisk)
 
 def main():

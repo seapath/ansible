@@ -505,17 +505,31 @@ def test_write_disk_replacement_status_keeps_the_raid_message(out, status):
     assert written[".5.5.0"] == "RAID SMART Warnings on one disk"
 
 
-def test_write_disk_replacement_status_breaks_on_a_flagged_disk(out, status):
-    # Known defect: the SMART and array-device checks flag a disk with the
-    # integer 1, and singlelinetooid() calls lstrip() on the value. The whole
-    # collection therefore dies exactly when a disk starts failing, and
-    # /tmp/snmpdata.txt is left holding the last healthy snapshot.
+def test_write_disk_replacement_status_reports_a_flagged_disk(out, status):
+    # The SMART and array-device checks flag a disk with the integer 1, where
+    # the RAID check stores a message; both have to reach the OID tree.
     status.replacedisk[2] = 1
 
-    with pytest.raises(AttributeError):
-        snmp.write_disk_replacement_status(status)
+    snmp.write_disk_replacement_status(status)
 
-    assert status.globalreplacedisk == "Problem on one disk"
+    written = oids(out)
+    assert written[".5.3.0"] == "1"
+    assert written[".5.1.0"] == "OK"
+    assert written[".5.5.0"] == "Problem on one disk"
+
+
+def test_a_failing_disk_still_gets_published(out, commands, status):
+    # The whole point of the collector: a disk going bad must be reported,
+    # not crash the run and leave snmpd on the last healthy snapshot.
+    commands(rules=[("/dev/sdc", "FAILED!\n")], default="PASSED\n")
+
+    snmp.collect_smart_health(status)
+    snmp.write_disk_replacement_status(status)
+
+    written = oids(out)
+    assert written[".2.3.0"] == "FAILED!"
+    assert written[".5.3.0"] == "1"
+    assert written[".5.5.0"] == "Problem on one disk"
 
 
 # --- entry point ----------------------------------------------------------
