@@ -4,6 +4,9 @@
 # Coverage scope for the Python shipped by this repository.
 # Everything listed under "source" is reported even when no test imports it,
 # so a new untested script shows up as 0% instead of silently disappearing.
+# That discovery walks for ".py" files: the seapath-alloc entry points deployed
+# to /usr/bin carry no suffix, so they are measured only because the tests
+# import them. See "Where the numbers come from" in tests/README.md.
 
 [run]
 branch = True
