@@ -67,20 +67,6 @@ command dispatch has to slip past the `except Exception` wrapped around it.
 globally. Where a script writes through a module-level file handle, point that
 handle at a `StringIO`.
 
-## Known defects pinned by tests
-
-Two tests assert current broken behaviour rather than desired behaviour, and
-say so in a comment. They are change detectors: fixing either defect should
-update its test in the same commit.
-
-- `test_write_disk_replacement_status_breaks_on_a_flagged_disk` -
-  `snmp_getdata.py` flags a suspect disk with the integer `1`, then calls
-  `lstrip()` on it, so the collection crashes exactly when a disk starts
-  failing.
-- `test_collect_multilines_survives_an_unparsable_crm_status` - on a parse
-  error the loop falls through with `data` still holding the previous
-  iteration's output, so OID `.1.11` repeats the lvs status.
-
 ## OpenSSF Best Practices
 
 The badge thresholds this suite answers to:
