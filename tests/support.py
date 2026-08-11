@@ -11,9 +11,24 @@ module and one CI helper. The tests therefore import them by path.
 
 import importlib.util
 import sys
+import types
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def install_stub_module(name):
+    """
+    Register an empty module under ``name`` and return it.
+
+    Some scripts import modules that cannot exist in a test environment: the
+    rados and rbd C bindings only ship with Ceph, and vm_manager lives in a
+    git submodule that the unit job does not check out. Stubbing them lets
+    the tests drive the script's own logic and assert on the calls it makes.
+    """
+    module = types.ModuleType(name)
+    sys.modules[name] = module
+    return module
 
 
 def load_script(relpath, name=None):
