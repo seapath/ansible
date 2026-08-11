@@ -1,0 +1,47 @@
+# Copyright (C) 2026, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+name: Unit
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    name: Python Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      # No submodules: they are upstream projects tested in their own repos,
+      # and .coveragerc omits them from the report.
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install tox
+        run: pip install tox
+
+      - name: Run unit tests with coverage
+        run: tox -e unit
+
+      - name: Publish coverage summary
+        if: always()
+        run: |
+          pip install coverage
+          {
+            echo "## Python coverage"
+            echo
+            coverage report --format=markdown
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-python
+          path: |
+            coverage.xml
+            htmlcov/
+          if-no-files-found: error

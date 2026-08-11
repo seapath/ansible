@@ -17,8 +17,12 @@ jobs:
   ci-qa:
     uses: ./.github/workflows/ci-qa.yml
 
-  ci-molecule:
+  ci-unit:
     needs: ci-qa
+    uses: ./.github/workflows/ci-unit.yml
+
+  ci-molecule:
+    needs: ci-unit
     uses: ./.github/workflows/ci-molecule.yml
 
   ci-debian:

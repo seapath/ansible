@@ -1,0 +1,14 @@
+# Copyright (C) 2026, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+#
+# Dependencies for the Python unit test suite (tox -e unit).
+# Third-party imports of the scripts under test are listed here so the tests
+# exercise the real library rather than a stub. The ones that cannot be
+# installed from PyPI (rados, rbd, vm_manager, ansible) are stubbed in
+# tests/support.py instead.
+
+pytest
+pytest-cov
+junitparser
+lxml
+xmltodict
