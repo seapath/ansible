@@ -6,17 +6,17 @@ import socket,sys
 from time import sleep
 from _thread import start_new_thread
 
-CID = socket.VMADDR_CID_HOST
-PORT = int(sys.argv[1])
+STATUS_FILE = "/var/run/ptpstatus/ptp_state"
+DETAILS_FILE = "/var/run/ptpstatus/ptp_status"
 
 def client_handler(connection):
     data = connection.recv(2048)
     message = data.decode('utf-8')
     filename = ""
     if message == 'STATUS':
-        filename = "/var/run/ptpstatus/ptp_state"
+        filename = STATUS_FILE
     if message == 'DETAILS':
-        filename = "/var/run/ptpstatus/ptp_status"
+        filename = DETAILS_FILE
 
     ptp_data = "0"
     try:
@@ -47,4 +47,9 @@ def start_server(host, port):
         while True:
             accept_connections(s)
 
-start_server(CID, PORT)
+def main(argv=None):
+    argv = sys.argv[1:] if argv is None else argv
+    start_server(socket.VMADDR_CID_HOST, int(argv[0]))
+
+if __name__ == "__main__":
+    main()
