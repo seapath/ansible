@@ -71,6 +71,20 @@ on:
         description: |
           Don't expect the test playbooks to run Cyclictests. Can be overriden
           per host with the 'skip_cyclictest' Ansible variable.
+      do_latency_tests:
+        type: boolean
+        default: true
+        description: |
+          Whether to run the SV (Sampled Values) latency tests on the VMs.
+          Those tests depend on an accurate SV publisher, which is not
+          currently the case, so they can be flaky. Disable them for CI
+          runs on PRs.
+      pcap_loop:
+        type: number
+        default: 10
+        description: |
+          Number of times the SV pcap is played during the latency tests.
+          A higher value gives more meaningful results but takes more time.
 
 env:
   # TODO make this better
@@ -79,7 +93,7 @@ env:
   CYCLICTEST_INTERVAL: 200 # hardcoded in the cyclictest role for now
   LATENCY_MAXIMAL_HYP: 100
   LATENCY_MAXIMAL_VM: 100
-  PCAP_LOOP: 10
+  PCAP_LOOP: ${{ inputs.pcap_loop }}
   PCAP: "/seapath-ci/pcaps/8_streams_4000_SV.pcap"
 
 jobs:
@@ -260,7 +274,14 @@ jobs:
           echo "Deployed VMs $vms_pretty_list"
           echo "INVENTORY_VMS=$vms" >> "$GITHUB_ENV"
 
-          echo "DO_LATENCY_TESTS=$(echo "$vms" | jq 'any(.[]; .sv_subscriber == true and .rt == true)')" >> "$GITHUB_ENV"
+          DO_LATENCY_TESTS=$(echo "$vms" | jq 'any(.[]; .sv_subscriber == true and .rt == true)')
+          # SV latency tests depend on an accurate SV publisher and can be
+          # flaky, so callers can disable them, e.g. for CI runs on PRs.
+          if [[ "$DO_LATENCY_TESTS" == "true" && "${{ inputs.do_latency_tests }}" != "true" ]]; then
+            echo "::notice title=${{ inputs.seapath-flavor }} VMs::SV latency tests are disabled"
+            DO_LATENCY_TESTS=false
+          fi
+          echo "DO_LATENCY_TESTS=$DO_LATENCY_TESTS" >> "$GITHUB_ENV"
 
       # TODO weekly benchmark
 
