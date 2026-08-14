@@ -59,3 +59,7 @@ jobs:
       vms-test-playbooks: >-
         playbooks/test_run_cukinia.yaml
         playbooks/test_run_cyclictest.yaml
+      # SV latency tests only run in the weekly CI: the SV publisher is not
+      # accurate (it does bursts), so the tests are too flaky for CI on PRs.
+      do_latency_tests: ${{ inputs.weekly }}
+      pcap_loop: ${{ inputs.pcap_loop }}
