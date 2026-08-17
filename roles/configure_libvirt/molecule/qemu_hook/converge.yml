@@ -1,0 +1,15 @@
+---
+- name: Converge qemu hook configuration
+  hosts: all
+  become: true
+  gather_facts: false
+
+  roles:
+    - role: configure_libvirt
+      vars:
+        configure_libvirt_deploy_seapath_qemu_hook: true
+
+  handlers:
+    - name: Restart libvirtd
+      ansible.builtin.command: /usr/bin/true
+      changed_when: false

@@ -1,0 +1,12 @@
+---
+- name: Prepare libvirt test environment
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Create libvirt configuration directory
+      ansible.builtin.file:
+        path: /etc/libvirt
+        state: directory
+        mode: "0755"

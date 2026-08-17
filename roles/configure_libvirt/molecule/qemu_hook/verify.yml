@@ -1,0 +1,45 @@
+---
+- name: Verify qemu hook configuration
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Check qemu hook directory
+      ansible.builtin.stat:
+        path: /etc/libvirt/hooks/qemu.d
+      register: configure_libvirt_qemu_hook_dir
+
+    - name: Assert qemu hook directory ownership and permissions
+      ansible.builtin.assert:
+        that:
+          - configure_libvirt_qemu_hook_dir.stat.exists
+          - configure_libvirt_qemu_hook_dir.stat.isdir
+          - configure_libvirt_qemu_hook_dir.stat.mode == "0755"
+          - configure_libvirt_qemu_hook_dir.stat.pw_name == "root"
+          - configure_libvirt_qemu_hook_dir.stat.gr_name == "root"
+
+    - name: Check qemu hook file
+      ansible.builtin.stat:
+        path: /etc/libvirt/hooks/qemu.d/seapath_qemu_hook.py
+      register: configure_libvirt_qemu_hook
+
+    - name: Assert qemu hook ownership and permissions
+      ansible.builtin.assert:
+        that:
+          - configure_libvirt_qemu_hook.stat.exists
+          - configure_libvirt_qemu_hook.stat.isreg
+          - configure_libvirt_qemu_hook.stat.mode == "0755"
+          - configure_libvirt_qemu_hook.stat.pw_name == "root"
+          - configure_libvirt_qemu_hook.stat.gr_name == "root"
+
+    - name: Read qemu hook file
+      ansible.builtin.slurp:
+        path: /etc/libvirt/hooks/qemu.d/seapath_qemu_hook.py
+      register: configure_libvirt_qemu_hook_content
+
+    - name: Assert deployed qemu hook content
+      ansible.builtin.assert:
+        that:
+          - "(configure_libvirt_qemu_hook_content.content | b64decode).startswith('#!/usr/bin/env python3')"
+          - "'def main():' in (configure_libvirt_qemu_hook_content.content | b64decode)"
