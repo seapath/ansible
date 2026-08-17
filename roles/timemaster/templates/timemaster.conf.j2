@@ -28,6 +28,14 @@ include {{ timemaster_path_chrony_conf }}
 {% else %}server {{ line }} iburst maxsamples 10 minsamples 10 maxpoll 6 minpoll 6
 {% endif %}{% endfor %}
 {% endif %}
+# Step the clock whenever the offset exceeds 1 second, with no limit on the
+# number of steps. A grand master clock with no GPS fix yet announces 1970 over
+# PTP at boot, and chrony steps to it. The distribution default (makestep 1 3)
+# would then let the limit be reached before the grand master converges, and
+# chrony would only slew back, taking hours to recover. The same applies after
+# a grand master crash. This directive comes after the include above so that it
+# overrides the value shipped in {{ timemaster_path_chrony_conf }}.
+makestep 1 -1
 
 [ntp.conf]
 includefile /etc/ntp.conf
