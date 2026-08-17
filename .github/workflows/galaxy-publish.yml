@@ -29,6 +29,22 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          # The roles ship the submodule sources they install on the hosts, so
+          # the build needs them checked out. Recursive because cukinia has a
+          # submodule of its own.
+          submodules: recursive
+
+      - name: Check the submodules are populated
+        run: |
+          status=0
+          while read -r path; do
+            if [ -z "$(ls -A "${path}" 2>/dev/null)" ]; then
+              echo "::error::Submodule ${path} is empty, the collection would ship a broken role."
+              status=1
+            fi
+          done < <(git config --file .gitmodules --get-regexp '\.path$' | cut -d ' ' -f 2)
+          exit "${status}"
 
       - name: Set up Python
         uses: actions/setup-python@v6
