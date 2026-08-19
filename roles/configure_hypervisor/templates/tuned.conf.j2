@@ -32,8 +32,8 @@ enabled=0
 # Prevent tuned from stopping and restarting irqbalance when applying this
 # profile. The realtime base profile's [irqbalance] plugin causes a ~1s IRQ
 # redistribution that breaks Corosync heartbeats and triggers quorum loss.
-# irqbalance is masked system-wide; NIC IRQs are managed by nic-irq-monitor
-# and isolated CPUs are covered by isolcpus=managed_irq.
+# irqbalance is masked wherever the package is installed; NIC IRQs are managed
+# by nic-irq-monitor and isolated CPUs are covered by isolcpus=managed_irq.
 enabled=0
 
 [script]
