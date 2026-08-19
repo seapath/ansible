@@ -48,6 +48,7 @@
 
     - name: Synchronization of snmp_ scripts
       ansible.posix.synchronize:
+        use_ssh_args: true
         src: scripts/
         dest: /usr/local/bin/
         rsync_opts:

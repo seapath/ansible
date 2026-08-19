@@ -13,6 +13,7 @@
 
 - name: Synchronization of src vm_manager on the control machine to dest on the remote hosts
   ansible.posix.synchronize:
+    use_ssh_args: true
     src: vm_manager
     dest: /tmp/src
     rsync_opts:
