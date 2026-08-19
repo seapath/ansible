@@ -2,9 +2,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- name: Stop and mask irqbalance.service
+- name: Populate service facts
+  ansible.builtin.service_facts:
+- name: Stop and mask irqbalance.service if it is installed
   ansible.builtin.systemd:
     name: irqbalance.service
     state: stopped
     enabled: false
     masked: true
+  when:
+    - "'irqbalance.service' in services"
+    - "services['irqbalance.service'].status != 'not-found'"
