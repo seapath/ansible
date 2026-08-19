@@ -5,6 +5,7 @@
 ---
 - name: Copy Cukinia's tests
   ansible.posix.synchronize:
+    use_ssh_args: true
     src: cukinia-tests/cukinia
     dest: /etc/
     delete: true

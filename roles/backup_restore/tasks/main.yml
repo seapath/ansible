@@ -4,6 +4,7 @@
 ---
 - name: Synchronization of backup-restore folder on the control machine to dest on the remote hosts
   ansible.posix.synchronize:
+    use_ssh_args: true
     src: scripts/
     dest: /usr/local/bin/
     rsync_opts:
