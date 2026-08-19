@@ -11,6 +11,7 @@
 
 - name: Copy Pacemaker Seapath Resource-Agent files
   ansible.posix.synchronize:
+    use_ssh_args: true
     src: debian/pacemaker_ra/
     dest: /usr/lib/ocf/resource.d/seapath/
     rsync_opts:
