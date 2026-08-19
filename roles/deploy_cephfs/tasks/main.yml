@@ -150,6 +150,7 @@
 
 - name: Synchronize local cephfs_upload content to remote deploy_cephfs_remotedir
   ansible.posix.synchronize:
+    use_ssh_args: true
     src: "{{ deploy_cephfs_localdirtoupload }}"
     dest: "{{ deploy_cephfs_remotedir }}"
     archive: true
