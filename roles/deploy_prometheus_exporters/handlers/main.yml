@@ -1,0 +1,21 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+# Handlers run in declaration order, not in notification order: the daemon
+# reload must stay first so that the restarts act on the regenerated units.
+- name: Reload systemd after exporter container unit changes
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Restart changed exporter services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: restarted
+  loop: >-
+    {{
+      deploy_prometheus_exporters_unit_files.results
+      | selectattr('changed')
+      | map(attribute='item')
+      | list
+    }}
+  when: deploy_prometheus_exporters_manage_services | bool

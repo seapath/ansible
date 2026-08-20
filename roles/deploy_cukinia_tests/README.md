@@ -11,6 +11,11 @@ No requirement.
 | `deploy_cukinia_tests_extra_essential_services` | list | `[]` | Additional systemd services to whitelist in the unrecognized services check (SEAPATH-00200). |
 | `deploy_cukinia_tests_extra_essential_packages` | list | `[]` | Additional apt packages to whitelist in the unrecognized packages check (SEAPATH-00198). |
 
+Roles may also publish extra essential services as drop-in files under
+`/etc/cukinia/extra-essential-services.d/`. These files are read at
+cukinia test runtime, even when tests are deployed or executed later in a
+separate playbook run.
+
 ## Example Playbook
 ```yaml
 - name: deploy cukinia tests
