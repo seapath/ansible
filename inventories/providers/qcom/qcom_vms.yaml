@@ -6,6 +6,7 @@ VMs:
     guest-arm64:
       ansible_host: 192.168.200.162
       ansible_user: admin
+      arch: aarch64
       vm_template: "{{ inventory_dir }}/../../../templates/vm/guest.xml.j2"
       vm_disk: "{{ inventory_dir }}/../../../files/seapath-guest-efi-test-image-seapath-vm-arm64.rootfs.qcow2"
       vm_features: ["rt", "isolated"]
