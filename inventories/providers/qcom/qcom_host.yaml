@@ -7,15 +7,16 @@ all:
   hosts:
     seapath-host:
       # Admin network settings
-      ansible_host: 192.168.200.161 # administration IP.
-      network_interface: end0 # Administration interface name.
-      interfaces_to_wait_for: ["end0"]
-      gateway_addr: 192.168.200.1  # Administration Gateway.
+      ansible_host: 192.168.132.161 # administration IP.
+      network_interface: enx0826ae394483 # Administration interface name.
+      interfaces_to_wait_for: ["enx0826ae394483"]
+      gateway_addr: 192.168.132.1  # Administration Gateway.
       subnet: 24 # Subnet mask in CIDR notation.
+
       # Time synchronisation
-      ptp_interface: end0 # PTP interface receiving PTP frames.
+      #ptp_interface: end0 # PTP interface receiving PTP frames.
       ntp_servers:
-        - "185.254.101.25" # public NTP server example
+        - "192.168.132.17" # public NTP server example
 
       # Main network configuration. Nothing to change here
       ip_addr: "{{ ansible_host }}"

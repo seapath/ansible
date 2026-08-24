@@ -4,7 +4,7 @@
 VMs:
   hosts:
     guest-arm64:
-      ansible_host: 192.168.200.162
+      ansible_host: 192.168.132.162
       ansible_user: admin
       arch: aarch64
       vm_template: "{{ inventory_dir }}/../../../templates/vm/guest.xml.j2"
@@ -19,6 +19,11 @@ VMs:
       bridges:
         - name: br0
           mac_address: "8c:fd:f0:ae:ca:1c"
+      pci_passthrough:
+        - domain: 1
+          bus: 1
+          slot: 0
+          function: 0
   vars:
     cyclictest_affinity: "0-5"
     cyclictest_duration: 300
