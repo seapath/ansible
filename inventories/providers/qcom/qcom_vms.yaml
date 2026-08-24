@@ -1,0 +1,25 @@
+---
+# Virtual machines deployed on the QCOM standalone hypervisor.
+
+VMs:
+  hosts:
+    guest-arm64:
+      ansible_host: 192.168.200.162
+      ansible_user: admin
+      vm_template: "{{ inventory_dir }}/../../../templates/vm/guest.xml.j2"
+      vm_disk: "{{ inventory_dir }}/../../../files/seapath-guest-efi-test-image-seapath-vm-arm64.rootfs.qcow2"
+      vm_features: ["rt", "isolated"]
+      cpuset: [2, 3, 4, 5, 6, 7]
+      emulatorpin: "0-1"
+      memory: 4096
+      force: true
+      enable: true
+      autostart: true
+      bridges:
+        - name: br0
+          mac_address: "8c:fd:f0:ae:ca:1c"
+  vars:
+    cyclictest_affinity: "0-5"
+    cyclictest_duration: 300
+    cyclictest_priority: 99
+    cyclictest_result_folder: "../"
