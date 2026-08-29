@@ -45,6 +45,16 @@ then
     exit 1
 fi
 
+echo "Test python3 jmespath module is installed"
+if ! cat << EOF | python3 &>/dev/null
+import jmespath
+EOF
+then
+    echo "Error: python3 jmespath module must be installed" 1>&2
+    echo "See README.adoc for instructions" 1>&2
+    exit 1
+fi
+
 echo "Install roles in requirements.yaml"
 ansible-galaxy install --force --roles-path="$(pwd)/roles" -r ansible-requirements.yaml
 
