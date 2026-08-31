@@ -20,6 +20,7 @@ delay 1e-9
 
 [timemaster]
 ntp_program chronyd
+use_vclocks 0
 
 [chrony.conf]
 include {{ timemaster_path_chrony_conf }}
@@ -84,6 +85,7 @@ options -u ntp:ntp -g
 
 [phc2sys]
 path /usr/sbin/phc2sys
+options -O 0 -w -s /dev/ptp0 -R 1.00 -z /var/run/timemaster/ptp4l.0.socket -t [0:end0] -n 0 -E refclock_sock --refclock_sock_address /var/run/timemaster/chrony.SOCK0 -l 4 --
 
 [ptp4l]
 path /usr/sbin/ptp4l
