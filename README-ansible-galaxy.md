@@ -165,7 +165,7 @@ The other playbooks can be called alone to re-configure a specific part, when yo
 - `cluster_setup_ha.yaml`: Configure Corosync and Pacemaker et Corosync
 - `cluster_setup_libvirt.yaml`: Create a Ceph RBD pool for libvirt
 - `cluster_setup_users.yaml`: Setup libvirtadmin user over the cluster
-- `cluster_remove_machine.yaml`: Remove a machine from the cluster (pacemaker and Ceph), e.g. before replacing it.
+- `cluster_remove_machine.yaml`: Remove a machine the cluster has lost from pacemaker and Ceph, e.g. before replacing it. It refuses to run while the machine still has OSDs up, as it drops the Ceph host by force without draining it.
 
 ## VM deployement
 
