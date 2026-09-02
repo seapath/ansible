@@ -13,6 +13,7 @@ The `cephadm_install` role must have been applied to `cluster_machines` before t
 | cephadm_release        | No       | String | "20.2.0"     | Version of the ceph container image                                                   |
 | cephadm_spec_path      | No       | String | spec.yaml.j2 | Path to the spec file of cephadm. Use it to override the default config               |
 | cephadm_network        | Yes      | String |              | Ceph network (e.g. "192.168.55.0/24")                                                 |
+| ceph_conf_overrides    | No       | Dict   | {}           | Ceph configuration options to set, grouped by section ("global", "mon", "osd"...)     |
 
 Note that for each node you want in the cluster, those host vars need to be defined:
 
@@ -47,6 +48,30 @@ Consequences:
 Logical volumes listed in `ceph_osd_disks` are wiped in place (the volume
 layout belongs to the user); whole disks and partitions are destroyed so that
 ceph-volume can create its own LVM layer on them.
+
+## Ceph configuration options
+
+`ceph_conf_overrides` is a dictionary of Ceph sections, each holding the
+options to set for that section:
+
+```yaml
+ceph_conf_overrides:
+  global:
+    osd_pool_default_size: 3
+  mon:
+    auth_allow_insecure_global_id_reclaim: false
+```
+
+The options are rendered into the `ceph.conf` handed to `cephadm bootstrap`,
+and then written to the cluster configuration store with `ceph config set`,
+which is what makes a change take effect on an already bootstrapped cluster.
+Option names are matched the way `ceph config` spells them, so spaces and
+dashes are accepted and normalised to underscores. An option Ceph does not
+know about fails the run instead of being silently dropped.
+
+Options removed from `ceph_conf_overrides` keep their value in the cluster:
+the role never unsets anything. Use `ceph config rm <section> <option>` to
+go back to the default.
 
 ## Custom OSD layouts
 
