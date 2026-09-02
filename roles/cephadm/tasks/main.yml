@@ -184,6 +184,60 @@
   loop: "{{ cephadm_mon_nodes_to_add }}"
   when: cephadm_mon_nodes_to_add | length > 0
 
+# === Ceph configuration options ===
+# ceph_conf_overrides only reaches the cluster through the ceph.conf handed
+# to "cephadm bootstrap", so it is read on the very first run and ignored
+# afterwards. Push it to the configuration store as well, so that editing it
+# on a cluster that is already bootstrapped has an effect.
+- name: Build the list of Ceph configuration options to apply
+  ansible.builtin.set_fact:
+    cephadm_conf_options: >-
+      {%- set options = [] -%}
+      {%- for section, settings in (ceph_conf_overrides | default({})).items() -%}
+      {%- for name, value in settings.items() -%}
+      {%- set _ = options.append({
+            'section': section,
+            'name': name | replace(' ', '_') | replace('-', '_'),
+            'value': (value | string | lower) if (value is boolean) else (value | string)}) -%}
+      {%- endfor -%}
+      {%- endfor -%}
+      {{ options }}
+  run_once: true
+
+# "ceph config get" refuses "global" as an entity, so the comparison is made
+# against the options the cluster has stored, which "ceph config dump" gives
+# for every section in one call. Masked entries are left out: they are not
+# what a plain section setting writes.
+- name: Read the Ceph configuration stored in the cluster
+  ansible.builtin.command: ceph config dump --format json
+  register: cephadm_conf_dump
+  changed_when: false
+  run_once: true
+  delegate_to: "{{ cephadm_first_node }}"
+  when: cephadm_conf_options | length > 0
+
+- name: Map the stored Ceph configuration by section and option
+  ansible.builtin.set_fact:
+    cephadm_conf_stored: >-
+      {%- set stored = {} -%}
+      {%- for entry in (cephadm_conf_dump.stdout | default('[]') | from_json) -%}
+      {%- if not entry.mask | default('') -%}
+      {%- set _ = stored.update({entry.section ~ '/' ~ entry.name: entry.value}) -%}
+      {%- endif -%}
+      {%- endfor -%}
+      {{ stored }}
+  run_once: true
+
+- name: Set the Ceph configuration options that differ
+  ansible.builtin.command: "ceph config set {{ item.section }} {{ item.name }} {{ item.value }}"
+  changed_when: true
+  run_once: true
+  delegate_to: "{{ cephadm_first_node }}"
+  loop: "{{ cephadm_conf_options }}"
+  loop_control:
+    label: "{{ item.section }}/{{ item.name }}"
+  when: item.value != (cephadm_conf_stored[item.section ~ '/' ~ item.name] | default(none))
+
 # === OSDs now ===
 # A volume is kept untouched if and only if it hosts an OSD that the
 # running cluster claims: the OSD uuid found in the LVM tags written by
