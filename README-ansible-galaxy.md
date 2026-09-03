@@ -196,9 +196,6 @@ The other playbooks can be called alone to re-configure a specific part, when yo
 - `seapath_setup_custom_hardware.yaml`: Apply hardware specific roles
 - `purge_ceph.yaml`: Remove the Ceph configuration on the cluster (only used for development)
 
-Note: All the other `replace_machine_*` playbooks are specific parts of the machine replacement scenario.
-They should not be called alone.
-
 ## Management
 
 - `seapath_setup_snmp.yaml`: Configure SNMP on all machines

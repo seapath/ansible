@@ -5,42 +5,137 @@
   hosts: localhost
   pre_tasks:
     - name: Exit playbook, if no machine was given
-      fail:
+      ansible.builtin.fail:
         msg: "machine_to_remove must be declared"
       when: machine_to_remove is undefined
 
-- name: Import replace_machine_find_online_ceph_machine playbook
-  import_playbook: replace_machine_find_online_ceph_machine.yaml
-  when: groups['mon_host'] is undefined
+    - name: Exit playbook, if the machine is not part of the cluster
+      ansible.builtin.fail:
+        msg: "{{ machine_to_remove }} is not part of the cluster_machines group"
+      when: machine_to_remove not in (groups['cluster_machines'] | default([]))
 
-- name: Try to find OSD
+- name: Remove node from pacemaker and ceph
   hosts: cluster_machines
   become: true
   tasks:
-    - name: Get OSD to shrink
-      script: "../scripts/get_osd.py {{ hostvars[machine_to_remove].get('hostname', machine_to_remove) }}"
-      register: raw_osd
-      delegate_to: "{{ groups['mon_host'][0] }}"
-    - debug:
-        var: raw_osd
-    - name: Register OSD
-      set_fact:
-        osd_to_kill: "{{ raw_osd.stdout_lines[0] }}"
-      when: raw_osd.stdout
-      delegate_to: "{{ groups['mon_host'][0] }}"
-    - debug:
-        var: osd_to_kill
+    - name: Set fact with hostname of machine_to_remove
+      ansible.builtin.set_fact:
+        machine_to_remove_hostname: "{{ hostvars[machine_to_remove]['hostname'] }}"
+    - name: Define first_node excluding machine_to_remove
+      ansible.builtin.set_fact:
+        first_node: "{{ (groups['cluster_machines'] | difference([machine_to_remove]))[0] }}"
 
-- name: Import replace_machine_shrink_osd playbook
-  import_playbook: replace_machine_shrink_osd.yaml
-  when: osd_to_kill is defined
+    # This playbook removes a machine the cluster has already lost: the OSDs
+    # are purged rather than drained, and the monitor store is left on the
+    # machine. Doing that to a machine whose OSDs are still serving leaves the
+    # cluster degraded with no warning, so ask Ceph first.
+    - name: Get the OSD tree of the cluster # noqa: run-once[task]
+      ansible.builtin.command: ceph osd tree --format json
+      register: cluster_osd_tree
+      changed_when: false
+      delegate_to: "{{ first_node }}"
+      run_once: true
 
-- name: Import replace_machine_shrink_mon playbook
-  import_playbook: replace_machine_shrink_mon.yaml
-  vars:
-    mon_to_kill: "{{ hostvars[machine_to_remove].get('hostname', machine_to_remove) }}"
+    - name: List the OSDs hosted by machine_to_remove # noqa: run-once[task]
+      ansible.builtin.set_fact:
+        machine_to_remove_osds: >-
+          {{ (cluster_osd_tree.stdout | from_json).nodes
+             | selectattr('type', 'equalto', 'host')
+             | selectattr('name', 'equalto', machine_to_remove_hostname)
+             | map(attribute='children') | flatten | list }}
+      run_once: true
 
-- name: Import replace_machine_shrink_pacemaker playbook
-  import_playbook: replace_machine_shrink_pacemaker.yaml
-  vars:
-    pacemaker_machine: mon_host
+    - name: List the OSDs of machine_to_remove that are still up # noqa: run-once[task]
+      ansible.builtin.set_fact:
+        machine_to_remove_up_osds: >-
+          {{ (cluster_osd_tree.stdout | from_json).nodes
+             | selectattr('type', 'equalto', 'osd')
+             | selectattr('status', 'equalto', 'up')
+             | selectattr('id', 'in', machine_to_remove_osds)
+             | map(attribute='name') | list }}
+      run_once: true
+
+    - name: Refuse to remove a machine whose OSDs are still up # noqa: run-once[task]
+      ansible.builtin.assert:
+        that: machine_to_remove_up_osds | length == 0
+        fail_msg: >-
+          {{ machine_to_remove }} still has OSDs up in the cluster
+          ({{ machine_to_remove_up_osds | join(', ') }}). Removing it now would
+          abandon them and leave the cluster degraded. Mark them out with
+          "ceph osd out {{ machine_to_remove_up_osds | join(' ') }}", wait for
+          the cluster to report active+clean, then run this playbook again.
+      run_once: true
+
+    # crm_node -R returns success against a machine that is still a Corosync
+    # member and the removal is silently lost, so ask Pacemaker as well.
+    - name: Get the Pacemaker node list # noqa: run-once[task]
+      ansible.builtin.command: crm_node -l
+      register: pacemaker_node_list
+      changed_when: false
+      delegate_to: "{{ first_node }}"
+      run_once: true
+
+    - name: Refuse to remove a machine still active in the Corosync ring # noqa: run-once[task]
+      ansible.builtin.assert:
+        that: >-
+          pacemaker_node_list.stdout_lines
+          | select('search', '\s' ~ machine_to_remove ~ '\s+member$')
+          | list | length == 0
+        fail_msg: >-
+          {{ machine_to_remove }} is still an active Corosync member. Removing
+          it now would be reported as a success and silently lost, and its
+          ceph-mgr would keep running on a cluster it no longer belongs to.
+          Power {{ machine_to_remove }} off, then run this playbook again.
+      run_once: true
+
+    - name: Purge the OSDs of machine_to_remove # noqa: run-once[task]
+      ansible.builtin.command: "ceph osd purge {{ item }} --yes-i-really-mean-it"
+      loop: "{{ machine_to_remove_osds }}"
+      delegate_to: "{{ first_node }}"
+      run_once: true
+      changed_when: true
+
+    - name: Remove the monitor of machine_to_remove from the quorum # noqa: run-once[task]
+      ansible.builtin.command: "ceph mon remove {{ machine_to_remove_hostname }}"
+      register: mon_remove
+      delegate_to: "{{ first_node }}"
+      run_once: true
+      changed_when: mon_remove.rc == 0
+      failed_when:
+        - mon_remove.rc != 0
+        - "'does not exist' not in mon_remove.stderr"
+
+    - name: Remove machine_to_remove from the CRUSH map # noqa: run-once[task]
+      ansible.builtin.command: "ceph osd crush rm {{ machine_to_remove_hostname }}"
+      register: crush_remove
+      delegate_to: "{{ first_node }}"
+      run_once: true
+      changed_when: crush_remove.rc == 0
+      failed_when:
+        - crush_remove.rc != 0
+        - "'does not exist' not in crush_remove.stderr"
+
+    - name: Remove machine from pacemaker-corosync cluster # noqa: run-once[task]
+      ansible.builtin.command: "crm_node -R {{ machine_to_remove }} --force"
+      delegate_to: "{{ first_node }}"
+      run_once: true
+      changed_when: true
+
+    - name: Verify machine_to_remove is out of the Pacemaker cluster # noqa: run-once[task]
+      ansible.builtin.command: crm_node -l
+      register: pacemaker_node_list_after
+      changed_when: false
+      delegate_to: "{{ first_node }}"
+      run_once: true
+
+    - name: Fail if Pacemaker still knows machine_to_remove # noqa: run-once[task]
+      ansible.builtin.assert:
+        that: >-
+          pacemaker_node_list_after.stdout_lines
+          | select('search', '\s' ~ machine_to_remove ~ '\s')
+          | list | length == 0
+        fail_msg: >-
+          crm_node -R reported a success but {{ machine_to_remove }} is still
+          in the Pacemaker node list. Check what happened before reusing the
+          machine.
+      run_once: true
