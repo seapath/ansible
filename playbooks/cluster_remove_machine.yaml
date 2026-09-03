@@ -61,6 +61,30 @@
           playbook again.
       run_once: true
 
+    # crm_node -R returns a success against a machine that is still an active
+    # Corosync member and the removal is then silently lost: the node stays in
+    # the member list and its ceph-mgr keeps running on a cluster it no longer
+    # belongs to. Ask Pacemaker the same way we ask Ceph.
+    - name: Get the Pacemaker node list # noqa: run-once[task]
+      ansible.builtin.command: crm_node -l
+      register: pacemaker_node_list
+      changed_when: false
+      delegate_to: "{{ first_node }}"
+      run_once: true
+
+    - name: Refuse to remove a machine still active in the Corosync ring # noqa: run-once[task]
+      ansible.builtin.assert:
+        that: >-
+          pacemaker_node_list.stdout_lines
+          | select('search', '\s' ~ machine_to_remove ~ '\s+member$')
+          | list | length == 0
+        fail_msg: >-
+          {{ machine_to_remove }} is still an active Corosync member. Removing
+          it now would be reported as a success and silently lost, and its
+          ceph-mgr would keep running on a cluster it no longer belongs to.
+          Power {{ machine_to_remove }} off, then run this playbook again.
+      run_once: true
+
     - name: Remove machine from pacemaker-corosync cluster # noqa: run-once[task]
       ansible.builtin.command: "crm_node -R {{ machine_to_remove }} --force"
       delegate_to: "{{ first_node }}"
@@ -72,3 +96,22 @@
       delegate_to: "{{ first_node }}"
       run_once: true
       changed_when: true
+
+    - name: Get the Pacemaker node list again # noqa: run-once[task]
+      ansible.builtin.command: crm_node -l
+      register: pacemaker_node_list_after
+      changed_when: false
+      delegate_to: "{{ first_node }}"
+      run_once: true
+
+    - name: Fail if Pacemaker still knows machine_to_remove # noqa: run-once[task]
+      ansible.builtin.assert:
+        that: >-
+          pacemaker_node_list_after.stdout_lines
+          | select('search', '\s' ~ machine_to_remove ~ '\s')
+          | list | length == 0
+        fail_msg: >-
+          crm_node -R reported a success but {{ machine_to_remove }} is still
+          in the Pacemaker node list. Check what happened before reusing the
+          machine.
+      run_once: true
