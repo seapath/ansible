@@ -133,6 +133,7 @@
       ansible.builtin.file:
         path: "{{ vm_file_dest }}"
         state: absent
+      when: deploy_vms_cluster_disk_copy | bool
     - name: "Remove temporary additional disk files for {{ item }}"
       ansible.builtin.file:
         path: "{{ deploy_vms_cluster_qcow2tmpuploadfolder }}/additional_{{ add_disk_idx }}.qcow2"
@@ -141,6 +142,7 @@
       loop_control:
         loop_var: add_disk
         index_var: add_disk_idx
+      when: deploy_vms_cluster_disk_copy | bool
     - name: "Remove temporary cloud-init seed file for {{ item }}"
       ansible.builtin.file:
         path: "{{ deploy_vms_cluster_qcow2tmpuploadfolder }}/cloudinit-seed.qcow2"
