@@ -9,6 +9,11 @@
         msg: "machine_to_remove must be declared"
       when: machine_to_remove is undefined
 
+    - name: Exit playbook, if the machine is not part of the cluster
+      ansible.builtin.fail:
+        msg: "{{ machine_to_remove }} is not part of the cluster_machines group"
+      when: machine_to_remove not in (groups['cluster_machines'] | default([]))
+
 - name: Remove node from pacemaker and ceph
   hosts: cluster_machines
   become: true
@@ -19,6 +24,66 @@
     - name: Define first_node excluding machine_to_remove
       ansible.builtin.set_fact:
         first_node: "{{ (groups['cluster_machines'] | difference([machine_to_remove]))[0] }}"
+
+    # This playbook removes a machine the cluster has already lost: the host
+    # is dropped by force and offline, which abandons its OSDs instead of
+    # draining them. Doing that to a machine whose OSDs are still serving
+    # leaves the cluster degraded with no warning, so ask Ceph first.
+    - name: Get the OSD tree of the cluster # noqa: run-once[task]
+      ansible.builtin.command: ceph osd tree --format json
+      register: cluster_osd_tree
+      changed_when: false
+      delegate_to: "{{ first_node }}"
+      run_once: true
+
+    - name: List the OSDs of machine_to_remove that are still up # noqa: run-once[task]
+      ansible.builtin.set_fact:
+        machine_to_remove_up_osds: >-
+          {{ (cluster_osd_tree.stdout | from_json).nodes
+             | selectattr('type', 'equalto', 'osd')
+             | selectattr('status', 'equalto', 'up')
+             | selectattr('id', 'in', (cluster_osd_tree.stdout | from_json).nodes
+                 | selectattr('type', 'equalto', 'host')
+                 | selectattr('name', 'equalto', machine_to_remove_hostname)
+                 | map(attribute='children') | flatten)
+             | map(attribute='name') | list }}
+      run_once: true
+
+    - name: Refuse to remove a machine whose OSDs are still up # noqa: run-once[task]
+      ansible.builtin.assert:
+        that: machine_to_remove_up_osds | length == 0
+        fail_msg: >-
+          {{ machine_to_remove }} still has OSDs up in the cluster
+          ({{ machine_to_remove_up_osds | join(', ') }}). Removing it now would
+          abandon them and leave the cluster degraded. Drain the machine first
+          with "ceph orch host drain {{ machine_to_remove_hostname }}", wait for
+          "ceph orch osd rm status" to report no remaining OSD, then run this
+          playbook again.
+      run_once: true
+
+    # crm_node -R returns a success against a machine that is still an active
+    # Corosync member and the removal is then silently lost: the node stays in
+    # the member list and its ceph-mgr keeps running on a cluster it no longer
+    # belongs to. Ask Pacemaker the same way we ask Ceph.
+    - name: Get the Pacemaker node list # noqa: run-once[task]
+      ansible.builtin.command: crm_node -l
+      register: pacemaker_node_list
+      changed_when: false
+      delegate_to: "{{ first_node }}"
+      run_once: true
+
+    - name: Refuse to remove a machine still active in the Corosync ring # noqa: run-once[task]
+      ansible.builtin.assert:
+        that: >-
+          pacemaker_node_list.stdout_lines
+          | select('search', '\s' ~ machine_to_remove ~ '\s+member$')
+          | list | length == 0
+        fail_msg: >-
+          {{ machine_to_remove }} is still an active Corosync member. Removing
+          it now would be reported as a success and silently lost, and its
+          ceph-mgr would keep running on a cluster it no longer belongs to.
+          Power {{ machine_to_remove }} off, then run this playbook again.
+      run_once: true
 
     - name: Remove machine from pacemaker-corosync cluster # noqa: run-once[task]
       ansible.builtin.command: "crm_node -R {{ machine_to_remove }} --force"
@@ -31,3 +96,22 @@
       delegate_to: "{{ first_node }}"
       run_once: true
       changed_when: true
+
+    - name: Get the Pacemaker node list again # noqa: run-once[task]
+      ansible.builtin.command: crm_node -l
+      register: pacemaker_node_list_after
+      changed_when: false
+      delegate_to: "{{ first_node }}"
+      run_once: true
+
+    - name: Fail if Pacemaker still knows machine_to_remove # noqa: run-once[task]
+      ansible.builtin.assert:
+        that: >-
+          pacemaker_node_list_after.stdout_lines
+          | select('search', '\s' ~ machine_to_remove ~ '\s')
+          | list | length == 0
+        fail_msg: >-
+          crm_node -R reported a success but {{ machine_to_remove }} is still
+          in the Pacemaker node list. Check what happened before reusing the
+          machine.
+      run_once: true
