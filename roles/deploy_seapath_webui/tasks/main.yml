@@ -1,0 +1,141 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+- name: Deploy the SEAPATH web UI
+  when: deploy_seapath_webui_enabled | bool
+  block:
+    - name: Read the home of the account the trust targets
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ deploy_seapath_webui_ansible_user }}"
+
+    - name: Fail when that account does not exist
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.getent_passwd[deploy_seapath_webui_ansible_user] is defined
+        fail_msg: >-
+          The {{ deploy_seapath_webui_ansible_user }} account does not exist on this
+          machine. It comes from the SEAPATH image, and the web UI installs its
+          own key in that account's authorized_keys in order to reach even this
+          machine. Creating it here would invent a second problem.
+
+    - name: Name the home of that account, which the trust material lives in
+      ansible.builtin.set_fact:
+        deploy_seapath_webui_ansible_ssh_dir: >-
+          {{ ansible_facts.getent_passwd[deploy_seapath_webui_ansible_user][4] }}/.ssh
+
+    - name: Read the CPUs this machine has
+      ansible.builtin.slurp:
+        src: /sys/devices/system/cpu/present
+      register: deploy_seapath_webui_present_cpus
+      when:
+        - not deploy_seapath_webui_cpu_affinity
+        - isolcpus is defined
+
+    # The complement of the isolated set. Written here rather than in the
+    # template so the value is one fact a reader can print, and so the quadlet
+    # stays a file an operator can compare with the one the image ships.
+    - name: Compute the housekeeping CPUs
+      ansible.builtin.set_fact:
+        deploy_seapath_webui_cpu_affinity: >-
+          {% set isolated = [] %}
+          {%- for part in (isolcpus | replace(' ', '')).split(',') if part -%}
+          {%- set bounds = part.split('-') -%}
+          {%- set _ = isolated.extend(range(bounds[0] | int, bounds[-1] | int + 1)) -%}
+          {%- endfor -%}
+          {{ range(0, ((deploy_seapath_webui_present_cpus.content | b64decode | trim).split('-')[-1] | int) + 1)
+             | difference(isolated) | sort | join(',') }}
+      when:
+        - not deploy_seapath_webui_cpu_affinity
+        - isolcpus is defined
+
+    - name: Create the Unix groups that grant each role
+      ansible.builtin.group:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - "{{ deploy_seapath_webui_admin_group }}"
+        - "{{ deploy_seapath_webui_operator_group }}"
+        - "{{ deploy_seapath_webui_viewer_group }}"
+
+    # The service's own state. 0700 because the TLS private key, the SSH
+    # private key and the session secret live there.
+    - name: Create the state directory
+      ansible.builtin.file:
+        path: "{{ deploy_seapath_webui_state_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+
+    - name: Create the inventory repository directory
+      ansible.builtin.file:
+        path: "{{ deploy_seapath_webui_inventory_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0750"
+
+    - name: Create the run traces and artefacts directory
+      ansible.builtin.file:
+        path: "{{ deploy_seapath_webui_data_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0750"
+
+    # Pulled here rather than by the restart job, so a registry this machine
+    # cannot reach fails the run in front of the operator who asked for it. A
+    # site that preloaded the image keeps it: nothing is pulled when the tag is
+    # already present.
+    - name: Make sure the image is on this machine
+      containers.podman.podman_image:
+        name: "{{ seapath_webui_image }}"
+        state: present
+
+    - name: Ensure the quadlet directory exists
+      ansible.builtin.file:
+        path: /etc/containers/systemd
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Deploy the container unit
+      ansible.builtin.template:
+        src: seapath-webui.container.j2
+        dest: /etc/containers/systemd/seapath-webui.container
+        owner: root
+        group: root
+        mode: "0644"
+      notify:
+        - Reload systemd after the web UI unit changed
+        - Restart the web UI out of band
+
+    - name: Flush handlers before starting the service
+      ansible.builtin.meta: flush_handlers
+
+    # Boot activation comes from the [Install] section of the quadlet: systemd
+    # refuses to enable a generated unit, so there is nothing to enable here.
+    - name: Start the web UI
+      ansible.builtin.systemd:
+        name: seapath-webui
+        state: started
+
+- name: Remove the SEAPATH web UI
+  when: not deploy_seapath_webui_enabled | bool
+  block:
+    - name: Stop the web UI
+      ansible.builtin.systemd:
+        name: seapath-webui
+        state: stopped
+      failed_when: false
+
+    # The unit only. The state directories hold the trust material and the
+    # inventory repository, and deleting those is never a side effect of
+    # turning a service off.
+    - name: Remove the container unit
+      ansible.builtin.file:
+        path: /etc/containers/systemd/seapath-webui.container
+        state: absent
+      notify: Reload systemd after the web UI unit changed

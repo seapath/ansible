@@ -1,0 +1,34 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+# Handlers run in declaration order, so the reload stays first: the restart has
+# to act on the unit systemd regenerated from the quadlet.
+- name: Reload systemd after the web UI unit changed
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+# The one thing this role does differently from every other deploy_* role, and
+# the reason is worth the four lines: on the machine serving the UI, this
+# restart kills the process recording the run. A `state: restarted` handler
+# would cut ansible-runner mid task, the SSH session would die, and the run
+# would have no result at all.
+#
+# So the restart is handed to systemd as a transient timer. systemd-run returns
+# at once, the play reaches its end, the run writes its result, and the
+# container is replaced a few seconds later. What an operator sees is a page
+# that stops answering and comes back on the new version.
+#
+# A play that takes longer than the delay to finish still loses the end of its
+# own run on that machine. The web UI reports such a run as interrupted and
+# says that is what applying this playbook looks like.
+- name: Restart the web UI out of band
+  ansible.builtin.command:
+    argv:
+      - systemd-run
+      - --collect
+      - --description=SEAPATH web UI restart, out of the run that asked for it
+      - "--on-active={{ deploy_seapath_webui_restart_delay }}"
+      - /bin/systemctl
+      - restart
+      - seapath-webui
+  changed_when: true
