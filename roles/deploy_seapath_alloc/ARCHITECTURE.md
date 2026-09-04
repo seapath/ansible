@@ -181,6 +181,8 @@ seapath_alloc/
 │  ── observability ──────────────────────────────────────────────────────
 ├── status.py         pool state collection, no side effects; shared by
 │                     CLI (seapath-alloc status) and Prometheus exporter
+├── conformance.py    host RT tuning reader: tuned profile, kernel cmdline,
+│                     sched_rt, hugepages, THP, SMT, IRQ affinity, ACPI
 ├── exporter.py       Prometheus textfile writer + fallback persistence
 └── cli.py            entry points for all CLI binaries
 ```
@@ -274,12 +276,27 @@ exporter.generate()
   │    returns structured dict (actors, free_logical, free_physical, ...)
   │
   ├─ _load_state()   → fallbacks.json     (cumulative counter)
-  └─ _load_active()  → active_fallbacks.json
-        expire entries where /proc/{pid} no longer exists
-        expose seapath_alloc_active_fallbacks{severity} gauges
+  ├─ _load_active()  → active_fallbacks.json
+  │    expire entries where /proc/{pid} no longer exists
+  │    expose seapath_alloc_active_fallbacks{severity} gauges
+  │
+  └─ conformance.collect(isolated=topo.isolated_cpus())
+       reads /etc/tuned, /proc/cmdline, the sched_rt sysctls, the hugepage
+       pools, /sys THP and SMT, /proc/irq affinities, /sys/firmware/acpi
+       exposes the seapath_rt_* families
 
   write .prom via atomic rename → /var/lib/prometheus/node_exporter/seapath-alloc.prom
 ```
+
+The second half is what the node's tuning *is*, beside what its cores are
+*doing*. It lives here because the timer, the atomic write and the
+node_exporter textfile directory already exist, and because the two halves are
+read together by whoever asks whether a cluster still matches its inventory.
+The isolated set is passed in rather than read again: a second reading could
+only disagree with the topology the same run already has.
+
+`conformance.py` reports and never judges. What a value ought to be depends on
+the machine's inventory, which this collector does not have and must not guess.
 
 ---
 
