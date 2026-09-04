@@ -7,6 +7,15 @@ Prometheus textfile collector for the seapath-alloc pool.
 Writes to /var/lib/prometheus/node_exporter/seapath-alloc.prom using an
 atomic rename so node_exporter never reads a partial file.
 
+Two blocks of metrics ride in that one file:
+
+- seapath_alloc_*, what the isolated cores are doing, derived from the pool
+  and from the affinity of every thread in /proc.
+- seapath_rt_*, what the machine was tuned as, read by conformance.py. It
+  rides here rather than in a collector of its own because the timer, the
+  atomic write and the node_exporter textfile directory already exist, and
+  because the two halves are read together by whoever asks the question.
+
 Run every 15 seconds via the seapath-alloc-export.timer systemd timer.
 
 Persistent fallback state is kept in /var/lib/seapath/alloc/fallbacks.json
@@ -18,6 +27,7 @@ import logging
 import os
 import time
 
+from . import conformance
 from .status import collect
 from .topology import Topology, parse_cpu_list
 
@@ -102,6 +112,21 @@ def record_fallback(label: str, group: str, requested_isolation: str,
 # Prometheus text format helpers
 # ---------------------------------------------------------------------------
 
+def _escape(value) -> str:
+    """Escape the three characters Prometheus reserves inside a label value.
+
+    Most labels here are CPU numbers and process names and would survive
+    without this. The kernel command line would not: it is published verbatim
+    because the parameters that matter to latency are not a fixed list, and a
+    single backslash in it would otherwise produce an exposition no parser
+    accepts.
+    """
+    return (str(value)
+            .replace("\\", "\\\\")
+            .replace('"', '\\"')
+            .replace("\n", "\\n"))
+
+
 def _metric(buf: list, name: str, help_: str, type_: str, samples: list):
     """Append one complete metric family (HELP + TYPE + samples) to buf."""
     if not samples:
@@ -110,7 +135,9 @@ def _metric(buf: list, name: str, help_: str, type_: str, samples: list):
     buf.append(f"# TYPE {name} {type_}")
     for labels, value in samples:
         if labels:
-            lstr = "{" + ",".join(f'{k}="{v}"' for k, v in labels.items()) + "}"
+            lstr = "{" + ",".join(
+                f'{k}="{_escape(v)}"' for k, v in labels.items()
+            ) + "}"
         else:
             lstr = ""
         buf.append(f"{name}{lstr} {value}")
@@ -338,6 +365,163 @@ def _occupied_cpu_counts(data: dict) -> list:
 
 
 # ---------------------------------------------------------------------------
+# Host real-time tuning
+# ---------------------------------------------------------------------------
+#
+# What the machine was tuned as, beside what its isolated cores are doing.
+# None of it is published by prometheus-node-exporter, and reading it here
+# costs one file read per timer tick on a host this collector already runs on.
+#
+# The whole block is a reading. Whether a value is right depends on what the
+# machine's inventory declares, which this collector does not have: it reports
+# and never judges.
+#
+# Two conventions the consumer relies on, and they are tested:
+#
+# - The info families are published even when every reading in them came back
+#   empty, so an empty label means "read, and there was nothing", while an
+#   absent family means "this node runs a collector too old to publish it".
+#   seapath_rt_tuned_info is always present and is what identifies the block.
+# - A numeric gauge is omitted when it could not be read, because every value
+#   it could carry is a legitimate one: sched_rt_runtime_us is -1 on a
+#   correctly tuned machine, and a hugepage pool of 0 is a real answer.
+
+def _bool_label(value) -> str:
+    """"1", "0", or "" for a reading that could not be made."""
+    if value is None:
+        return ""
+    return "1" if value else "0"
+
+
+def _append_host_tuning(buf: list, reading: dict):
+    """Append the seapath_rt_* families for one host reading."""
+    tuned = reading["tuned"]
+    _metric(buf,
+            "seapath_rt_tuned_info",
+            "The tuned profile this machine is configured with."
+            " profile is empty when none is selected."
+            " installed=0 means the profile is named but installed nowhere,"
+            " so nothing is tuning this machine."
+            " Read from the configured profile, not from the running daemon.",
+            "gauge",
+            [({
+                "profile":   tuned["profile"],
+                "source":    tuned["source"],
+                "installed": _bool_label(tuned["installed"]),
+            }, 1)])
+
+    _metric(buf,
+            "seapath_rt_kernel_cmdline_info",
+            "The command line this kernel booted with, verbatim."
+            " Carries isolcpus as it was requested, which"
+            " /sys/devices/system/cpu/isolated cannot show: the two differ on"
+            " a machine converged and never rebooted.",
+            "gauge",
+            [({"cmdline": reading["cmdline"]}, 1)])
+
+    sched = reading["sched_rt"]
+    if sched["runtime_us"] is not None:
+        _metric(buf,
+                "seapath_rt_sched_rt_runtime_us",
+                "Runtime a real-time task may use within each period."
+                " -1 disables throttling, which is what the realtime tuned"
+                " profile sets.",
+                "gauge",
+                [({}, sched["runtime_us"])])
+    if sched["period_us"] is not None:
+        _metric(buf,
+                "seapath_rt_sched_rt_period_us",
+                "The real-time throttling period.",
+                "gauge",
+                [({}, sched["period_us"])])
+
+    pools = reading["hugepages"]
+    _metric(buf,
+            "seapath_rt_hugepages_total",
+            "Hugepages reserved, by page size."
+            " node is empty for the machine-wide pool and carries the NUMA"
+            " node number for the others: a guest pinned to one socket draws"
+            " from that socket's pool, so a machine with the right total and"
+            " nothing on the node the guest sits on fails to start.",
+            "gauge",
+            [({"size_kb": p["size_kb"],
+               "node": "" if p["node"] is None else p["node"]}, p["total"])
+             for p in pools])
+    _metric(buf,
+            "seapath_rt_hugepages_free",
+            "Hugepages still free, by page size and NUMA node.",
+            "gauge",
+            [({"size_kb": p["size_kb"],
+               "node": "" if p["node"] is None else p["node"]}, p["free"])
+             for p in pools])
+
+    thp = reading["thp"]
+    _metric(buf,
+            "seapath_rt_transparent_hugepages_info",
+            "The transparent hugepage controls."
+            " Anything but never leaves khugepaged compacting memory in the"
+            " background, which an isolated CPU does not escape."
+            " Empty labels mean this kernel exposes no such control.",
+            "gauge",
+            [({"enabled": thp["enabled"], "defrag": thp["defrag"]}, 1)])
+
+    smt = reading["smt"]
+    _metric(buf,
+            "seapath_rt_smt_info",
+            "The SMT control this machine exposes."
+            " An empty control means it exposes none, which is usual on AMD"
+            " and where the firmware disabled SMT.",
+            "gauge",
+            [({"control": smt["control"]}, 1)])
+    if smt["active"] is not None:
+        _metric(buf,
+                "seapath_rt_smt_active",
+                "1 when two threads share a physical core's execution units,"
+                " so an isolated CPU is only isolated if its sibling is idle"
+                " or isolated too.",
+                "gauge",
+                [({}, 1 if smt["active"] else 0)])
+
+    _metric(buf,
+            "seapath_rt_acpi_present",
+            "1 when the firmware exposes ACPI."
+            " Nothing here measures a system management interrupt: they are"
+            " invisible to the kernel by construction, and hwlatdetect is what"
+            " measures them.",
+            "gauge",
+            [({}, 1 if reading["acpi"] else 0)])
+
+    irq = reading["irq"]
+    if irq["total"] is not None:
+        _metric(buf,
+                "seapath_rt_irqs_total",
+                "Interrupts this machine has a descriptor for.",
+                "gauge",
+                [({}, irq["total"])])
+        _metric(buf,
+                "seapath_rt_irqs_on_isolated_cpus",
+                "Interrupts whose affinity mask still reaches an isolated CPU."
+                " A mask is a permission rather than a measurement: the"
+                " interrupt is a latency source whether or not it has fired"
+                " there yet. 0 is the expected shape where the kernel honours"
+                " isolcpus=managed_irq.",
+                "gauge",
+                [({}, irq["on_isolated"])])
+        _metric(buf,
+                "seapath_rt_irq_on_isolated_info",
+                "One series per interrupt allowed on an isolated CPU, naming"
+                f" the device behind it. At most {conformance.IRQ_DETAIL_LIMIT}"
+                " are described; seapath_rt_irqs_on_isolated_cpus always"
+                " carries the true count.",
+                "gauge",
+                [({
+                    "irq":  entry["irq"],
+                    "name": entry["name"],
+                    "cpus": ",".join(str(cpu) for cpu in entry["cpus"]),
+                }, 1) for entry in irq["detail"]])
+
+
+# ---------------------------------------------------------------------------
 # Main generate / write
 # ---------------------------------------------------------------------------
 
@@ -517,6 +701,9 @@ def generate() -> str:
                     "requested": state.get("last_requested", ""),
                     "severity":  state.get("last_severity", "hard"),
                 }, 1)])
+
+    # --- Host real-time tuning -------------------------------------------------
+    _append_host_tuning(buf, conformance.collect(isolated=topo.isolated_cpus()))
 
     _metric(buf,
             "seapath_alloc_scrape_timestamp_seconds",
