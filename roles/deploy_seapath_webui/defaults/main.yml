@@ -1,0 +1,69 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+# The management web UI, as a podman quadlet. The service edits the inventory
+# and runs these playbooks; it never configures a machine itself, which is why
+# this role is the only thing that writes to the host on its behalf.
+deploy_seapath_webui_enabled: true
+
+# `latest` is the default because it is what a machine that says nothing already
+# runs: the ISO installs a quadlet naming that tag and preloads that image, so a
+# first apply on a node with no route to a registry finds what is already there.
+# A version pinned here would be a snapshot that rots, and rots into a
+# downgrade.
+#
+# A site that wants to say which code answers on its machines sets this in the
+# inventory, to an exact tag. That is also how the service is updated, including
+# from its own UI: edit the variable, apply this playbook.
+#
+# The only variable of this role without the role name as a prefix, which is
+# what the noqa silences. It is the one an inventory sets, and inventories
+# already carry it under this name: renaming it would leave those sites on
+# `latest` without a word.
+seapath_webui_image: docker.io/insatomcat/seapath-webui:latest # noqa: var-naming[no-role-prefix]
+
+# The administration address. `auto` makes the service resolve the address of
+# the interface carrying the default route, which is what a machine that has
+# never converged boots with. The wildcard is never used: a hypervisor also
+# sits on the networks carrying sampled values and the storage traffic.
+deploy_seapath_webui_bind_address: "{{ ip_addr | default('auto') }}"
+deploy_seapath_webui_port: 8006
+
+# Extra names in the self signed certificate. Only affects how loudly a browser
+# complains: what an operator verifies is the fingerprint printed on the
+# console at every start.
+deploy_seapath_webui_additional_sans: >-
+  {{
+    [ip_addr | default(''), cluster_ip_addr | default('')]
+    | select | join(',')
+  }}
+
+# Unix groups granting each role. An account in none of them is authenticated
+# and has no access at all.
+deploy_seapath_webui_admin_group: seapath-admin
+deploy_seapath_webui_operator_group: seapath-operator
+deploy_seapath_webui_viewer_group: seapath-viewer
+
+# The account every Ansible connection targets, including the one to this very
+# machine. Its home is looked up with getent, never hardcoded to /home/ansible.
+deploy_seapath_webui_ansible_user: "{{ ansible_user | default('ansible') }}"
+
+# State. The first two hold the trust material and the inventory repository,
+# which are the only two places on a host this service ever writes.
+deploy_seapath_webui_state_dir: /etc/seapath/webui
+deploy_seapath_webui_inventory_dir: /etc/seapath/inventory
+deploy_seapath_webui_data_dir: /var/lib/seapath-webui
+
+# Housekeeping CPUs. Left empty, the role computes the complement of `isolcpus`
+# and pins the container there: this service must never compete with a real
+# time guest. Set it to pin explicitly, or on a machine with no isolated CPU
+# the container is left unpinned.
+deploy_seapath_webui_cpu_affinity: ""
+deploy_seapath_webui_cpu_quota: 50%
+deploy_seapath_webui_nice: 5
+
+# Seconds between the end of the play and the restart of the container. The
+# restart is handed to systemd rather than done here, because on the machine
+# serving the UI this role replaces the process that is recording the run. The
+# delay is what lets that run reach its last task and write its own result.
+deploy_seapath_webui_restart_delay: 30
