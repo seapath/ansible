@@ -16,6 +16,7 @@ from seapath_alloc.exporter import (
     _build_slot_member_info,
     _build_slot_warning_info,
     _build_vm_thread_info,
+    _escape,
     _load_active,
     _load_state,
     _metric,
@@ -58,6 +59,34 @@ def data(actors=(), slots=(), reserved=(), free_logical="8-11",
         "actors": list(actors),
         "reserved_siblings": list(reserved),
         "slots": list(slots),
+    }
+
+
+def tuning(tuned=None, cmdline="BOOT_IMAGE=/vmlinuz isolcpus=4-11",
+           sched_rt=None, hugepages=None, thp=None, smt=None, acpi=True,
+           irq=None):
+    """A canned host reading, shaped like conformance.collect()."""
+    return {
+        "tuned": tuned if tuned is not None else {
+            "profile": "seapath-rt-host",
+            "source": "/etc/tuned/active_profile",
+            "installed": True,
+        },
+        "cmdline": cmdline,
+        "sched_rt": sched_rt if sched_rt is not None else {
+            "runtime_us": -1, "period_us": 1000000,
+        },
+        "hugepages": hugepages if hugepages is not None else [
+            {"size_kb": 1048576, "node": None, "total": 16, "free": 8},
+        ],
+        "thp": thp if thp is not None else {
+            "enabled": "never", "defrag": "never",
+        },
+        "smt": smt if smt is not None else {"active": True, "control": "on"},
+        "acpi": acpi,
+        "irq": irq if irq is not None else {
+            "total": 214, "on_isolated": 0, "detail": [],
+        },
     }
 
 
@@ -186,6 +215,21 @@ def test_metric_with_no_samples_writes_nothing():
     assert buf == []
 
 
+def test_escape_leaves_an_ordinary_label_alone():
+    assert _escape("eno1-TxRx-0") == "eno1-TxRx-0"
+
+
+def test_escape_protects_the_three_reserved_characters():
+    assert _escape(r'a\b "c" d' + "\ne") == r'a\\b \"c\" d\ne'
+
+
+def test_metric_escapes_label_values():
+    buf = []
+    _metric(buf, "m", "h", "gauge", [({"cmdline": 'quiet dyndbg="x +p"'}, 1)])
+
+    assert buf[-1] == r'm{cmdline="quiet dyndbg=\"x +p\""} 1'
+
+
 # --- per-actor builders ---------------------------------------------------
 
 
@@ -290,12 +334,20 @@ def test_occupied_cpu_counts_of_an_idle_node():
 
 @pytest.fixture
 def node(monkeypatch, state_files, std_topology):
-    """Serve a canned collect() payload and topology to generate()."""
-    def install(payload=None):
+    """Serve a canned collect() payload, topology and host reading.
+
+    The host reading is canned too: generate() reads the machine it runs on,
+    and a test that let it through would assert on the developer's laptop.
+    """
+    def install(payload=None, host=None):
         monkeypatch.setattr(
             exporter_mod, "collect", lambda: payload or data()
         )
         monkeypatch.setattr(exporter_mod, "Topology", lambda **kw: std_topology)
+        monkeypatch.setattr(
+            exporter_mod.conformance, "collect",
+            lambda **kw: host if host is not None else tuning()
+        )
         return payload
 
     return install
@@ -470,3 +522,224 @@ def test_write_prom_overwrites_a_previous_scrape(node, tmp_path):
     write_prom(str(path))
 
     assert "stale content" not in path.read_text()
+
+
+# --- host real-time tuning ------------------------------------------------
+#
+# The families a management interface reads to ask the eight conformance
+# questions of every node in a cluster instead of only of the one it runs on.
+# Two conventions are load bearing there and are asserted here: an info family
+# is published even when the reading was empty, so an absent family means the
+# node runs an older collector, and a numeric gauge is omitted rather than
+# defaulted, because every value it could carry is a legitimate one.
+
+
+def test_generate_publishes_the_tuned_profile(node):
+    node(host=tuning())
+
+    out = families(generate())
+
+    assert out["seapath_rt_tuned_info"] == [
+        'seapath_rt_tuned_info{profile="seapath-rt-host",'
+        'source="/etc/tuned/active_profile",installed="1"} 1'
+    ]
+
+
+def test_generate_publishes_a_profile_installed_nowhere(node):
+    node(host=tuning(tuned={
+        "profile": "seapath-rt-host",
+        "source": "/etc/tuned/active_profile",
+        "installed": False,
+    }))
+
+    assert 'installed="0"' in families(generate())["seapath_rt_tuned_info"][0]
+
+
+def test_generate_publishes_the_tuned_family_when_no_profile_was_read(node):
+    """An empty label is a reading. An absent family is an older collector."""
+    node(host=tuning(tuned={"profile": "", "source": "", "installed": None}))
+
+    assert families(generate())["seapath_rt_tuned_info"] == [
+        'seapath_rt_tuned_info{profile="",source="",installed=""} 1'
+    ]
+
+
+def test_generate_publishes_the_kernel_command_line_verbatim(node):
+    node(host=tuning(cmdline="BOOT_IMAGE=/vmlinuz isolcpus=4-11 nohz_full=4-11"))
+
+    assert families(generate())["seapath_rt_kernel_cmdline_info"] == [
+        'seapath_rt_kernel_cmdline_info{cmdline="BOOT_IMAGE=/vmlinuz '
+        'isolcpus=4-11 nohz_full=4-11"} 1'
+    ]
+
+
+def test_generate_escapes_a_command_line_that_would_break_the_exposition(node):
+    node(host=tuning(cmdline='root=UUID=x quiet dyndbg="module nvme +p"'))
+
+    line = families(generate())["seapath_rt_kernel_cmdline_info"][0]
+
+    assert r'dyndbg=\"module nvme +p\"' in line
+
+
+def test_generate_publishes_the_rt_throttling_window(node):
+    node(host=tuning(sched_rt={"runtime_us": -1, "period_us": 1000000}))
+
+    out = families(generate())
+
+    assert out["seapath_rt_sched_rt_runtime_us"] == [
+        "seapath_rt_sched_rt_runtime_us -1"
+    ]
+    assert out["seapath_rt_sched_rt_period_us"] == [
+        "seapath_rt_sched_rt_period_us 1000000"
+    ]
+
+
+def test_generate_omits_a_sysctl_it_could_not_read(node):
+    """Absent rather than defaulted: -1 and 950000 are both real answers."""
+    node(host=tuning(sched_rt={"runtime_us": None, "period_us": None}))
+
+    out = families(generate())
+
+    assert "seapath_rt_sched_rt_runtime_us" not in out
+    assert "seapath_rt_sched_rt_period_us" not in out
+
+
+def test_generate_publishes_hugepages_per_size_and_numa_node(node):
+    node(host=tuning(hugepages=[
+        {"size_kb": 1048576, "node": None, "total": 16, "free": 8},
+        {"size_kb": 1048576, "node": 0, "total": 16, "free": 8},
+        {"size_kb": 1048576, "node": 1, "total": 0, "free": 0},
+    ]))
+
+    out = families(generate())
+
+    assert out["seapath_rt_hugepages_total"] == [
+        'seapath_rt_hugepages_total{size_kb="1048576",node=""} 16',
+        'seapath_rt_hugepages_total{size_kb="1048576",node="0"} 16',
+        'seapath_rt_hugepages_total{size_kb="1048576",node="1"} 0',
+    ]
+    assert 'seapath_rt_hugepages_free{size_kb="1048576",node="1"} 0' in out[
+        "seapath_rt_hugepages_free"
+    ]
+
+
+def test_generate_publishes_no_hugepage_family_on_a_kernel_with_no_pool(node):
+    node(host=tuning(hugepages=[]))
+
+    assert "seapath_rt_hugepages_total" not in families(generate())
+
+
+def test_generate_publishes_the_transparent_hugepage_controls(node):
+    node(host=tuning(thp={"enabled": "madvise", "defrag": "defer"}))
+
+    assert families(generate())["seapath_rt_transparent_hugepages_info"] == [
+        'seapath_rt_transparent_hugepages_info{enabled="madvise",'
+        'defrag="defer"} 1'
+    ]
+
+
+def test_generate_publishes_smt(node):
+    node(host=tuning(smt={"active": True, "control": "on"}))
+
+    out = families(generate())
+
+    assert out["seapath_rt_smt_info"] == ['seapath_rt_smt_info{control="on"} 1']
+    assert out["seapath_rt_smt_active"] == ["seapath_rt_smt_active 1"]
+
+
+def test_generate_keeps_smt_off_apart_from_a_machine_with_no_control(node):
+    node(host=tuning(smt={"active": False, "control": "off"}))
+
+    assert families(generate())["seapath_rt_smt_active"] == [
+        "seapath_rt_smt_active 0"
+    ]
+
+
+def test_generate_omits_smt_active_where_the_machine_exposes_none(node):
+    node(host=tuning(smt={"active": None, "control": ""}))
+
+    out = families(generate())
+
+    assert "seapath_rt_smt_active" not in out
+    assert out["seapath_rt_smt_info"] == ['seapath_rt_smt_info{control=""} 1']
+
+
+def test_generate_publishes_acpi(node):
+    node(host=tuning(acpi=False))
+
+    assert families(generate())["seapath_rt_acpi_present"] == [
+        "seapath_rt_acpi_present 0"
+    ]
+
+
+def test_generate_publishes_the_interrupts_reaching_isolated_cpus(node):
+    node(host=tuning(irq={
+        "total": 214,
+        "on_isolated": 2,
+        "detail": [
+            {"irq": "181", "name": "eno1-TxRx-0", "cpus": [4, 5]},
+            {"irq": "182", "name": "", "cpus": [6]},
+        ],
+    }))
+
+    out = families(generate())
+
+    assert out["seapath_rt_irqs_total"] == ["seapath_rt_irqs_total 214"]
+    assert out["seapath_rt_irqs_on_isolated_cpus"] == [
+        "seapath_rt_irqs_on_isolated_cpus 2"
+    ]
+    assert out["seapath_rt_irq_on_isolated_info"] == [
+        'seapath_rt_irq_on_isolated_info{irq="181",name="eno1-TxRx-0",'
+        'cpus="4,5"} 1',
+        'seapath_rt_irq_on_isolated_info{irq="182",name="",cpus="6"} 1',
+    ]
+
+
+def test_generate_publishes_a_clean_irq_affinity_as_zero(node):
+    """Zero is the expected shape, and it has to be said rather than implied."""
+    node(host=tuning(irq={"total": 214, "on_isolated": 0, "detail": []}))
+
+    out = families(generate())
+
+    assert out["seapath_rt_irqs_on_isolated_cpus"] == [
+        "seapath_rt_irqs_on_isolated_cpus 0"
+    ]
+    assert "seapath_rt_irq_on_isolated_info" not in out
+
+
+def test_generate_omits_the_irq_families_when_proc_irq_said_nothing(node):
+    node(host=tuning(irq={"total": None, "on_isolated": 0, "detail": []}))
+
+    out = families(generate())
+
+    assert "seapath_rt_irqs_total" not in out
+    assert "seapath_rt_irqs_on_isolated_cpus" not in out
+
+
+def test_generate_reads_the_host_with_the_isolated_set_it_already_has(node,
+                                                                     monkeypatch):
+    """The topology is read once. A second reading could only disagree."""
+    seen = {}
+
+    def spy(**kwargs):
+        seen.update(kwargs)
+        return tuning()
+
+    node()
+    monkeypatch.setattr(exporter_mod.conformance, "collect", spy)
+
+    generate()
+
+    assert seen["isolated"] == [4, 5, 6, 7, 8, 9, 10, 11]
+
+
+def test_generate_publishes_both_blocks_in_one_file(node, tmp_path):
+    """One textfile, one timer, one node_exporter job."""
+    node()
+    path = tmp_path / "seapath-alloc.prom"
+
+    write_prom(str(path))
+
+    content = path.read_text()
+    assert "seapath_alloc_cpu_detail" in content
+    assert "seapath_rt_tuned_info" in content
