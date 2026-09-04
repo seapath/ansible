@@ -1,0 +1,16 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+# Deploy the SEAPATH management web UI: the service that edits the inventory
+# and runs these playbooks. It is deployed by the playbooks it runs, so
+# applying this from the UI replaces the UI itself, which the role handles by
+# handing the restart to systemd rather than doing it under the run.
+
+---
+- name: Deploy the SEAPATH management web UI
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  become: true
+  roles:
+    - deploy_seapath_webui

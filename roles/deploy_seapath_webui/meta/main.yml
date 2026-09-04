@@ -1,0 +1,10 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+galaxy_info:
+  author: "Seapath"
+  namespace: "seapath"
+  description: Deploy the SEAPATH management web UI as a podman quadlet unit.
+  min_ansible_version: "2.16"
+  license: Apache-2.0
+dependencies: []
