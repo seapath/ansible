@@ -47,6 +47,17 @@ are written as a Prometheus textfile
 [Textfile collector](README.md#textfile-collector)) and served by
 `node_exporter` itself, so they ride on the `node` job.
 
+The same textfile carries a second block, `seapath_rt_*`: the machine's
+real-time tuning as it is configured, which no exporter publishes (the tuned
+profile, the kernel command line, the RT throttling window, the hugepage pools
+per NUMA node, SMT, transparent hugepages, the interrupt affinities reaching
+isolated cores, ACPI). It rides on the `node` job too, needs no extra scrape
+configuration, and is documented in
+[Host real-time tuning](README.md#exported-metrics).
+
+Prometheus then keeps the history of values that used to be visible only by
+logging into each machine, and an alerting rule can watch them.
+
 ## Required labels
 
 | Label | Required for | Where it comes from |
