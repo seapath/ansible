@@ -1,0 +1,102 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+#
+# Managed by the deploy_seapath_webui role. Edit the role, never this file.
+#
+# The service edits the inventory and runs these playbooks. It never
+# configures a machine directly: the configuration plane goes out over SSH,
+# even to this machine, so nothing below is writable except the service's own
+# state and the authorized_keys of the account it connects as, which is the
+# trust it needs to reach even itself.
+#
+# What this container is not given is worth as much as what it is: no route to
+# the host's systemd, its bus or its journal. Live state belongs to
+# prometheus-node-exporter, which every SEAPATH node runs.
+
+[Unit]
+Description=SEAPATH management web UI and API
+After=network-online.target libvirtd.service
+Wants=network-online.target
+
+[Container]
+# seapath_webui_image in the inventory. Set it to an exact tag where a machine
+# has to be able to say which code is answering on it, and editing it then
+# applying this playbook is how the service is updated. The default is `latest`,
+# which is the tag the ISO installs and preloads.
+Image={{ seapath_webui_image }}
+ContainerName=seapath-webui
+Network=host
+
+# Service state: the PKI, the session secret, the SSH keys, the run traces and
+# the artefact store. The inventory repository is separate so it can be backed
+# up, cloned and exported on its own.
+Volume={{ deploy_seapath_webui_state_dir }}:{{ deploy_seapath_webui_state_dir }}:rw
+Volume={{ deploy_seapath_webui_inventory_dir }}:{{ deploy_seapath_webui_inventory_dir }}:rw
+Volume={{ deploy_seapath_webui_data_dir }}:{{ deploy_seapath_webui_data_dir }}:rw
+
+# Trust material: where this node's own key and the peer keys are installed.
+# The service appends single lines to authorized_keys and never rewrites the
+# file, because the image seeded it with the site key a conventional Ansible
+# control machine uses.
+Volume={{ deploy_seapath_webui_ansible_ssh_dir }}:{{ deploy_seapath_webui_ansible_ssh_dir }}:rw
+
+# Node identity. The container has its own UTS namespace, so without these the
+# view would show a container id and the certificate would be issued to one.
+Volume=/etc/hostname:/etc/hostname:ro
+Volume=/etc/os-release:/etc/os-release:ro
+
+# The machine's public SSH host keys, so the first connection is verified
+# without prompting and without accepting an unverified key.
+Volume=/etc/ssh:/etc/ssh:ro
+
+# Hardware, which is what the seed inventory is written from at first boot.
+# /proc is deliberately absent: with the host network namespace the container's
+# own /proc already reports the host's values.
+Volume=/sys:/sys:ro
+Volume=/dev/disk:/dev/disk:ro
+# The directory rather than corosync.conf itself: that file appears only once
+# cluster_setup_ha has run, and its presence is what tells a cluster member
+# from a standalone machine.
+Volume=/etc/corosync:/etc/corosync:ro
+
+# Runtime plane: starting, stopping and migrating VMs.
+Volume=/var/run/libvirt/libvirt-sock:/var/run/libvirt/libvirt-sock
+Volume=/etc/ceph:/etc/ceph:ro
+
+# PAM against the machine's own accounts, and the Unix group that grants each
+# role. The whole directory read only rather than three files: usermod writes a
+# new file and renames it over the old one, so a bind mount of the file would
+# pin the inode the container started with and an operator added to
+# {{ deploy_seapath_webui_admin_group }} would stay locked out until a restart.
+Volume=/etc:/run/host/etc:ro
+
+Environment=PYTHONUNBUFFERED=1
+Environment=SEAPATH_WEBUI_BIND_ADDRESS={{ deploy_seapath_webui_bind_address }}
+Environment=SEAPATH_WEBUI_PORT={{ deploy_seapath_webui_port }}
+Environment=SEAPATH_WEBUI_ADMIN_GROUP={{ deploy_seapath_webui_admin_group }}
+Environment=SEAPATH_WEBUI_OPERATOR_GROUP={{ deploy_seapath_webui_operator_group }}
+Environment=SEAPATH_WEBUI_VIEWER_GROUP={{ deploy_seapath_webui_viewer_group }}
+Environment=SEAPATH_WEBUI_ANSIBLE_USER={{ deploy_seapath_webui_ansible_user }}
+Environment=SEAPATH_WEBUI_ANSIBLE_SSH_DIR={{ deploy_seapath_webui_ansible_ssh_dir }}
+{% if deploy_seapath_webui_additional_sans %}
+Environment=SEAPATH_WEBUI_TLS_ADDITIONAL_SANS={{ deploy_seapath_webui_additional_sans }}
+{% endif %}
+
+[Service]
+Restart=always
+RestartSec=5
+
+# Dropping this file on a machine and starting the unit has to be enough. All
+# of these are inert when empty, which is what makes creating them harmless.
+ExecStartPre=/usr/bin/mkdir -p {{ deploy_seapath_webui_state_dir }} {{ deploy_seapath_webui_inventory_dir }} {{ deploy_seapath_webui_data_dir }} /etc/corosync /etc/ceph
+ExecStartPre=/usr/bin/chmod 0700 {{ deploy_seapath_webui_state_dir }}
+{% if deploy_seapath_webui_cpu_affinity %}
+# Housekeeping CPUs, the complement of isolcpus. This service must never
+# compete with a real time guest.
+CPUAffinity={{ deploy_seapath_webui_cpu_affinity }}
+CPUQuota={{ deploy_seapath_webui_cpu_quota }}
+Nice={{ deploy_seapath_webui_nice }}
+{% endif %}
+
+[Install]
+WantedBy=multi-user.target
