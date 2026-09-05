@@ -1,0 +1,24 @@
+# Copyright (C) 2026, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# Ansible playbook that measures the latency of the hypervisors with
+# cyclictest and fetches the histogram to the control machine.
+#
+# The `cyclictest` role has only ever been reachable through
+# `ci_all_machines_tests.yaml`, which runs it after the Yocto functional tests
+# and therefore cannot be used on a Debian machine or on a running deployment.
+# This playbook is that role on its own, so a latency measurement is something
+# an operator can ask for on any SEAPATH machine.
+#
+# Nothing on the machines is changed: the role copies a script to a temporary
+# directory, runs cyclictest, fetches the result and leaves.
+
+---
+- name: Measure the latency with cyclictest
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  become: true
+  gather_facts: false
+  roles:
+    - cyclictest
