@@ -28,6 +28,23 @@ build that no package fixes, so a machine that will never answer is an expected
 state: a measurement plays every machine of the inventory, and one kernel that
 cannot answer must not take down a run that has already loaded the others.
 
+## A patched copy is what runs
+
+`rt-tests` 2.6 counts the SMIs before it starts the tracer, by parsing
+`rdmsr -a -d 0x34` and converting each line to an integer. The `msr-tools`
+snapshot Debian ships since `1.3+git20220805` prefixes every line with
+`CPU n: `, so the conversion raises and `hwlatdetect` dies before it measures
+anything. It only happens where the `msr` module is loaded, which is why one
+machine of a cluster measures and its neighbour brings back a traceback, from
+the same run and the same package version.
+
+So the role copies `hwlatdetect` into its temporary directory, fixes that one
+line on the copy, and runs the copy. `/usr/sbin/hwlatdetect` is left alone, for
+the same reason the role does not install `rt-tests`: a measurement changes
+nothing on the machines it measures. The copy goes away with the directory, and
+the substitution is a no-op on a machine whose `rdmsr` prints the old format.
+Remove it when the fix is released upstream.
+
 ## Role Variables
 
 | Variable                   | Required | Type   | Default | Comments                                                        |
