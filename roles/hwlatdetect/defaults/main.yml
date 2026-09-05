@@ -1,0 +1,20 @@
+# Copyright (C) 2026, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+---
+hwlatdetect_result_folder: ".."
+# How long the detector runs, in seconds. It measures for `width` out of every
+# `window`, so the sampled fraction is width/window: at the defaults below the
+# hardware is watched half the time, and a 120s run observes 60s of it.
+#
+# These defaults are for a machine carrying no live traffic. The tracer rotates
+# over every CPU, isolated cores included, and blocks the one it lands on for
+# `width` with interrupts disabled: 0.5s here, which no guest processing
+# Sampled Values survives. See the README.
+hwlatdetect_duration: 120
+hwlatdetect_window: 1000000
+hwlatdetect_width: 500000
+# Microseconds. A sample below this is not reported, so the value decides what
+# counts as an interruption worth knowing about rather than measurement noise.
+# 10us is the rt-tests default.
+hwlatdetect_threshold: 10
