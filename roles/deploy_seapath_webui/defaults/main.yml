@@ -62,6 +62,22 @@ deploy_seapath_webui_cpu_affinity: ""
 deploy_seapath_webui_cpu_quota: 50%
 deploy_seapath_webui_nice: 5
 
+# How many versions of the web UI image this machine keeps. Two, because that
+# is what a rollback costs: D23 of the web UI makes `seapath_webui_image` the
+# update lever, so going back is editing that variable and applying again, and
+# a substation is not necessarily connected to a registry. Keeping the previous
+# version on the machine is what makes that lever work offline rather than in
+# principle. Everything older is 440 MB apiece on a root filesystem that also
+# holds /var/lib/containers.
+#
+# 0 keeps everything, for a site that would rather manage this itself.
+#
+# The image tagged `latest` is never removed, whatever this says. The ISO
+# preloads it so that a first apply on a machine with no route to a registry
+# finds something to start, and reclaiming that one image would quietly take
+# away the fallback this role's default depends on.
+deploy_seapath_webui_image_retention: 2
+
 # Seconds between the end of the play and the restart of the container. The
 # restart is handed to systemd rather than done here, because on the machine
 # serving the UI this role replaces the process that is recording the run. The
