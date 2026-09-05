@@ -1,0 +1,16 @@
+# Copyright (C) 2026, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+---
+galaxy_info:
+  author: "Seapath"
+  description: >-
+    Run hwlatdetect and fetch the result, measuring the interruptions the
+    kernel cannot see.
+  min_ansible_version: 2.9.10
+  license: Apache-2.0
+  platforms:
+    - name: Debian
+      versions:
+        - all
+dependencies: []
