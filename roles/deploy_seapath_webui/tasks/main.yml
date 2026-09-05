@@ -122,6 +122,20 @@
         name: seapath-webui
         state: started
 
+    # Retention. This role is what puts an image on the machine, so it is what
+    # has to bound the pile: every apply adds one and nothing ever removed one,
+    # which on a hypervisor whose root filesystem also holds
+    # /var/lib/containers is a slow way to fill a disk.
+    #
+    # The moment is chosen rather than convenient. The restart above is
+    # deferred, so right here the container still runs the *previous* image and
+    # the new one is present and unused. Keeping both is therefore the same
+    # thing as keeping what a rollback needs, and nothing running is ever the
+    # thing removed.
+    - name: Bound the number of web UI images this machine keeps
+      ansible.builtin.include_tasks: retention.yml
+      when: deploy_seapath_webui_image_retention | int > 0
+
 - name: Remove the SEAPATH web UI
   when: not deploy_seapath_webui_enabled | bool
   block:
