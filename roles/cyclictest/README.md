@@ -4,7 +4,11 @@ This role runs cyclictest and fetch the resulting histogram.
 
 ## Requirements
 
-no requirement.
+`cyclictest`, from the `rt-tests` package. Nothing in this collection installs
+it, and this role does not either: a latency measurement must change nothing on
+the machines it measures. The role checks for the binary first and fails
+naming the package, because without that check the failure is a Python
+traceback from the script, ending in `FileNotFoundError`.
 
 ## Role Variables
 
