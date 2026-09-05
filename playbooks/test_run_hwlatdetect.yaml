@@ -1,0 +1,29 @@
+# Copyright (C) 2026, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# Ansible playbook that measures the interruptions the kernel cannot see, with
+# hwlatdetect, and fetches the result to the control machine.
+#
+# This is the measurement no other check on a SEAPATH machine can make. A
+# System Management Interrupt takes the CPU into firmware without telling the
+# operating system, so the time is missing from the kernel's accounting and
+# from cyclictest's view of it. A correctly isolated machine that still misses
+# its deadline is either a firmware problem or a configuration one, and this is
+# what tells the two apart.
+#
+# Nothing on the machines is changed. Run it where no live traffic is carried,
+# on a bench, on a machine not yet in service, or on one taken out of the
+# cluster: the tracer rotates over every CPU, isolated cores included, and
+# blocks the one it lands on with interrupts disabled for the sampling width of
+# every window, 0.5s at the default settings, which no guest processing Sampled
+# Values survives.
+
+---
+- name: Measure the hardware latency with hwlatdetect
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  become: true
+  gather_facts: false
+  roles:
+    - hwlatdetect
