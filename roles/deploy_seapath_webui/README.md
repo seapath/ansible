@@ -29,6 +29,7 @@ the state directories, and the three Unix groups that grant each role.
 | `deploy_seapath_webui_data_dir` | `/var/lib/seapath-webui` | Run traces, artefacts, and a collection installed on the node |
 | `deploy_seapath_webui_cpu_affinity` | computed from `isolcpus` | Housekeeping CPUs. Empty on a machine with no isolated CPU, and the container is left unpinned |
 | `deploy_seapath_webui_restart_delay` | `30` | Seconds between the end of the play and the restart |
+| `deploy_seapath_webui_image_retention` | `2` | How many versions of the image the machine keeps. `0` keeps everything |
 
 `seapath_webui_image` is the one variable without the role name as a prefix.
 It is the one an inventory sets, and inventories already carry it under this
@@ -55,6 +56,37 @@ The image is pulled by a task rather than by that timer, so a registry the
 machine cannot reach fails the run in front of the operator who asked for it. A
 site that preloaded the image keeps it: nothing is pulled when the tag is
 already present.
+
+## The machine keeps two versions
+
+Every apply adds an image and nothing used to remove one. On a hypervisor whose
+root filesystem also holds `/var/lib/containers`, 440 MB per update is a slow
+way to fill a disk.
+
+Two rather than one, because that is what a rollback costs. `seapath_webui_image`
+is the update lever: going back a version is editing that variable and applying
+again, and a substation is not necessarily connected to a registry. Keeping the
+previous version on the machine is what makes that lever work offline rather
+than in principle.
+
+Three images are kept whatever their age: the one the quadlet now names, the
+one the container is running this second, and the one tagged `latest`. That
+last one is the image the ISO preloads so a first apply with no route to a
+registry finds something to start, and reclaiming it would quietly take away
+the fallback this role's own default depends on.
+
+The removal runs where the deferred restart puts it: at that moment the
+container still runs the previous image and the new one is present and unused,
+so what a rollback needs and what is running are the same two images. `podman`
+refuses to remove an image a container holds, and that refusal is tolerated
+rather than forced, because it is the safety net under the whole step.
+
+An image is matched both by its repository and by its
+`org.opencontainers.image.title` label. The repository alone is not enough: on
+a site left on the default `latest`, pulling again moves that name onto the new
+image and leaves the old one with no name at all, so a retention written on
+repositories would find nothing to remove while the machine filled up. The
+label survives the untagging.
 
 ## What this role never does
 

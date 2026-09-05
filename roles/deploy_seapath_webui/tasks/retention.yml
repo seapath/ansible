@@ -1,0 +1,142 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+# Which versions of this service's image a machine keeps, and the removal of
+# the rest. A file of its own because it is the one part of this role that can
+# be exercised without deploying anything: hand it a `podman` that prints a
+# machine's images and it says which ones it would remove.
+
+# The repository, with any tag or digest taken off. Written as two
+# substitutions rather than a split on ":" because a registry carries a port:
+# `localhost:5000/seapath-webui:1.0` has three colons and only the last one is
+# a tag.
+- name: Name the repository the deployed image comes from
+  ansible.builtin.set_fact:
+    deploy_seapath_webui_repository: >-
+      {{
+        seapath_webui_image
+        | regex_replace('@.*$', '')
+        | regex_replace(':[^:/]+$', '')
+      }}
+
+- name: Read the images on this machine
+  ansible.builtin.command:
+    argv:
+      - podman
+      - images
+      - --format
+      - json
+  register: deploy_seapath_webui_image_list
+  changed_when: false
+  check_mode: false
+
+# Resolved by asking podman rather than by matching strings, because an
+# inventory is free to write `insatomcat/seapath-webui:0.3.15` where podman
+# lists `docker.io/insatomcat/seapath-webui:0.3.15`. An image wrongly believed
+# absent from this list is one this role would delete.
+- name: Resolve the images to keep whatever their age
+  ansible.builtin.command:
+    argv:
+      - podman
+      - image
+      - inspect
+      - "{{ item }}"
+      - --format
+      - "{{ '{{.Id}}' }}"
+  loop:
+    # What the quadlet now names.
+    - "{{ seapath_webui_image }}"
+    # The `latest` the ISO preloads, so a machine with no route to a registry
+    # still finds something to start. Reclaiming that one image would quietly
+    # take away the fallback this role's own default depends on.
+    - "{{ deploy_seapath_webui_repository }}:latest"
+  register: deploy_seapath_webui_pinned
+  # A tag this machine does not have is the ordinary case rather than a
+  # failure: a site pinned to versions may never have pulled `latest`.
+  failed_when: false
+  changed_when: false
+  check_mode: false
+
+- name: Read the image the container is running, if it is running one
+  containers.podman.podman_container_info:
+    name: seapath-webui
+  register: deploy_seapath_webui_running
+  failed_when: false
+  check_mode: false
+
+# Ours, by two criteria rather than one. The repository catches a node pinned
+# to exact tags, which is what the web UI's own seed writes into the inventory.
+# The label catches what a floating tag leaves behind: pulling `latest` again
+# moves that name onto the new image and leaves the old one with no name at
+# all, so a site on this role's default would otherwise pile up images no
+# repository filter can recognise. A label survives the untagging, which is why
+# the image carries one.
+#
+# Rendered to JSON and read back because a loop cannot return a list otherwise:
+# what a statement block produces is text.
+- name: Sort out which images are this service's, newest first
+  ansible.builtin.set_fact:
+    deploy_seapath_webui_ours: >-
+      {{
+        deploy_seapath_webui_selected
+        | from_json
+        | sort(attribute='Created', reverse=true)
+        | list
+      }}
+  vars:
+    deploy_seapath_webui_selected: >-
+      {%- set found = [] -%}
+      {%- for image in deploy_seapath_webui_image_list.stdout | from_json -%}
+      {%-   set repositories = image.Names | default([])
+              | map('regex_replace', ':[^:/]+$', '') | list -%}
+      {%-   set labels = image.Labels | default({}, true) -%}
+      {%-   if deploy_seapath_webui_repository in repositories
+               or labels.get('org.opencontainers.image.title') == 'seapath-webui' -%}
+      {%-     set _ = found.append(image) -%}
+      {%-   endif -%}
+      {%- endfor -%}
+      {{ found | to_json }}
+
+- name: Decide which images are older than the retention
+  ansible.builtin.set_fact:
+    deploy_seapath_webui_stale: >-
+      {{
+        deploy_seapath_webui_ours[deploy_seapath_webui_image_retention | int:]
+        | rejectattr('Id', 'in', deploy_seapath_webui_kept)
+        | map(attribute='Id')
+        | list
+      }}
+  vars:
+    deploy_seapath_webui_kept: >-
+      {{
+        (
+          deploy_seapath_webui_pinned.results
+          | selectattr('rc', 'equalto', 0)
+          | map(attribute='stdout')
+          | map('trim')
+          | list
+        )
+        + [deploy_seapath_webui_running.containers[0].Image | default('')]
+        | select
+        | list
+      }}
+
+# By id, because an image carrying two tags has to lose both, and podman only
+# untags while another name still points at it.
+#
+# A refusal is tolerated and a failure is not. podman declines to remove an
+# image a container uses, and that refusal is the safety net under this whole
+# file: never --force it. Anything else stops the run, because an image this
+# machine cannot manage is worth saying out loud rather than swallowing.
+- name: Remove the web UI images older than the retention
+  ansible.builtin.command:
+    argv:
+      - podman
+      - rmi
+      - "{{ item }}"
+  loop: "{{ deploy_seapath_webui_stale }}"
+  register: deploy_seapath_webui_removed
+  changed_when: deploy_seapath_webui_removed.rc == 0
+  failed_when:
+    - deploy_seapath_webui_removed.rc != 0
+    - "'image is in use' not in deploy_seapath_webui_removed.stderr"
