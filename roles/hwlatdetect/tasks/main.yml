@@ -1,0 +1,107 @@
+# Copyright (C) 2026, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Create temporary test directory
+  ansible.builtin.tempfile:
+    state: directory
+  register: hwlatdetect_tmp_test_dir
+
+# hwlatdetect comes from the same `rt-tests` package as cyclictest, and
+# nothing in this collection installs it. Checked separately from the tracer
+# below, because the two failures call for different answers: install a package
+# here, boot a different kernel there. Without this check the command module
+# reports a missing executable and `failed_when: false` swallows it, leaving
+# the task below to render an undefined stdout.
+- name: Look for hwlatdetect # noqa: command-instead-of-shell
+  ansible.builtin.shell: command -v hwlatdetect
+  register: hwlatdetect_binary
+  changed_when: false
+  failed_when: false
+
+- name: Fail with the name of the package rather than with a missing executable
+  ansible.builtin.fail:
+    msg: >-
+      hwlatdetect is not installed on {{ inventory_hostname }}. The rt-tests
+      package provides it. Nothing here installs it, because a measurement must
+      change nothing on the machines it measures.
+  when: hwlatdetect_binary.rc != 0
+
+# hwlatdetect drives the kernel's hwlat tracer, so a kernel built without
+# CONFIG_HWLAT_TRACER has nothing to drive. Looked for in both places tracefs
+# is mounted: modern kernels put it at /sys/kernel/tracing, older ones only
+# under debugfs. Checked before the run rather than after, because the failure
+# is otherwise a message about a missing file that reads as a broken playbook
+# rather than as a kernel that cannot answer the question.
+- name: Look for the hwlat tracer
+  ansible.builtin.slurp:
+    src: "{{ item }}/available_tracers"
+  register: hwlatdetect_tracers
+  failed_when: false
+  loop:
+    - /sys/kernel/tracing
+    - /sys/kernel/debug/tracing
+
+# available_tracers is a space separated list, so the question is word
+# membership. Asked with `split` rather than a regex: a `\b` written here
+# reaches Jinja before it reaches the regex engine, and Jinja reads it as a
+# backspace, which matches nothing and reports every kernel as unsupported.
+- name: Note whether this kernel offers the tracer
+  ansible.builtin.set_fact:
+    hwlatdetect_supported: >-
+      {{ hwlatdetect_tracers.results
+         | map(attribute='content', default='')
+         | map('b64decode')
+         | map('split')
+         | map('intersect', ['hwlat'])
+         | select() | list | length > 0 }}
+
+- name: Execute hwlatdetect
+  # Never fails the play. A measurement plays every machine the inventory
+  # declares and the collection sets any_errors_fatal, so one machine whose
+  # kernel refuses would take down a run that has already loaded the others.
+  # The reason is written into the fetched file instead, where whoever asked
+  # for the measurement reads it.
+  #
+  # Bare integers: window, width and threshold are microseconds and duration is
+  # seconds, which is what the rt-tests script documents as its defaults.
+  ansible.builtin.command:
+    argv:
+      - hwlatdetect
+      - "--duration={{ hwlatdetect_duration }}"
+      - "--window={{ hwlatdetect_window }}"
+      - "--width={{ hwlatdetect_width }}"
+      - "--threshold={{ hwlatdetect_threshold }}"
+  register: hwlatdetect_run
+  changed_when: true
+  failed_when: false
+  when: hwlatdetect_supported | bool
+
+- name: Save the result
+  # The command line first, so the artefact says what produced it, then stdout
+  # and stderr. Both, because hwlatdetect reports a refusal on stderr and a
+  # file holding an empty stdout says nothing about why it is empty.
+  ansible.builtin.copy:
+    content: |
+      hwlatdetect --duration={{ hwlatdetect_duration }} --window={{ hwlatdetect_window }} --width={{ hwlatdetect_width }} --threshold={{ hwlatdetect_threshold }}
+      {% if hwlatdetect_supported | bool %}
+      {{ hwlatdetect_run.stdout | default('') }}
+      {{ hwlatdetect_run.stderr | default('') }}
+      {% else %}
+      hwlatdetect did not run on {{ inventory_hostname }}: this kernel offers no
+      hwlat tracer, which is what CONFIG_HWLAT_TRACER provides. Nothing was
+      measured here.
+      {% endif %}
+    dest: "{{ hwlatdetect_tmp_test_dir.path }}/hwlatdetect.txt"
+    mode: "0644"
+
+- name: Fetch results
+  ansible.builtin.fetch:
+    src: "{{ hwlatdetect_tmp_test_dir.path }}/hwlatdetect.txt"
+    dest: "{{ hwlatdetect_result_folder }}/hwlatdetect_{{ inventory_hostname }}.txt"
+    flat: true
+
+- name: Remove the temporary test directory
+  ansible.builtin.file:
+    path: "{{ hwlatdetect_tmp_test_dir.path }}"
+    state: absent
