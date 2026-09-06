@@ -122,7 +122,7 @@ https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.ht
 *Warning:* Currently only the Ansible version 2.16 is supported. Other versions
 will not work.
 
-Also you must also install the `netaddr`, `six` and `jmespath` python3 modules as well as the `rsync` package.
+You must also install the `netaddr`, `six` and `jmespath` python3 modules as well as the `rsync` package.
 
 === Additional components
 
