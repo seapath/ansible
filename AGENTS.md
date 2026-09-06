@@ -9,7 +9,7 @@
   cqfd init           # build the dev container
   cqfd -b prepare     # install galaxy deps, submodules, patches, plugins
   ```
-- **Without cqfd**: install `ansible-core~=2.16.0`, `netaddr`, `six`, `rsync`, then run `./prepare.sh`.
+- **Without cqfd**: install `ansible-core~=2.16.0`, `netaddr`, `six`, `jmespath`, `rsync`, then run `./prepare.sh`.
 
 ## Lint / Format
 
