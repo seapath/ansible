@@ -5,3 +5,12 @@
 deploy_vms_standalone_disk_copy: true
 deploy_vms_standalone_qcow2tmpuploadfolder: "/tmp"
 deploy_vms_standalone_disk_pool: "/var/lib/libvirt/images"
+
+# Which guests this role deploys. An inventory that describes a cluster and a
+# standalone machine at once has one `VMs` group and two deployments to send it
+# to; declaring `standalone_VMs` and `cluster_VMs` as children of `VMs` says
+# which guest belongs to which. `groups['VMs']` stays the union of the two, so
+# every play that configures the guests themselves is unchanged, and an
+# inventory with one flat `VMs` group keeps behaving exactly as before.
+deploy_vms_standalone_guests: >-
+  {{ groups['standalone_VMs'] if 'standalone_VMs' in groups else groups['VMs'] }}

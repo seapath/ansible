@@ -15,7 +15,7 @@
     - item in deploy_vms_standalone_all_vms.list_vms
     - hostvars[item].force is defined
     - hostvars[item].force
-  loop: "{{ groups['VMs'] }}"
+  loop: "{{ deploy_vms_standalone_guests }}"
 
 - name: Undefine VM
   ansible.builtin.command: "virsh undefine --nvram {{ item }}"
@@ -23,14 +23,14 @@
     - item in deploy_vms_standalone_all_vms.list_vms
     - hostvars[item].force is defined
     - hostvars[item].force
-  loop: "{{ groups['VMs'] }}"
+  loop: "{{ deploy_vms_standalone_guests }}"
   changed_when: true
 
 - name: Print info
   ansible.builtin.debug:
     var: hostvars[item]
     verbosity: 2
-  loop: "{{ groups['VMs'] }}"
+  loop: "{{ deploy_vms_standalone_guests }}"
 
 - name: Check tmp folder permission
   ansible.builtin.file:
@@ -53,7 +53,7 @@
     - deploy_vms_standalone_disk_copy | bool
     - hostvars[item].disk_extract is not defined or not hostvars[item].disk_extract | bool
     - item not in deploy_vms_standalone_all_vms.list_vms or (item in deploy_vms_standalone_all_vms.list_vms and hostvars[item].force is defined and hostvars[item].force)
-  loop: "{{ groups['VMs'] }}"
+  loop: "{{ deploy_vms_standalone_guests }}"
 
 - name: Copy the gzipped disk on target # noqa: risky-file-permissions
   ansible.builtin.copy:
@@ -64,7 +64,7 @@
     - hostvars[item].disk_extract is defined
     - hostvars[item].disk_extract | bool
     - item not in deploy_vms_standalone_all_vms.list_vms or (item in deploy_vms_standalone_all_vms.list_vms and hostvars[item].force is defined and hostvars[item].force)
-  loop: "{{ groups['VMs'] }}"
+  loop: "{{ deploy_vms_standalone_guests }}"
 
 - name: Extract the gzipped disk on target
   ansible.builtin.command:
@@ -75,13 +75,13 @@
     - hostvars[item].disk_extract is defined
     - hostvars[item].disk_extract | bool
     - item not in deploy_vms_standalone_all_vms.list_vms or (item in deploy_vms_standalone_all_vms.list_vms and hostvars[item].force is defined and hostvars[item].force)
-  loop: "{{ groups['VMs'] }}"
+  loop: "{{ deploy_vms_standalone_guests }}"
 
 - name: Copy additional disks on target
   ansible.builtin.include_tasks: copy_additional_disk.yml
   vars:
     _vm_name: "{{ item }}"
-  loop: "{{ groups['VMs'] }}"
+  loop: "{{ deploy_vms_standalone_guests }}"
   when:
     - hostvars[item].additional_disk is defined
     - deploy_vms_standalone_disk_copy | bool
@@ -91,7 +91,7 @@
   ansible.builtin.include_tasks: cloud_init_seed.yml
   vars:
     _vm_name: "{{ item }}"
-  loop: "{{ groups['VMs'] }}"
+  loop: "{{ deploy_vms_standalone_guests }}"
   when:
     - hostvars[item].cloud_init is defined
     - item not in deploy_vms_standalone_all_vms.list_vms or (item in deploy_vms_standalone_all_vms.list_vms and hostvars[item].force is defined and hostvars[item].force)
@@ -102,7 +102,7 @@
     standalone_main_disk: "{{ hostvars[item].inventory_hostname }}.qcow2" # noqa: var-naming[no-role-prefix]
   delegate_to: "{{ item }}"
   delegate_facts: true
-  loop: "{{ groups['VMs'] }}"
+  loop: "{{ deploy_vms_standalone_guests }}"
   when: item not in deploy_vms_standalone_all_vms.list_vms or (item in deploy_vms_standalone_all_vms.list_vms and hostvars[item].force is defined and hostvars[item].force)
 
 - name: Export VM config for debug in /tmp # noqa: risky-file-permissions
@@ -112,7 +112,7 @@
   vars:
     vm: "{{ hostvars[item] }}"
   when: ansible_verbosity >= 2
-  loop: "{{ groups['VMs'] }}"
+  loop: "{{ deploy_vms_standalone_guests }}"
 
 - name: Create VMs
   community.libvirt.virt:
@@ -121,7 +121,7 @@
       {{ lookup('template',
       hostvars[item].vm_template,
       template_vars=dict(vm=hostvars[item])) }}
-  loop: "{{ groups['VMs'] }}"
+  loop: "{{ deploy_vms_standalone_guests }}"
   when: item not in deploy_vms_standalone_all_vms.list_vms or (item in deploy_vms_standalone_all_vms.list_vms and hostvars[item].force is defined and hostvars[item].force)
 
 # The profile is read by the seapath-alloc libvirt hook at every VM start.
@@ -134,14 +134,14 @@
     owner: root
     group: root
     mode: "0644"
-  loop: "{{ groups['VMs'] }}"
+  loop: "{{ deploy_vms_standalone_guests }}"
   when: hostvars[item].vm_pinning_profile is defined
 
 - name: Remove pinning profiles of VMs that no longer define one
   ansible.builtin.file:
     path: "/etc/seapath/alloc.d/{{ item }}.yaml"
     state: absent
-  loop: "{{ groups['VMs'] }}"
+  loop: "{{ deploy_vms_standalone_guests }}"
   when: hostvars[item].vm_pinning_profile is not defined
 
 - name: Start VMs
@@ -149,5 +149,5 @@
     name: "{{ item }}"
     state: running
     autostart: "{{ hostvars[item].autostart | default(true) }}"
-  loop: "{{ groups['VMs'] }}"
+  loop: "{{ deploy_vms_standalone_guests }}"
   when: hostvars[item].enable | default(true)

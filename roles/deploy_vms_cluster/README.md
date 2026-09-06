@@ -19,9 +19,43 @@ No requirement.
 | deploy_vms_cluster_qcow2tmpuploadfolder | No       | String | "/tmp"  | Hypervisor directory to store VM disks temporarily while VMs are beeing created          |
 | deploy_vms_cluster_vms_disks_directory  | No       | String |         | Path in the Ansible machine to be prepend to the disk image path                         |
 | deploy_vms_cluster_disk_copy            | No       | Bool   | true    | Set true to copy the VM disk from the Ansible machine before creating the VM             |
+| deploy_vms_cluster_guests               | No       | List   | `cluster_VMs`, or `VMs` | The guests `deploy_vms_cluster.yaml` loops over. See below                |
 
 The role uses the "VMs" group of the inventory. All members of this group will be deployed according to member's variable described below.
 The Ansible member inventory host name will be used as VM name.
+
+### Which guests the role deploys
+
+The role deploys the members of the `VMs` group.
+
+An inventory that describes a cluster **and** a standalone machine has one
+`VMs` group and two deployments to send it to, and no way of saying which
+guest belongs to which. Declare `cluster_VMs` and `standalone_VMs` as children
+of `VMs` to say it:
+
+```yaml
+VMs:
+  children:
+    cluster_VMs:
+      hosts:
+        myClusterVM:
+          vm_template: "../templates/vm/guest.xml.j2"
+          vm_disk: "../files/guest.qcow2"
+    standalone_VMs:
+      hosts:
+        myLocalVM:
+          vm_template: "../templates/vm/guest.xml.j2"
+          vm_disk: "../files/guest.qcow2"
+```
+
+Ansible lists the hosts of a group's children under the parent, so
+`groups['VMs']` stays the union of the two. Every play that configures the
+guests themselves, `seapath_setup_main.yaml` and `seapath_setup_hardening.yaml`
+among them, is unchanged.
+
+An inventory with one flat `VMs` group and no children behaves exactly as
+before: each role falls back to the whole group.
+
 
 | *item* variables   | Required | Type        | Default                               | Comments                                                              |
 |--------------------|----------|-------------|---------------------------------------|-----------------------------------------------------------------------|

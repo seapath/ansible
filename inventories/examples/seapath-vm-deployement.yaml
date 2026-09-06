@@ -11,6 +11,25 @@
 # - General inventory : https://lf-energy.atlassian.net/wiki/x/lIblAQ
 # - guest.xml.j2 templated xml file : https://lf-energy.atlassian.net/wiki/x/ao3lAQ
 
+# One `VMs` group deploys to one place. Where an inventory describes a cluster
+# and a standalone machine at once, declare `cluster_VMs` and `standalone_VMs`
+# as children of `VMs` and put each guest under the one that deploys it:
+#
+#   VMs:
+#     children:
+#       cluster_VMs:
+#         hosts:
+#           rtvm:
+#             [...]
+#       standalone_VMs:
+#         hosts:
+#           vm:
+#             [...]
+#
+# `groups['VMs']` stays the union of the two, so the playbooks that configure
+# the guests themselves are unchanged. A flat group, as below, deploys every
+# guest to whichever of the two playbooks is run.
+
 ---
 VMs:
   hosts:

@@ -1,15 +1,26 @@
 # Copyright (C) 2021, RTE (http://www.rte-france.com)
 # Copyright (C) 2024 Savoir-faire Linux, Inc.
 # SPDX-License-Identifier: Apache-2.0
-# Deploy all VMs define in the VMs group
+# Deploy the VMs of the cluster: the members of `cluster_VMs` when the
+# inventory declares that group, and every member of `VMs` otherwise.
 
 ---
 - name: Deploy VMs on cluster
   hosts: "{{ groups['cluster_machines'][0] }}"
   gather_facts: false
   become: true
+  vars:
+    # An inventory that describes a cluster and a standalone machine at once
+    # has one `VMs` group and two deployments to send it to. Declaring
+    # `cluster_VMs` and `standalone_VMs` as children of `VMs` says which guest
+    # belongs to which, and leaves `groups['VMs']` the union of the two, so
+    # every play that configures the guests themselves is unchanged.
+    #
+    # An inventory with one flat `VMs` group keeps behaving exactly as before.
+    deploy_vms_cluster_guests: >-
+      {{ groups['cluster_VMs'] if 'cluster_VMs' in groups else groups['VMs'] }}
   tasks:
     - name: Deploy VMs on Cluster Role
-      with_items: "{{ groups['VMs'] }}"
+      with_items: "{{ deploy_vms_cluster_guests }}"
       ansible.builtin.include_role:
         name: deploy_vms_cluster
