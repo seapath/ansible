@@ -51,3 +51,7 @@ jobs:
         playbooks/ci_vms_standalone_ptp.yaml
       vms-test-playbooks: >-
         playbooks/ci_all_machines_tests.yaml
+      # SV latency tests only run in the weekly CI: the SV publisher is not
+      # accurate (it does bursts), so the tests are too flaky for CI on PRs.
+      do_latency_tests: ${{ inputs.weekly }}
+      pcap_loop: ${{ inputs.pcap_loop }}
