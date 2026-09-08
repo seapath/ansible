@@ -11,6 +11,25 @@
 # - General inventory : https://lf-energy.atlassian.net/wiki/x/lIblAQ
 # - guest.xml.j2 templated xml file : https://lf-energy.atlassian.net/wiki/x/ao3lAQ
 
+# A flat `VMs` group, as below, is deployed by whichever of
+# `deploy_vms_cluster.yaml` / `deploy_vms_standalone.yaml` is run. When one
+# inventory holds both a cluster and a standalone machine, declare `cluster_VMs`
+# and `standalone_VMs` as children of `VMs` and put each guest under the one
+# that deploys it:
+#
+#   VMs:
+#     children:
+#       cluster_VMs:
+#         hosts:
+#           rtvm:
+#             [...]
+#       standalone_VMs:
+#         hosts:
+#           vm:
+#             [...]
+#
+# `groups['VMs']` stays the union of both, so the plays that configure the
+# guests themselves are unchanged.
 ---
 VMs:
   hosts:
