@@ -59,23 +59,27 @@
 - name: Provision cluster VM (create if missing or forced)
   when: deploy_vms_cluster_presencevm.status == "Undefined" or (hostvars[item].force is defined and hostvars[item].force)
   vars:
-    vm_file: "{{ hostvars[item].vm_disk | default( deploy_vms_cluster_vms_disks_directory ~ '/' ~ item ~ '.qcow2') }}"
     vm_file_dest: "{{ deploy_vms_cluster_qcow2tmpuploadfolder + '/os.qcow2' }}"
   block:
-    - name: "Copy system disk on target for {{ item }}" # noqa: risky-file-permissions
-      ansible.builtin.copy:
-        src: "{{ vm_file }}"
-        dest: "{{ vm_file_dest }}"
+    - name: "Stage system disk on target for {{ item }}"
+      ansible.builtin.include_role:
+        name: stage_vm_disk
       vars:
-        ansible_remote_tmp: "{{ deploy_vms_cluster_qcow2tmpuploadfolder | default(omit) }}"
+        stage_vm_disk_label: "{{ item }}"
+        stage_vm_disk_destination: "{{ vm_file_dest }}"
+        stage_vm_disk_source: "{{ hostvars[item].vm_disk | default('') }}"
+        stage_vm_disk_fallback_source: "{{ deploy_vms_cluster_vms_disks_directory ~ '/' ~ item ~ '.qcow2' if deploy_vms_cluster_vms_disks_directory | length > 0 else '' }}"
+        stage_vm_disk_checksum: "{{ hostvars[item].vm_disk_checksum | default({}) }}"
+        stage_vm_disk_remote_tmp: "{{ deploy_vms_cluster_qcow2tmpuploadfolder }}"
       when: deploy_vms_cluster_disk_copy | bool
-    - name: "Copy additional disk on target for {{ item }}"
-      ansible.builtin.copy:
-        src: "{{ add_disk }}"
-        dest: "{{ deploy_vms_cluster_qcow2tmpuploadfolder }}/additional_{{ add_disk_idx }}.qcow2"
-        mode: "0644"
+    - name: "Stage additional disks on target for {{ item }}"
+      ansible.builtin.include_role:
+        name: stage_vm_disk
       vars:
-        ansible_remote_tmp: "{{ deploy_vms_cluster_qcow2tmpuploadfolder | default(omit) }}"
+        stage_vm_disk_label: "{{ item }} - additional disk {{ add_disk_idx }}"
+        stage_vm_disk_destination: "{{ deploy_vms_cluster_qcow2tmpuploadfolder }}/additional_{{ add_disk_idx }}.qcow2"
+        stage_vm_disk_source: "{{ add_disk }}"
+        stage_vm_disk_remote_tmp: "{{ deploy_vms_cluster_qcow2tmpuploadfolder }}"
       loop: "{{ hostvars[item].additional_disk | default([]) }}"
       loop_control:
         loop_var: add_disk

@@ -5,3 +5,4 @@
 deploy_vms_standalone_disk_copy: true
 deploy_vms_standalone_qcow2tmpuploadfolder: "/tmp"
 deploy_vms_standalone_disk_pool: "/var/lib/libvirt/images"
+deploy_vms_standalone_vms_disks_directory: ""

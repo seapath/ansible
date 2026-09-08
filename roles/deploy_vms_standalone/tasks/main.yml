@@ -7,6 +7,17 @@
     command: list_vms
   register: deploy_vms_standalone_all_vms
 
+# Runs first so invalid disk entries fail before the existing VM is
+# destroyed (force) or any disk is staged.
+- name: Normalize additional disk file names for the VM templates
+  ansible.builtin.include_tasks: normalize_additional_disk.yml
+  vars:
+    _vm_name: "{{ item }}"
+  loop: "{{ groups['VMs'] }}"
+  when:
+    - hostvars[item].additional_disk is defined
+    - item not in deploy_vms_standalone_all_vms.list_vms or (item in deploy_vms_standalone_all_vms.list_vms and hostvars[item].force is defined and hostvars[item].force)
+
 - name: Stop VM
   community.libvirt.virt:
     state: destroyed
@@ -43,26 +54,19 @@
     - deploy_vms_standalone_qcow2tmpuploadfolder is defined
     - deploy_vms_standalone_qcow2tmpuploadfolder != "/tmp"
 
-- name: Copy the disk on target # noqa: risky-file-permissions
-  ansible.builtin.copy:
-    src: "{{ hostvars[item].vm_disk }}"
-    dest: "{{ deploy_vms_standalone_disk_pool }}/{{ hostvars[item].inventory_hostname }}.qcow2"
+- name: Stage the system disk on target  # noqa: var-naming[no-role-prefix]
+  ansible.builtin.include_role:
+    name: stage_vm_disk
   vars:
-    ansible_remote_tmp: "{{ deploy_vms_standalone_qcow2tmpuploadfolder | default(omit) }}"
+    deploy_vms_standalone_disk_extension: "{{ 'img.gz' if hostvars[item].disk_extract is defined and hostvars[item].disk_extract | bool else 'qcow2' }}"
+    stage_vm_disk_label: "{{ item }}"
+    stage_vm_disk_destination: "{{ deploy_vms_standalone_disk_pool }}/{{ hostvars[item].inventory_hostname }}.{{ deploy_vms_standalone_disk_extension }}"
+    stage_vm_disk_source: "{{ hostvars[item].vm_disk | default('') }}"
+    stage_vm_disk_fallback_source: "{{ deploy_vms_standalone_vms_disks_directory ~ '/' ~ item ~ '.' ~ deploy_vms_standalone_disk_extension if deploy_vms_standalone_vms_disks_directory | length > 0 else '' }}"
+    stage_vm_disk_checksum: "{{ hostvars[item].vm_disk_checksum | default({}) }}"
+    stage_vm_disk_remote_tmp: "{{ deploy_vms_standalone_qcow2tmpuploadfolder }}"
   when:
     - deploy_vms_standalone_disk_copy | bool
-    - hostvars[item].disk_extract is not defined or not hostvars[item].disk_extract | bool
-    - item not in deploy_vms_standalone_all_vms.list_vms or (item in deploy_vms_standalone_all_vms.list_vms and hostvars[item].force is defined and hostvars[item].force)
-  loop: "{{ groups['VMs'] }}"
-
-- name: Copy the gzipped disk on target # noqa: risky-file-permissions
-  ansible.builtin.copy:
-    src: "{{ hostvars[item].vm_disk }}"
-    dest: "{{ deploy_vms_standalone_disk_pool }}/{{ hostvars[item].inventory_hostname }}.img.gz"
-  when:
-    - deploy_vms_standalone_disk_copy | bool
-    - hostvars[item].disk_extract is defined
-    - hostvars[item].disk_extract | bool
     - item not in deploy_vms_standalone_all_vms.list_vms or (item in deploy_vms_standalone_all_vms.list_vms and hostvars[item].force is defined and hostvars[item].force)
   loop: "{{ groups['VMs'] }}"
 
@@ -77,8 +81,8 @@
     - item not in deploy_vms_standalone_all_vms.list_vms or (item in deploy_vms_standalone_all_vms.list_vms and hostvars[item].force is defined and hostvars[item].force)
   loop: "{{ groups['VMs'] }}"
 
-- name: Copy additional disks on target
-  ansible.builtin.include_tasks: copy_additional_disk.yml
+- name: Stage additional disks on target
+  ansible.builtin.include_tasks: stage_additional_disk.yml
   vars:
     _vm_name: "{{ item }}"
   loop: "{{ groups['VMs'] }}"

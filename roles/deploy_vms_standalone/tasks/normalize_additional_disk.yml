@@ -1,0 +1,30 @@
+# Copyright (C) 2026 Sprecher Automation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: "Normalize additional disk entries for {{ _vm_name }}"
+  ansible.builtin.include_role:
+    name: stage_vm_disk
+    tasks_from: normalize
+  vars:
+    stage_vm_disk_label: "{{ _vm_name }}"
+    stage_vm_disk_disks: "{{ hostvars[_vm_name].additional_disk }}"
+
+- name: "Reset additional disk file names for {{ _vm_name }}"
+  ansible.builtin.set_fact:
+    deploy_vms_standalone_additional_disk_files: []
+
+- name: "Derive additional disk file names for {{ _vm_name }}"
+  ansible.builtin.set_fact:
+    deploy_vms_standalone_additional_disk_files: "{{ deploy_vms_standalone_additional_disk_files + [_vm_name ~ '_data_' ~ add_disk_idx ~ ('_' ~ add_disk.label if add_disk.label | length > 0 else '') ~ '.qcow2'] }}"
+  loop: "{{ stage_vm_disk_normalized_disks }}"
+  loop_control:
+    loop_var: add_disk
+    index_var: add_disk_idx
+    label: "{{ add_disk.file }}"
+
+- name: "Publish additional disk file names for {{ _vm_name }}"  # noqa: var-naming[no-role-prefix]
+  ansible.builtin.set_fact:
+    standalone_additional_disks: "{{ deploy_vms_standalone_additional_disk_files }}"
+  delegate_to: "{{ _vm_name }}"
+  delegate_facts: true

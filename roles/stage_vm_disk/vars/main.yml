@@ -1,0 +1,16 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2026 Sprecher Automation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+stage_vm_disk_url_regex: '^(https?|ftps?)://'
+stage_vm_disk_source_path: "{{ stage_vm_disk_source.path | default('') if stage_vm_disk_source is mapping else stage_vm_disk_source }}"
+stage_vm_disk_source_is_url: "{{ stage_vm_disk_source_path is match(stage_vm_disk_url_regex) }}"
+stage_vm_disk_source_is_remote: "{{ stage_vm_disk_remote_source | length > 0 }}"
+stage_vm_disk_resolved_local_source: "{{ stage_vm_disk_local_source if stage_vm_disk_local_source | length > 0 else (stage_vm_disk_fallback_source if not stage_vm_disk_source_is_remote else '') }}"
+stage_vm_disk_resolved_source: "{{ stage_vm_disk_remote_source if stage_vm_disk_source_is_remote else stage_vm_disk_resolved_local_source }}"
+stage_vm_disk_checksum_preference: ['sha512', 'sha384', 'sha256']
+stage_vm_disk_checksum_unknown: "{{ (stage_vm_disk_checksum.keys() | list) | difference(stage_vm_disk_checksum_preference) }}"
+stage_vm_disk_checksum_algorithm: "{{ stage_vm_disk_checksum_preference | select('in', stage_vm_disk_checksum.keys() | list) | first | default('') }}"
+stage_vm_disk_checksum_hash: "{{ stage_vm_disk_checksum[stage_vm_disk_checksum_algorithm] | default('') }}"
+stage_vm_disk_checksum_present: "{{ (stage_vm_disk_checksum_algorithm | length > 0) and (stage_vm_disk_checksum_hash | length > 0) }}"

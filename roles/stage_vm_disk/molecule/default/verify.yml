@@ -1,0 +1,49 @@
+---
+- name: Verify
+  hosts: hv1
+  gather_facts: false
+  tasks:
+    - name: Stat staged disks
+      ansible.builtin.stat:
+        path: "{{ item }}"
+        checksum_algorithm: sha256
+        get_checksum: true
+      register: stage_vm_disk_test_staged
+      loop:
+        - "{{ stage_vm_disk_test_directory }}/vm-local.qcow2"
+        - "{{ stage_vm_disk_test_directory }}/vm-remote.qcow2"
+        - "{{ stage_vm_disk_test_directory }}/vm-fallback.qcow2"
+        - "{{ stage_vm_disk_test_directory }}/vm-checksum-preference.qcow2"
+        - "{{ stage_vm_disk_test_directory }}/guest.qcow2"
+
+    - name: Assert staged disks match the source checksum
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.checksum == stage_vm_disk_test_sha256
+        fail_msg: "{{ item.item }} is missing or does not match the source disk."
+      loop: "{{ stage_vm_disk_test_staged.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Stat disks of rejected staging attempts
+      ansible.builtin.stat:
+        path: "{{ stage_vm_disk_test_directory }}/{{ item }}"
+      register: stage_vm_disk_test_rejected
+      loop:
+        - vm-remote-badsum.qcow2
+        - vm-local-badsum.qcow2
+        - vm-unsupported-algo.qcow2
+        - vm-remote-nosum.qcow2
+        - vm-no-source.qcow2
+        - vm-both-sources.qcow2
+        - vm-local-url.qcow2
+        - vm-string-checksum.qcow2
+
+    - name: Assert rejected staging attempts left no disk behind
+      ansible.builtin.assert:
+        that: not item.stat.exists
+        fail_msg: "{{ item.item }} must not exist after a rejected staging attempt."
+      loop: "{{ stage_vm_disk_test_rejected.results }}"
+      loop_control:
+        label: "{{ item.item }}"

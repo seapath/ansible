@@ -1,0 +1,323 @@
+---
+- name: Converge
+  hosts: hv1
+  gather_facts: false
+  tasks:
+    - name: Create staging destination directory
+      ansible.builtin.file:
+        path: "{{ stage_vm_disk_test_directory }}"
+        state: directory
+        mode: "0755"
+
+    - name: Stage disk from a local source
+      ansible.builtin.include_role:
+        name: stage_vm_disk
+      vars:
+        stage_vm_disk_label: vm-local
+        stage_vm_disk_local_source: "{{ stage_vm_disk_test_local_disk }}"
+        stage_vm_disk_checksum:
+          sha256: "{{ stage_vm_disk_test_sha256 }}"
+        stage_vm_disk_destination: "{{ stage_vm_disk_test_directory }}/vm-local.qcow2"
+
+    - name: Stage disk from a remote source (passed as raw disk entry)
+      ansible.builtin.include_role:
+        name: stage_vm_disk
+      vars:
+        stage_vm_disk_label: vm-remote
+        stage_vm_disk_source:
+          path: "{{ stage_vm_disk_test_remote_disk }}"
+          sha256: "{{ stage_vm_disk_test_sha256 }}"
+        stage_vm_disk_destination: "{{ stage_vm_disk_test_directory }}/vm-remote.qcow2"
+
+    - name: Stage disk via the directory fallback source
+      ansible.builtin.include_role:
+        name: stage_vm_disk
+      vars:
+        stage_vm_disk_label: vm-fallback
+        stage_vm_disk_fallback_source: "{{ stage_vm_disk_test_local_disk }}"
+        stage_vm_disk_destination: "{{ stage_vm_disk_test_directory }}/vm-fallback.qcow2"
+
+    - name: Stage disk with the destination derived from the destination directory
+      ansible.builtin.include_role:
+        name: stage_vm_disk
+      vars:
+        stage_vm_disk_label: vm-derived-destination
+        stage_vm_disk_local_source: "{{ stage_vm_disk_test_local_disk }}"
+        stage_vm_disk_checksum:
+          sha256: "{{ stage_vm_disk_test_sha256 }}"
+        stage_vm_disk_destination_directory: "{{ stage_vm_disk_test_directory }}"
+
+    - name: Stage disk with a correct sha512 and a wrong sha256 dummy (strongest algorithm must win)
+      ansible.builtin.include_role:
+        name: stage_vm_disk
+      vars:
+        stage_vm_disk_label: vm-checksum-preference
+        stage_vm_disk_local_source: "{{ stage_vm_disk_test_local_disk }}"
+        stage_vm_disk_checksum:
+          sha512: "{{ stage_vm_disk_test_sha512 }}"
+          sha256: "{{ stage_vm_disk_test_badsum }}"
+        stage_vm_disk_destination: "{{ stage_vm_disk_test_directory }}/vm-checksum-preference.qcow2"
+
+    - name: Attempt staging from a remote source with a wrong checksum
+      block:
+        - name: Stage disk for vm-remote-badsum
+          ansible.builtin.include_role:
+            name: stage_vm_disk
+          vars:
+            stage_vm_disk_label: vm-remote-badsum
+            stage_vm_disk_remote_source: "{{ stage_vm_disk_test_remote_disk }}"
+            stage_vm_disk_checksum:
+              sha256: "{{ stage_vm_disk_test_badsum }}"
+            stage_vm_disk_destination: "{{ stage_vm_disk_test_directory }}/vm-remote-badsum.qcow2"
+        - name: Record unexpected success
+          ansible.builtin.set_fact:
+            stage_vm_disk_test_remote_badsum_rejected: false
+      rescue:
+        - name: Record expected failure
+          ansible.builtin.set_fact:
+            stage_vm_disk_test_remote_badsum_rejected: true
+
+    - name: Attempt staging from a local source with a wrong checksum
+      tags: molecule-idempotence-notest  # copies and removes the disk on every run by design
+      block:
+        - name: Stage disk for vm-local-badsum
+          ansible.builtin.include_role:
+            name: stage_vm_disk
+          vars:
+            stage_vm_disk_label: vm-local-badsum
+            stage_vm_disk_local_source: "{{ stage_vm_disk_test_local_disk }}"
+            stage_vm_disk_checksum:
+              sha256: "{{ stage_vm_disk_test_badsum }}"
+            stage_vm_disk_destination: "{{ stage_vm_disk_test_directory }}/vm-local-badsum.qcow2"
+        - name: Record unexpected success
+          ansible.builtin.set_fact:
+            stage_vm_disk_test_local_badsum_rejected: false
+      rescue:
+        - name: Record expected failure
+          ansible.builtin.set_fact:
+            stage_vm_disk_test_local_badsum_rejected: true
+
+    - name: Attempt staging with an unsupported checksum algorithm
+      block:
+        - name: Stage disk for vm-unsupported-algo
+          ansible.builtin.include_role:
+            name: stage_vm_disk
+          vars:
+            stage_vm_disk_label: vm-unsupported-algo
+            stage_vm_disk_local_source: "{{ stage_vm_disk_test_local_disk }}"
+            stage_vm_disk_checksum:
+              md5: "00000000000000000000000000000000"
+            stage_vm_disk_destination: "{{ stage_vm_disk_test_directory }}/vm-unsupported-algo.qcow2"
+        - name: Record unexpected success
+          ansible.builtin.set_fact:
+            stage_vm_disk_test_unsupported_algo_rejected: false
+      rescue:
+        - name: Record expected failure
+          ansible.builtin.set_fact:
+            stage_vm_disk_test_unsupported_algo_rejected: true
+
+    - name: Attempt staging from a remote source without a checksum
+      block:
+        - name: Stage disk for vm-remote-nosum
+          ansible.builtin.include_role:
+            name: stage_vm_disk
+          vars:
+            stage_vm_disk_label: vm-remote-nosum
+            stage_vm_disk_remote_source: "{{ stage_vm_disk_test_remote_disk }}"
+            stage_vm_disk_destination: "{{ stage_vm_disk_test_directory }}/vm-remote-nosum.qcow2"
+        - name: Record unexpected success
+          ansible.builtin.set_fact:
+            stage_vm_disk_test_remote_nosum_rejected: false
+      rescue:
+        - name: Record expected failure
+          ansible.builtin.set_fact:
+            stage_vm_disk_test_remote_nosum_rejected: true
+
+    - name: Attempt staging without any disk source
+      block:
+        - name: Stage disk for vm-no-source
+          ansible.builtin.include_role:
+            name: stage_vm_disk
+          vars:
+            stage_vm_disk_label: vm-no-source
+            stage_vm_disk_destination: "{{ stage_vm_disk_test_directory }}/vm-no-source.qcow2"
+        - name: Record unexpected success
+          ansible.builtin.set_fact:
+            stage_vm_disk_test_no_source_rejected: false
+      rescue:
+        - name: Record expected failure
+          ansible.builtin.set_fact:
+            stage_vm_disk_test_no_source_rejected: true
+
+    - name: Attempt staging with both disk sources set
+      block:
+        - name: Stage disk for vm-both-sources
+          ansible.builtin.include_role:
+            name: stage_vm_disk
+          vars:
+            stage_vm_disk_label: vm-both-sources
+            stage_vm_disk_local_source: "{{ stage_vm_disk_test_local_disk }}"
+            stage_vm_disk_remote_source: "{{ stage_vm_disk_test_remote_disk }}"
+            stage_vm_disk_checksum:
+              sha256: "{{ stage_vm_disk_test_sha256 }}"
+            stage_vm_disk_destination: "{{ stage_vm_disk_test_directory }}/vm-both-sources.qcow2"
+        - name: Record unexpected success
+          ansible.builtin.set_fact:
+            stage_vm_disk_test_both_sources_rejected: false
+      rescue:
+        - name: Record expected failure
+          ansible.builtin.set_fact:
+            stage_vm_disk_test_both_sources_rejected: true
+
+    - name: Attempt staging with a URL as local source
+      block:
+        - name: Stage disk for vm-local-url
+          ansible.builtin.include_role:
+            name: stage_vm_disk
+          vars:
+            stage_vm_disk_label: vm-local-url
+            stage_vm_disk_local_source: "{{ stage_vm_disk_test_remote_disk }}"
+            stage_vm_disk_checksum:
+              sha256: "{{ stage_vm_disk_test_sha256 }}"
+            stage_vm_disk_destination: "{{ stage_vm_disk_test_directory }}/vm-local-url.qcow2"
+        - name: Record unexpected success
+          ansible.builtin.set_fact:
+            stage_vm_disk_test_local_url_rejected: false
+      rescue:
+        - name: Record expected failure
+          ansible.builtin.set_fact:
+            stage_vm_disk_test_local_url_rejected: true
+
+    - name: Attempt staging with a checksum that is not a dict
+      block:
+        - name: Stage disk for vm-string-checksum
+          ansible.builtin.include_role:
+            name: stage_vm_disk
+          vars:
+            stage_vm_disk_label: vm-string-checksum
+            stage_vm_disk_local_source: "{{ stage_vm_disk_test_local_disk }}"
+            stage_vm_disk_checksum: "{{ stage_vm_disk_test_sha256 }}"
+            stage_vm_disk_destination: "{{ stage_vm_disk_test_directory }}/vm-string-checksum.qcow2"
+        - name: Record unexpected success
+          ansible.builtin.set_fact:
+            stage_vm_disk_test_string_checksum_rejected: false
+      rescue:
+        - name: Record expected failure
+          ansible.builtin.set_fact:
+            stage_vm_disk_test_string_checksum_rejected: true
+
+    - name: Attempt staging without a destination
+      block:
+        - name: Stage disk for vm-no-destination
+          ansible.builtin.include_role:
+            name: stage_vm_disk
+          vars:
+            stage_vm_disk_label: vm-no-destination
+            stage_vm_disk_local_source: "{{ stage_vm_disk_test_local_disk }}"
+        - name: Record unexpected success
+          ansible.builtin.set_fact:
+            stage_vm_disk_test_no_destination_rejected: false
+      rescue:
+        - name: Record expected failure
+          ansible.builtin.set_fact:
+            stage_vm_disk_test_no_destination_rejected: true
+
+    - name: Normalize a mixed additional disk list
+      ansible.builtin.include_role:
+        name: stage_vm_disk
+        tasks_from: normalize
+      vars:
+        stage_vm_disk_label: normalize-test
+        stage_vm_disk_disks:
+          - "../files/plain.qcow2"
+          - path: "{{ stage_vm_disk_test_local_disk }}"
+            sha256: "{{ stage_vm_disk_test_sha256 }}"
+            label: "scada-data"
+          - path: "{{ stage_vm_disk_test_remote_disk }}"
+            sha256: "{{ stage_vm_disk_test_sha256 }}"
+
+    - name: Assert normalized disk entries
+      ansible.builtin.assert:
+        that:
+          - stage_vm_disk_normalized_disks | length == 3
+          - stage_vm_disk_normalized_disks[0].file == 'plain.qcow2'
+          - stage_vm_disk_normalized_disks[0].label == ''
+          - stage_vm_disk_normalized_disks[0].local_source == '../files/plain.qcow2'
+          - stage_vm_disk_normalized_disks[0].remote_source == ''
+          - stage_vm_disk_normalized_disks[0].checksum == {}
+          - stage_vm_disk_normalized_disks[1].label == 'scada-data'
+          - stage_vm_disk_normalized_disks[1].local_source == stage_vm_disk_test_local_disk
+          - stage_vm_disk_normalized_disks[1].remote_source == ''
+          - stage_vm_disk_normalized_disks[1].checksum.sha256 == stage_vm_disk_test_sha256
+          - stage_vm_disk_normalized_disks[2].file == 'guest.qcow2'
+          - stage_vm_disk_normalized_disks[2].label == ''
+          - stage_vm_disk_normalized_disks[2].local_source == ''
+          - stage_vm_disk_normalized_disks[2].remote_source == stage_vm_disk_test_remote_disk
+        fail_msg: "Normalization produced unexpected entries: {{ stage_vm_disk_normalized_disks }}"
+
+    - name: Attempt normalizing an invalid disk entry
+      block:
+        - name: Normalize a dict entry with an unsupported key
+          ansible.builtin.include_role:
+            name: stage_vm_disk
+            tasks_from: normalize
+          vars:
+            stage_vm_disk_label: normalize-invalid
+            stage_vm_disk_disks:
+              - url: "{{ stage_vm_disk_test_remote_disk }}"
+                sha256: "{{ stage_vm_disk_test_sha256 }}"
+        - name: Record unexpected success
+          ansible.builtin.set_fact:
+            stage_vm_disk_test_invalid_entry_rejected: false
+      rescue:
+        - name: Record expected failure
+          ansible.builtin.set_fact:
+            stage_vm_disk_test_invalid_entry_rejected: true
+
+    - name: Attempt normalizing a disk entry with an invalid label
+      block:
+        - name: Normalize a dict entry with a label containing a path separator
+          ansible.builtin.include_role:
+            name: stage_vm_disk
+            tasks_from: normalize
+          vars:
+            stage_vm_disk_label: normalize-invalid-label
+            stage_vm_disk_disks:
+              - path: "{{ stage_vm_disk_test_local_disk }}"
+                sha256: "{{ stage_vm_disk_test_sha256 }}"
+                label: "../escape"
+        - name: Record unexpected success
+          ansible.builtin.set_fact:
+            stage_vm_disk_test_invalid_label_rejected: false
+      rescue:
+        - name: Record expected failure
+          ansible.builtin.set_fact:
+            stage_vm_disk_test_invalid_label_rejected: true
+
+    - name: Assert invalid disk source configurations were rejected
+      tags: molecule-idempotence-notest  # depends on facts from the skipped attempt above
+      ansible.builtin.assert:
+        that:
+          - stage_vm_disk_test_remote_badsum_rejected
+          - stage_vm_disk_test_local_badsum_rejected
+          - stage_vm_disk_test_unsupported_algo_rejected
+          - stage_vm_disk_test_remote_nosum_rejected
+          - stage_vm_disk_test_no_source_rejected
+          - stage_vm_disk_test_both_sources_rejected
+          - stage_vm_disk_test_local_url_rejected
+          - stage_vm_disk_test_string_checksum_rejected
+          - stage_vm_disk_test_no_destination_rejected
+          - stage_vm_disk_test_invalid_entry_rejected
+          - stage_vm_disk_test_invalid_label_rejected
+        fail_msg: >-
+          Expected stage_vm_disk to fail for wrong remote checksum ({{ stage_vm_disk_test_remote_badsum_rejected }}),
+          wrong local checksum ({{ stage_vm_disk_test_local_badsum_rejected }}),
+          unsupported checksum algorithm ({{ stage_vm_disk_test_unsupported_algo_rejected }}),
+          missing checksum for a remote disk ({{ stage_vm_disk_test_remote_nosum_rejected }}),
+          missing source ({{ stage_vm_disk_test_no_source_rejected }}),
+          conflicting sources ({{ stage_vm_disk_test_both_sources_rejected }}),
+          a URL as local source ({{ stage_vm_disk_test_local_url_rejected }}),
+          a checksum that is not a dict ({{ stage_vm_disk_test_string_checksum_rejected }}),
+          a missing destination ({{ stage_vm_disk_test_no_destination_rejected }}),
+          an invalid normalize entry ({{ stage_vm_disk_test_invalid_entry_rejected }}) and
+          an invalid disk label ({{ stage_vm_disk_test_invalid_label_rejected }}).
