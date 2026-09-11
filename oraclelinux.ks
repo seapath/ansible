@@ -1,3 +1,14 @@
+# =============================================================================
+# WARNING: NON-PRODUCTION KICKSTART FILE
+#
+# This is an undocumented, non-production kickstart used only to build
+# disposable test/lab machines. It hardcodes DEFAULT PASSWORDS for the admin,
+# ansible and root accounts, enables root SSH login and grants passwordless
+# sudo. Every credential in this file must be considered public.
+#
+# DO NOT DEPLOY THIS FILE AS-IS. Regenerate all passwords and SSH keys, review
+# the security settings, and adapt the disk/network values before any real use.
+# =============================================================================
 # Installation process
 text
 reboot
