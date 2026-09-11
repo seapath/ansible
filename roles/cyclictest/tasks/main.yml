@@ -7,6 +7,27 @@
     state: directory
   register: cyclictest_tmp_test_dir
 
+# cyclictest comes from the `rt-tests` package, which nothing in this
+# collection installs. Without this check the run reaches the script, which
+# does not catch the missing binary, and the operator gets a Python traceback
+# ending in FileNotFoundError instead of the name of the package to install.
+#
+# `shell` rather than `command`, because `command -v` is a shell builtin. `which`
+# is a real binary but is absent from the minimal images this has to work on.
+- name: Look for cyclictest # noqa: command-instead-of-shell
+  ansible.builtin.shell: command -v cyclictest
+  register: cyclictest_binary
+  changed_when: false
+  failed_when: false
+
+- name: Fail with the name of the package rather than with a traceback
+  ansible.builtin.fail:
+    msg: >-
+      cyclictest is not installed on {{ inventory_hostname }}. The rt-tests
+      package provides it. Nothing here installs it, because a latency
+      measurement must change nothing on the machines it measures.
+  when: cyclictest_binary.rc != 0
+
 - name: Copy cyclictest script
   ansible.builtin.copy:
     src: run_cyclictest.py
