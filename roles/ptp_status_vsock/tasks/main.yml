@@ -15,11 +15,13 @@
         src: ptpstatus/ptpstatus.sh.j2
         dest: /var/lib/ptp/ptpstatus.sh
         mode: "0755"
+      register: ptp_status_vsock_ptpstatus_script
     - name: Copy ptp_vsock executable files
       ansible.builtin.copy:
         src: ptp_vsock.py
         dest: /var/lib/ptp/ptp_vsock.py
         mode: "0755"
+      register: ptp_status_vsock_ptpvsock_script
 
     - name: Copy ptp_status.service
       ansible.builtin.copy:
@@ -37,13 +39,23 @@
       ansible.builtin.service:
         daemon_reload: true
       when: ptp_status_vsock_ptpstatus.changed or ptp_status_vsock_ptpvsock.changed
+    # A running service keeps the script and the unit it was started with,
+    # so a change to either is only picked up by a restart.
     - name: Enable ptpstatus.service
       ansible.builtin.systemd:
         name: ptpstatus.service
         enabled: true
-        state: started
+        state: >-
+          {{ 'restarted'
+             if ptp_status_vsock_ptpstatus_script.changed
+             or ptp_status_vsock_ptpstatus.changed
+             else 'started' }}
     - name: Enable ptp_vsock.service
       ansible.builtin.systemd:
         name: ptp_vsock.service
         enabled: true
-        state: started
+        state: >-
+          {{ 'restarted'
+             if ptp_status_vsock_ptpvsock_script.changed
+             or ptp_status_vsock_ptpvsock.changed
+             else 'started' }}
