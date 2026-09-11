@@ -18,14 +18,21 @@
     append: false
   no_log: true
 
+# Privilege model: the administrative operator (admin_user) is intentionally
+# granted passwordless sudo. The vm_manager service runs as root and there is
+# no RBAC layer yet, so the admin must be able to operate the platform without
+# an interactive password prompt. This is a deliberate, documented design
+# decision, not an oversight. Restrict who can log in as admin_user and protect
+# its SSH credentials accordingly.
 - name: Install sudo admin user rules
   ansible.builtin.copy:
     content: |
-      {{ admin_user }}   ALL=NOPASSWD:EXEC: ALL
+      {{ admin_user }}   ALL=(ALL) NOPASSWD: ALL
     dest: "/etc/sudoers.d/{{ admin_user }}"
     owner: root
     group: root
     mode: "0440"
+    validate: visudo -cf %s
 - name: Remove admin sudoers line created by image build
   ansible.builtin.lineinfile:
     dest: /etc/sudoers
