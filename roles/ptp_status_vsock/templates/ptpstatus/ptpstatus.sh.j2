@@ -453,6 +453,17 @@ set -u
 
 declare -i STATE_PTP_CLOCK_ACCURACY_MIN=0x23 # 1 us
 
+# node_exporter's textfile collector directory, created by
+# deploy_prometheus_exporters. The same status is published there as
+# seapath_ptp_* so a machine can be asked over HTTP what the guests are told
+# over vsock. Nothing is written when the directory is absent.
+PROM_DIR="/var/lib/prometheus/node_exporter"
+PROM_FILE="$PROM_DIR/seapath_ptp.prom"
+# Rewritten this often, in loops of one second, and at once on a SmpSync
+# change. Often enough for a reader to tell a stopped ptpstatus from a live
+# one, and rare enough to spare the disk a write every second.
+declare -i PROM_EVERY=10
+
 
 ##############################################################################
 #
@@ -480,12 +491,19 @@ declare -i STATE_PTP_CLOCK_ACCURACY_DEFAULT=0xfe
 STATE_PTP_GM_PRESENT=""
 declare -i STATE_PTP_CLOCK_CLASS=0
 declare -i STATE_PTP_CLOCK_ACCURACY=0
+# Only published, never used to derive SmpSync
+STATE_PTP_GM_IDENTITY=""
+STATE_PTP_PORT_STATE=""
+STATE_PTP_MASTER_OFFSET=""
 
 # Reset state to default
 function resetState() {
   STATE_PTP_GM_PRESENT="$STATE_PTP_GM_PRESENT_DEFAULT"
   STATE_PTP_CLOCK_CLASS=$STATE_PTP_CLOCK_CLASS_DEFAULT
   STATE_PTP_CLOCK_ACCURACY=$STATE_PTP_CLOCK_ACCURACY_DEFAULT
+  STATE_PTP_GM_IDENTITY=""
+  STATE_PTP_PORT_STATE=""
+  STATE_PTP_MASTER_OFFSET=""
 }
 
 
@@ -520,6 +538,18 @@ function getPtpStatus() {
       'GET PORT_DATA_SET' \
       2> /dev/null)"
   echo "$_pmcOutput" > "$PTP_DETAILS_FILE"
+
+  # Read whether or not a GM clock is present: the port state is what says
+  # why there is none.
+  STATE_PTP_GM_IDENTITY="$( \
+    echo "$_pmcOutput" | \
+    awk '/gmIdentity/ {print $2; exit}' | tr -d '\r\n[:space:]')"
+  STATE_PTP_PORT_STATE="$( \
+    echo "$_pmcOutput" | \
+    awk '/portState/ {print $2; exit}' | tr -d '\r\n[:space:]')"
+  STATE_PTP_MASTER_OFFSET="$( \
+    echo "$_pmcOutput" | \
+    awk '/master_offset/ {print $2; exit}' | tr -d '\r\n[:space:]')"
 
   # Determine whether a GM clock is present
   # We extract gmPresent and ensure we only get one clean value
@@ -593,6 +623,58 @@ function writePtpStatusFile() {
 }
 
 
+# Keep a label value to the characters pmc prints for it
+function promLabel() {
+  printf '%s' "$1" | tr -cd 'A-Za-z0-9._:-'
+}
+
+
+# Publish the PTP status for node_exporter's textfile collector
+declare -i STATE_PROM_LOOPS=0
+function writeMetricsFile() {
+  local -i _smpSync=$1
+  local _changed=$2
+
+  [[ -d "$PROM_DIR" ]] || return 0
+
+  STATE_PROM_LOOPS=$((STATE_PROM_LOOPS + 1))
+  if [[ "$_changed" != "true" ]] && [[ $STATE_PROM_LOOPS -lt $PROM_EVERY ]]; then
+    return 0
+  fi
+  STATE_PROM_LOOPS=0
+
+  local _offset=""
+  if [[ "$STATE_PTP_MASTER_OFFSET" =~ ^-?[0-9]+$ ]]; then
+    # The C locale, or a French one prints a decimal comma no scraper reads
+    _offset="$(LC_ALL=C awk -v ns="$STATE_PTP_MASTER_OFFSET" 'BEGIN {printf "%.9f", ns / 1e9}')"
+  fi
+
+  # Written aside and renamed, so a scrape never reads half a file
+  local _tmp="$PROM_FILE.$$"
+  {
+    echo "# HELP seapath_ptp_info The grandmaster this machine follows, as pmc reports it."
+    echo "# TYPE seapath_ptp_info gauge"
+    printf 'seapath_ptp_info{gm_present="%s",gm_identity="%s",clock_class="%d",clock_accuracy="0x%02x",port_state="%s"} 1\n' \
+      "$(promLabel "$STATE_PTP_GM_PRESENT")" \
+      "$(promLabel "$STATE_PTP_GM_IDENTITY")" \
+      "$STATE_PTP_CLOCK_CLASS" \
+      "$STATE_PTP_CLOCK_ACCURACY" \
+      "$(promLabel "$STATE_PTP_PORT_STATE")"
+    echo "# HELP seapath_ptp_smpsynch IEC 61850-9-2 SmpSynch: 0 none, 1 local, 2 global."
+    echo "# TYPE seapath_ptp_smpsynch gauge"
+    echo "seapath_ptp_smpsynch $_smpSync"
+    if [[ -n "$_offset" ]]; then
+      echo "# HELP seapath_ptp_master_offset_seconds ptp4l offset from its master."
+      echo "# TYPE seapath_ptp_master_offset_seconds gauge"
+      echo "seapath_ptp_master_offset_seconds $_offset"
+    fi
+    echo "# HELP seapath_ptp_timestamp_seconds When ptpstatus wrote this file."
+    echo "# TYPE seapath_ptp_timestamp_seconds gauge"
+    echo "seapath_ptp_timestamp_seconds $(date +%s)"
+  } > "$_tmp" && mv -f "$_tmp" "$PROM_FILE" || rm -f "$_tmp"
+}
+
+
 ##############################################################################
 #
 # Main
@@ -626,6 +708,12 @@ declare -i SMPSYNC=0
 
 while true; do
   getPtpStatus "SMPSYNC"
+  if [[ $SMPSYNC -ne $STATE_STATUS_CLOCK_SYNC_WRITTEN ]]; then
+    SMPSYNC_CHANGED="true"
+  else
+    SMPSYNC_CHANGED="false"
+  fi
   writePtpStatusFile $SMPSYNC
+  writeMetricsFile $SMPSYNC "$SMPSYNC_CHANGED"
   sleep 1
 done
