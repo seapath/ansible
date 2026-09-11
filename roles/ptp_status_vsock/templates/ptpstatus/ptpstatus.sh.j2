@@ -537,16 +537,16 @@ function getPtpStatus() {
   # A GM clock is present
 
   # Determine the GM clock class
-  # We extract gmPresent and ensure we only get one clean value
+  # We extract gm.ClockClass and ensure we only get one clean value
   local _STATE_PTP_CLOCK_CLASS="$( \
     echo "$_pmcOutput" | \
-    awk '/gmPresent/ {print tolower($2); exit}' | tr -d '\r\n[:space:]')"
+    awk '/gm\.ClockClass/ {print $2; exit}' | tr -d '\r\n[:space:]')"
   STATE_PTP_CLOCK_CLASS=${_STATE_PTP_CLOCK_CLASS:-$STATE_PTP_CLOCK_CLASS_DEFAULT}
 
   # Determine the GM clock accuracy
   local _STATE_PTP_CLOCK_ACCURACY=$( \
     echo "$_pmcOutput" | \
-    awk '/gm.clockAccuracy/ {print $2; exit}' | tr -d '\r\n[:space:]')
+    awk '/gm\.ClockAccuracy/ {print $2; exit}' | tr -d '\r\n[:space:]')
   STATE_PTP_CLOCK_ACCURACY=${_STATE_PTP_CLOCK_ACCURACY:-$STATE_PTP_CLOCK_ACCURACY_DEFAULT}
 
   # Determine if the clock class is global
@@ -559,7 +559,7 @@ function getPtpStatus() {
 
   # Determine if the GM clock accuracy is within spec
   local -i _clockIsAccurate=0
-  if [[ $STATE_PTP_CLOCK_ACCURACY -ge 0x20 ]] || \
+  if [[ $STATE_PTP_CLOCK_ACCURACY -ge 0x20 ]] && \
      [[ $STATE_PTP_CLOCK_ACCURACY -le $STATE_PTP_CLOCK_ACCURACY_MIN ]]; then
     # The GM clock accuracy is within spec
     _clockIsAccurate=1
