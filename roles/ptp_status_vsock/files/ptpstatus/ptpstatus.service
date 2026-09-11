@@ -2,7 +2,6 @@
 Description=gets ptp status
 
 [Service]
-ExecStartPre=rm -rf /var/run/ptpstatus
 ExecStartPre=mkdir -p /var/run/ptpstatus
 ExecStart=/var/lib/ptp/ptpstatus.sh /var/run/ptpstatus/ptp_state /var/run/ptpstatus/ptp_status
 
