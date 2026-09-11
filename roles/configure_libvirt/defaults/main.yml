@@ -3,3 +3,4 @@
 
 ---
 configure_libvirt_allow_non_root_libvirt_socket_access: true
+configure_libvirt_deploy_seapath_qemu_hook: false

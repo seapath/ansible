@@ -1,0 +1,45 @@
+---
+- name: Verify default libvirt configuration
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Check libvirtd configuration
+      ansible.builtin.stat:
+        path: /etc/libvirt/libvirtd.conf
+      register: configure_libvirt_conf_stat
+
+    - name: Assert libvirtd configuration ownership and permissions
+      ansible.builtin.assert:
+        that:
+          - configure_libvirt_conf_stat.stat.exists
+          - configure_libvirt_conf_stat.stat.isreg
+          - configure_libvirt_conf_stat.stat.mode == "0644"
+          - configure_libvirt_conf_stat.stat.pw_name == "root"
+          - configure_libvirt_conf_stat.stat.gr_name == "root"
+
+    - name: Read libvirtd configuration
+      ansible.builtin.slurp:
+        path: /etc/libvirt/libvirtd.conf
+      register: configure_libvirt_conf
+
+    - name: Assert libvirtd configuration grants libvirt group access
+      ansible.builtin.assert:
+        that:
+          - "'listen_tls = 0' in (configure_libvirt_conf.content | b64decode)"
+          - "'listen_tcp = 0' in (configure_libvirt_conf.content | b64decode)"
+          - "'unix_sock_ro_perms = \"0770\"' in (configure_libvirt_conf.content | b64decode)"
+          - "'unix_sock_rw_perms = \"0770\"' in (configure_libvirt_conf.content | b64decode)"
+          - "'unix_sock_group = \"libvirt\"' in (configure_libvirt_conf.content | b64decode)"
+          - "'host_uuid = \"' ~ (inventory_hostname | to_uuid) ~ '\"' in (configure_libvirt_conf.content | b64decode)"
+
+    - name: Check disabled qemu hook is absent
+      ansible.builtin.stat:
+        path: /etc/libvirt/hooks/qemu.d/seapath_qemu_hook.py
+      register: configure_libvirt_qemu_hook
+
+    - name: Assert disabled qemu hook is absent
+      ansible.builtin.assert:
+        that:
+          - not configure_libvirt_qemu_hook.stat.exists

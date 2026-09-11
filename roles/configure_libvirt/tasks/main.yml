@@ -12,14 +12,7 @@
     mode: "0644"
   when:
     - configure_libvirt_allow_non_root_libvirt_socket_access
-  register: configure_libvirt_libvirtd_conf
-
-# Restart libvirtd if configuration changed
-- name: Restart libvirtd
-  ansible.builtin.systemd:
-    name: libvirtd
-    state: restarted
-  when: configure_libvirt_libvirtd_conf.changed # noqa: no-handler
+  notify: Restart libvirtd
 
 # OracleLinux specific
 - name: Enable and start virtsecretd.socket
@@ -40,3 +33,30 @@
     state: started
     enabled: true
   when: seapath_distro == "OracleLinux"
+
+- name: Ensure libvirt hooks/qemu.d directory exists
+  ansible.builtin.file:
+    path: /etc/libvirt/hooks/qemu.d/
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  when: configure_libvirt_deploy_seapath_qemu_hook
+  notify: Restart libvirtd
+
+- name: Copy qemu_hook.py to libvirt qemu hook
+  ansible.builtin.copy:
+    src: qemu_hook.py
+    dest: /etc/libvirt/hooks/qemu.d/seapath_qemu_hook.py
+    mode: '0755'
+    owner: root
+    group: root
+  when: configure_libvirt_deploy_seapath_qemu_hook
+  notify: Restart libvirtd
+
+- name: Remove seapath qemu hook when disabled
+  ansible.builtin.file:
+    path: /etc/libvirt/hooks/qemu.d/seapath_qemu_hook.py
+    state: absent
+  when: not configure_libvirt_deploy_seapath_qemu_hook
+  notify: Restart libvirtd
