@@ -3,3 +3,5 @@
 
 ---
 cephadm_release: "20.2.0"
+cephadm_prometheus_exporter_enabled: true
+cephadm_prometheus_listen_address: "{{ ip_addr | default(ansible_host) }}"

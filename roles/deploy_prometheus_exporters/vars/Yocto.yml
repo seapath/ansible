@@ -1,0 +1,11 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+# Yocto support is not implemented yet; skip deployment until it is added.
+deploy_prometheus_exporters_enabled: false
+deploy_prometheus_exporters_register_essential_services: false
+
+deploy_prometheus_exporters_libvirt_exporter_socket: /var/run/libvirt/libvirt-sock-ro
+deploy_prometheus_exporters_insatomcat_libvirt_socket: /var/run/libvirt/libvirt-sock
+deploy_prometheus_exporters_insatomcat_qemu_dir: /var/run/libvirt/qemu
+deploy_prometheus_exporters_libvirt_systemd_unit: libvirtd.service
