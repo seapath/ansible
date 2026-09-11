@@ -3,6 +3,17 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+- name: Assert that a real grub password hash is provided
+  ansible.builtin.assert:
+    that:
+      - grub_password is defined
+      - grub_password is match('^grub\.pbkdf2\.sha512\.[0-9]+\.[0-9A-Fa-f]+\.[0-9A-Fa-f]+$')
+    fail_msg: >-
+      grub_password is not defined or is not a valid PBKDF2 hash (the example
+      inventory placeholder is not accepted). Generate one with
+      grub-mkpasswd-pbkdf2 -c 65536 and set grub_password.
+    quiet: true
+  when: not revert
 - name: Set grub password
   ansible.builtin.template:
     src: "01_password.j2"
