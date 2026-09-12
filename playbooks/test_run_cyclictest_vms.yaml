@@ -1,0 +1,32 @@
+# Copyright (C) 2026, RTE (http://www.rte-france.com)
+# SPDX-License-Identifier: Apache-2.0
+
+# Ansible playbook that measures the latency inside the guests with cyclictest
+# and fetches the histogram to the control machine.
+#
+# `test_run_cyclictest.yaml` measures the hypervisors, which is where the
+# scheduler a guest waits behind runs. An application inside a guest waits for
+# that plus the virtualisation: the scheduling of its vCPU threads, the VM
+# exits, the virtualised timer. This playbook is the same role played inside
+# the guests, so the two figures can be read side by side and the difference
+# between them read as what virtualisation costs.
+#
+# A guest is reached over SSH like any other host, so its entry in the `VMs`
+# group needs an `ansible_host` and an account this control machine holds a key
+# for. `rt-tests` must already be installed in the guest: the role refuses to
+# install it, because a measurement must change nothing on what it measures.
+#
+# Limit it to one guest. Played as it stands it loads every guest of the
+# inventory at real time priority at once, and a guest measured while its
+# neighbours are being measured reports the contention between them rather than
+# its own latency:
+#
+#     ansible-playbook seapath.ansible.test_run_cyclictest_vms --limit rtvm
+
+---
+- name: Measure the latency inside the guests with cyclictest
+  hosts: VMs
+  become: true
+  gather_facts: false
+  roles:
+    - cyclictest
