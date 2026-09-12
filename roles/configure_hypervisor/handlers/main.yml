@@ -27,7 +27,3 @@
     - "machine-rt"
     - "machine-nort"
     - "ovs"
-
-- name: Reload systemd units
-  ansible.builtin.systemd:
-    daemon_reload: true
