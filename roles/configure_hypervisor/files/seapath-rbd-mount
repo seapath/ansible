@@ -43,6 +43,13 @@ RBD_IMAGE="${POOL}/${IMAGE}"
 MOUNTPOINT="/mnt/rbd/${IMAGE}"
 DEV_PATH="/dev/rbd/${POOL}/${IMAGE}"
 
+WAIT_TIMEOUT=300
+WAIT_INTERVAL=10
+WAIT_ATTEMPT_TIMEOUT=15
+# Comfortably longer than one iteration (attempt + sleep), so the start
+# deadline is always pushed past the next attempt.
+EXTEND_USEC=$(((WAIT_INTERVAL + WAIT_ATTEMPT_TIMEOUT) * 2 * 1000000))
+
 log() { echo "seapath-rbd-mount: $*" >&2; }
 die() { log "$*"; exit 1; }
 count_lines() { printf '%s\n' "$1" | wc -l; }
@@ -157,6 +164,64 @@ if [ -n "$remaining" ]; then
     die "$RBD_IMAGE still mapped after cleanup" \
         "($(printf '%s' "$remaining" | tr '\n' ' ')), refusing to stack a second mapping"
 fi
+
+# ---------------------------------------------------------------------------
+# wait_for_pool - block until the pool answers
+#
+# Everything above this point is local state: /sys/bus/rbd through
+# `rbd device list`, and the mount table.  Everything below needs the cluster
+# to answer.  At boot the quorum forms a minute or two after
+# network-online.target, which is when the calling unit starts, so the
+# `rbd info` below would fail on a node that is otherwise perfectly healthy,
+# and `Restart=` would then retry the container against a cluster that is
+# still forming.
+#
+# Listing the pool is the readiness criterion rather than a mon ping: it is
+# exactly what the steps below need to succeed (quorum reached, OSD map
+# received, pool present and readable with the local keyring).
+#
+# Each attempt is wrapped in `timeout` because rbd retries a mon connection on
+# its own for far longer than the interval, which would make the deadline
+# meaningless.
+#
+# EXTEND_TIMEOUT_USEC is what allows a 300 s wait inside ExecStartPre=:
+# TimeoutStartSec covers the whole start-up, ExecStartPre= included, and
+# defaults to 90 s.  Each notification pushes that deadline back.  It requires
+# NotifyAccess=all, which podman's quadlet generator emits for every container
+# unit.  Outside that context (run by hand, or from a unit that is not
+# Type=notify) the notification is refused, the wait is capped by the caller's
+# own timeout, and the log line below says so once.
+# ---------------------------------------------------------------------------
+
+wait_for_pool() {
+    local deadline=$((SECONDS + WAIT_TIMEOUT))
+    local warned=0
+
+    while :; do
+        if timeout "$WAIT_ATTEMPT_TIMEOUT" rbd --pool "$POOL" ls \
+            > /dev/null 2>&1; then
+            return 0
+        fi
+
+        [ "$SECONDS" -lt "$deadline" ] || break
+
+        if ! systemd-notify "EXTEND_TIMEOUT_USEC=${EXTEND_USEC}" 2> /dev/null
+        then
+            if [ "$warned" -eq 0 ]; then
+                log "systemd-notify refused: the wait is capped by the" \
+                    "caller's own timeout, not by ${WAIT_TIMEOUT}s"
+                warned=1
+            fi
+        fi
+
+        log "waiting for Ceph pool $POOL ..."
+        sleep "$WAIT_INTERVAL"
+    done
+
+    die "Ceph pool $POOL not reachable after ${WAIT_TIMEOUT}s"
+}
+
+wait_for_pool
 
 # ---------------------------------------------------------------------------
 # Create the RBD image on first use
