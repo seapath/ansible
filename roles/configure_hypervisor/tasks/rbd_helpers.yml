@@ -16,3 +16,23 @@
     owner: root
     group: root
     mode: "0755"
+
+- name: Install wait-for-rbd helper
+  ansible.builtin.copy:
+    src: wait-for-rbd.sh
+    dest: /usr/local/bin/wait-for-rbd.sh
+    owner: root
+    group: root
+    mode: "0755"
+
+# Not enabled: the unit has no [Install] section and is pulled in by the
+# quadlets that declare Requires=ceph-rbd-ready.service, so it stays inert on
+# a hypervisor with no RBD-backed container.
+- name: Install ceph-rbd-ready readiness gate
+  ansible.builtin.copy:
+    src: ceph-rbd-ready.service
+    dest: /etc/systemd/system/ceph-rbd-ready.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd units
