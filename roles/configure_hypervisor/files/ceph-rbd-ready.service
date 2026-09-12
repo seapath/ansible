@@ -1,0 +1,26 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+#
+# Readiness gate for the containers whose volumes live on Ceph RBD images.
+#
+# This unit is deliberately not enabled: it carries no [Install] section and is
+# pulled in on demand by the units that need it, which keeps it inert on
+# hypervisors without Ceph.  A quadlet using an RBD volume declares:
+#
+#   [Unit]
+#   After=ceph.target ceph-rbd-ready.service
+#   Wants=ceph.target
+#   Requires=ceph-rbd-ready.service
+#
+# ceph.target is only wanted, never required: it does not exist on a node that
+# runs no local Ceph daemon, and requiring an absent unit fails the start.
+
+[Unit]
+Description=Wait for a usable Ceph RBD pool
+After=network-online.target ceph.target
+Wants=network-online.target ceph.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/wait-for-rbd.sh rbd
