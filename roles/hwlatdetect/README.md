@@ -19,14 +19,19 @@ firmware problem or a configuration one, and this is what tells the two apart.
   naming the package. Nothing here installs it: a measurement must change
   nothing on the machines it measures.
 - A kernel built with `CONFIG_HWLAT_TRACER`. The role checks for the tracer and
-  records its absence in the result rather than failing.
+  fails naming the kernel option.
 
-The two checks are deliberately different. A missing package is a machine that
-was not prepared, and the same machine answers as soon as it is, so the run
-stops and says which package. A missing tracer is a property of the kernel
-build that no package fixes, so a machine that will never answer is an expected
-state: a measurement plays every machine of the inventory, and one kernel that
-cannot answer must not take down a run that has already loaded the others.
+Both checks run before any machine starts measuring.
+
+## Failures
+
+The role fails when `hwlatdetect` does not complete its measurement. That
+check comes after the result is fetched: the machines measure in parallel, and
+failing earlier would stop the play before the machines that did measure bring
+their result back. The fetched file holds the exit status, stdout and stderr.
+
+`hwlatdetect` exits 1 when the worst gap exceeds the threshold. That is a
+finding, reported in the result file, and the role does not fail on it.
 
 ## A patched copy is what runs
 
