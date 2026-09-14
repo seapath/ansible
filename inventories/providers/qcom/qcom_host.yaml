@@ -1,0 +1,61 @@
+# This inventory describes a standalone SEAPATH machine (no cluster)
+# It contains all required variables to configure and run your standalone machine.
+# Replace all the TODOs to fit your physical machines.
+# More informations on SEAPATH Wiki: https://lf-energy.atlassian.net/wiki/x/BIDtGQ
+---
+all:
+  hosts:
+    seapath-host:
+      # Admin network settings
+      ansible_host: 192.168.132.161 # administration IP.
+      network_interface: enx0826ae394483 # Administration interface name.
+      interfaces_to_wait_for: ["enx0826ae394483"]
+      gateway_addr: 192.168.132.1  # Administration Gateway.
+      subnet: 24 # Subnet mask in CIDR notation.
+
+      # Time synchronisation
+      #ptp_interface: end0 # PTP interface receiving PTP frames.
+      ntp_servers:
+        - "192.168.132.17" # public NTP server example
+
+      # Main network configuration. Nothing to change here
+      ip_addr: "{{ ansible_host }}"
+      apply_network_config: true
+
+      # Ansible variables
+      ansible_connection: ssh
+      ansible_python_interpreter: /usr/bin/python3
+      ansible_remote_tmp: /tmp/.ansible/tmp
+      ansible_user: root
+
+  vars:
+    cyclictest_result_folder: "."
+
+# The machine is standalone
+standalone_machine:
+  hosts:
+    seapath-host:
+
+# The machine is an hypervisor
+hypervisors:
+  hosts:
+    seapath-host:
+  vars:
+    cyclictest_affinity: "0-7"
+    cyclictest_duration: 300 # 5 min
+    cyclictest_priority: 99
+    isolcpus: "2-N" # List of CPUs to isolate (Debian only). TODO
+
+# Empty groups to prevent warnings, mostly ceph-ansible
+grafana-server:
+iscsigws:
+iscsi-gws:
+mdss:
+mgrs:
+nfss:
+rbdmirrors:
+rgwloadbalancers:
+rgws:
+cluster_machines:
+
+...
