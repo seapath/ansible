@@ -36,8 +36,8 @@
 - name: Check whether the inventory describes the backups
   ansible.builtin.set_fact:
     backup_restore_from_inventory: "{{
-      [backup_local_dir, backup_local_tmp_dir, backup_remote_serv,
-       backup_remote_dir, backup_include_vm, backup_exclude_vm]
+      [backup_restore_local_dir, backup_restore_local_tmp_dir, backup_restore_remote_serv,
+       backup_restore_remote_dir, backup_restore_include_vm, backup_restore_exclude_vm]
       | select('truthy') | list | length > 0 }}"
 
 - name: Render /etc/backup-restore.conf from the inventory

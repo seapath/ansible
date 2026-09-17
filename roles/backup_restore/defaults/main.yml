@@ -7,10 +7,10 @@
 # file from them at every convergence, and the menu's own writes are replaced.
 # Leaving all seven unset keeps the previous behaviour, where the file is
 # created empty and filled from the menu on the machine.
-backup_local_dir: ""
-backup_local_tmp_dir: ""
-backup_remote_serv: ""
-backup_remote_dir: ""
-backup_remote_shell: ""
-backup_include_vm: ""
-backup_exclude_vm: ""
+backup_restore_local_dir: ""
+backup_restore_local_tmp_dir: ""
+backup_restore_remote_serv: ""
+backup_restore_remote_dir: ""
+backup_restore_remote_shell: ""
+backup_restore_include_vm: ""
+backup_restore_exclude_vm: ""
