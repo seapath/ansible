@@ -1,0 +1,22 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+# The local volumes this machine carries beyond what its installer laid out.
+# Each entry is a new partition, taken from the free space after the last
+# partition of a disk, formatted either directly or through LVM, and mounted
+# by UUID. Nothing that exists is ever resized, reformatted or removed: an
+# entry whose partition, volume or file system is already there is left as it
+# is. See the README for the keys of an entry.
+#
+# Example:
+#
+# configure_local_storage_volumes:
+#   - name: data
+#     disk: /dev/disk/by-path/pci-0000:00:17.0-ata-1
+#     size: "100%"
+#     lvm:
+#       vg: vgdata
+#       lv: data
+#     fstype: ext4
+#     mountpoint: /data
+configure_local_storage_volumes: []
