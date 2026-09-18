@@ -1,0 +1,58 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+# Every entry is checked before the first one touches a disk, so a typo in the
+# third entry does not leave the first two created and the run half done.
+- name: Check the local volumes declared for this machine
+  ansible.builtin.assert:
+    that:
+      - configure_local_storage_volume.name is defined
+      - configure_local_storage_volume.name is match('^[A-Za-z0-9_-]{1,36}$')
+      - configure_local_storage_volume.disk is defined
+      - configure_local_storage_volume.disk is match('^/dev/[A-Za-z0-9_.:/+-]+$')
+      - configure_local_storage_volume.mountpoint is defined
+      - configure_local_storage_volume.mountpoint is match('^(/[A-Za-z0-9_.-]+)+$')
+      - "'/../' not in (configure_local_storage_volume.mountpoint ~ '/')"
+      - "'/./' not in (configure_local_storage_volume.mountpoint ~ '/')"
+      - (configure_local_storage_volume.fstype | default('ext4')) in ['ext4', 'xfs']
+      - (configure_local_storage_volume.mount_options | default('defaults')) is match('^[A-Za-z0-9_.=,-]+$')
+      - (configure_local_storage_volume.size | default('100%') | string) is match('^(100%|[1-9][0-9]*[MGT])$')
+      - configure_local_storage_volume.lvm is not defined or (
+          configure_local_storage_volume.lvm.vg is defined
+          and configure_local_storage_volume.lvm.vg is match('^[A-Za-z0-9_][A-Za-z0-9_.+-]*$')
+          and configure_local_storage_volume.lvm.lv is defined
+          and configure_local_storage_volume.lvm.lv is match('^[A-Za-z0-9_][A-Za-z0-9_.+-]*$'))
+    fail_msg: >-
+      The local volume {{ configure_local_storage_volume.name | default('without a name') }}
+      is not usable as declared. It needs a name of at most 36 letters, digits,
+      dashes or underscores (it becomes the GPT partition name), a disk under
+      /dev, an absolute mount point other than /, a size that is either 100%
+      or a number followed by M, G or T, an fstype of ext4 or xfs, mount
+      options without spaces, and, when lvm is given, both its vg and lv
+      names.
+    quiet: true
+  loop: "{{ configure_local_storage_volumes }}"
+  loop_control:
+    loop_var: configure_local_storage_volume
+    label: "{{ configure_local_storage_volume.name | default('?') }}"
+
+- name: Check that no two local volumes share a name or a mount point
+  ansible.builtin.assert:
+    that:
+      - names | unique | length == names | length
+      - mountpoints | unique | length == mountpoints | length
+    fail_msg: >-
+      Two local volumes declare the same name or the same mount point. The name
+      is how the role recognises a partition it created on a later run, and a
+      mount point can hold one file system.
+    quiet: true
+  vars:
+    names: "{{ configure_local_storage_volumes | map(attribute='name') | list }}"
+    mountpoints: "{{ configure_local_storage_volumes | map(attribute='mountpoint') | list }}"
+
+- name: Create and mount each local volume
+  ansible.builtin.include_tasks: volume.yml
+  loop: "{{ configure_local_storage_volumes }}"
+  loop_control:
+    loop_var: configure_local_storage_volume
+    label: "{{ configure_local_storage_volume.name }}"

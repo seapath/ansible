@@ -111,6 +111,7 @@ Note: For SEAPATH Yocto, these roles shouldn't be used as this configuration is 
 - `deploy_cockpit_plugins`: Deploy the SEAPATH specific cockpit plugins (all but Yocto)
 - `hardware_customization_welotec`: Configure network cards on the Welotec machines
 - `detect_seapath_distro`: Detect the SEAPATH distro flavor and set the `seapath_distro` variable.
+- `configure_local_storage`: Create local partitions, directly formatted or under LVM, and mount them by UUID
 
 ## Hardening
 
@@ -188,6 +189,7 @@ The other playbooks can be called alone to re-configure a specific part, when yo
 - `seapath_setup_configure_nic_irq_affinity.yaml`: Configure NIC IRQs affinity (useful for macvtap interfaces)
 - `seapath_setup_cockpit_plugins.yaml`: Deploy cockpit plugins on the cluster
 - `seapath_setup_custom_hardware.yaml`: Apply hardware specific roles
+- `seapath_setup_local_storage.yaml`: Create the local volumes each machine declares
 
 ## Management
 
