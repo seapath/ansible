@@ -190,6 +190,7 @@ The other playbooks can be called alone to re-configure a specific part, when yo
 - `seapath_setup_cockpit_plugins.yaml`: Deploy cockpit plugins on the cluster
 - `seapath_setup_custom_hardware.yaml`: Apply hardware specific roles
 - `seapath_setup_local_storage.yaml`: Create the local volumes each machine declares
+- `seapath_setup_backup_restore.yaml`: Apply the backup-restore configuration on the cluster machines
 
 ## Management
 
