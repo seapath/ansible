@@ -82,6 +82,14 @@
     src: 10_linux.patch
   notify: Update-grub
   when: not debian_grub_bootcount_revert
+# patch keeps a 10_linux.orig when a hunk applies at an offset, and every
+# executable file under /etc/grub.d is run by update-grub: the unpatched copy
+# would write the whole menu a second time. The backup above is the one kept.
+- name: Remove the copy patch leaves beside 10_linux
+  ansible.builtin.file:
+    path: /etc/grub.d/10_linux.orig
+    state: absent
+  notify: Update-grub
 - name: REVERT Restore original 10_linux
   ansible.builtin.copy:
     src: /etc/grub.d_backup10_linux
