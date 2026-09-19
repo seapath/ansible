@@ -60,6 +60,29 @@
     - name: Flush handlers before starting exporter services
       ansible.builtin.meta: flush_handlers
 
+    # The ha_cluster_exporter container used to mount the host's /var/run on
+    # its own. podman then created the mount point of the container's
+    # /run/.containerenv in the host's /run, and systemd, finding that file,
+    # takes the host for a podman container. The kernel's zz-update-grub hook
+    # then exits without writing the boot menu, so a new kernel is never
+    # booted; and systemd-shutdown skips every unmount, so / is never
+    # remounted read-only and each boot starts by recovering the journal.
+    # The mount is gone; the empty file it left stays until /run is cleared,
+    # so it is removed here. A real .containerenv, inside a container, is
+    # never empty.
+    - name: Look for the file the former /var/run mount left in /run
+      ansible.builtin.stat:
+        path: /run/.containerenv
+      register: deploy_prometheus_exporters_containerenv
+
+    - name: Remove it, so systemd no longer takes this machine for a container
+      ansible.builtin.file:
+        path: /run/.containerenv
+        state: absent
+      when:
+        - deploy_prometheus_exporters_containerenv.stat.exists
+        - deploy_prometheus_exporters_containerenv.stat.size == 0
+
     # Boot activation comes from the [Install] section of the quadlet units:
     # systemd refuses to enable a generated unit, so there is nothing to enable
     # here.
