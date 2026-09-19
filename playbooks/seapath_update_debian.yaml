@@ -5,10 +5,47 @@
   roles:
     - debian_grub_bootcount
 
+# One machine at a time. Each one reboots, and a cluster only keeps its guests
+# running if the other members are up to take them while it does. A machine
+# that fails stops the run before the next one is touched.
 - name: Update Debian Systems
   hosts: all
   become: true
+  serial: 1
   tasks:
+    - name: Check if the machine is a cluster member
+      ansible.builtin.stat:
+        path: /etc/corosync/corosync.conf
+      register: update_debian_corosync_conf
+
+    - name: Check if the machine is part of a Ceph cluster
+      ansible.builtin.stat:
+        path: /etc/ceph/ceph.conf
+      register: update_debian_ceph_conf
+
+    - name: Move the guests off the machine
+      when: update_debian_corosync_conf.stat.exists
+      block:
+        # Without a node name, crm acts on the node it runs on, which spares
+        # guessing how Pacemaker spells this machine's name.
+        - name: Put the machine in standby
+          ansible.builtin.command: crm node standby
+          changed_when: true
+
+        - name: Wait for the guests to leave the machine
+          ansible.builtin.command: crm_resource --wait --timeout=600s
+          changed_when: false
+
+    # The OSDs of this machine go down with it. Without noout Ceph marks them
+    # out after a few minutes and starts moving their data to the other
+    # machines, only to move it back once the machine is up again.
+    - name: Keep Ceph from rebalancing while the machine reboots
+      ansible.builtin.command: ceph osd set noout
+      changed_when: true
+      when:
+        - update_debian_corosync_conf.stat.exists
+        - update_debian_ceph_conf.stat.exists
+
     - name: Make an LVM snapshot of the root lvm
       community.general.lvol:
         vg: "{{ vg_name | default('vg1') }}"
@@ -53,11 +90,6 @@
       when: "'root-snap' in lvm_snapshot.stdout"
       changed_when: true
 
-    - name: Do something if not success
-      ansible.builtin.debug:
-        msg: "Upgrade has failed, and the system has been rolled back."
-      when: "'root-snap' not in lvm_snapshot.stdout"
-
     - name: Enable grub password protection if it was enabled before
       ansible.builtin.shell:
         cmd: mv /etc/grub.d_01_password /etc/grub.d/01_password && update-grub
@@ -65,3 +97,39 @@
       when:
         - grub_password.stat.exists
         - "'root-snap' in lvm_snapshot.stdout"
+
+    # Back in the cluster whether the upgrade held or was rolled back: either
+    # way the machine now runs a system that booted.
+    - name: Bring the machine back in the cluster
+      when: update_debian_corosync_conf.stat.exists
+      block:
+        - name: Take the machine out of standby
+          ansible.builtin.command: crm node online
+          register: update_debian_online
+          until: update_debian_online.rc == 0
+          retries: 30
+          delay: 10
+          changed_when: true
+
+        - name: Wait for the OSDs of the machine to be up
+          ansible.builtin.command: ceph osd stat --format json
+          register: update_debian_osd_stat
+          until: >-
+            (update_debian_osd_stat.stdout | from_json).num_up_osds ==
+            (update_debian_osd_stat.stdout | from_json).num_osds
+          retries: 60
+          delay: 10
+          changed_when: false
+          when: update_debian_ceph_conf.stat.exists
+
+        - name: Let Ceph rebalance again
+          ansible.builtin.command: ceph osd unset noout
+          changed_when: true
+          when: update_debian_ceph_conf.stat.exists
+
+    # A failure here stops the run, so no other machine is updated after one
+    # that could not boot its new system.
+    - name: Fail if the upgrade was rolled back
+      ansible.builtin.fail:
+        msg: "Upgrade has failed, and the system has been rolled back."
+      when: "'root-snap' not in lvm_snapshot.stdout"
