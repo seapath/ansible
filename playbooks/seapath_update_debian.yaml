@@ -12,6 +12,11 @@
   hosts: all
   become: true
   serial: 1
+  vars:
+    update_debian_vg: "{{ vg_name | default('vg1') }}"
+    # Below this, the snapshot would fill up during the upgrade and could not
+    # be rolled back to. The run stops before anything changes instead.
+    update_debian_snapshot_min_gib: "{{ snapshot_min_size_gib | default(2) }}"
   tasks:
     - name: Check if the machine is a cluster member
       ansible.builtin.stat:
@@ -23,57 +28,177 @@
         path: /etc/ceph/ceph.conf
       register: update_debian_ceph_conf
 
-    - name: Move the guests off the machine
-      when: update_debian_corosync_conf.stat.exists
+    # Everything that can refuse the update is asked before the machine is
+    # touched: a refusal here leaves the guests where they are.
+    - name: Read the logical volumes of the root volume group
+      ansible.builtin.command:
+        argv:
+          - lvs
+          - --noheadings
+          - --nosuffix
+          - --units
+          - b
+          - --separator
+          - ","
+          - -o
+          - lv_name,lv_size
+          - "{{ update_debian_vg }}"
+      register: update_debian_lvs
+      changed_when: false
+
+    - name: Read the free space of the root volume group
+      ansible.builtin.command:
+        argv:
+          - vgs
+          - --noheadings
+          - --nosuffix
+          - --units
+          - b
+          - -o
+          - vg_free
+          - "{{ update_debian_vg }}"
+      register: update_debian_vgs
+      changed_when: false
+
+    - name: Work out the size of the snapshot
+      ansible.builtin.set_fact:
+        update_debian_volumes: >-
+          {{ dict(update_debian_lvs.stdout_lines
+                  | map('trim') | map('split', ',')) }}
+        update_debian_free: "{{ update_debian_vgs.stdout | trim | int }}"
+
+    # A snapshot left by an update that never finished. lvol would find it
+    # and report it created, and a rollback would then go back to whatever
+    # the machine was when that one was taken.
+    - name: Refuse a snapshot left by an earlier update
+      ansible.builtin.fail:
+        msg: >-
+          {{ update_debian_vg }}/root-snap already exists. It was left by an
+          earlier update that did not finish. Remove it with lvremove once the
+          machine is known to be good, then update again.
+      when: "'root-snap' in update_debian_volumes"
+
+    # A snapshot never needs more than its origin. It gets the size of root
+    # when the volume group has it, and what is free otherwise.
+    - name: Refuse an update the volume group has no room to snapshot
+      ansible.builtin.fail:
+        msg: >-
+          {{ update_debian_vg }} has
+          {{ (update_debian_free | int / 1073741824) | round(1) }} GiB free,
+          and the snapshot that lets the update be rolled back needs at least
+          {{ update_debian_snapshot_min_gib }} GiB. Free some space in the
+          volume group first.
+      when:
+        - snapshot_size is not defined
+        - >-
+          update_debian_free | int <
+          (update_debian_snapshot_min_gib | float * 1073741824)
+
+    - name: Update the machine
       block:
-        # Without a node name, crm acts on the node it runs on, which spares
-        # guessing how Pacemaker spells this machine's name.
-        - name: Put the machine in standby
-          ansible.builtin.command: crm node standby
+        - name: Make an LVM snapshot of the root lvm
+          community.general.lvol:
+            vg: "{{ update_debian_vg }}"
+            lv: root
+            snapshot: root-snap
+            size: >-
+              {{ snapshot_size | default(
+                   '100%ORIGIN'
+                   if update_debian_free | int >= update_debian_volumes.root | int
+                   else '100%FREE') }}
+
+        - name: Move the guests off the machine
+          when: update_debian_corosync_conf.stat.exists
+          block:
+            # Without a node name, crm acts on the node it runs on, which
+            # spares guessing how Pacemaker spells this machine's name.
+            - name: Put the machine in standby
+              ansible.builtin.command: crm node standby
+              changed_when: true
+
+            - name: Wait for the guests to leave the machine
+              ansible.builtin.command: crm_resource --wait --timeout=600s
+              changed_when: false
+
+        # The OSDs of this machine go down with it. Without noout Ceph marks
+        # them out after a few minutes and starts moving their data to the
+        # other machines, only to move it back once the machine is up again.
+        - name: Keep Ceph from rebalancing while the machine reboots
+          ansible.builtin.command: ceph osd set noout
+          changed_when: true
+          when:
+            - update_debian_corosync_conf.stat.exists
+            - update_debian_ceph_conf.stat.exists
+
+        - name: Check if grub is password protected
+          ansible.builtin.stat:
+            path: /etc/grub.d/01_password
+          register: grub_password
+
+        - name: Disable password protection and update-grub
+          ansible.builtin.shell:
+            cmd: mv /etc/grub.d/01_password /etc/grub.d_01_password && update-grub
+          changed_when: true
+          when: grub_password.stat.exists
+
+        - name: Enable Grub Boot Count
+          ansible.builtin.command: /usr/bin/grub-editenv /boot/efi/bootcountenv set bootcount=0
           changed_when: true
 
-        - name: Wait for the guests to leave the machine
-          ansible.builtin.command: crm_resource --wait --timeout=600s
-          changed_when: false
+        - name: Note that packages are about to change
+          ansible.builtin.set_fact:
+            update_debian_upgrading: true
 
-    # The OSDs of this machine go down with it. Without noout Ceph marks them
-    # out after a few minutes and starts moving their data to the other
-    # machines, only to move it back once the machine is up again.
-    - name: Keep Ceph from rebalancing while the machine reboots
-      ansible.builtin.command: ceph osd set noout
-      changed_when: true
-      when:
-        - update_debian_corosync_conf.stat.exists
-        - update_debian_ceph_conf.stat.exists
+        - name: Upgrade the OS (apt-get dist-upgrade)
+          ansible.builtin.apt:
+            update_cache: true
+            install_recommends: false
+            autoremove: true
+            upgrade: dist
 
-    - name: Make an LVM snapshot of the root lvm
-      community.general.lvol:
-        vg: "{{ vg_name | default('vg1') }}"
-        lv: root
-        snapshot: root-snap
-        size: "{{ snapshot_size | default('21G') }}"
+      # A failure before the reboot puts the machine back as it was found, as
+      # far as that is known, and still fails the run so it is seen.
+      rescue:
+        - name: Disarm the boot counter
+          ansible.builtin.command: /usr/bin/grub-editenv /boot/efi/bootcountenv set bootcount=disabled
+          changed_when: true
 
-    - name: Check if grub is password protected
-      ansible.builtin.stat:
-        path: /etc/grub.d/01_password
-      register: grub_password
+        - name: Enable grub password protection again
+          ansible.builtin.shell:
+            cmd: mv /etc/grub.d_01_password /etc/grub.d/01_password && update-grub
+            removes: /etc/grub.d_01_password
+          when: grub_password.stat.exists | default(false)
 
-    - name: Disable password protection and update-grub
-      ansible.builtin.shell:
-        cmd: mv /etc/grub.d/01_password /etc/grub.d_01_password && update-grub
-      changed_when: true
-      when: grub_password.stat.exists
+        # Kept once packages may have changed: it is then the way back, by
+        # hand, to the system as it was before the upgrade started.
+        - name: Remove the snapshot, since nothing was upgraded
+          ansible.builtin.command: "lvremove -y /dev/{{ update_debian_vg }}/root-snap"
+          args:
+            removes: "/dev/{{ update_debian_vg }}/root-snap"
+          when: not (update_debian_upgrading | default(false))
 
-    - name: Enable Grub Boot Count
-      ansible.builtin.command: /usr/bin/grub-editenv /boot/efi/bootcountenv set bootcount=0
-      changed_when: true
+        - name: Take the machine out of standby
+          ansible.builtin.command: crm node online
+          changed_when: true
+          when: update_debian_corosync_conf.stat.exists
 
-    - name: Upgrade the OS (apt-get dist-upgrade)
-      ansible.builtin.apt:
-        update_cache: true
-        install_recommends: false
-        autoremove: true
-        upgrade: dist
+        - name: Let Ceph rebalance again
+          ansible.builtin.command: ceph osd unset noout
+          changed_when: true
+          when:
+            - update_debian_corosync_conf.stat.exists
+            - update_debian_ceph_conf.stat.exists
+
+        - name: Fail, having put the machine back
+          ansible.builtin.fail:
+            msg: >-
+              The update of {{ inventory_hostname }} failed at
+              "{{ ansible_failed_task.name }}": {{ ansible_failed_result.msg
+              | default('see the task above') }}.
+              {{ 'Packages may have changed, and the snapshot '
+                 ~ update_debian_vg ~ '/root-snap is kept as the way back.'
+                 if update_debian_upgrading | default(false)
+                 else 'Nothing was upgraded.' }}
 
     - name: Reboot and hope for the best
       ansible.builtin.reboot:
@@ -81,12 +206,12 @@
       ansible.builtin.wait_for_connection:
 
     - name: Check if snapshot is there
-      ansible.builtin.command: "lvs --noheadings -o lv_name {{ vg_name | default('vg1') }}"
+      ansible.builtin.command: "lvs --noheadings -o lv_name {{ update_debian_vg }}"
       register: lvm_snapshot
       changed_when: false
 
     - name: Remove snapshot if success
-      ansible.builtin.command: "lvremove -y /dev/{{ vg_name | default('vg1') }}/root-snap"
+      ansible.builtin.command: "lvremove -y /dev/{{ update_debian_vg }}/root-snap"
       when: "'root-snap' in lvm_snapshot.stdout"
       changed_when: true
 
