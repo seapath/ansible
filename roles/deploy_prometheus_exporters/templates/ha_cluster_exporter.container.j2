@@ -6,7 +6,6 @@ After=network.target
 Image={{ deploy_prometheus_exporters_ha_cluster_exporter_image }}
 PublishPort={{ deploy_prometheus_exporters_listen_address }}:9664:9664
 PodmanArgs=--pid=host --ipc=host --privileged
-Volume=/var/run:/var/run
 Exec=\
   --crm-mon-path=/usr/local/bin/crm_mon \
   --cibadmin-path=/usr/local/bin/cibadmin \
