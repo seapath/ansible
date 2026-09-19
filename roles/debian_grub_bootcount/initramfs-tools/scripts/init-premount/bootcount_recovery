@@ -39,9 +39,17 @@ if grep -q "\bseapath.bootcount_action=recovery\b" /proc/cmdline; then
 		fi
 	done
 
-	# Look for the first ESP device
+	# GRUB passes the UUID of the file system it read the counter from.
+	# Without it (grub.cfg from an older role), look for the first ESP.
 	ESP_DEVICE=""
-	for d in $(blkid -o device | sort); do
+	for x in $(cat /proc/cmdline); do
+		case "$x" in
+		seapath.bootcount_esp=?*)
+			ESP_DEVICE="$(blkid -U "${x#seapath.bootcount_esp=}")"
+			;;
+		esac
+	done
+	[ -n "$ESP_DEVICE" ] || for d in $(blkid -o device | sort); do
 		if [ "$(blkid -p $d -s PART_ENTRY_TYPE -o value)" = "c12a7328-f81f-11d2-ba4b-00a0c93ec93b" ]; then
 			ESP_DEVICE="$d"
 			break
