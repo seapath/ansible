@@ -24,11 +24,11 @@ if search --no-floppy --fs-uuid --set=bootcount_root $bootcount_uuid; then
 fi
 
 # Allow using bootcount&recovery on a single kernel (to catch userland crash)
-if [ -z "\$safe_entry_id"]; then
+if [ -z "\$safe_entry_id" ]; then
   safe_entry_id="\$new_entry_id"
 fi
 
-if [ ( -s "\$bootcountenv" ) -a ( -n "\$new_entry_id" ) -a ( "\$safe_entry_id" )]; then
+if [ ( -s "\$bootcountenv" ) -a ( -n "\$new_entry_id" ) -a ( -n "\$safe_entry_id" ) ]; then
   set seapath_boot_count_params="seapath.bootcount_action=nothing"
   set bootcount="disabled"
   set newbootcount="disabled"
