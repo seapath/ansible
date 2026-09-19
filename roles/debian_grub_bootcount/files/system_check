@@ -58,6 +58,19 @@ rejoin_cluster() {
 			failed=1
 		fi
 	fi
+	# An update without a reboot that did not finish. Probes are left the
+	# time to run, since before them the others take this machine's guests
+	# for stopped.
+	if [ -e "$pending/maintenance" ]; then
+		if retry crm_resource --wait --timeout=600s &&
+			retry crm_attribute --type crm_config --name maintenance-mode --delete; then
+			rm -f "$pending/maintenance"
+			logger -t system_check 'Cluster taken out of maintenance'
+		else
+			logger -t system_check 'Could not take the cluster out of maintenance'
+			failed=1
+		fi
+	fi
 	if [ -e "$pending/noout" ]; then
 		# The OSDs of this machine are given the time to come back first.
 		# Past that, they are down for good, and Ceph must be free to
