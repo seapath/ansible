@@ -5,7 +5,10 @@ while [ "$(systemctl is-system-running)" = starting ] ; do
 done
 
 if [ "$(systemctl is-system-running)" = running ] ; then
-	logger -t system_check 'System OK'
+	# GRUB moves the counter from 0 to 1 when it reads it: an update that
+	# armed it and finds it still at 0 was booted without the safety net.
+	bootcount="$(grub-editenv /boot/efi/bootcountenv list | sed -n 's/^bootcount=//p')"
+	logger -t system_check "System OK, bootcount was ${bootcount:-unset}"
 	grub-editenv /boot/efi/bootcountenv set bootcount=disabled
 else
 	# Only reboot if the bootcounting process is running

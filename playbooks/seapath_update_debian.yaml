@@ -94,6 +94,29 @@
           update_debian_free | int <
           (update_debian_snapshot_min_gib | float * 1073741824)
 
+    # The counter is what brings the machine back if the new system does not
+    # boot. A grub.cfg that cannot find it would let the update go on
+    # without that way back.
+    - name: Read the file system that holds the boot counter
+      ansible.builtin.command: grub-probe --target=fs_uuid /boot/efi/bootcountenv
+      register: update_debian_bootcount_uuid
+      changed_when: false
+
+    - name: Read the boot counter section of grub.cfg
+      ansible.builtin.command: grep -qF -- "--set=bootcount_root {{ update_debian_bootcount_uuid.stdout }}" /boot/grub/grub.cfg
+      register: update_debian_bootcount_cfg
+      changed_when: false
+      failed_when: update_debian_bootcount_cfg.rc > 1
+
+    - name: Refuse an update GRUB could not roll back
+      ansible.builtin.fail:
+        msg: >-
+          /boot/grub/grub.cfg does not look for the boot counter on file system
+          {{ update_debian_bootcount_uuid.stdout }} (/boot/efi). Without it, a
+          new system that does not boot is never rolled back. Run the
+          debian_grub_bootcount role and update-grub, then update again.
+      when: update_debian_bootcount_cfg.rc != 0
+
     - name: Update the machine
       block:
         - name: Make an LVM snapshot of the root lvm
@@ -252,6 +275,29 @@
           ansible.builtin.command: ceph osd unset noout
           changed_when: true
           when: update_debian_ceph_conf.stat.exists
+
+    # system_check logs the counter it finds once the system is up. GRUB
+    # moves it from 0 to 1 when it reads it, so a 0 means this boot was never
+    # counted and a failed one would not have been rolled back.
+    - name: Wait for the boot to be checked
+      ansible.builtin.command: journalctl -b -t system_check -o cat
+      register: update_debian_system_check
+      until: "'System' in update_debian_system_check.stdout"
+      retries: 60
+      delay: 10
+      changed_when: false
+      when: "'root-snap' in lvm_snapshot.stdout"
+
+    - name: Fail if GRUB did not read the boot counter
+      ansible.builtin.fail:
+        msg: >-
+          {{ inventory_hostname }} was updated and boots, but GRUB never read
+          the boot counter in /boot/efi/bootcountenv: had the new system
+          failed to boot, it would not have been rolled back. The run stops
+          before the next machine.
+      when:
+        - "'root-snap' in lvm_snapshot.stdout"
+        - "'bootcount was 0' in update_debian_system_check.stdout"
 
     # A failure here stops the run, so no other machine is updated after one
     # that could not boot its new system.
