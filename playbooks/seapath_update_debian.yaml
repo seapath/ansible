@@ -130,12 +130,31 @@
                    if update_debian_free | int >= update_debian_volumes.root | int
                    else '100%FREE') }}
 
+        # What the machine must undo itself once its new system is up and
+        # will not reboot again: this playbook may run on the machine it
+        # updates, and then ends with the reboot. See system_check in the
+        # debian_grub_bootcount role.
+        - name: Make room for what the machine undoes after the reboot
+          ansible.builtin.file:
+            path: /boot/efi/seapath_update
+            state: directory
+            mode: "0700"
+
         - name: Move the guests off the machine
           when: update_debian_corosync_conf.stat.exists
           block:
+            - name: Have the machine leave standby after the reboot
+              ansible.builtin.copy:
+                content: ""
+                dest: /boot/efi/seapath_update/standby
+                mode: "0600"
+
             # Without --node, crm_attribute asks the cluster how it names
             # this machine. crm would take the hostname, which Pacemaker may
-            # spell differently, and then change nothing.
+            # spell differently, and then change nothing. The standby is kept
+            # across the reboot: were the machine to take guests back as
+            # soon as it joins, they would be on a system that boot counting
+            # may still reboot and roll back.
             - name: Put the machine in standby
               ansible.builtin.command: crm_attribute --type nodes --name standby --update on
               changed_when: true
@@ -148,11 +167,19 @@
         # them out after a few minutes and starts moving their data to the
         # other machines, only to move it back once the machine is up again.
         - name: Keep Ceph from rebalancing while the machine reboots
-          ansible.builtin.command: ceph osd set noout
-          changed_when: true
           when:
             - update_debian_corosync_conf.stat.exists
             - update_debian_ceph_conf.stat.exists
+          block:
+            - name: Have the machine let Ceph rebalance after the reboot
+              ansible.builtin.copy:
+                content: ""
+                dest: /boot/efi/seapath_update/noout
+                mode: "0600"
+
+            - name: Set the noout flag
+              ansible.builtin.command: ceph osd set noout
+              changed_when: true
 
         - name: Check if grub is password protected
           ansible.builtin.stat:
@@ -213,6 +240,11 @@
             - update_debian_corosync_conf.stat.exists
             - update_debian_ceph_conf.stat.exists
 
+        - name: Leave the machine nothing to undo at the next boot
+          ansible.builtin.file:
+            path: /boot/efi/seapath_update
+            state: absent
+
         - name: Fail, having put the machine back
           ansible.builtin.fail:
             msg: >-
@@ -224,70 +256,56 @@
                  if update_debian_upgrading | default(false)
                  else 'Nothing was upgraded.' }}
 
+    # When the machine updated is the one running this playbook, the run
+    # ends here. Everything past the reboot is then done by the machine
+    # itself, and what follows only checks that it was, for a machine
+    # updated from another one.
     - name: Reboot and hope for the best
       ansible.builtin.reboot:
     - name: Wait for Connection
       ansible.builtin.wait_for_connection:
 
-    - name: Check if snapshot is there
-      ansible.builtin.command: "lvs --noheadings -o lv_name {{ update_debian_vg }}"
-      register: lvm_snapshot
-      changed_when: false
-
-    - name: Remove snapshot if success
-      ansible.builtin.command: "lvremove -y /dev/{{ update_debian_vg }}/root-snap"
-      when: "'root-snap' in lvm_snapshot.stdout"
-      changed_when: true
-
-    - name: Enable grub password protection if it was enabled before
-      ansible.builtin.shell:
-        cmd: mv /etc/grub.d_01_password /etc/grub.d/01_password && update-grub
-      changed_when: true
-      when:
-        - grub_password.stat.exists
-        - "'root-snap' in lvm_snapshot.stdout"
-
-    # Back in the cluster whether the upgrade held or was rolled back: either
-    # way the machine now runs a system that booted.
-    - name: Bring the machine back in the cluster
-      when: update_debian_corosync_conf.stat.exists
-      block:
-        - name: Take the machine out of standby
-          ansible.builtin.command: crm_attribute --type nodes --name standby --update off
-          register: update_debian_online
-          until: update_debian_online.rc == 0
-          retries: 30
-          delay: 10
-          changed_when: true
-
-        - name: Wait for the OSDs of the machine to be up
-          ansible.builtin.command: ceph osd stat --format json
-          register: update_debian_osd_stat
-          until: >-
-            (update_debian_osd_stat.stdout | from_json).num_up_osds ==
-            (update_debian_osd_stat.stdout | from_json).num_osds
-          retries: 60
-          delay: 10
-          changed_when: false
-          when: update_debian_ceph_conf.stat.exists
-
-        - name: Let Ceph rebalance again
-          ansible.builtin.command: ceph osd unset noout
-          changed_when: true
-          when: update_debian_ceph_conf.stat.exists
-
-    # system_check logs the counter it finds once the system is up. GRUB
-    # moves it from 0 to 1 when it reads it, so a 0 means this boot was never
-    # counted and a failed one would not have been rolled back.
+    # system_check removes the snapshot, enables the GRUB password again,
+    # takes the machine out of standby and removes noout, then logs that it
+    # is done.
     - name: Wait for the boot to be checked
       ansible.builtin.command: journalctl -b -t system_check -o cat
       register: update_debian_system_check
-      until: "'System' in update_debian_system_check.stdout"
-      retries: 60
+      until: >-
+        'Boot check done' in update_debian_system_check.stdout or
+        'Rebooting' in update_debian_system_check.stdout
+      retries: 200
       delay: 10
       changed_when: false
-      when: "'root-snap' in lvm_snapshot.stdout"
 
+    # The counter GRUB left for the first check of this boot.
+    - name: Read the boot counter the machine booted with
+      ansible.builtin.set_fact:
+        update_debian_bootcount: >-
+          {{ update_debian_system_check.stdout
+             | regex_search('bootcount was ([^!\s]+)', '\1')
+             | first }}
+
+    # A failure here stops the run, so no other machine is updated after one
+    # that could not boot its new system.
+    - name: Fail if the new system does not come up
+      ansible.builtin.fail:
+        msg: >-
+          {{ inventory_hostname }} booted its new system, but not cleanly, and
+          is rebooting it. After three failed boots it goes back to the system
+          it had before the update.
+      when: "'Rebooting' in update_debian_system_check.stdout"
+
+    # The initramfs disables the counter when it rolls back, so the boot
+    # that follows finds it disabled.
+    - name: Fail if the upgrade was rolled back
+      ansible.builtin.fail:
+        msg: "Upgrade has failed, and the system has been rolled back."
+      when: update_debian_bootcount == 'disabled'
+
+    # GRUB moves the counter from 0 to 1 when it reads it, so a 0 means this
+    # boot was never counted and a failed one would not have been rolled
+    # back.
     - name: Fail if GRUB did not read the boot counter
       ansible.builtin.fail:
         msg: >-
@@ -295,13 +313,44 @@
           the boot counter in /boot/efi/bootcountenv: had the new system
           failed to boot, it would not have been rolled back. The run stops
           before the next machine.
-      when:
-        - "'root-snap' in lvm_snapshot.stdout"
-        - "'bootcount was 0' in update_debian_system_check.stdout"
+      when: update_debian_bootcount == '0'
 
-    # A failure here stops the run, so no other machine is updated after one
-    # that could not boot its new system.
-    - name: Fail if the upgrade was rolled back
+    - name: Read the logical volumes left after the boot
+      ansible.builtin.command: "lvs --noheadings -o lv_name {{ update_debian_vg }}"
+      register: update_debian_lvs_after
+      changed_when: false
+
+    - name: Read what the machine has left to undo
+      ansible.builtin.find:
+        paths: /boot/efi/seapath_update
+      register: update_debian_pending
+
+    - name: Fail if the machine did not finish the update
       ansible.builtin.fail:
-        msg: "Upgrade has failed, and the system has been rolled back."
-      when: "'root-snap' not in lvm_snapshot.stdout"
+        msg: >-
+          {{ inventory_hostname }} boots its new system, but did not
+          {{ ((['remove the snapshot ' ~ update_debian_vg ~ '/root-snap']
+               if 'root-snap' in update_debian_lvs_after.stdout else [])
+               + (update_debian_pending.files | map(attribute='path')
+                | map('basename')
+                | map('replace', 'standby', 'leave standby')
+                | map('replace', 'noout', 'remove the Ceph noout flag')
+                | list))
+             | join(' and ') }}.
+          See journalctl -b -t system_check there.
+      when: >-
+        'root-snap' in update_debian_lvs_after.stdout or
+        update_debian_pending.matched > 0
+
+    - name: Wait for the OSDs of the machine to be up
+      ansible.builtin.command: ceph osd stat --format json
+      register: update_debian_osd_stat
+      until: >-
+        (update_debian_osd_stat.stdout | from_json).num_up_osds ==
+        (update_debian_osd_stat.stdout | from_json).num_osds
+      retries: 60
+      delay: 10
+      changed_when: false
+      when:
+        - update_debian_corosync_conf.stat.exists
+        - update_debian_ceph_conf.stat.exists
