@@ -47,7 +47,7 @@ if [ ( -s "\$bootcountenv" ) -a ( -n "\$new_entry_id" ) -a ( -n "\$safe_entry_id
   elif [ \$bootcount == "3" ]; then
     echo "Reached maximum failed boot count, starting recovery..."
     set default="\${safe_entry_id}"
-    set seapath_boot_count_params="seapath.bootcount_action=recovery"
+    set seapath_boot_count_params="seapath.bootcount_action=recovery seapath.bootcount_esp=$bootcount_uuid"
     export seapath_boot_count_params
     set newbootcount=3
   else
