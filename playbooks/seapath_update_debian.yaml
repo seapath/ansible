@@ -329,28 +329,17 @@
             state: absent
 
     # The machine running this playbook cannot wait for its own reboot: the
-    # run would die with it and never report. With detach_reboot, the reboot
-    # is scheduled a few seconds out and the run ends first. The machine
-    # finishes its update at boot all the same, and nothing is left to check
-    # it from here.
-    - name: Schedule the reboot and end the run
-      ansible.builtin.command:
-        argv:
-          - systemd-run
-          - --on-active=15
-          - systemctl
-          - reboot
-      changed_when: true
-      when:
-        - update_debian_reboot
-        - detach_reboot | default(false) | bool
-
+    # run would die with it and never report. With defer_reboot, the update
+    # stops short of the reboot, and update_debian_reboot says whether the
+    # caller has to reboot the machine, which then finishes its update at
+    # boot all the same. Until then it stays in standby, with its snapshot.
+    #
     # Everything past the reboot is done by the machine itself, and what
     # follows only checks that it was.
     - name: Reboot into the new kernel
       when:
         - update_debian_reboot
-        - not (detach_reboot | default(false) | bool)
+        - not (defer_reboot | default(false) | bool)
       block:
         - name: Reboot and hope for the best
           ansible.builtin.reboot:
