@@ -1,22 +1,103 @@
 #!/bin/bash
 
+# What an update left for the updated machine to undo once it boots, since
+# the machine that ran the update may be this one, and gone with the reboot.
+# It is kept on the ESP: a rollback puts the root file system back as it was
+# before the update, and with it anything written there since.
+pending=/boot/efi/seapath_update
+
+# Put back what the update changed to boot its new system, once that system
+# is known to boot.
+finish_update() {
+	local vg
+	vg="$(lvs --noheadings -o vg_name "$(findmnt -no SOURCE /)" | tr -d ' ')"
+	if [ -n "$vg" ] && lvs "$vg/root-snap" >/dev/null 2>&1; then
+		if lvremove -y "$vg/root-snap"; then
+			logger -t system_check "Removed the snapshot $vg/root-snap"
+		else
+			logger -t system_check "Could not remove the snapshot $vg/root-snap"
+			failed=1
+		fi
+	fi
+	if [ -e /etc/grub.d_01_password ]; then
+		if mv /etc/grub.d_01_password /etc/grub.d/01_password && update-grub; then
+			logger -t system_check 'GRUB password protection enabled again'
+		else
+			logger -t system_check 'Could not enable GRUB password protection again'
+			failed=1
+		fi
+	fi
+}
+
+# Ten minutes for a command to succeed.
+retry() {
+	local _
+	for _ in $(seq 60); do
+		"$@" && return 0
+		sleep 10
+	done
+	return 1
+}
+
+osds_up() {
+	ceph osd stat --format json 2>/dev/null | python3 -c 'import json, sys
+s = json.load(sys.stdin)
+sys.exit(s["num_up_osds"] != s["num_osds"])'
+}
+
+# Once no more reboot is coming, let the machine take guests again, and let
+# Ceph move data off OSDs that stay down.
+rejoin_cluster() {
+	if [ -e "$pending/standby" ]; then
+		if retry crm node online; then
+			rm -f "$pending/standby"
+			logger -t system_check 'Machine taken out of standby'
+		else
+			logger -t system_check 'Could not take the machine out of standby'
+			failed=1
+		fi
+	fi
+	if [ -e "$pending/noout" ]; then
+		# The OSDs of this machine are given the time to come back first.
+		# Past that, they are down for good, and Ceph must be free to
+		# restore their data elsewhere.
+		retry osds_up || logger -t system_check 'Some OSDs are still down'
+		if retry ceph osd unset noout; then
+			rm -f "$pending/noout"
+			logger -t system_check 'Ceph noout flag removed'
+		else
+			logger -t system_check 'Could not remove the Ceph noout flag'
+			failed=1
+		fi
+	fi
+}
+
 while [ "$(systemctl is-system-running)" = starting ] ; do
 	sleep 1
 done
 
+failed=0
+# GRUB moves the counter from 0 to 1 when it reads it: an update that armed
+# it and finds it still at 0 was booted without the safety net. It is found
+# disabled on the boot that follows a rollback.
+bootcount="$(grub-editenv /boot/efi/bootcountenv list | sed -n 's/^bootcount=//p')"
+
 if [ "$(systemctl is-system-running)" = running ] ; then
-	# GRUB moves the counter from 0 to 1 when it reads it: an update that
-	# armed it and finds it still at 0 was booted without the safety net.
-	bootcount="$(grub-editenv /boot/efi/bootcountenv list | sed -n 's/^bootcount=//p')"
 	logger -t system_check "System OK, bootcount was ${bootcount:-unset}"
+	# At 3, GRUB booted the recovery: this is not the new system.
+	case "$bootcount" in
+	0|1|2) finish_update ;;
+	esac
 	grub-editenv /boot/efi/bootcountenv set bootcount=disabled
-else
+elif [[ "$bootcount" =~ ^[0-9]+$ ]]; then
 	# Only reboot if the bootcounting process is running
-	if grub-editenv /boot/efi/bootcountenv list | grep -qE '^bootcount=[0-9]+$'; then
-		logger -t system_check 'System KO! Rebooting...'
-		reboot
-	else
-		logger -t system_check 'System KO! (NOT rebooting, bootcounting is not enabled)'
-	fi
+	logger -t system_check "System KO, bootcount was $bootcount! Rebooting..."
+	reboot
+	exit 0
+else
+	logger -t system_check "System KO, bootcount was ${bootcount:-unset}! (NOT rebooting, bootcounting is not enabled)"
 fi
 
+rejoin_cluster
+logger -t system_check 'Boot check done'
+exit "$failed"
