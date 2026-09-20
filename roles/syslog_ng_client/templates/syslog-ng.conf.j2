@@ -61,6 +61,9 @@ destination d_net {
                 transport("tcp")
 {% endif %}
                 time_zone("UTC")
+{% if syslog_structured_data | bool %}
+                flags(syslog-protocol)
+{% endif %}
 {% if syslog_disk_buffer | bool %}
                 disk-buffer(
                         dir("{{ syslog_disk_buffer_dir }}")
@@ -93,6 +96,14 @@ log {
 {% if ansible_distribution == 'Debian' and ansible_distribution_version | int < 12 %}
         if (program("libvirtd")) {
                 rewrite { set-facility("daemon"); };
+        };
+{% endif %}
+{% if syslog_structured_data | bool %}
+        rewrite {
+                set("{{ syslog_nodename }}" value(".SDATA.{{ syslog_sd_id }}.nodename"));
+{% if syslog_cluster is defined %}
+                set("{{ syslog_cluster }}" value(".SDATA.{{ syslog_sd_id }}.cluster"));
+{% endif %}
         };
 {% endif %}
         destination(d_net);
