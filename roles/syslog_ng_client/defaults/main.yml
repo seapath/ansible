@@ -6,6 +6,11 @@
 
 syslog_conf_template: "syslog-ng.conf.j2" # noqa: var-naming[no-role-prefix]
 
+# Version declared by @version at the top of syslog-ng.conf. The role reads it
+# from the installed syslog-ng; set syslog_config_version to pin it instead.
+# This value is only used when that reading fails.
+syslog_config_version_fallback: "3.38" # noqa: var-naming[no-role-prefix]
+
 # Buffer outgoing messages on disk so that an administration network outage
 # does not lose the logs produced while the remote server is unreachable.
 # Without it only the in-memory queue survives the cut, which is a few
