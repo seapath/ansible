@@ -1,0 +1,14 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+# Handlers run in declaration order, not in notification order: the daemon
+# reload must stay first so that the restart acts on the regenerated unit.
+- name: Reload systemd after the collector unit changed
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Restart the collector
+  ansible.builtin.systemd:
+    name: "{{ deploy_otel_collector_service }}"
+    state: restarted
+  when: deploy_otel_collector_manage_services | bool
