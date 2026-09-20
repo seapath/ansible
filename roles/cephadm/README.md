@@ -16,7 +16,7 @@ The `cephadm_install` role must have been applied to `cluster_machines` before t
 | cephadm_network                   | Yes      | String  |              | Ceph network (e.g. "192.168.55.0/24")                                                 |
 | ceph_conf_overrides    | No       | Dict   | {}           | Ceph configuration options to set, grouped by section ("global", "mon", "osd"...)     |
 | cephadm_prometheus_exporter_enabled | No     | Boolean | `true`       | Enable the built-in Ceph mgr prometheus module after the cluster is healthy           |
-| cephadm_prometheus_listen_address   | No     | String  | see defaults | Administration IP the mgr prometheus exporter binds to on each host. Defaults to `ip_addr`, same as `deploy_prometheus_exporters_listen_address`. Override per host in inventory if needed. |
+| cephadm_prometheus_listen_address   | No     | String  | see defaults | Administration IP the mgr prometheus exporter binds to on each host. Defaults to `ip_addr`, same as `deploy_prometheus_exporters_listen_address`, and to `127.0.0.1` when `deploy_otel_collector_enabled` is set. Override per host in inventory if needed. |
 
 Note that for each node you want in the cluster, those host vars need to be defined:
 
@@ -105,7 +105,8 @@ built-in Ceph mgr prometheus module once the cluster reaches `HEALTH_OK`:
 - `ceph config set mgr mgr/prometheus/exclude_perf_counters false`
 - `ceph config set mgr.<hostname>.<id> mgr/prometheus/server_addr <admin-ip>` on each mgr
   daemon, using `cephadm_prometheus_listen_address` (defaults to `ip_addr`, same as
-  `deploy_prometheus_exporters_listen_address`)
+  `deploy_prometheus_exporters_listen_address`, and to `127.0.0.1` when the per-node
+  collector is deployed with `deploy_otel_collector_enabled`)
 
 The role discovers mgr daemon names once with `ceph orch ps --daemon-type=mgr`, then each
 cluster machine matches its own daemon with its `hostname` host variable (falling back to
