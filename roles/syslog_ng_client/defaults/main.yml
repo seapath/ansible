@@ -42,3 +42,16 @@ syslog_tls_ssl_options: # noqa: var-naming[no-role-prefix]
 # syslog-ng only exposes from 4.0 through openssl-conf-cmds().
 syslog_tls_cipher_suite: >- # noqa: var-naming[no-role-prefix]
   ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256
+
+# Carry the cluster and nodename labels the Prometheus exporters are scraped
+# with (see roles/seapath_alloc/PROMETHEUS.md) in the RFC 5424
+# structured data of every exported message, so that a metric and a log line
+# about the same node can be joined on the same key.
+#
+# Off by default: it switches the destination to RFC 5424, which a collector
+# expecting the legacy BSD format will not parse.
+syslog_structured_data: false # noqa: var-naming[no-role-prefix]
+# 32473 is the private enterprise number IANA reserves for documentation
+# (RFC 5612). Replace it with the PEN of the organisation running the site.
+syslog_sd_id: "seapath@32473" # noqa: var-naming[no-role-prefix]
+syslog_nodename: "{{ inventory_hostname }}" # noqa: var-naming[no-role-prefix]

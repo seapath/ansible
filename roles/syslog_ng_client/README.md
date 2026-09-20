@@ -19,6 +19,37 @@ If not, TLS encryption is deactivated.
 | syslog_tls_key       |  No      | String      |         | Syslog TLS private key                                             |
 | syslog_tls_server_ca |  No      | String      |         | Syslog TLS CA                                                      |
 
+## Structured data
+
+The Prometheus exporters this repository deploys are scraped with a `cluster`
+and a `nodename` label, which are the join key tying a Ceph metric, a
+Pacemaker metric and a `seapath_alloc_*` metric back to the same physical node
+(see [PROMETHEUS.md](../seapath_alloc/PROMETHEUS.md)). Logs carry a
+hostname and nothing else, so a metric and a log line about the same node
+cannot be correlated on the same key.
+
+Setting `syslog_structured_data` puts both labels in the RFC 5424 structured
+data of every exported message:
+
+```
+<133>1 2026-09-20T12:00:00+00:00 hv1 libvirtd 1234 - [seapath@32473 nodename="hv1" cluster="siteA"] message
+```
+
+This switches the destination to RFC 5424 (`flags(syslog-protocol)`), which a
+collector expecting the legacy BSD format will not parse, so it is off by
+default. Check the collector before enabling it.
+
+`syslog_sd_id` defaults to the private enterprise number IANA reserves for
+documentation (32473, RFC 5612). Replace it with the PEN of the organisation
+running the site.
+
+| Variable                | Required | Type    | Default                | Comments                                              |
+|-------------------------|----------|---------|------------------------|--------------------------------------------------------|
+| syslog_structured_data  |  No      | Boolean | `false`                | Export in RFC 5424 with the labels in structured data  |
+| syslog_sd_id            |  No      | String  | `seapath@32473`        | SD-ID of the structured data block                     |
+| syslog_nodename         |  No      | String  | `{{ inventory_hostname }}` | Value of the `nodename` field                      |
+| syslog_cluster          |  No      | String  |                        | Value of the `cluster` field; omitted when undefined   |
+
 ## Configuration version
 
 The `@version` line of `syslog-ng.conf` is read from the installed syslog-ng

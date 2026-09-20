@@ -31,7 +31,10 @@ provisioner:
         syslog_server_ip: 192.168.123.234
         syslog_tls_port: 1234
 
-        syslog_ng_client_conf_md5sum: c59ceb4d66bb414072e61187ccf6d50b
+        syslog_structured_data: true
+        syslog_cluster: molecule-cluster
+
+        syslog_ng_client_conf_md5sum: 9b6f71f56f44a9b2d8ae86572064999e
 
 verifier:
   name: ansible
