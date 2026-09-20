@@ -22,3 +22,18 @@ syslog_disk_buffer_reliable: false # noqa: var-naming[no-role-prefix]
 syslog_disk_buffer_mem_length: 10000 # noqa: var-naming[no-role-prefix]
 # Front queue, in bytes, used when reliable is true.
 syslog_disk_buffer_mem_size: 1048576 # noqa: var-naming[no-role-prefix]
+
+# TLS policy of the remote destination. peer-verify is already syslog-ng's
+# default, it is set explicitly so that an audit reads the policy in the
+# generated configuration instead of inferring it from the version shipped.
+syslog_tls_peer_verify: required-trusted # noqa: var-naming[no-role-prefix]
+# TLS 1.2 and newer only.
+syslog_tls_ssl_options: # noqa: var-naming[no-role-prefix]
+  - no-sslv2
+  - no-sslv3
+  - no-tlsv1
+  - no-tlsv11
+# Applies to TLS 1.2 and below. TLS 1.3 negotiates its own suites, which
+# syslog-ng only exposes from 4.0 through openssl-conf-cmds().
+syslog_tls_cipher_suite: >- # noqa: var-naming[no-role-prefix]
+  ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256
