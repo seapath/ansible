@@ -3,6 +3,28 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+- name: Detect the syslog-ng configuration version
+  when: syslog_config_version is not defined
+  block:
+    - name: Read the installed syslog-ng version
+      become: true
+      ansible.builtin.command: syslog-ng --version
+      register: syslog_ng_client_version_cmd
+      changed_when: false
+      failed_when: false
+
+    - name: Set the configuration version from the installed syslog-ng
+      ansible.builtin.set_fact: # noqa: var-naming[no-role-prefix]
+        # A version above the installed one makes syslog-ng refuse the
+        # configuration, so fall back rather than guess when the parsing fails.
+        syslog_config_version: >-
+          {{ syslog_ng_client_detected[0]
+             if syslog_ng_client_detected else syslog_config_version_fallback }}
+      vars:
+        syslog_ng_client_detected: >-
+          {{ syslog_ng_client_version_cmd.stdout | default('')
+             | regex_findall('syslog-ng\s+\d+\s+\((\d+\.\d+)') }}
+
 - name: Create /var/log/syslog-ng folder on hosts
   become: true
   ansible.builtin.file:
