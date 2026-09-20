@@ -19,6 +19,28 @@ If not, TLS encryption is deactivated.
 | syslog_tls_key       |  No      | String      |         | Syslog TLS private key                                             |
 | syslog_tls_server_ca |  No      | String      |         | Syslog TLS CA                                                      |
 
+## TLS policy
+
+When TLS is enabled the destination restricts the handshake to TLS 1.2 and
+newer with AEAD cipher suites, and verifies the server against
+`syslog_tls_server_ca`. `cipher-suite` only covers TLS 1.2 and below; TLS 1.3
+negotiates its own suites, which syslog-ng exposes from 4.0 onwards through
+`openssl-conf-cmds()`.
+
+Verifying the CA accepts any certificate that CA signed. On a CA shared with
+other services, pin the collector itself with `syslog_tls_trusted_dn` (a list
+of distinguished name patterns) or `syslog_tls_trusted_keys` (a list of
+`SHA1:` certificate fingerprints). Both are left out of the configuration
+when undefined.
+
+| Variable                 | Required | Type   | Default | Comments                                                      |
+|--------------------------|----------|--------|---------|----------------------------------------------------------------|
+| syslog_tls_peer_verify   |  No      | String | `required-trusted` | syslog-ng `peer-verify()` value                     |
+| syslog_tls_ssl_options   |  No      | List   | TLS 1.2+ | syslog-ng `ssl-options()` values; empty to omit the option    |
+| syslog_tls_cipher_suite  |  No      | String | ECDHE AEAD suites | OpenSSL cipher list; empty to omit the option        |
+| syslog_tls_trusted_dn    |  No      | List   |         | Accept the server only if its DN matches one of these patterns |
+| syslog_tls_trusted_keys  |  No      | List   |         | Accept the server only if its fingerprint is one of these      |
+
 ## Disk buffer
 
 The remote destination buffers on disk, so that logs produced while the
