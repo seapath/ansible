@@ -1,0 +1,43 @@
+---
+dependency:
+  name: galaxy
+
+driver:
+  name: podman
+
+platforms:
+  - name: collector
+    image: docker.io/geerlingguy/docker-debian13-ansible:latest
+    privileged: true
+    command: /sbin/init
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      roles_path: "${MOLECULE_PROJECT_DIRECTORY}/.."
+  playbooks:
+    prepare: prepare.yml
+    converge: converge.yml
+    verify: verify.yml
+  inventory:
+    host_vars:
+      collector:
+        seapath_distro: Debian
+        ip_addr: 10.10.10.10
+        deploy_otel_collector_enabled: true
+        deploy_otel_collector_manage_services: false
+        deploy_otel_collector_cluster: test-cluster
+        deploy_otel_collector_nodename: collector
+        deploy_otel_collector_exporters:
+          - node-exporter
+          - ha_cluster_exporter
+        deploy_otel_collector_scrape_ceph: true
+        deploy_otel_collector_tls_cert: /tmp/molecule-otelcol-cert.pem
+        deploy_otel_collector_tls_key: /tmp/molecule-otelcol-key.pem
+        deploy_otel_collector_tls_client_ca: /tmp/molecule-otelcol-ca.pem
+
+verifier:
+  name: ansible

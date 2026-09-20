@@ -1,0 +1,74 @@
+---
+- name: Verify the collector signs its own certificate when none is given
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Check the generated TLS material
+      ansible.builtin.stat:
+        path: "/etc/otelcol/cert.d/{{ item }}"
+      register: deploy_otel_collector_tls_files
+      loop:
+        - servercert.pem
+        - serverkey.pem
+
+    - name: Assert the node signed a certificate and kept the key to itself
+      ansible.builtin.assert:
+        that:
+          - deploy_otel_collector_tls_files.results | map(attribute='stat.exists') | min
+          - >-
+            (deploy_otel_collector_tls_files.results
+             | selectattr('item', 'eq', 'serverkey.pem')
+             | first).stat.mode == '0600'
+        fail_msg: >-
+          Without a certificate of its own the collector would serve the whole
+          observability surface of the node in the clear
+
+    - name: Check the CA of a scraper was not invented
+      ansible.builtin.stat:
+        path: /etc/otelcol/cert.d/clientca.pem
+      register: deploy_otel_collector_client_ca
+
+    - name: Assert no client CA is installed when none is given
+      ansible.builtin.assert:
+        that:
+          - not deploy_otel_collector_client_ca.stat.exists
+        fail_msg: Mutual TLS must stay something a site asks for
+
+    - name: Read the generated certificate
+      ansible.builtin.command:
+        cmd: openssl x509 -noout -text -in /etc/otelcol/cert.d/servercert.pem
+      register: deploy_otel_collector_cert_text
+      changed_when: false
+
+    - name: Assert the address it is served on is in the subjectAltName
+      ansible.builtin.assert:
+        that:
+          - "'IP Address:10.10.10.11' in deploy_otel_collector_cert_text.stdout"
+          - "'DNS:lonely' in deploy_otel_collector_cert_text.stdout"
+          - "'TLS Web Server Authentication' in deploy_otel_collector_cert_text.stdout"
+        fail_msg: >-
+          A scraper verifies the address it connected to, which a common name
+          alone has not answered for in years
+
+    - name: Read the generated collector configuration
+      ansible.builtin.slurp:
+        path: /etc/otelcol/config.yaml
+      register: deploy_otel_collector_config_raw
+
+    - name: Parse the generated collector configuration
+      ansible.builtin.set_fact:
+        deploy_otel_collector_config: >-
+          {{ deploy_otel_collector_config_raw.content | b64decode | from_yaml }}
+
+    - name: Assert the endpoint is served with the generated material
+      ansible.builtin.assert:
+        that:
+          - deploy_otel_collector_config.exporters.prometheus.endpoint == '10.10.10.11:9464'
+          - deploy_otel_collector_config.exporters.prometheus.tls.cert_file
+            == '/etc/otelcol/cert.d/servercert.pem'
+          - deploy_otel_collector_config.exporters.prometheus.tls.key_file
+            == '/etc/otelcol/cert.d/serverkey.pem'
+          - deploy_otel_collector_config.exporters.prometheus.tls.client_ca_file is not defined
+        fail_msg: The endpoint is not served with the certificate the node signed
