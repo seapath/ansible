@@ -1,0 +1,92 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+#
+# {{ ansible_managed }}
+#
+# One receiver scraping this node's exporters on the loopback, one exporter
+# serving the aggregate on a single TLS endpoint. Nothing is pushed: the
+# central Prometheus keeps scraping, one target per node instead of six.
+---
+receivers:
+  prometheus:
+    config:
+      scrape_configs:
+{% for target in deploy_otel_collector_jobs %}
+        - job_name: {{ target.job }}
+          scrape_interval: {{ deploy_otel_collector_scrape_interval }}
+          static_configs:
+            - targets: ["127.0.0.1:{{ target.port }}"]
+{% if deploy_otel_collector_cluster or deploy_otel_collector_nodename %}
+              labels:
+{% if deploy_otel_collector_cluster %}
+                cluster: "{{ deploy_otel_collector_cluster }}"
+{% endif %}
+{% if deploy_otel_collector_nodename %}
+                nodename: "{{ deploy_otel_collector_nodename }}"
+{% endif %}
+{% endif %}
+          relabel_configs:
+            # The target is the loopback, so instance would be the same string
+            # on every node of the cluster. It is rewritten to the address the
+            # rest of the world knows this node by, which is what the
+            # single-node dashboard reads.
+            - target_label: instance
+              replacement: "{{ deploy_otel_collector_instance_address }}:{{ target.port }}"
+{% endfor %}
+
+processors:
+  # A ceiling the collector enforces on itself: under pressure it refuses data
+  # and says so in its own metrics, rather than growing on a machine that also
+  # runs real time guests.
+  memory_limiter:
+    check_interval: 5s
+    limit_mib: {{ deploy_otel_collector_memory_limit_mib }}
+    spike_limit_mib: {{ deploy_otel_collector_memory_spike_limit_mib }}
+
+exporters:
+  prometheus:
+    endpoint: "{{ deploy_otel_collector_listen_address }}:{{ deploy_otel_collector_listen_port }}"
+    # Metric names and labels are passed through unaltered. Anything else
+    # renames the series this deployment already has history for.
+    translation_strategy: NoTranslation
+    # The collector otherwise stamps otel_scope_name, otel_scope_version and
+    # otel_scope_schema_url on every series it re-exposes, which are three
+    # labels no SEAPATH dashboard reads and which change the identity of every
+    # series this deployment already has history for.
+    without_scope_info: true
+    metric_expiration: {{ deploy_otel_collector_metric_expiration }}
+{% if deploy_otel_collector_tls_enabled | bool %}
+    tls:
+      cert_file: {{ deploy_otel_collector_tls_dir }}/servercert.pem
+      key_file: {{ deploy_otel_collector_tls_dir }}/serverkey.pem
+{% if deploy_otel_collector_tls_client_ca is defined %}
+      # Mutual TLS: a scraper without a certificate signed by this CA is
+      # refused before it reads a single metric.
+      client_ca_file: {{ deploy_otel_collector_tls_dir }}/clientca.pem
+{% endif %}
+      min_version: "{{ deploy_otel_collector_tls_min_version }}"
+{% endif %}
+
+service:
+  telemetry:
+    # The identity the collector reports for its own metrics. Left to itself it
+    # picks service.instance.id at random at every start, and since the
+    # prometheus receiver reads that identity back from target_info, the
+    # collector's own series would be renamed at every restart and pile up in
+    # the central Prometheus.
+    resource:
+      service.name: "{{ deploy_otel_collector_self_job }}"
+      service.instance.id: "{{ deploy_otel_collector_instance_address }}:{{ deploy_otel_collector_self_port }}"
+    metrics:
+      level: basic
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: 127.0.0.1
+                port: {{ deploy_otel_collector_self_port }}
+  pipelines:
+    metrics:
+      receivers: [prometheus]
+      processors: [memory_limiter]
+      exporters: [prometheus]

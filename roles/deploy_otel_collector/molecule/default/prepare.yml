@@ -1,0 +1,34 @@
+---
+- name: Prepare test environment (Debian 13)
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Install podman
+      ansible.builtin.apt:
+        name:
+          - podman
+        state: present
+        update_cache: true
+
+    - name: Ensure quadlet directory exists
+      ansible.builtin.file:
+        path: /etc/containers/systemd
+        state: directory
+        mode: "0755"
+
+    # The role copies these files, it does not read them: what is under test is
+    # that the TLS material lands with the right permissions and that the
+    # generated configuration points at it.
+    - name: Write the TLS material the role deploys
+      delegate_to: localhost
+      become: false
+      ansible.builtin.copy:
+        content: "molecule placeholder {{ item }}\n"
+        dest: "/tmp/molecule-otelcol-{{ item }}.pem"
+        mode: "0600"
+      loop:
+        - cert
+        - key
+        - ca
