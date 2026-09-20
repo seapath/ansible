@@ -19,6 +19,28 @@ If not, TLS encryption is deactivated.
 | syslog_tls_key       |  No      | String      |         | Syslog TLS private key                                             |
 | syslog_tls_server_ca |  No      | String      |         | Syslog TLS CA                                                      |
 
+## Disk buffer
+
+The remote destination buffers on disk, so that logs produced while the
+administration network is down are sent once it comes back instead of being
+dropped. The buffer lives in `syslog_disk_buffer_dir`, which the role creates
+and which must stay inside the `ReadWritePaths` of the hardened syslog-ng unit
+(`configure_hardening` allows `/var/lib/syslog-ng`).
+
+`reliable(no)` is the default: messages queue in memory first and spill to
+disk under pressure, so a crash can lose what was still in the front queue. Set
+`syslog_disk_buffer_reliable` to `true` to write every message to disk before
+acknowledging it, at the cost of one I/O per message.
+
+| Variable                       | Required | Type    | Default                        | Comments                                                        |
+|--------------------------------|----------|---------|--------------------------------|-----------------------------------------------------------------|
+| syslog_disk_buffer             |  No      | Boolean | `true`                         | Buffer outgoing messages on disk                                |
+| syslog_disk_buffer_dir         |  No      | String  | `/var/lib/syslog-ng/disk-buffer` | Directory holding the buffer files                            |
+| syslog_disk_buffer_size        |  No      | Int     | `134217728`                    | Maximum buffer size in bytes (syslog-ng minimum is `1048576`)   |
+| syslog_disk_buffer_reliable    |  No      | Boolean | `false`                        | Write every message to disk before acknowledging it             |
+| syslog_disk_buffer_mem_length  |  No      | Int     | `10000`                        | Front queue in messages, used when `reliable` is `false`        |
+| syslog_disk_buffer_mem_size    |  No      | Int     | `1048576`                      | Front queue in bytes, used when `reliable` is `true`            |
+
 ## Role's configuration template variables
 
 | Variable             | Required | Type        | Default | Comments                                                           |
