@@ -1,7 +1,16 @@
 # Copyright (C) 2026 RTE
 # SPDX-License-Identifier: Apache-2.0
 ---
-deploy_prometheus_exporters_listen_address: "{{ ip_addr | default(ansible_host) }}"
+# The administration address, which is what a node exposes when it is scraped
+# directly. When the per-node OpenTelemetry collector is deployed
+# (deploy_otel_collector_enabled), the exporters move to the loopback instead:
+# the collector scrapes them there and becomes the only endpoint this node
+# exposes, on one port with one TLS configuration. Set this variable
+# explicitly to override either behaviour.
+deploy_prometheus_exporters_listen_address: >-
+  {{ '127.0.0.1'
+     if (deploy_otel_collector_enabled | default(false) | bool)
+     else (ip_addr | default(ansible_host)) }}
 
 deploy_prometheus_exporters_images: {}
 

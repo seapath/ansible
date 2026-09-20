@@ -241,3 +241,50 @@ relabel_configs:
 Neither of the bundled dashboards needs this (the cluster dashboard keys off
 `cluster`/`nodename`, the single-node one off `instance`), so treat it as
 optional convenience, not a requirement.
+
+## One target per node: the per-node collector
+
+Everything above assumes Prometheus reaches each exporter directly, which
+means six HTTP endpoints per hypervisor, in the clear, on the administration
+network. The `deploy_otel_collector` role replaces that with a single TLS
+endpoint per node: an OpenTelemetry collector scrapes the six on `127.0.0.1`
+and serves the aggregate on port 9464, and the exporters move to the loopback
+(see [its README](../deploy_otel_collector/README.md)).
+
+The model stays pull, so a node that dies is still a target that goes down.
+The whole scrape configuration above then collapses into one job:
+
+```yaml
+scrape_configs:
+  - job_name: seapath
+    scheme: https
+    # Each series already carries the job, instance, cluster and nodename the
+    # node's own collector attached. Without this, Prometheus prefixes them
+    # with exported_ and every dashboard filtering on them breaks.
+    honor_labels: true
+    tls_config:
+      ca_file: /etc/prometheus/seapath-ca.crt
+      cert_file: /etc/prometheus/prometheus.crt
+      key_file: /etc/prometheus/prometheus.key
+    file_sd_configs:
+      - files: ["/etc/prometheus/targets/*.yml"]
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: "(.+)"
+        target_label: __address__
+        replacement: "${1}:9464"
+```
+
+The target files keep carrying `cluster`, `nodename` and `project` exactly as
+above, and the collector is free of them: it aggregates the exporters of one
+node and says nothing about the cluster it belongs to. A site that would
+rather each machine answer for itself sets `deploy_otel_collector_cluster` and
+`deploy_otel_collector_nodename`, and since `honor_labels` is on, what the
+node sends then wins. The `keep` rules of the
+[scrape filtering](#scrape-filtering) section disappear: each node's collector
+scrapes what that node actually runs, so a host that runs no `ha_cluster_exporter`
+simply reports no `ha` series. The target files are still what carries
+`project`, and they stay the place a site lists its nodes.
+
+Series names, types and labels are unchanged, `up` is still produced per
+exporter, and both bundled dashboards keep working.
