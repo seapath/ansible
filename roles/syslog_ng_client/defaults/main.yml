@@ -1,6 +1,24 @@
 # Copyright (C) 2026 Savoir-faire Linux, Inc.
+# Copyright (C) 2026 RTE
 # SPDX-License-Identifier: Apache-2.0
 
 ---
 
 syslog_conf_template: "syslog-ng.conf.j2" # noqa: var-naming[no-role-prefix]
+
+# Buffer outgoing messages on disk so that an administration network outage
+# does not lose the logs produced while the remote server is unreachable.
+# Without it only the in-memory queue survives the cut, which is a few
+# seconds of logs at best.
+syslog_disk_buffer: true # noqa: var-naming[no-role-prefix]
+syslog_disk_buffer_dir: /var/lib/syslog-ng/disk-buffer # noqa: var-naming[no-role-prefix]
+# 128 MiB, the minimum accepted by syslog-ng is 1048576.
+syslog_disk_buffer_size: 134217728 # noqa: var-naming[no-role-prefix]
+# reliable(no) keeps the in-memory queue in front of the disk buffer and only
+# spills to disk under pressure. reliable(yes) writes every message to disk
+# before acknowledging it, which costs an I/O per message.
+syslog_disk_buffer_reliable: false # noqa: var-naming[no-role-prefix]
+# Front queue, in messages, used when reliable is false.
+syslog_disk_buffer_mem_length: 10000 # noqa: var-naming[no-role-prefix]
+# Front queue, in bytes, used when reliable is true.
+syslog_disk_buffer_mem_size: 1048576 # noqa: var-naming[no-role-prefix]
