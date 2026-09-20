@@ -5,7 +5,11 @@ This role deploys Prometheus exporters as Podman quadlet container units under
 Activation at boot comes from the `[Install]` section of the quadlet units.
 
 The exporters are bound to the administration IP address, which defaults to the
-standard SEAPATH `ip_addr` inventory variable.
+standard SEAPATH `ip_addr` inventory variable. With the per-node collector
+deployed (`deploy_otel_collector_enabled`, see the
+[deploy_otel_collector role](../deploy_otel_collector/README.md)) they bind to
+the loopback instead, and that collector becomes the single endpoint this node
+exposes.
 
 ## Requirements
 
@@ -25,7 +29,7 @@ standard SEAPATH `ip_addr` inventory variable.
 |---|---|---|---|---|
 | `deploy_prometheus_exporters_enabled` | No | Boolean | `true` | Set to `false` on Yocto and SLES until support is added |
 | `deploy_prometheus_exporters_exporters` | No | List | see below | Exporters to deploy on the host |
-| `deploy_prometheus_exporters_listen_address` | No | String | `"{{ ip_addr \| default(ansible_host) }}"` | IP address exporters listen on |
+| `deploy_prometheus_exporters_listen_address` | No | String | `ip_addr`, or `127.0.0.1` with the collector | IP address exporters listen on |
 | `deploy_prometheus_exporters_images` | No | Dict | `{}` | Container images keyed by exporter name |
 | `deploy_prometheus_exporters_node_exporter_image` | No | String | see defaults | Node exporter container image |
 | `deploy_prometheus_exporters_podman_exporter_image` | No | String | see defaults | Podman exporter container image |

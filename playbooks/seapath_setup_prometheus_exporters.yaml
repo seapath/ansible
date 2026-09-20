@@ -10,3 +10,7 @@
   roles:
     - detect_seapath_distro
     - deploy_prometheus_exporters
+    # In the same play as the exporters, so the collector scrapes exactly the
+    # list that role deployed. Inert until deploy_otel_collector_enabled is set
+    # in the inventory, which is also what moves the exporters to the loopback.
+    - deploy_otel_collector
