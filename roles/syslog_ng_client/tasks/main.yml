@@ -10,6 +10,15 @@
     state: directory
     mode: "0755"
 
+- name: Create the syslog-ng disk buffer directory
+  become: true
+  when: syslog_disk_buffer | bool
+  ansible.builtin.file:
+    path: "{{ syslog_disk_buffer_dir }}"
+    state: directory
+    # The buffer holds message payloads, keep it readable by root only.
+    mode: "0700"
+
 - name: Copy syslog-ng conf file
   become: true
   ansible.builtin.template:

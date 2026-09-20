@@ -48,6 +48,19 @@ destination d_net {
                 transport("tcp")
 {% endif %}
                 time_zone("UTC")
+{% if syslog_disk_buffer | bool %}
+                disk-buffer(
+                        dir("{{ syslog_disk_buffer_dir }}")
+                        disk-buf-size({{ syslog_disk_buffer_size }})
+{% if syslog_disk_buffer_reliable | bool %}
+                        reliable(yes)
+                        mem-buf-size({{ syslog_disk_buffer_mem_size }})
+{% else %}
+                        reliable(no)
+                        mem-buf-length({{ syslog_disk_buffer_mem_length }})
+{% endif %}
+                )
+{% endif %}
         );
 };
 {% endif %}
