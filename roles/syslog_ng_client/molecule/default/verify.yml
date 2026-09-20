@@ -20,6 +20,32 @@
         that:
           - syslog_ng_client_var_log_syslog_ng_stat.stat.exists
 
+    - name: Read the installed syslog-ng version
+      ansible.builtin.command: syslog-ng --version
+      register: syslog_ng_client_version_cmd
+      changed_when: false
+
+    - name: Read the generated configuration
+      ansible.builtin.slurp:
+        src: /etc/syslog-ng/syslog-ng.conf
+      register: syslog_ng_client_conf_content
+
+    # The md5sum below covers this too, but only with an opaque mismatch: a
+    # syslog-ng bump in the CI image should say so instead.
+    - name: Assert the configuration declares the installed syslog-ng version
+      ansible.builtin.assert:
+        that:
+          - 'syslog_ng_client_declared_version == "@version: " ~ syslog_ng_client_installed_version'
+        fail_msg: >-
+          Expected '@version: {{ syslog_ng_client_installed_version }}' but got
+          '{{ syslog_ng_client_declared_version }}'
+      vars:
+        syslog_ng_client_installed_version: >-
+          {{ (syslog_ng_client_version_cmd.stdout
+              | regex_findall('syslog-ng\s+\d+\s+\((\d+\.\d+)'))[0] }}
+        syslog_ng_client_declared_version: >-
+          {{ (syslog_ng_client_conf_content.content | b64decode).splitlines()[0] }}
+
     - name: Ensure /etc/syslog-ng/syslog-ng.conf exists
       ansible.builtin.stat:
         checksum_algorithm: md5

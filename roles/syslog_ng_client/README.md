@@ -19,6 +19,24 @@ If not, TLS encryption is deactivated.
 | syslog_tls_key       |  No      | String      |         | Syslog TLS private key                                             |
 | syslog_tls_server_ca |  No      | String      |         | Syslog TLS CA                                                      |
 
+## Configuration version
+
+The `@version` line of `syslog-ng.conf` is read from the installed syslog-ng
+(`syslog-ng --version`), so a machine running 4.8 gets `@version: 4.8` instead
+of the 3.38 the template used to hardcode, and syslog-ng stops warning about a
+configuration older than itself at every start.
+
+A declared version below the installed one runs the configuration in
+compatibility mode, and a version above it is refused outright, which is why
+the role never guesses: when reading the installed version fails it falls back
+to `syslog_config_version_fallback`. Set `syslog_config_version` to pin the
+declared version and skip the detection entirely.
+
+| Variable                       | Required | Type   | Default  | Comments                                          |
+|--------------------------------|----------|--------|----------|----------------------------------------------------|
+| syslog_config_version          |  No      | String | detected | Pin the declared version, skipping the detection   |
+| syslog_config_version_fallback |  No      | String | `3.38`   | Used only when the detection fails                 |
+
 ## TLS policy
 
 When TLS is enabled the destination restricts the handshake to TLS 1.2 and
