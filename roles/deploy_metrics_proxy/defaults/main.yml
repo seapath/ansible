@@ -1,0 +1,106 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+# One TLS reverse proxy per node, as a podman quadlet next to the exporters it
+# serves.
+#
+# Turning this on does two things at once, which is the point: the exporters
+# move to the loopback (deploy_prometheus_exporters and cephadm read this very
+# variable to decide where they bind), and this proxy becomes the single
+# endpoint the node exposes on the administration network. One port, one
+# certificate, one TLS policy, instead of six HTTP endpoints in the clear whose
+# support for TLS is uneven and unconfigured.
+#
+# Each exporter keeps its own path on that port and its own job on the
+# Prometheus side. The proxy forwards bytes: every exposition reaches
+# Prometheus exactly as the exporter wrote it, and a dead exporter is a target
+# that goes down on its own.
+deploy_metrics_proxy_enabled: false
+
+# Pinned, so that the proxy of a substation is a version this repository has
+# read. The slim variant carries the core modules this role uses (http, ssl,
+# proxy) and nothing else.
+deploy_metrics_proxy_image: docker.io/library/nginx:1.30.5-alpine-slim
+
+# The single endpoint this node exposes. 9464 is the port the per-node
+# endpoint has used on this branch so far, kept so that firewall rules written
+# for it still apply.
+deploy_metrics_proxy_listen_address: "{{ ip_addr | default(ansible_host) }}"
+deploy_metrics_proxy_listen_port: 9464
+
+# Server certificate and key, as paths on the Ansible machine, in the same
+# shape as the syslog client's TLS material.
+# deploy_metrics_proxy_tls_cert: /path/to/servercert.pem
+# deploy_metrics_proxy_tls_key: /path/to/serverkey.pem
+#
+# Without them the node signs its own, so that deploying this role never
+# produces a cleartext endpoint while a site is still deciding what issues its
+# certificates. A self signed certificate hides the metrics from anyone
+# listening on the administration network, and it proves nothing about who is
+# answering: an operator who wants that pins the fingerprint this role prints,
+# or replaces the certificate with one of their PKI, which is the same two
+# variables above.
+deploy_metrics_proxy_tls_self_signed: true
+# Ten years. The certificate secures a link inside a substation, it is not
+# read by a browser, and an expiry is a monitoring outage nobody is watching
+# for.
+deploy_metrics_proxy_tls_self_signed_days: 3650
+# A certificate this close to its expiry is replaced on the next run.
+deploy_metrics_proxy_tls_renew_before_days: 30
+#
+# The CA that client certificates are verified against. Set it to require
+# mutual TLS: the central Prometheus then presents a certificate and nothing
+# else can read the metrics of this node. It works with a self signed server
+# certificate too, and it is the only thing that turns confidentiality into
+# access control.
+# deploy_metrics_proxy_tls_client_ca: /path/to/clientca.pem
+deploy_metrics_proxy_tls_dir: /etc/seapath-metrics-proxy/cert.d
+deploy_metrics_proxy_tls_min_version: "1.2"
+
+# How long the proxy waits for an exporter before answering 504. Under the
+# default scrape timeout of Prometheus (10s), so that a slow exporter shows up
+# as a gateway timeout the proxy logs rather than as a scrape Prometheus
+# abandons without saying why.
+deploy_metrics_proxy_read_timeout: 8s
+
+# The exporters running on this host. Derived from the inventory groups the
+# same way deploy_prometheus_exporters derives its own list, and taken straight
+# from that role when both are applied in the same play.
+deploy_metrics_proxy_exporters: >-
+  {{
+    deploy_prometheus_exporters_exporters | default(
+      (
+        ['node-exporter']
+        + (
+          deploy_metrics_proxy_group_exporters.cluster_machines
+          if inventory_hostname in groups.get('cluster_machines', [])
+          else []
+        )
+        + (
+          deploy_metrics_proxy_group_exporters.hypervisors
+          if inventory_hostname in groups.get('hypervisors', [])
+          else []
+        )
+      ) | unique
+    )
+  }}
+
+# The Ceph mgr prometheus module, which is deployed by cephadm and not by the
+# exporters role, so it is selected on its own.
+deploy_metrics_proxy_serve_ceph: >-
+  {{
+    inventory_hostname in groups.get('cluster_machines', [])
+    and (cephadm_prometheus_exporter_enabled | default(true) | bool)
+  }}
+
+# Housekeeping CPUs. Left empty, the role computes the complement of `isolcpus`
+# and pins the container there: this service must never compete with a real
+# time guest. On a machine with no isolated CPU the container is left unpinned.
+deploy_metrics_proxy_cpu_affinity: ""
+deploy_metrics_proxy_cpu_quota: 25%
+deploy_metrics_proxy_nice: 5
+
+deploy_metrics_proxy_manage_services: true
+deploy_metrics_proxy_register_essential_services: true
+deploy_metrics_proxy_cukinia_extra_essential_services_dir: /etc/cukinia/extra-essential-services.d
+deploy_metrics_proxy_cukinia_extra_essential_services_file: "{{ deploy_metrics_proxy_cukinia_extra_essential_services_dir }}/deploy_metrics_proxy"

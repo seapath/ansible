@@ -27,13 +27,13 @@ provisioner:
       lonely:
         seapath_distro: Debian
         ip_addr: 10.10.10.11
-        deploy_otel_collector_enabled: true
-        deploy_otel_collector_manage_services: false
+        deploy_metrics_proxy_enabled: true
+        deploy_metrics_proxy_manage_services: false
         # No certificate given: the node signs its own rather than serving the
         # metrics of a hypervisor in the clear.
-        deploy_otel_collector_exporters:
+        deploy_metrics_proxy_exporters:
           - node-exporter
-        deploy_otel_collector_scrape_ceph: false
+        deploy_metrics_proxy_serve_ceph: false
 
 verifier:
   name: ansible

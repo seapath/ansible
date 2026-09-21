@@ -26,7 +26,7 @@
       become: false
       ansible.builtin.copy:
         content: "molecule placeholder {{ item }}\n"
-        dest: "/tmp/molecule-otelcol-{{ item }}.pem"
+        dest: "/tmp/molecule-metrics-proxy-{{ item }}.pem"
         mode: "0600"
       loop:
         - cert

@@ -1,0 +1,96 @@
+---
+- name: Verify the metrics proxy deployment
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Read the generated proxy configuration
+      ansible.builtin.slurp:
+        path: /etc/seapath-metrics-proxy/nginx.conf
+      register: deploy_metrics_proxy_config_raw
+
+    - name: Name the configuration lines
+      ansible.builtin.set_fact:
+        deploy_metrics_proxy_config: >-
+          {{ (deploy_metrics_proxy_config_raw.content | b64decode).splitlines() | map('trim') | list }}
+
+    # Each route read back as the pair it forwards, so that a path served by
+    # the wrong port fails as clearly as a missing one.
+    - name: List the routes the proxy serves
+      ansible.builtin.set_fact:
+        deploy_metrics_proxy_served: >-
+          {{ deploy_metrics_proxy_config
+             | select('match', '^(location = /metrics/|proxy_pass )')
+             | map('regex_replace', '^location = (\S+) \{$', '\1')
+             | map('regex_replace', '^proxy_pass (\S+);$', '\1')
+             | batch(2) | map('join', ' ') | sort }}
+
+    - name: Assert every exporter of this host is served from the loopback
+      ansible.builtin.assert:
+        that:
+          - deploy_metrics_proxy_served == [
+              '/metrics/ceph http://127.0.0.1:9283/metrics',
+              '/metrics/ha http://127.0.0.1:9664/metrics',
+              '/metrics/node http://127.0.0.1:9100/metrics']
+        fail_msg: >-
+          The routes do not match the exporters of this host, or a route does
+          not lead to the loopback: {{ deploy_metrics_proxy_served }}
+
+    - name: Assert the single endpoint is served with mutual TLS
+      ansible.builtin.assert:
+        that:
+          - "'listen 10.10.10.10:9464 ssl;' in deploy_metrics_proxy_config"
+          - "'ssl_certificate /etc/seapath-metrics-proxy/cert.d/servercert.pem;' in deploy_metrics_proxy_config"
+          - "'ssl_certificate_key /etc/seapath-metrics-proxy/cert.d/serverkey.pem;' in deploy_metrics_proxy_config"
+          - "'ssl_client_certificate /etc/seapath-metrics-proxy/cert.d/clientca.pem;' in deploy_metrics_proxy_config"
+          - "'ssl_verify_client on;' in deploy_metrics_proxy_config"
+          - "'ssl_protocols TLSv1.2 TLSv1.3;' in deploy_metrics_proxy_config"
+        fail_msg: The exposed endpoint is not the expected TLS endpoint
+
+    - name: Check the TLS material of the proxy
+      ansible.builtin.stat:
+        path: "/etc/seapath-metrics-proxy/cert.d/{{ item }}"
+      register: deploy_metrics_proxy_tls_files
+      loop:
+        - servercert.pem
+        - serverkey.pem
+        - clientca.pem
+
+    - name: Assert the private key is readable by root only
+      ansible.builtin.assert:
+        that:
+          - deploy_metrics_proxy_tls_files.results | map(attribute='stat.exists') | min
+          - >-
+            (deploy_metrics_proxy_tls_files.results
+             | selectattr('item', 'eq', 'serverkey.pem')
+             | first).stat.mode == '0600'
+        fail_msg: The TLS material is missing, or the private key is world readable
+
+    - name: Read the proxy quadlet unit
+      ansible.builtin.slurp:
+        path: /etc/containers/systemd/seapath-metrics-proxy.container
+      register: deploy_metrics_proxy_unit_raw
+
+    - name: Assert the unit runs in the host network namespace
+      ansible.builtin.assert:
+        that:
+          - "'Network=host' in (deploy_metrics_proxy_unit_raw.content | b64decode)"
+          - "'Restart=always' in (deploy_metrics_proxy_unit_raw.content | b64decode)"
+          - >-
+            'Volume=/etc/seapath-metrics-proxy/nginx.conf:/etc/nginx/nginx.conf:ro'
+            in (deploy_metrics_proxy_unit_raw.content | b64decode)
+          - "'nginx:1.30.5-alpine-slim' in (deploy_metrics_proxy_unit_raw.content | b64decode)"
+        fail_msg: >-
+          The proxy must share the host network namespace, or it cannot
+          reach the exporters on 127.0.0.1
+
+    - name: Check the cukinia drop-in
+      ansible.builtin.slurp:
+        path: /etc/cukinia/extra-essential-services.d/deploy_metrics_proxy
+      register: deploy_metrics_proxy_cukinia
+
+    - name: Assert the proxy is published as an essential service
+      ansible.builtin.assert:
+        that:
+          - "'seapath-metrics-proxy' in (deploy_metrics_proxy_cukinia.content | b64decode)"

@@ -1,0 +1,72 @@
+---
+- name: Verify the proxy signs its own certificate when none is given
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Check the generated TLS material
+      ansible.builtin.stat:
+        path: "/etc/seapath-metrics-proxy/cert.d/{{ item }}"
+      register: deploy_metrics_proxy_tls_files
+      loop:
+        - servercert.pem
+        - serverkey.pem
+
+    - name: Assert the node signed a certificate and kept the key to itself
+      ansible.builtin.assert:
+        that:
+          - deploy_metrics_proxy_tls_files.results | map(attribute='stat.exists') | min
+          - >-
+            (deploy_metrics_proxy_tls_files.results
+             | selectattr('item', 'eq', 'serverkey.pem')
+             | first).stat.mode == '0600'
+        fail_msg: >-
+          Without a certificate of its own the proxy would serve the whole
+          observability surface of the node in the clear
+
+    - name: Check the CA of a scraper was not invented
+      ansible.builtin.stat:
+        path: /etc/seapath-metrics-proxy/cert.d/clientca.pem
+      register: deploy_metrics_proxy_client_ca
+
+    - name: Assert no client CA is installed when none is given
+      ansible.builtin.assert:
+        that:
+          - not deploy_metrics_proxy_client_ca.stat.exists
+        fail_msg: Mutual TLS must stay something a site asks for
+
+    - name: Read the generated certificate
+      ansible.builtin.command:
+        cmd: openssl x509 -noout -text -in /etc/seapath-metrics-proxy/cert.d/servercert.pem
+      register: deploy_metrics_proxy_cert_text
+      changed_when: false
+
+    - name: Assert the address it is served on is in the subjectAltName
+      ansible.builtin.assert:
+        that:
+          - "'IP Address:10.10.10.11' in deploy_metrics_proxy_cert_text.stdout"
+          - "'DNS:lonely' in deploy_metrics_proxy_cert_text.stdout"
+          - "'TLS Web Server Authentication' in deploy_metrics_proxy_cert_text.stdout"
+        fail_msg: >-
+          A scraper verifies the address it connected to, which a common name
+          alone has not answered for in years
+
+    - name: Read the generated proxy configuration
+      ansible.builtin.slurp:
+        path: /etc/seapath-metrics-proxy/nginx.conf
+      register: deploy_metrics_proxy_config_raw
+
+    - name: Name the configuration lines
+      ansible.builtin.set_fact:
+        deploy_metrics_proxy_config: >-
+          {{ (deploy_metrics_proxy_config_raw.content | b64decode).splitlines() | map('trim') | list }}
+
+    - name: Assert the endpoint is served with the generated material
+      ansible.builtin.assert:
+        that:
+          - "'listen 10.10.10.11:9464 ssl;' in deploy_metrics_proxy_config"
+          - "'ssl_certificate /etc/seapath-metrics-proxy/cert.d/servercert.pem;' in deploy_metrics_proxy_config"
+          - "'ssl_certificate_key /etc/seapath-metrics-proxy/cert.d/serverkey.pem;' in deploy_metrics_proxy_config"
+          - deploy_metrics_proxy_config | select('match', 'ssl_client_certificate|ssl_verify_client') | list | length == 0
+        fail_msg: The endpoint is not served with the certificate the node signed
