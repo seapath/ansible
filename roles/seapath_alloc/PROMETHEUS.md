@@ -242,49 +242,54 @@ Neither of the bundled dashboards needs this (the cluster dashboard keys off
 `cluster`/`nodename`, the single-node one off `instance`), so treat it as
 optional convenience, not a requirement.
 
-## One target per node: the per-node collector
+## Behind the per-node metrics proxy
 
 Everything above assumes Prometheus reaches each exporter directly, which
 means six HTTP endpoints per hypervisor, in the clear, on the administration
-network. The `deploy_otel_collector` role replaces that with a single TLS
-endpoint per node: an OpenTelemetry collector scrapes the six on `127.0.0.1`
-and serves the aggregate on port 9464, and the exporters move to the loopback
-(see [its README](../deploy_otel_collector/README.md)).
+network. The `deploy_metrics_proxy` role replaces that with a single TLS
+endpoint per node: an nginx serves each exporter on its own path of port 9464,
+`/metrics/<job>`, and the exporters move to `127.0.0.1` (see
+[its README](../deploy_metrics_proxy/README.md)).
 
-The model stays pull, so a node that dies is still a target that goes down.
-The whole scrape configuration above then collapses into one job:
+The six jobs above stay, `keep` rules included. Each one changes in three
+places, shown here for `node`:
 
 ```yaml
 scrape_configs:
-  - job_name: seapath
+  - job_name: node
     scheme: https
-    # Each series already carries the job, instance, cluster and nodename the
-    # node's own collector attached. Without this, Prometheus prefixes them
-    # with exported_ and every dashboard filtering on them breaks.
-    honor_labels: true
+    metrics_path: /metrics/node
     tls_config:
+      # The CA of the site PKI, or the certificate a node signed itself, which
+      # is then pinned per node and checked against the fingerprint the run
+      # printed. cert_file and key_file are what
+      # deploy_metrics_proxy_tls_client_ca asks for.
       ca_file: /etc/prometheus/seapath-ca.crt
       cert_file: /etc/prometheus/prometheus.crt
       key_file: /etc/prometheus/prometheus.key
     file_sd_configs:
       - files: ["/etc/prometheus/targets/*.yml"]
     relabel_configs:
+      # Written before __address__ gets the proxy port, so the series keep the
+      # instance they had when the exporter was scraped directly.
+      - source_labels: [__address__]
+        regex: "(.+)"
+        target_label: instance
+        replacement: "${1}:9100"
       - source_labels: [__address__]
         regex: "(.+)"
         target_label: __address__
         replacement: "${1}:9464"
 ```
 
-The target files keep carrying `cluster`, `nodename` and `project` exactly as
-above, and the collector is free of them: it aggregates the exporters of one
-node and says nothing about the cluster it belongs to. A site that would
-rather each machine answer for itself sets `deploy_otel_collector_cluster` and
-`deploy_otel_collector_nodename`, and since `honor_labels` is on, what the
-node sends then wins. The `keep` rules of the
-[scrape filtering](#scrape-filtering) section disappear: each node's collector
-scrapes what that node actually runs, so a host that runs no `ha_cluster_exporter`
-simply reports no `ha` series. The target files are still what carries
-`project`, and they stay the place a site lists its nodes.
+The other five follow the same pattern: `metrics_path` is `/metrics/` followed
+by the job name (`/metrics/ceph`, `/metrics/ha`,
+`/metrics/seapath_custom_exporter`, `/metrics/libvirt_exporter`,
+`/metrics/podman_exporter`), and `instance` keeps the exporter port from the
+[exporter table](#exporters-and-jobs). The `instance` rule is what keeps the
+single-node dashboard working, since every job now reaches the same address
+and port.
 
-Series names, types and labels are unchanged, `up` is still produced per
-exporter, and both bundled dashboards keep working.
+A node that does not run an exporter answers 404 on its path, and one whose
+exporter is down answers 502, so both show up as a down target exactly as
+they did before the proxy.
