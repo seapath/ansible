@@ -8,6 +8,7 @@
     - name: Install podman
       ansible.builtin.apt:
         name:
+          - lvm2
           - podman
         state: present
         update_cache: true

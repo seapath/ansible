@@ -1,0 +1,11 @@
+[Unit]
+Description=Write the LVM metrics for the node exporter
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/seapath-lvm-textfile
+Nice=10
+IOSchedulingClass=idle
+# Each LVM command has its own 15 s timeout; this is the last resort for a
+# scan stuck in the kernel, which those cannot interrupt.
+TimeoutStartSec=90

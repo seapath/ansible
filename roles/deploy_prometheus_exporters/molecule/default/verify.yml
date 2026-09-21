@@ -72,3 +72,39 @@
           - deploy_prometheus_exporters_textfile_dir.stat.exists
           - deploy_prometheus_exporters_textfile_dir.stat.isdir
           - deploy_prometheus_exporters_textfile_dir.stat.mode == "0755"
+
+    - name: Check the LVM metrics files
+      ansible.builtin.stat:
+        path: "{{ item.path }}"
+      loop:
+        - {path: /usr/local/sbin/seapath-lvm-textfile, mode: "0755"}
+        - {path: /etc/systemd/system/seapath-lvm-textfile.service, mode: "0644"}
+        - {path: /etc/systemd/system/seapath-lvm-textfile.timer, mode: "0644"}
+      register: deploy_prometheus_exporters_lvm_files
+
+    - name: Assert the LVM metrics files are deployed
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.mode == item.item.mode
+          - item.stat.pw_name == "root"
+        fail_msg: "{{ item.item.path }} is missing or has the wrong mode"
+      loop: "{{ deploy_prometheus_exporters_lvm_files.results }}"
+      loop_control:
+        label: "{{ item.item.path }}"
+
+    - name: Run the LVM metrics script once
+      ansible.builtin.command: /usr/local/sbin/seapath-lvm-textfile
+      changed_when: false
+
+    - name: Read the LVM metrics
+      ansible.builtin.slurp:
+        path: /var/lib/prometheus/node_exporter/seapath_lvm.prom
+      register: deploy_prometheus_exporters_lvm_metrics
+
+    - name: Assert the LVM metrics were collected
+      ansible.builtin.assert:
+        that:
+          - >-
+            'seapath_lvm_collect_success 1'
+            in (deploy_prometheus_exporters_lvm_metrics.content | b64decode)
