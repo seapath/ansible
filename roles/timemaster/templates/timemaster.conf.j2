@@ -16,6 +16,9 @@ delay 1e-9
 # source selection or to make it prefer other sources.
 # The default is 1e-9 (1 nanosecond).
 # Leave as default to leave the error be computed via the std dev of measured samples.
+{% if timemaster_ptp_ntp_options is not none %}
+ntp_options {{ timemaster_ptp_ntp_options }}
+{% endif %}
 {% endif %}
 
 [timemaster]
@@ -24,8 +27,8 @@ ntp_program chronyd
 [chrony.conf]
 include {{ timemaster_path_chrony_conf }}
 {% if ntp_servers is defined %}
-{%- for line in ntp_servers %}{% if ptp_interface is not defined and loop.index==1 %}server {{ line }} trust iburst maxsamples 10 minsamples 10 maxpoll 6 minpoll 6
-{% else %}server {{ line }} iburst maxsamples 10 minsamples 10 maxpoll 6 minpoll 6
+{%- for line in ntp_servers %}{% if ptp_interface is not defined and loop.index==1 %}server {{ line }} trust iburst maxsamples {{ timemaster_ntp_samples }} minsamples {{ timemaster_ntp_samples }} maxpoll {{ timemaster_ntp_poll }} minpoll {{ timemaster_ntp_poll }}
+{% else %}server {{ line }} iburst maxsamples {{ timemaster_ntp_samples }} minsamples {{ timemaster_ntp_samples }} maxpoll {{ timemaster_ntp_poll }} minpoll {{ timemaster_ntp_poll }}
 {% endif %}{% endfor %}
 {% endif %}
 # Step the clock whenever the offset exceeds 1 second, with no limit on the
@@ -36,6 +39,11 @@ include {{ timemaster_path_chrony_conf }}
 # a grand master crash. This directive comes after the include above so that it
 # overrides the value shipped in {{ timemaster_path_chrony_conf }}.
 makestep 1 -1
+{% if timemaster_chrony_custom_options is not none %}
+{% for line in timemaster_chrony_custom_options %}
+{{ line }}
+{% endfor %}
+{% endif %}
 
 [ntp.conf]
 includefile /etc/ntp.conf

@@ -7,3 +7,7 @@ timemaster_ptp_delay_mechanism: "P2P"
 timemaster_ptp_domain_number: 0
 timemaster_ptp_minor_version: 1
 timemaster_ptp_custom_options:
+timemaster_ntp_poll: 6
+timemaster_ntp_samples: 10
+timemaster_ptp_ntp_options:
+timemaster_chrony_custom_options:
