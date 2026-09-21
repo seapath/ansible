@@ -37,6 +37,7 @@ exposes.
 | `deploy_prometheus_exporters_insatomcat_exporter_image` | No | String | see defaults | Insatomcat exporter container image |
 | `deploy_prometheus_exporters_ha_cluster_exporter_image` | No | String | see defaults | HA cluster exporter container image |
 | `deploy_prometheus_exporters_manage_services` | No | Boolean | `true` | Start systemd units and restart them on unit file changes |
+| `deploy_prometheus_exporters_lvm_enabled` | No | Boolean | `true` | Write the LVM metrics to the node exporter textfile collector, see below |
 | `deploy_prometheus_exporters_register_essential_services` | No | Boolean | `true` | Publish deployed services for cukinia tests |
 | `deploy_prometheus_exporters_libvirt_exporter_socket` | No | String | see vars | Host libvirt socket mounted in libvirt exporter |
 | `deploy_prometheus_exporters_insatomcat_libvirt_socket` | No | String | see vars | Host libvirt socket mounted in insatomcat exporter |
@@ -89,6 +90,56 @@ The mapping is defined in `vars/main.yml` as
 |---|---|---|---|
 | Debian, CentOS, SLES | `/var/run/libvirt/libvirt-sock-ro` | `/var/run/libvirt/libvirt-sock` | `libvirtd.service` |
 | Oracle Linux | `/run/libvirt/virtqemud-sock` | `/run/libvirt/virtqemud-sock` | `virtqemud.service` |
+
+## LVM metrics
+
+node_exporter reports the file systems mounted on logical volumes and the I/O
+of their device-mapper devices, but nothing of the LVM layer itself. On the
+machines that run the node exporter and have LVM installed (`/usr/sbin/lvm`),
+the role adds a `seapath-lvm-textfile.timer`. Every minute it runs
+`/usr/local/sbin/seapath-lvm-textfile`, which reads `vgs`, `pvs` and `lvs` and
+writes `/var/lib/prometheus/node_exporter/seapath_lvm.prom`, served by the node
+exporter on its next scrape.
+
+| Metric | Labels | Meaning |
+|---|---|---|
+| `seapath_lvm_vg_size_bytes`, `seapath_lvm_vg_free_bytes` | `vg` | Size and unallocated space of the volume group |
+| `seapath_lvm_vg_pv_count`, `seapath_lvm_vg_missing_pv_count` | `vg` | Physical volumes in the group, and those that cannot be found |
+| `seapath_lvm_vg_lv_count`, `seapath_lvm_vg_snapshot_count` | `vg` | Logical volumes and snapshots in the group |
+| `seapath_lvm_pv_size_bytes`, `seapath_lvm_pv_free_bytes`, `seapath_lvm_pv_missing` | `pv`, `vg` | Size, free space and presence of each physical volume. `vg` is empty for a PV in no group |
+| `seapath_lvm_lv_info` | `vg`, `lv`, `segtype`, `origin`, `pool` | Always 1: the type of the LV, the origin of a snapshot, the pool of a thin volume |
+| `seapath_lvm_lv_size_bytes` | `vg`, `lv` | Size of the logical volume |
+| `seapath_lvm_lv_active` | `vg`, `lv` | 1 when the LV is active on this node |
+| `seapath_lvm_lv_data_ratio` | `vg`, `lv` | Used share, 0 to 1, of a snapshot, thin pool or thin volume |
+| `seapath_lvm_lv_metadata_ratio` | `vg`, `lv` | Used share of the metadata of a thin or cache pool |
+| `seapath_lvm_lv_healthy` | `vg`, `lv` | 0 when `lv_health_status` reports a problem; `lvs -o +lv_health_status` tells which |
+| `seapath_lvm_lv_merging` | `vg`, `lv` | 1 while a snapshot is being merged back into its origin |
+| `seapath_lvm_lv_snapshot_invalid` | `vg`, `lv` | 1 when a snapshot has overflowed and can no longer be used |
+| `seapath_lvm_collect_success` | | 0 when the last run failed |
+| `seapath_lvm_collect_duration_seconds` | | Time the last run took |
+
+A metric that does not apply to an LV, such as the fill ratio of a linear
+volume, is left out rather than written as 0.
+
+Each LVM command is given 15 seconds. A run that fails or times out writes
+`seapath_lvm_collect_success 0` and nothing else, so that the figures of an
+earlier run are never served as current ones.
+
+Some alerts worth setting, given how SEAPATH uses LVM:
+
+- `seapath_lvm_lv_data_ratio{lv="root-snap"} > 0.8`: the snapshot taken by
+  `seapath_update_debian.yaml` is filling up. At 100 % it is invalidated and
+  the update can no longer be rolled back.
+- `seapath_lvm_lv_info{lv="root-snap"}` present for more than a few days: an
+  update was never finished or cleaned up, and the next one will refuse to
+  run.
+- `seapath_lvm_vg_free_bytes{vg="vg1"}` below `snapshot_min_size_gib` (2 GiB
+  by default): the next Debian update will refuse to run.
+- `seapath_lvm_lv_healthy == 0`, `seapath_lvm_vg_missing_pv_count > 0` or
+  `seapath_lvm_collect_success == 0`.
+
+Set `deploy_prometheus_exporters_lvm_enabled: false` to leave them out; the
+role then removes the timer, the script and the metrics file.
 
 ## Example Playbook
 
