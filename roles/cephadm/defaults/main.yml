@@ -5,10 +5,10 @@
 cephadm_release: "20.2.0"
 cephadm_prometheus_exporter_enabled: true
 # Where the mgr prometheus module binds. It follows the exporters: with the
-# per-node OpenTelemetry collector deployed (deploy_otel_collector_enabled),
-# the module answers on the loopback and the collector is what exposes these
-# metrics on the administration network.
+# per-node metrics proxy deployed (deploy_metrics_proxy_enabled), the module
+# answers on the loopback and the proxy is what exposes these metrics on the
+# administration network.
 cephadm_prometheus_listen_address: >-
   {{ '127.0.0.1'
-     if (deploy_otel_collector_enabled | default(false) | bool)
+     if (deploy_metrics_proxy_enabled | default(false) | bool)
      else (ip_addr | default(ansible_host)) }}

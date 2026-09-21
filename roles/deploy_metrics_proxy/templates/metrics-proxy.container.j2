@@ -1,0 +1,40 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+#
+# {{ ansible_managed }}
+#
+# Managed by the deploy_metrics_proxy role. Edit the role, never this file.
+
+[Unit]
+Description=TLS proxy in front of the Prometheus exporters
+After=network-online.target
+Wants=network-online.target
+# No ordering against podman.socket, libvirt or Pacemaker: an exporter that is
+# not up yet answers 502 through the proxy, which Prometheus reports as that
+# job being down and retries at the next interval. Ordering the proxy behind
+# every exporter it serves would only delay the moment that becomes visible.
+
+[Container]
+Image={{ deploy_metrics_proxy_image }}
+ContainerName={{ deploy_metrics_proxy_service }}
+# The host network namespace, because the exporters are on the host's loopback.
+Network=host
+Volume={{ deploy_metrics_proxy_config_file }}:/etc/nginx/nginx.conf:ro
+{% if deploy_metrics_proxy_tls_enabled | bool %}
+Volume={{ deploy_metrics_proxy_tls_dir }}:{{ deploy_metrics_proxy_tls_dir }}:ro
+{% endif %}
+SecurityLabelDisable=true
+
+[Service]
+Restart=always
+RestartSec=5
+{% if deploy_metrics_proxy_cpu_affinity %}
+# Housekeeping CPUs, the complement of isolcpus. Forwarding scrapes must never
+# compete with a real time guest.
+CPUAffinity={{ deploy_metrics_proxy_cpu_affinity }}
+CPUQuota={{ deploy_metrics_proxy_cpu_quota }}
+Nice={{ deploy_metrics_proxy_nice }}
+{% endif %}
+
+[Install]
+WantedBy=multi-user.target

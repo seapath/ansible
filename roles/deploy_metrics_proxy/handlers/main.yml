@@ -3,12 +3,12 @@
 ---
 # Handlers run in declaration order, not in notification order: the daemon
 # reload must stay first so that the restart acts on the regenerated unit.
-- name: Reload systemd after the collector unit changed
+- name: Reload systemd after the proxy unit changed
   ansible.builtin.systemd:
     daemon_reload: true
 
-- name: Restart the collector
+- name: Restart the metrics proxy
   ansible.builtin.systemd:
-    name: "{{ deploy_otel_collector_service }}"
+    name: "{{ deploy_metrics_proxy_service }}"
     state: restarted
-  when: deploy_otel_collector_manage_services | bool
+  when: deploy_metrics_proxy_manage_services | bool

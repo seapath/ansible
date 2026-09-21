@@ -5,4 +5,4 @@
   tasks:
     - name: Apply role under test
       ansible.builtin.include_role:
-        name: deploy_otel_collector
+        name: deploy_metrics_proxy
