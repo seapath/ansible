@@ -6,7 +6,7 @@ driver:
   name: podman
 
 platforms:
-  - name: collector
+  - name: proxy
     image: docker.io/geerlingguy/docker-debian13-ansible:latest
     privileged: true
     command: /sbin/init
@@ -24,20 +24,18 @@ provisioner:
     verify: verify.yml
   inventory:
     host_vars:
-      collector:
+      proxy:
         seapath_distro: Debian
         ip_addr: 10.10.10.10
-        deploy_otel_collector_enabled: true
-        deploy_otel_collector_manage_services: false
-        deploy_otel_collector_cluster: test-cluster
-        deploy_otel_collector_nodename: collector
-        deploy_otel_collector_exporters:
+        deploy_metrics_proxy_enabled: true
+        deploy_metrics_proxy_manage_services: false
+        deploy_metrics_proxy_exporters:
           - node-exporter
           - ha_cluster_exporter
-        deploy_otel_collector_scrape_ceph: true
-        deploy_otel_collector_tls_cert: /tmp/molecule-otelcol-cert.pem
-        deploy_otel_collector_tls_key: /tmp/molecule-otelcol-key.pem
-        deploy_otel_collector_tls_client_ca: /tmp/molecule-otelcol-ca.pem
+        deploy_metrics_proxy_serve_ceph: true
+        deploy_metrics_proxy_tls_cert: /tmp/molecule-metrics-proxy-cert.pem
+        deploy_metrics_proxy_tls_key: /tmp/molecule-metrics-proxy-key.pem
+        deploy_metrics_proxy_tls_client_ca: /tmp/molecule-metrics-proxy-ca.pem
 
 verifier:
   name: ansible

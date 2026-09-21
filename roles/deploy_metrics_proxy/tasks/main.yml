@@ -1,0 +1,310 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+- name: Deploy the metrics proxy
+  when: deploy_metrics_proxy_enabled | bool
+  block:
+    - name: Check every exporter of this host has a known endpoint
+      ansible.builtin.assert:
+        that:
+          - deploy_metrics_proxy_exporters | length > 0
+          - deploy_metrics_proxy_exporters
+            | difference(deploy_metrics_proxy_target_map.keys() | list)
+            | length == 0
+        fail_msg: >-
+          No endpoint is known for
+          {{ deploy_metrics_proxy_exporters
+             | difference(deploy_metrics_proxy_target_map.keys() | list)
+             | join(', ') }}.
+          An exporter this proxy has no route for would become unreachable
+          the moment the exporters move to the loopback, without anything
+          failing. Add it to deploy_metrics_proxy_target_map.
+
+    # Either a certificate is given, or the node signs its own. Both end up in
+    # the same two files, so everything downstream reads one flag.
+    - name: Decide what serves the TLS endpoint of this node
+      ansible.builtin.set_fact:
+        deploy_metrics_proxy_tls_provided: >-
+          {{
+            deploy_metrics_proxy_tls_cert is defined
+            and deploy_metrics_proxy_tls_key is defined
+          }}
+        deploy_metrics_proxy_tls_enabled: >-
+          {{
+            (
+              deploy_metrics_proxy_tls_cert is defined
+              and deploy_metrics_proxy_tls_key is defined
+            )
+            or deploy_metrics_proxy_tls_self_signed | bool
+          }}
+
+    - name: Refuse to serve the metrics of this node in the clear
+      ansible.builtin.assert:
+        that:
+          - deploy_metrics_proxy_tls_enabled | bool
+        fail_msg: >-
+          The proxy listens on {{ deploy_metrics_proxy_listen_address }},
+          which is reachable from the administration network, and
+          deploy_metrics_proxy_tls_self_signed is off with no certificate
+          given. Serving the whole observability surface of this node,
+          including its real time tuning, over plain HTTP is what deploying
+          this proxy is meant to stop.
+      when: deploy_metrics_proxy_listen_address not in ['127.0.0.1', 'localhost', '::1']
+
+    # Written here rather than in the template so the value is one fact a
+    # reader can print, and so the generated configuration stays a file an
+    # operator can compare with what the role produced.
+    - name: List the exporters this proxy serves
+      ansible.builtin.set_fact:
+        deploy_metrics_proxy_routes: >-
+          {{
+            (
+              deploy_metrics_proxy_exporters
+              | map('extract', deploy_metrics_proxy_target_map)
+              | list
+            )
+            + (
+              [{'job': deploy_metrics_proxy_ceph_job,
+                'port': deploy_metrics_proxy_ceph_port}]
+              if deploy_metrics_proxy_serve_ceph | bool
+              else []
+            )
+          }}
+
+    - name: Read the CPUs this machine has
+      ansible.builtin.slurp:
+        src: /sys/devices/system/cpu/present
+      register: deploy_metrics_proxy_present_cpus
+      when:
+        - not deploy_metrics_proxy_cpu_affinity
+        - isolcpus is defined
+
+    # The complement of the isolated set, computed the same way the web UI role
+    # computes it.
+    - name: Compute the housekeeping CPUs
+      ansible.builtin.set_fact:
+        deploy_metrics_proxy_cpu_affinity: >-
+          {% set isolated = [] %}
+          {%- for part in (isolcpus | replace(' ', '')).split(',') if part -%}
+          {%- set bounds = part.split('-') -%}
+          {%- set _ = isolated.extend(range(bounds[0] | int, bounds[-1] | int + 1)) -%}
+          {%- endfor -%}
+          {{ range(0, ((deploy_metrics_proxy_present_cpus.content | b64decode | trim).split('-')[-1] | int) + 1)
+             | difference(isolated) | sort | join(',') }}
+      when:
+        - not deploy_metrics_proxy_cpu_affinity
+        - isolcpus is defined
+
+    - name: Create the proxy configuration directory
+      ansible.builtin.file:
+        path: "{{ deploy_metrics_proxy_config_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Install the TLS material of the proxy
+      when: deploy_metrics_proxy_tls_enabled | bool
+      block:
+        - name: Create the proxy certificate directory
+          ansible.builtin.file:
+            path: "{{ deploy_metrics_proxy_tls_dir }}"
+            state: directory
+            owner: root
+            group: root
+            mode: "0700"
+
+        - name: Copy the proxy certificate
+          ansible.builtin.copy:
+            src: "{{ deploy_metrics_proxy_tls_cert }}"
+            dest: "{{ deploy_metrics_proxy_tls_dir }}/servercert.pem"
+            owner: root
+            group: root
+            mode: "0644"
+          when: deploy_metrics_proxy_tls_provided | bool
+          notify: Restart the metrics proxy
+
+        - name: Copy the proxy key
+          ansible.builtin.copy:
+            src: "{{ deploy_metrics_proxy_tls_key }}"
+            dest: "{{ deploy_metrics_proxy_tls_dir }}/serverkey.pem"
+            owner: root
+            group: root
+            mode: "0600"
+          when: deploy_metrics_proxy_tls_provided | bool
+          notify: Restart the metrics proxy
+
+        - name: Sign the certificate of this node when none is given
+          when: not deploy_metrics_proxy_tls_provided | bool
+          block:
+            # One command answers both questions: a missing file and a
+            # certificate about to expire both exit non zero, and an expired
+            # certificate is a monitoring outage nobody is watching for.
+            - name: Look for a certificate that is still valid
+              ansible.builtin.command:
+                cmd: >-
+                  openssl x509 -noout
+                  -checkend {{ deploy_metrics_proxy_tls_renew_before_days | int * 86400 }}
+                  -in {{ deploy_metrics_proxy_tls_dir }}/servercert.pem
+              register: deploy_metrics_proxy_cert_validity
+              failed_when: false
+              changed_when: false
+
+            # The address is in the subjectAltName, not just the CN: a scraper
+            # verifying this certificate connects to an address, and a CN alone
+            # has not been accepted for that in years.
+            - name: Sign the certificate of this node
+              ansible.builtin.command:
+                cmd: >-
+                  openssl req -x509 -nodes -newkey rsa:4096
+                  -days {{ deploy_metrics_proxy_tls_self_signed_days }}
+                  -subj "/CN={{ inventory_hostname }}"
+                  -addext "subjectAltName=IP:{{ deploy_metrics_proxy_listen_address }},DNS:{{ inventory_hostname }}"
+                  -addext "extendedKeyUsage=serverAuth"
+                  -keyout {{ deploy_metrics_proxy_tls_dir }}/serverkey.pem
+                  -out {{ deploy_metrics_proxy_tls_dir }}/servercert.pem
+              when: deploy_metrics_proxy_cert_validity.rc != 0
+              changed_when: true
+              notify: Restart the metrics proxy
+
+            - name: Keep the private key readable by root only
+              ansible.builtin.file:
+                path: "{{ deploy_metrics_proxy_tls_dir }}/{{ item.name }}"
+                owner: root
+                group: root
+                mode: "{{ item.mode }}"
+              loop:
+                - {name: serverkey.pem, mode: "0600"}
+                - {name: servercert.pem, mode: "0644"}
+              loop_control:
+                label: "{{ item.name }}"
+
+            # What an operator pins on the Prometheus side, or compares with
+            # what their scraper reports. A self signed certificate is only
+            # worth the fingerprint someone checked.
+            - name: Read the fingerprint of the certificate this node serves
+              ansible.builtin.command:
+                cmd: >-
+                  openssl x509 -noout -fingerprint -sha256
+                  -in {{ deploy_metrics_proxy_tls_dir }}/servercert.pem
+              register: deploy_metrics_proxy_cert_fingerprint
+              changed_when: false
+
+            - name: Show the fingerprint of the certificate this node serves
+              ansible.builtin.debug:
+                msg: "{{ deploy_metrics_proxy_cert_fingerprint.stdout | trim }}"
+
+        - name: Copy the CA client certificates are verified against
+          ansible.builtin.copy:
+            src: "{{ deploy_metrics_proxy_tls_client_ca }}"
+            dest: "{{ deploy_metrics_proxy_tls_dir }}/clientca.pem"
+            owner: root
+            group: root
+            mode: "0644"
+          when: deploy_metrics_proxy_tls_client_ca is defined
+          notify: Restart the metrics proxy
+
+    - name: Deploy the proxy configuration
+      ansible.builtin.template:
+        src: nginx.conf.j2
+        dest: "{{ deploy_metrics_proxy_config_file }}"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart the metrics proxy
+
+    - name: Ensure the quadlet directory exists
+      ansible.builtin.file:
+        path: /etc/containers/systemd
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Deploy the proxy container unit
+      ansible.builtin.template:
+        src: metrics-proxy.container.j2
+        dest: "/etc/containers/systemd/{{ deploy_metrics_proxy_service }}.container"
+        owner: root
+        group: root
+        mode: "0644"
+      notify:
+        - Reload systemd after the proxy unit changed
+        - Restart the metrics proxy
+
+    - name: Flush handlers before starting the proxy
+      ansible.builtin.meta: flush_handlers
+
+    # Boot activation comes from the [Install] section of the quadlet unit:
+    # systemd refuses to enable a generated unit, so there is nothing to enable
+    # here.
+    - name: Start the proxy
+      ansible.builtin.systemd:
+        name: "{{ deploy_metrics_proxy_service }}"
+        state: started
+      when: deploy_metrics_proxy_manage_services | bool
+
+    - name: Publish the proxy for cukinia tests
+      when: deploy_metrics_proxy_register_essential_services | bool
+      block:
+        - name: Ensure the cukinia extra essential services drop-in directory exists
+          ansible.builtin.file:
+            path: "{{ deploy_metrics_proxy_cukinia_extra_essential_services_dir }}"
+            state: directory
+            owner: root
+            group: root
+            mode: "0755"
+
+        - name: Publish the proxy service for cukinia tests
+          ansible.builtin.template:
+            src: cukinia-extra-essential-services.j2
+            dest: "{{ deploy_metrics_proxy_cukinia_extra_essential_services_file }}"
+            owner: root
+            group: root
+            mode: "0644"
+
+# A machine that never had the proxy is left untouched: this branch exists
+# to undo a deployment, and on every other node it is a single stat.
+- name: Look for a proxy unit to remove
+  ansible.builtin.stat:
+    path: "/etc/containers/systemd/{{ deploy_metrics_proxy_service }}.container"
+  register: deploy_metrics_proxy_unit
+  when: not deploy_metrics_proxy_enabled | bool
+
+- name: Remove the metrics proxy
+  when:
+    - not deploy_metrics_proxy_enabled | bool
+    - deploy_metrics_proxy_unit.stat.exists
+  block:
+    - name: Stop the proxy
+      ansible.builtin.systemd:
+        name: "{{ deploy_metrics_proxy_service }}"
+        state: stopped
+      failed_when: false
+      when: deploy_metrics_proxy_manage_services | bool
+
+    # The unit and the configuration. The certificate directory is left alone:
+    # deleting trust material is never a side effect of turning a service off.
+    - name: Remove the proxy container unit
+      ansible.builtin.file:
+        path: "/etc/containers/systemd/{{ deploy_metrics_proxy_service }}.container"
+        state: absent
+      notify: Reload systemd after the proxy unit changed
+
+    - name: Remove the proxy configuration
+      ansible.builtin.file:
+        path: "{{ deploy_metrics_proxy_config_file }}"
+        state: absent
+
+    - name: Remove the proxy cukinia extra services drop-in
+      ansible.builtin.file:
+        path: "{{ deploy_metrics_proxy_cukinia_extra_essential_services_file }}"
+        state: absent
+
+- name: Remove the proxy cukinia extra services drop-in
+  ansible.builtin.file:
+    path: "{{ deploy_metrics_proxy_cukinia_extra_essential_services_file }}"
+    state: absent
+  when:
+    - deploy_metrics_proxy_enabled | bool
+    - not deploy_metrics_proxy_register_essential_services | bool
