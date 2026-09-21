@@ -1,0 +1,46 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+# Where each exporter answers on the loopback, and the job it is scraped under.
+# The job names are the ones roles/seapath_alloc/PROMETHEUS.md
+# documents, and the proxy serves each exporter on /metrics/<job>, so the path
+# Prometheus asks for is written from the job name it already has.
+#
+# An exporter absent from this map fails the run: the list of exporters is
+# derived from the inventory groups, so a new exporter added to
+# deploy_prometheus_exporters without a line here would silently become
+# unreachable the day the proxy is turned on.
+deploy_metrics_proxy_target_map:
+  node-exporter:
+    job: node
+    port: 9100
+  podman-exporter:
+    job: podman_exporter
+    port: 9882
+  libvirt-exporter:
+    job: libvirt_exporter
+    port: 9177
+  insatomcat-exporter:
+    job: seapath_custom_exporter
+    port: 9184
+  ha_cluster_exporter:
+    job: ha
+    port: 9664
+
+# Mirrors deploy_prometheus_exporters_group_exporters. The two roles are
+# normally applied in the same play, where the exporters role's own list wins;
+# this copy is what makes the proxy usable on its own.
+deploy_metrics_proxy_group_exporters:
+  cluster_machines:
+    - ha_cluster_exporter
+  hypervisors:
+    - podman-exporter
+    - libvirt-exporter
+    - insatomcat-exporter
+
+deploy_metrics_proxy_ceph_job: ceph
+deploy_metrics_proxy_ceph_port: 9283
+
+deploy_metrics_proxy_config_dir: /etc/seapath-metrics-proxy
+deploy_metrics_proxy_config_file: /etc/seapath-metrics-proxy/nginx.conf
+deploy_metrics_proxy_service: seapath-metrics-proxy
