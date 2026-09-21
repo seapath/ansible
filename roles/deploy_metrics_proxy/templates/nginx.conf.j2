@@ -1,0 +1,59 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+#
+# {{ ansible_managed }}
+#
+# One TLS endpoint in front of this node's exporters, each on its own path.
+# The expositions are forwarded as the exporters wrote them: nothing here
+# parses, merges or caches a metric.
+
+# One worker is plenty for a handful of scrapes every few seconds, and it keeps
+# the footprint of this service on the housekeeping CPUs predictable.
+worker_processes 1;
+error_log stderr warn;
+pid /run/nginx.pid;
+
+events {
+    worker_connections 64;
+}
+
+http {
+    access_log off;
+    server_tokens off;
+
+    server {
+{% set address = deploy_metrics_proxy_listen_address %}
+        listen {{ '[' ~ address ~ ']' if ':' in address else address }}:{{ deploy_metrics_proxy_listen_port }}{{ ' ssl' if deploy_metrics_proxy_tls_enabled | bool else '' }};
+{% if deploy_metrics_proxy_tls_enabled | bool %}
+
+        # Read by the master process, which runs as root, before the worker
+        # drops to the nginx user: the key stays readable by root alone.
+        ssl_certificate {{ deploy_metrics_proxy_tls_dir }}/servercert.pem;
+        ssl_certificate_key {{ deploy_metrics_proxy_tls_dir }}/serverkey.pem;
+        ssl_protocols {{ ['1.2', '1.3'] | select('ge', deploy_metrics_proxy_tls_min_version | string) | map('regex_replace', '^', 'TLSv') | join(' ') }};
+{% if deploy_metrics_proxy_tls_client_ca is defined %}
+        # Mutual TLS: a scraper without a certificate signed by this CA is
+        # refused before it reads a single metric.
+        ssl_client_certificate {{ deploy_metrics_proxy_tls_dir }}/clientca.pem;
+        ssl_verify_client on;
+{% endif %}
+{% endif %}
+
+        proxy_http_version 1.1;
+        proxy_connect_timeout 2s;
+        proxy_read_timeout {{ deploy_metrics_proxy_read_timeout }};
+
+{% for target in deploy_metrics_proxy_routes %}
+        location = /metrics/{{ target.job }} {
+            proxy_pass http://127.0.0.1:{{ target.port }}/metrics;
+        }
+{% endfor %}
+
+        # Anything else is a path no exporter answers on. A 404 rather than a
+        # default page, so that a Prometheus job pointed at an exporter this
+        # node does not run reports it plainly.
+        location / {
+            return 404;
+        }
+    }
+}
