@@ -22,3 +22,11 @@ deploy_prometheus_exporters_group_exporters:
     - podman-exporter
     - libvirt-exporter
     - insatomcat-exporter
+
+deploy_prometheus_exporters_lvm_deployed: >-
+  {{
+    deploy_prometheus_exporters_enabled | bool
+    and deploy_prometheus_exporters_lvm_enabled | bool
+    and 'node-exporter' in deploy_prometheus_exporters_exporters
+    and deploy_prometheus_exporters_lvm_binary.stat.exists
+  }}

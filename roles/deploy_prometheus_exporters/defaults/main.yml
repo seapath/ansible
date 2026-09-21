@@ -52,6 +52,9 @@ deploy_prometheus_exporters_exporters: >-
   }}
 
 deploy_prometheus_exporters_enabled: true
+# Write the LVM metrics to the node exporter textfile collector. They are only
+# deployed where the node exporter is and LVM is installed.
+deploy_prometheus_exporters_lvm_enabled: true
 deploy_prometheus_exporters_manage_services: true
 deploy_prometheus_exporters_register_essential_services: true
 deploy_prometheus_exporters_cukinia_extra_essential_services_dir: /etc/cukinia/extra-essential-services.d
