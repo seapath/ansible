@@ -112,6 +112,71 @@
             group: root
             mode: "0644"
 
+# LVM is left out by node_exporter, which only sees the file systems and the
+# device-mapper devices above it. A script run by a timer writes it to the
+# textfile collector instead, on the machines that have LVM.
+- name: Look for the LVM tools
+  ansible.builtin.stat:
+    path: /usr/sbin/lvm
+  register: deploy_prometheus_exporters_lvm_binary
+
+- name: Deploy the LVM metrics
+  when: deploy_prometheus_exporters_lvm_deployed | bool
+  block:
+    - name: Install the LVM metrics script
+      ansible.builtin.copy:
+        src: lvm_textfile.py
+        dest: /usr/local/sbin/seapath-lvm-textfile
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Install the LVM metrics units
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: "/etc/systemd/system/{{ item }}"
+        owner: root
+        group: root
+        mode: "0644"
+      loop:
+        - seapath-lvm-textfile.service
+        - seapath-lvm-textfile.timer
+      notify: Restart the LVM metrics timer
+
+    - name: Enable and start the LVM metrics timer
+      ansible.builtin.systemd:
+        name: seapath-lvm-textfile.timer
+        enabled: true
+        state: started
+        daemon_reload: true
+      when: deploy_prometheus_exporters_manage_services | bool
+
+- name: Remove the LVM metrics
+  when: not deploy_prometheus_exporters_lvm_deployed | bool
+  block:
+    - name: Look for the LVM metrics timer
+      ansible.builtin.stat:
+        path: /etc/systemd/system/seapath-lvm-textfile.timer
+      register: deploy_prometheus_exporters_lvm_timer
+
+    - name: Stop and disable the LVM metrics timer
+      ansible.builtin.systemd:
+        name: seapath-lvm-textfile.timer
+        enabled: false
+        state: stopped
+      when: deploy_prometheus_exporters_lvm_timer.stat.exists
+
+    - name: Remove the LVM metrics files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/systemd/system/seapath-lvm-textfile.timer
+        - /etc/systemd/system/seapath-lvm-textfile.service
+        - /usr/local/sbin/seapath-lvm-textfile
+        - /var/lib/prometheus/node_exporter/seapath_lvm.prom
+      notify: Reload systemd after exporter container unit changes
+
 - name: Remove prometheus exporters cukinia extra services drop-in
   ansible.builtin.file:
     path: "{{ deploy_prometheus_exporters_cukinia_extra_essential_services_file }}"
