@@ -69,6 +69,7 @@ machine.
 | `nodename` | Cluster dashboard (`$nodename` template variable, per-node panels) | Static label on the target, set to `inventory_hostname` |
 | `project` | Not read by the bundled dashboards | Optional: useful to scope a multi-site/multi-project Prometheus (alerting rules, dashboard folders) |
 | `seapath` | Scrape filtering only (see below) | Optional: only needed on a standalone machine (`standalone_machine` inventory group) |
+| `proxy` | Scrape routing only (see [the metrics proxy](#behind-the-per-node-metrics-proxy)) | Optional: `"true"` on a host where `deploy_metrics_proxy` is deployed; dropped before ingestion |
 
 `cluster` and `nodename` are mandatory for every `cluster_machines` /
 `hypervisors` host if you want to use the cluster dashboard. A standalone
@@ -251,45 +252,112 @@ endpoint per node: an nginx serves each exporter on its own path of port 9464,
 `/metrics/<job>`, and the exporters move to `127.0.0.1` (see
 [its README](../deploy_metrics_proxy/README.md)).
 
-The six jobs above stay, `keep` rules included. Each one changes in three
-places, shown here for `node`:
+The role is turned on node by node, so one Prometheus usually scrapes both
+kinds of hosts for a while. A `proxy: "true"` label in the target files says
+which hosts are behind the proxy:
+
+```yaml
+# /etc/prometheus/targets/<project>.yml
+- targets: ["192.0.2.11"]
+  labels: { project: siteA, cluster: siteA, nodename: siteA-node1, proxy: "true" }
+- targets: ["192.0.2.12"]
+  labels: { project: siteA, cluster: siteA, nodename: siteA-node2 }
+```
+
+The six jobs above stay, `keep` rules included, and route each target from
+that label. A `replace` rule whose regex does not match leaves the target
+alone, so three rules shared by all jobs switch a tagged host to HTTPS, the
+path of the job and the proxy port, and the last rule gives the other hosts
+their exporter port as before. Shown here for `node`:
 
 ```yaml
 scrape_configs:
   - job_name: node
-    scheme: https
-    metrics_path: /metrics/node
+    file_sd_configs:
+      - files: ["/etc/prometheus/targets/*.yml"]
+    # Used by the targets switched to https only.
     tls_config:
-      # The CA of the site PKI, or the certificate a node signed itself, which
-      # is then pinned per node and checked against the fingerprint the run
+      # The CA of the site PKI, or the certificates the nodes signed
+      # themselves, concatenated, each checked against the fingerprint the run
       # printed. cert_file and key_file are what
       # deploy_metrics_proxy_tls_client_ca asks for.
       ca_file: /etc/prometheus/seapath-ca.crt
       cert_file: /etc/prometheus/prometheus.crt
       key_file: /etc/prometheus/prometheus.key
-    file_sd_configs:
-      - files: ["/etc/prometheus/targets/*.yml"]
     relabel_configs:
-      # Written before __address__ gets the proxy port, so the series keep the
-      # instance they had when the exporter was scraped directly.
+      # Written before __address__ gets a port, so the series keep the same
+      # instance whether the host is behind the proxy or not.
       - source_labels: [__address__]
         regex: "(.+)"
         target_label: instance
         replacement: "${1}:9100"
-      - source_labels: [__address__]
-        regex: "(.+)"
+      - source_labels: [proxy]
+        regex: "true"
+        target_label: __scheme__
+        replacement: https
+      - source_labels: [proxy, job]
+        separator: ";"
+        regex: "true;(.+)"
+        target_label: __metrics_path__
+        replacement: "/metrics/${1}"
+      - source_labels: [proxy, __address__]
+        separator: ";"
+        regex: "true;(.+)"
         target_label: __address__
         replacement: "${1}:9464"
+      # Hosts without the proxy: __address__ is still a bare address.
+      - source_labels: [__address__]
+        regex: "([^:]+)"
+        target_label: __address__
+        replacement: "${1}:9100"
+      # Routing only: keeping it would change the identity of every series of
+      # a host the day it moves behind the proxy.
+      - regex: proxy
+        action: labeldrop
 ```
 
-The other five follow the same pattern: `metrics_path` is `/metrics/` followed
-by the job name (`/metrics/ceph`, `/metrics/ha`,
-`/metrics/seapath_custom_exporter`, `/metrics/libvirt_exporter`,
-`/metrics/podman_exporter`), and `instance` keeps the exporter port from the
-[exporter table](#exporters-and-jobs). The `instance` rule is what keeps the
-single-node dashboard working, since every job now reaches the same address
-and port.
+The other five jobs take the same rules and change only the port, in the
+`instance` rule and the last `__address__` rule, to the one of the
+[exporter table](#exporters-and-jobs). The path comes from the job name
+(`/metrics/ceph`, `/metrics/ha`, `/metrics/seapath_custom_exporter`,
+`/metrics/libvirt_exporter`, `/metrics/podman_exporter`), so the three
+proxy rules are identical in every job and fit a YAML anchor. The `instance`
+rule is what keeps the single-node dashboard working, since every job of a
+proxied host reaches the same address and port. The last `__address__` rule
+expects IPv4 addresses or host names as targets.
 
 A node that does not run an exporter answers 404 on its path, and one whose
 exporter is down answers 502, so both show up as a down target exactly as
 they did before the proxy.
+
+Moving a host is a matter of deploying the role, then adding the label: the
+exporters leave the administration address when the role is deployed, so the
+host's targets are down between the two steps. Prometheus rereads the target
+files on its own.
+
+### Pinning self-signed certificates
+
+Without a site PKI, each node signs its own certificate, and `ca_file` is the
+concatenation of those certificates. Prometheus accepts a self-signed
+certificate listed there as its own trust anchor. The run of
+`deploy_metrics_proxy` prints each fingerprint; collected from the Prometheus
+host, the certificates are checked against those fingerprints before they are
+trusted:
+
+```bash
+: > seapath-ca.crt.new
+for ip in 192.0.2.11 192.0.2.13; do
+  cert=$(timeout 5 openssl s_client -connect "$ip:9464" </dev/null 2>/dev/null | openssl x509 2>/dev/null) \
+    || { echo "$ip: no proxy"; continue; }
+  echo "$cert" >> seapath-ca.crt.new
+  echo "$ip: $(echo "$cert" | openssl x509 -noout -fingerprint -sha256)"
+done
+mv seapath-ca.crt.new /etc/prometheus/seapath-ca.crt
+```
+
+The bundle is rebuilt whenever a node gets a new certificate: reinstallation,
+or renewal near expiry. Prometheus refuses the whole configuration when
+`ca_file` is missing or holds no certificate, even if no target is switched
+to HTTPS yet. Until the first node is behind the proxy, leave `ca_file` out;
+`insecure_skip_verify: true` keeps the traffic encrypted during a migration
+without checking who answers.
