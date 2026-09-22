@@ -122,9 +122,13 @@ ansible-playbook playbooks/seapath_setup_prometheus_exporters.yaml
 ## On the Prometheus side
 
 The six jobs of [PROMETHEUS.md](../seapath_alloc/PROMETHEUS.md) stay,
-with their `keep` rules. Each one gains HTTPS, the path of its exporter and the
-port of the proxy, and keeps the `instance` it had: see
+with their `keep` rules. A `proxy: "true"` label on a target switches that host
+to HTTPS, the path of its exporter and the port of the proxy, and keeps the
+`instance` it had, so nodes move behind the proxy one at a time: see
 [its proxy section](../seapath_alloc/PROMETHEUS.md#behind-the-per-node-metrics-proxy).
+
+Deploy the role on a node first, then add the label: in between, the exporters
+of that node are on the loopback and its targets are down.
 
 ## What it costs
 
