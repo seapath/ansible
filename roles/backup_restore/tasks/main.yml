@@ -28,6 +28,27 @@
   loop_control:
     label: "{{ item | basename }}"
 
+# Whether the inventory describes the backups at all. A site that has always
+# driven the whiptail menu says nothing about them, and its file is left as it
+# is: the two tasks after this one are the behaviour the role has always had.
+# Setting any of the seven makes the inventory the source of truth, and the
+# file is rendered from it on every machine at every convergence.
+- name: Check whether the inventory describes the backups
+  ansible.builtin.set_fact:
+    backup_restore_from_inventory: "{{
+      [backup_restore_local_dir, backup_restore_local_tmp_dir, backup_restore_remote_serv,
+       backup_restore_remote_dir, backup_restore_include_vm, backup_restore_exclude_vm]
+      | select('truthy') | list | length > 0 }}"
+
+- name: Render /etc/backup-restore.conf from the inventory
+  ansible.builtin.template:
+    src: backup-restore.conf.j2
+    dest: /etc/backup-restore.conf
+    mode: "0644"
+    owner: root
+    group: root
+  when: backup_restore_from_inventory | bool
+
 - name: Create /etc/backup-restore.conf file
   ansible.builtin.file:
     path: "/etc/backup-restore.conf"
@@ -35,9 +56,12 @@
     mode: "0644"
     owner: root
     group: root
+  when: not (backup_restore_from_inventory | bool)
+  changed_when: false
 - name: Check configuration of backup-restore.sh tool (remote_shell)
   ansible.builtin.shell: 'grep -c "^remote_shell=" /etc/backup-restore.conf || true'
   register: backup_restore_check_remote_shell
+  when: not (backup_restore_from_inventory | bool)
   changed_when: true
 - name: Add default configuration of backup-restore.sh tool (remote_shell)
   ansible.builtin.lineinfile:
@@ -45,4 +69,6 @@
     regexp: "^remote_shell="
     line: "remote_shell=\"ssh\""
     state: present
-  when: backup_restore_check_remote_shell.stdout == "0"
+  when:
+    - not (backup_restore_from_inventory | bool)
+    - backup_restore_check_remote_shell.stdout == "0"

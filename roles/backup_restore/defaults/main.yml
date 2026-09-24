@@ -1,0 +1,16 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+# Where the backup-restore tool sends the backups, and what it leaves out.
+# These are the seven keys of /etc/backup-restore.conf. Setting any of them in
+# the inventory makes the inventory the source of truth: the role renders the
+# file from them at every convergence, and the menu's own writes are replaced.
+# Leaving all seven unset keeps the previous behaviour, where the file is
+# created empty and filled from the menu on the machine.
+backup_restore_local_dir: ""
+backup_restore_local_tmp_dir: ""
+backup_restore_remote_serv: ""
+backup_restore_remote_dir: ""
+backup_restore_remote_shell: ""
+backup_restore_include_vm: ""
+backup_restore_exclude_vm: ""
