@@ -5,7 +5,9 @@
 # Usage: restore_vm.sh <local_tmp_dir> <remote_shell> <remote_dir> <full backup dir> <guest> <inc date>
 # e.g.: restore_vm.sh /data2/tmp "ssh -p 22" cephbackup@ip:/backups/ backup_ceph_202203110733 VM1 202203110836
 
-set -u
+# Stop at the first failure: after a failed vm-mgr create, the next steps
+# would snapshot the image already on the cluster and overwrite its metadata
+set -eu
 
 local_tmp_dir=${1:-}
 remote_shell=${2:-}
@@ -34,7 +36,14 @@ echo "fulldatedir   : $fulldatedir"
 echo "guest         : $guest"
 echo "incdate       : $incdate"
 
-fulldate=${fulldatedir#backup_ceph_}
+# The full backup directory is <local_dir><date>, so its name carries
+# whatever prefix local_dir ends with; the files inside only carry the date
+if [[ $fulldatedir =~ ([0-9]{12})/?$ ]]; then
+  fulldate=${BASH_REMATCH[1]}
+else
+  echo "no date at the end of $fulldatedir"
+  exit 7
+fi
 
 echo Removing tmp local dir
 echo "rm -rf $local_tmp_dir/*, press enter to proceed"
