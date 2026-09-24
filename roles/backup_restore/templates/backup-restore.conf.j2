@@ -16,7 +16,7 @@ remote_serv={{ backup_restore_remote_serv }}
 {% if backup_restore_remote_dir %}
 remote_dir={{ backup_restore_remote_dir }}
 {% endif %}
-remote_shell="{{ backup_restore_remote_shell | default('ssh', true) }}"
+remote_shell="{{ backup_restore_remote_shell | default(('ssh -i ' ~ backup_restore_ssh_key) if backup_restore_ssh_key else 'ssh', true) }}"
 {% if backup_restore_include_vm %}
 include_vm={{ backup_restore_include_vm }}
 {% endif %}

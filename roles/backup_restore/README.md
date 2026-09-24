@@ -26,6 +26,11 @@ created empty and filled by the `backup-restore.sh` menu on the machine, which
 is how the role has always behaved. `include_vm` and `exclude_vm` are extended
 regular expressions matched against guest names.
 
+The machines reach the backup server over SSH as root, without a password.
+The role can create a key dedicated to that and trust the server's host key;
+installing the public key in the server's `authorized_keys` stays the job of
+whoever administers that server, for example with `ssh-copy-id`.
+
 ## Requirements
 
 no requirement.
@@ -41,6 +46,8 @@ no requirement.
 | `backup_restore_remote_shell` | How the machines reach the backup server. Defaults to `ssh`, and takes its options: `ssh -p 2222` |
 | `backup_restore_include_vm` | An extended regular expression matched against guest names. Unset means every guest |
 | `backup_restore_exclude_vm` | An extended regular expression, applied after the one above. Unset means nothing is left out |
+| `backup_restore_ssh_key` | A path, such as `/root/.ssh/backup_restore_ed25519`. The role generates an ed25519 key pair there once, and `remote_shell` then defaults to `ssh -i <path>`. The public half, `<path>.pub`, is what the backup server's `authorized_keys` must hold |
+| `backup_restore_remote_host_keys` | The backup server's host keys, as `known_hosts` lines (`<host> <type> <key>`, with `[host]:port` for another port). They are added to root's `known_hosts` |
 
 ## Example Playbook
 
