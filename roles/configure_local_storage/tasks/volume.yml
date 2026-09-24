@@ -1,0 +1,288 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+# One local volume: a partition after the last one of its disk, a PV, VG and
+# LV on it when lvm is given, a file system, and a mount by UUID. Each step
+# looks at what is there first and only ever adds.
+
+- name: Name the parameters of {{ configure_local_storage_volume.name }}
+  ansible.builtin.set_fact:
+    configure_local_storage_name: "{{ configure_local_storage_volume.name }}"
+    configure_local_storage_lvm: "{{ configure_local_storage_volume.lvm | default({}) }}"
+    configure_local_storage_fstype: "{{ configure_local_storage_volume.fstype | default('ext4') }}"
+    configure_local_storage_size: "{{ configure_local_storage_volume.size | default('100%') | string }}"
+    configure_local_storage_mountpoint: "{{ configure_local_storage_volume.mountpoint }}"
+    configure_local_storage_opts: "{{ configure_local_storage_volume.mount_options | default('defaults') }}"
+
+- name: Resolve the disk of {{ configure_local_storage_name }}
+  ansible.builtin.command:
+    cmd: readlink -e {{ configure_local_storage_volume.disk | quote }}
+  register: configure_local_storage_realdisk
+  changed_when: false
+  check_mode: false
+
+- name: Read what kind of device that is
+  ansible.builtin.command:
+    cmd: lsblk -dno TYPE {{ configure_local_storage_realdisk.stdout | quote }}
+  register: configure_local_storage_disktype
+  changed_when: false
+  check_mode: false
+
+- name: Refuse anything but a whole disk
+  ansible.builtin.assert:
+    that:
+      - configure_local_storage_disktype.stdout | trim in ['disk', 'loop']
+    fail_msg: >-
+      {{ configure_local_storage_volume.disk }} is a {{ configure_local_storage_disktype.stdout | trim }},
+      and the role adds a partition to a whole disk. Name the disk itself.
+    quiet: true
+
+# A disk handed to Ceph is Ceph's: cephadm zaps it and an OSD owns every block
+# of it. The comparison is on resolved paths, because the inventory names OSD
+# disks by path and this entry may name the same disk by id.
+- name: Resolve the disks Ceph was given
+  ansible.builtin.command:
+    cmd: readlink -f {{ item | quote }}
+  loop: "{{ ceph_osd_disks | default([]) }}"
+  register: configure_local_storage_osd_disks
+  changed_when: false
+  check_mode: false
+
+- name: Refuse a disk that Ceph was given
+  ansible.builtin.assert:
+    that:
+      - configure_local_storage_osd_disks.results
+        | map(attribute='stdout')
+        | select('match', '^' ~ (configure_local_storage_realdisk.stdout | regex_escape) ~ '(p?[0-9]+)?$')
+        | list | length == 0
+    fail_msg: >-
+      {{ configure_local_storage_volume.disk }} is listed in ceph_osd_disks, and an
+      OSD owns the whole of it. Choose another disk for {{ configure_local_storage_name }}.
+    quiet: true
+
+- name: Read the partition table of that disk
+  community.general.parted:
+    device: "{{ configure_local_storage_realdisk.stdout }}"
+    unit: MiB
+    state: info
+  register: configure_local_storage_parted
+  check_mode: false
+
+- name: Look for the partition this entry created on an earlier run
+  ansible.builtin.set_fact:
+    configure_local_storage_existing: >-
+      {{ configure_local_storage_parted.partitions
+         | selectattr('name', 'defined')
+         | selectattr('name', 'equalto', configure_local_storage_name)
+         | list }}
+
+- name: Read what is mounted on {{ configure_local_storage_mountpoint }}
+  ansible.builtin.command:
+    cmd: findmnt -rno UUID --mountpoint {{ configure_local_storage_mountpoint | quote }}
+  register: configure_local_storage_mounted
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Look inside {{ configure_local_storage_mountpoint }}
+  ansible.builtin.find:
+    paths: "{{ configure_local_storage_mountpoint }}"
+    file_type: any
+    hidden: true
+  register: configure_local_storage_content
+  when: configure_local_storage_mounted.rc != 0
+
+# A mount hides what the directory held, and what it held is still using the
+# space of the file system above it. Refused before anything is written, so a
+# refusal leaves the disk as it was. Whether a file system already mounted
+# there is this one is only known once its UUID can be read, further down.
+- name: Refuse a mount point that is in use
+  ansible.builtin.assert:
+    that:
+      - (configure_local_storage_mounted.rc == 0 and configure_local_storage_existing | length > 0)
+        or (configure_local_storage_mounted.rc != 0
+            and configure_local_storage_content.matched | default(0) == 0)
+    fail_msg: >-
+      {{ configure_local_storage_mountpoint }} {{ configure_local_storage_use }}.
+      Mounting {{ configure_local_storage_name }} there would hide what it holds.
+    quiet: true
+  vars:
+    configure_local_storage_use: >-
+      {{ 'already has another file system mounted on it'
+         if configure_local_storage_mounted.rc == 0 else 'is a directory that is not empty' }}
+
+- name: Create the partition
+  when: configure_local_storage_existing | length == 0
+  block:
+    # parted relabels a disk whose table differs from the one it is given, and
+    # that erases every partition on it. So the table is never chosen here: a
+    # GPT disk keeps its table, a disk with no table gets one only when it
+    # carries no signature at all, and anything else is refused.
+    - name: Look for any signature on a disk without a partition table
+      ansible.builtin.command:
+        cmd: blkid -p {{ configure_local_storage_realdisk.stdout | quote }}
+      register: configure_local_storage_blkid
+      changed_when: false
+      failed_when: configure_local_storage_blkid.rc not in [0, 2]
+      check_mode: false
+      when: configure_local_storage_parted.disk.table == 'unknown'
+
+    - name: Refuse a partition table the role would have to replace
+      ansible.builtin.assert:
+        that:
+          - configure_local_storage_parted.disk.table == 'gpt'
+            or (configure_local_storage_parted.disk.table == 'unknown'
+                and configure_local_storage_blkid.rc == 2)
+        fail_msg: >-
+          {{ configure_local_storage_volume.disk }} {{ configure_local_storage_state }}.
+          The role only adds partitions to a GPT disk or to an empty one, because
+          writing a GPT table over anything else erases what is on it.
+        quiet: true
+      # parted calls a disk formatted as a whole, with no table, a `loop`
+      # label, which is its own word for it and nobody else's.
+      vars:
+        configure_local_storage_state: >-
+          {{ {'unknown': 'has no partition table but carries a signature ('
+                         ~ (configure_local_storage_blkid.stdout | default('') | trim) ~ ')',
+              'loop': 'carries a file system on the whole disk, with no partition table'}
+             .get(configure_local_storage_parted.disk.table,
+                  'carries a ' ~ configure_local_storage_parted.disk.table ~ ' partition table') }}
+
+    # The free space after the last partition, which on a machine installed
+    # from the SEAPATH ISO is everything past the system partition. A gap
+    # between two partitions is never used: finding one is a judgement about
+    # the disk that belongs to whoever laid it out.
+    - name: Place the partition after the last one
+      ansible.builtin.set_fact:
+        configure_local_storage_number: >-
+          {{ (configure_local_storage_parted.partitions | map(attribute='num') | max | default(0)) + 1 }}
+        configure_local_storage_start: >-
+          {{ ((configure_local_storage_parted.partitions | map(attribute='end') | max | default(0)) | float
+              | round(0, 'ceil') | int) + 1 }}
+        configure_local_storage_wanted: >-
+          {{ 0 if configure_local_storage_size == '100%'
+             else ((configure_local_storage_size ~ 'B') | human_to_bytes / 1048576) | int }}
+
+    # 34 sectors at the end of a GPT disk hold the backup table. One MiB covers
+    # them whatever the sector size.
+    - name: Refuse a partition the free space cannot hold
+      ansible.builtin.assert:
+        that:
+          - configure_local_storage_free | int >= [configure_local_storage_wanted | int, 1024] | max
+        fail_msg: >-
+          {{ configure_local_storage_volume.disk }} has {{ configure_local_storage_free }} MiB
+          free after its last partition, and {{ configure_local_storage_name }} asks for
+          {{ configure_local_storage_size if configure_local_storage_wanted | int else 'all of it' }},
+          with at least 1 GiB. The role never shrinks or moves an existing partition.
+        quiet: true
+      vars:
+        configure_local_storage_free: >-
+          {{ [(configure_local_storage_parted.disk.size | float | int) - (configure_local_storage_start | int) - 1, 0] | max }}
+
+    - name: Create the partition of {{ configure_local_storage_name }}
+      community.general.parted:
+        device: "{{ configure_local_storage_realdisk.stdout }}"
+        label: gpt
+        number: "{{ configure_local_storage_number | int }}"
+        name: "{{ configure_local_storage_name }}"
+        unit: MiB
+        part_start: "{{ configure_local_storage_start | int }}MiB"
+        part_end: >-
+          {{ '100%' if configure_local_storage_wanted | int == 0
+             else ((configure_local_storage_start | int) + (configure_local_storage_wanted | int)) ~ 'MiB' }}
+        flags: "{{ ['lvm'] if configure_local_storage_lvm | length > 0 else [] }}"
+        state: present
+
+    - name: Wait for the partition's device node
+      ansible.builtin.command:
+        cmd: udevadm settle
+      changed_when: false
+
+- name: Name the partition's number
+  ansible.builtin.set_fact:
+    configure_local_storage_number: >-
+      {{ configure_local_storage_existing[0].num
+         if configure_local_storage_existing | length > 0
+         else configure_local_storage_number }}
+
+# The kernel names the partitions of a disk whose name ends in a digit with a
+# `p` between the two: nvme0n1p3, loop0p1, but sda3.
+- name: Name the partition's device
+  ansible.builtin.set_fact:
+    configure_local_storage_partition: >-
+      {{ configure_local_storage_realdisk.stdout
+         ~ ('p' if configure_local_storage_realdisk.stdout is match('.*[0-9]$') else '')
+         ~ (configure_local_storage_number | int) }}
+
+- name: Build the LVM layer
+  when: configure_local_storage_lvm | length > 0
+  block:
+    # remove_extra_pvs is what keeps an existing group whole: without it the
+    # module takes the list as the complete set of PVs and moves the others out.
+    - name: Add the partition to volume group {{ configure_local_storage_lvm.vg }}
+      community.general.lvg:
+        vg: "{{ configure_local_storage_lvm.vg }}"
+        pvs:
+          - "{{ configure_local_storage_partition }}"
+        remove_extra_pvs: false
+        state: present
+
+    - name: Look for logical volume {{ configure_local_storage_lvm.lv }}
+      ansible.builtin.command:
+        cmd: lvs --noheadings -o lv_name {{ (configure_local_storage_lvm.vg ~ '/' ~ configure_local_storage_lvm.lv) | quote }}
+      register: configure_local_storage_lvs
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    # Created once and never resized afterwards. Growing a volume under a
+    # mounted file system is an act of its own, with its own decision.
+    - name: Create logical volume {{ configure_local_storage_lvm.lv }}
+      community.general.lvol:
+        vg: "{{ configure_local_storage_lvm.vg }}"
+        lv: "{{ configure_local_storage_lvm.lv }}"
+        size: "{{ configure_local_storage_lvm.size | default('100%FREE') }}"
+        shrink: false
+      when: configure_local_storage_lvs.rc != 0
+
+- name: Name the device the file system goes on
+  ansible.builtin.set_fact:
+    configure_local_storage_device: >-
+      {{ ('/dev/' ~ configure_local_storage_lvm.vg ~ '/' ~ configure_local_storage_lvm.lv)
+         if configure_local_storage_lvm | length > 0 else configure_local_storage_partition }}
+
+# Without force, the module leaves a device alone when it already carries this
+# file system and fails when it carries another one. Both are what is wanted.
+- name: Create the file system of {{ configure_local_storage_name }}
+  community.general.filesystem:
+    dev: "{{ configure_local_storage_device }}"
+    fstype: "{{ configure_local_storage_fstype }}"
+
+- name: Read the UUID of that file system
+  ansible.builtin.command:
+    cmd: blkid -s UUID -o value {{ configure_local_storage_device | quote }}
+  register: configure_local_storage_uuid
+  changed_when: false
+  check_mode: false
+
+# Checked here, once the UUID is known, because only now can a mounted file
+# system be told apart from this one.
+- name: Refuse a mount point that holds another file system
+  ansible.builtin.assert:
+    that:
+      - configure_local_storage_mounted.rc != 0
+        or configure_local_storage_mounted.stdout | trim == configure_local_storage_uuid.stdout | trim
+    fail_msg: >-
+      {{ configure_local_storage_mountpoint }} already has another file system
+      mounted on it. Mounting {{ configure_local_storage_name }} there would hide
+      what it holds.
+    quiet: true
+
+- name: Mount by UUID the file system of {{ configure_local_storage_name }}
+  ansible.posix.mount:
+    path: "{{ configure_local_storage_mountpoint }}"
+    src: "UUID={{ configure_local_storage_uuid.stdout | trim }}"
+    fstype: "{{ configure_local_storage_fstype }}"
+    opts: "{{ configure_local_storage_opts }}"
+    passno: "2"
+    state: mounted
