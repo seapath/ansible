@@ -1,0 +1,2 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
