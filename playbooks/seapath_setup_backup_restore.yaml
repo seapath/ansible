@@ -1,0 +1,16 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+# Apply the backup-restore configuration alone: the scripts, the
+# /etc/backup-restore.conf rendered from the inventory, the staging
+# directories and the key the backups are pushed with. The prerequisites
+# playbooks play the same role among many others, and changing where the
+# backups go should not take a full preparation of every machine.
+
+---
+- name: Configure the backup-restore tool
+  hosts:
+    - cluster_machines
+  become: true
+  roles:
+    - backup_restore
