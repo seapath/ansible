@@ -2,34 +2,34 @@
 # SPDX-License-Identifier: Apache-2.0
 ---
 - name: Deploy the SEAPATH web UI
-  when: deploy_seapath_webui_enabled | bool
+  when: seapath_webui_enabled | bool
   block:
     - name: Read the home of the account the trust targets
       ansible.builtin.getent:
         database: passwd
-        key: "{{ deploy_seapath_webui_ansible_user }}"
+        key: "{{ seapath_webui_ansible_user }}"
 
     - name: Fail when that account does not exist
       ansible.builtin.assert:
         that:
-          - ansible_facts.getent_passwd[deploy_seapath_webui_ansible_user] is defined
+          - ansible_facts.getent_passwd[seapath_webui_ansible_user] is defined
         fail_msg: >-
-          The {{ deploy_seapath_webui_ansible_user }} account does not exist on this
+          The {{ seapath_webui_ansible_user }} account does not exist on this
           machine. It comes from the SEAPATH image, and the web UI installs its
           own key in that account's authorized_keys in order to reach even this
           machine. Creating it here would invent a second problem.
 
     - name: Name the home of that account, which the trust material lives in
       ansible.builtin.set_fact:
-        deploy_seapath_webui_ansible_ssh_dir: >-
-          {{ ansible_facts.getent_passwd[deploy_seapath_webui_ansible_user][4] }}/.ssh
+        seapath_webui_ansible_ssh_dir: >-
+          {{ ansible_facts.getent_passwd[seapath_webui_ansible_user][4] }}/.ssh
 
     - name: Read the CPUs this machine has
       ansible.builtin.slurp:
         src: /sys/devices/system/cpu/present
-      register: deploy_seapath_webui_present_cpus
+      register: seapath_webui_present_cpus
       when:
-        - not deploy_seapath_webui_cpu_affinity
+        - not seapath_webui_cpu_affinity
         - isolcpus is defined
 
     # The complement of the isolated set. Written here rather than in the
@@ -37,16 +37,16 @@
     # stays a file an operator can compare with the one the image ships.
     - name: Compute the housekeeping CPUs
       ansible.builtin.set_fact:
-        deploy_seapath_webui_cpu_affinity: >-
+        seapath_webui_cpu_affinity: >-
           {% set isolated = [] %}
           {%- for part in (isolcpus | replace(' ', '')).split(',') if part -%}
           {%- set bounds = part.split('-') -%}
           {%- set _ = isolated.extend(range(bounds[0] | int, bounds[-1] | int + 1)) -%}
           {%- endfor -%}
-          {{ range(0, ((deploy_seapath_webui_present_cpus.content | b64decode | trim).split('-')[-1] | int) + 1)
+          {{ range(0, ((seapath_webui_present_cpus.content | b64decode | trim).split('-')[-1] | int) + 1)
              | difference(isolated) | sort | join(',') }}
       when:
-        - not deploy_seapath_webui_cpu_affinity
+        - not seapath_webui_cpu_affinity
         - isolcpus is defined
 
     - name: Create the Unix groups that grant each role
@@ -54,9 +54,9 @@
         name: "{{ item }}"
         state: present
       loop:
-        - "{{ deploy_seapath_webui_admin_group }}"
-        - "{{ deploy_seapath_webui_operator_group }}"
-        - "{{ deploy_seapath_webui_viewer_group }}"
+        - "{{ seapath_webui_admin_group }}"
+        - "{{ seapath_webui_operator_group }}"
+        - "{{ seapath_webui_viewer_group }}"
 
     # The same membership the Debian ISO gives at installation, for the images
     # that do not. The account is looked up first because the user module would
@@ -72,7 +72,7 @@
     - name: Grant the web UI admin role to the machine administrator
       ansible.builtin.user:
         name: "{{ admin_user }}"
-        groups: "{{ deploy_seapath_webui_admin_group }}"
+        groups: "{{ seapath_webui_admin_group }}"
         append: true
       when:
         - admin_user is defined
@@ -82,7 +82,7 @@
     # private key and the session secret live there.
     - name: Create the state directory
       ansible.builtin.file:
-        path: "{{ deploy_seapath_webui_state_dir }}"
+        path: "{{ seapath_webui_state_dir }}"
         state: directory
         owner: root
         group: root
@@ -90,7 +90,7 @@
 
     - name: Create the inventory repository directory
       ansible.builtin.file:
-        path: "{{ deploy_seapath_webui_inventory_dir }}"
+        path: "{{ seapath_webui_inventory_dir }}"
         state: directory
         owner: root
         group: root
@@ -98,7 +98,7 @@
 
     - name: Create the run traces and artefacts directory
       ansible.builtin.file:
-        path: "{{ deploy_seapath_webui_data_dir }}"
+        path: "{{ seapath_webui_data_dir }}"
         state: directory
         owner: root
         group: root
@@ -154,10 +154,10 @@
     # thing removed.
     - name: Bound the number of web UI images this machine keeps
       ansible.builtin.include_tasks: retention.yml
-      when: deploy_seapath_webui_image_retention | int > 0
+      when: seapath_webui_image_retention | int > 0
 
 - name: Remove the SEAPATH web UI
-  when: not deploy_seapath_webui_enabled | bool
+  when: not seapath_webui_enabled | bool
   block:
     - name: Stop the web UI
       ansible.builtin.systemd:

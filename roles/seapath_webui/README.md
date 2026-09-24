@@ -3,7 +3,7 @@ Copyright (C) 2026 RTE
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
-# deploy_seapath_webui
+# seapath_webui
 
 Deploys the SEAPATH management web UI as a podman quadlet unit, on every
 machine the inventory declares.
@@ -14,7 +14,7 @@ this role is the only thing that writes to a host on its behalf: the quadlet,
 the state directories, and the three Unix groups that grant each role.
 
 The `admin_user` account, when the inventory names one and the machine has it,
-is added to `deploy_seapath_webui_admin_group`, as the Debian ISO already does
+is added to `seapath_webui_admin_group`, as the Debian ISO already does
 at installation. A machine without that account is left alone: `root` is an
 administrator of the web UI in any case.
 
@@ -22,23 +22,19 @@ administrator of the web UI in any case.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `deploy_seapath_webui_enabled` | `true` | Deploy and start. False stops the service and removes the unit, keeping the state |
+| `seapath_webui_enabled` | `true` | Deploy and start. False stops the service and removes the unit, keeping the state |
 | `seapath_webui_image` | `docker.io/insatomcat/seapath-webui:latest` | Image reference. `latest` is the tag the ISO installs and preloads. Set it to an exact tag to pin a version, and editing it then applying is how the service is updated |
-| `deploy_seapath_webui_bind_address` | `{{ ip_addr }}` | Listen address. `auto` resolves the interface carrying the default route, which is what a machine that has never converged boots with |
-| `deploy_seapath_webui_port` | `8006` | Listen port |
-| `deploy_seapath_webui_additional_sans` | `ip_addr`, `cluster_ip_addr` | Extra names in the self signed certificate |
-| `deploy_seapath_webui_admin_group` | `seapath-admin` | Unix group granting the admin role, with the operator and viewer groups beside it |
-| `deploy_seapath_webui_ansible_user` | `{{ ansible_user }}` | The account the trust targets. Its home is read with `getent` |
-| `deploy_seapath_webui_state_dir` | `/etc/seapath/webui` | PKI, session secret, SSH keys |
-| `deploy_seapath_webui_inventory_dir` | `/etc/seapath/inventory` | The inventory repository, which is the audit trail |
-| `deploy_seapath_webui_data_dir` | `/var/lib/seapath-webui` | Run traces, artefacts, and a collection installed on the node |
-| `deploy_seapath_webui_cpu_affinity` | computed from `isolcpus` | Housekeeping CPUs. Empty on a machine with no isolated CPU, and the container is left unpinned |
-| `deploy_seapath_webui_restart_delay` | `30` | Seconds between the end of the play and the restart |
-| `deploy_seapath_webui_image_retention` | `2` | How many versions of the image the machine keeps. `0` keeps everything |
-
-`seapath_webui_image` is the one variable without the role name as a prefix.
-It is the one an inventory sets, and inventories already carry it under this
-name.
+| `seapath_webui_bind_address` | `{{ ip_addr }}` | Listen address. `auto` resolves the interface carrying the default route, which is what a machine that has never converged boots with |
+| `seapath_webui_port` | `8006` | Listen port |
+| `seapath_webui_additional_sans` | `ip_addr`, `cluster_ip_addr` | Extra names in the self signed certificate |
+| `seapath_webui_admin_group` | `seapath-admin` | Unix group granting the admin role, with the operator and viewer groups beside it |
+| `seapath_webui_ansible_user` | `{{ ansible_user }}` | The account the trust targets. Its home is read with `getent` |
+| `seapath_webui_state_dir` | `/etc/seapath/webui` | PKI, session secret, SSH keys |
+| `seapath_webui_inventory_dir` | `/etc/seapath/inventory` | The inventory repository, which is the audit trail |
+| `seapath_webui_data_dir` | `/var/lib/seapath-webui` | Run traces, artefacts, and a collection installed on the node |
+| `seapath_webui_cpu_affinity` | computed from `isolcpus` | Housekeeping CPUs. Empty on a machine with no isolated CPU, and the container is left unpinned |
+| `seapath_webui_restart_delay` | `30` | Seconds between the end of the play and the restart |
+| `seapath_webui_image_retention` | `2` | How many versions of the image the machine keeps. `0` keeps everything |
 
 ## The restart is out of band, and that is the point
 
@@ -53,7 +49,7 @@ writes its own result, and the container is replaced a few seconds later. What
 an operator sees is a page that stops answering and comes back on the new
 version.
 
-A play that takes longer than `deploy_seapath_webui_restart_delay` to finish
+A play that takes longer than `seapath_webui_restart_delay` to finish
 still loses the end of its own run on that machine. The web UI reports such a
 run as interrupted and says that is what applying this playbook looks like.
 

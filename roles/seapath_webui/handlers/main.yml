@@ -27,7 +27,7 @@
       - systemd-run
       - --collect
       - --description=SEAPATH web UI restart, out of the run that asked for it
-      - "--on-active={{ deploy_seapath_webui_restart_delay }}"
+      - "--on-active={{ seapath_webui_restart_delay }}"
       - /bin/systemctl
       - restart
       - seapath-webui
