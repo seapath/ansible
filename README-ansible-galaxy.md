@@ -188,6 +188,7 @@ The other playbooks can be called alone to re-configure a specific part, when yo
 - `seapath_setup_configure_nic_irq_affinity.yaml`: Configure NIC IRQs affinity (useful for macvtap interfaces)
 - `seapath_setup_cockpit_plugins.yaml`: Deploy cockpit plugins on the cluster
 - `seapath_setup_custom_hardware.yaml`: Apply hardware specific roles
+- `seapath_setup_backup_restore.yaml`: Apply the backup-restore configuration on the cluster machines
 
 ## Management
 
