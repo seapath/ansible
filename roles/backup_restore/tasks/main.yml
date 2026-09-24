@@ -62,6 +62,35 @@
     mode: "0700"
   loop: "{{ [backup_restore_local_dir, backup_restore_local_tmp_dir] | select('truthy') | list }}"
 
+- name: Create the key the backups are pushed with
+  when: backup_restore_ssh_key | length > 0
+  block:
+    - name: Create the directory of that key
+      ansible.builtin.file:
+        path: "{{ backup_restore_ssh_key | dirname }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+
+    # Generated once and never replaced: its public half is installed on the
+    # backup server, and a new key would lock every machine out of it.
+    - name: Generate the key pair
+      ansible.builtin.command:
+        cmd: >-
+          ssh-keygen -q -t ed25519 -N ''
+          -C {{ ('backup_restore@' ~ inventory_hostname) | quote }}
+          -f {{ backup_restore_ssh_key | quote }}
+        creates: "{{ backup_restore_ssh_key }}"
+
+- name: Trust the host key of the backup server
+  ansible.builtin.known_hosts:
+    path: /root/.ssh/known_hosts
+    name: "{{ item.split()[0] }}"
+    key: "{{ item }}"
+    state: present
+  loop: "{{ backup_restore_remote_host_keys }}"
+
 - name: Create /etc/backup-restore.conf file
   ansible.builtin.file:
     path: "/etc/backup-restore.conf"
