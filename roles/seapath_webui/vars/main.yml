@@ -1,0 +1,10 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+# How `seapath_webui_http_proxy` is handed on, written once for the pull and
+# for the container. Lower case because podman and Python both read it, and
+# Python prefers it when both cases are set.
+seapath_webui_proxy_environment:
+  http_proxy: "{{ seapath_webui_http_proxy }}"
+  https_proxy: "{{ seapath_webui_http_proxy }}"
+  no_proxy: "{{ seapath_webui_no_proxy }}"
