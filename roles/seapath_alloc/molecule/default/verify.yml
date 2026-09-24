@@ -1,0 +1,61 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+- name: Verify seapath_alloc
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Read the hook registration
+      ansible.builtin.stat:
+        path: /etc/libvirt/hooks/qemu.d/10-seapath-pinning
+      register: seapath_alloc_hook_link
+
+    - name: Read the hook entry point
+      ansible.builtin.stat:
+        path: /usr/bin/seapath-qemu-hook
+      register: seapath_alloc_hook_bin
+
+    - name: Read the package
+      ansible.builtin.stat:
+        path: /usr/lib/seapath/seapath_alloc/hook.py
+      register: seapath_alloc_package
+
+    - name: Read the host settings
+      ansible.builtin.slurp:
+        src: /etc/seapath/alloc.yaml
+      register: seapath_alloc_settings
+
+    - name: Assert the hook is installed and registered
+      ansible.builtin.assert:
+        that:
+          - seapath_alloc_hook_link.stat.islnk
+          - seapath_alloc_hook_link.stat.lnk_source == "/usr/bin/seapath-qemu-hook"
+          - seapath_alloc_hook_bin.stat.mode == "0755"
+          - seapath_alloc_package.stat.exists
+          - "'allocation_strategy: packing' in (seapath_alloc_settings.content | b64decode)"
+
+    # The installed hook must import its package and exit 0 on any event,
+    # including a start whose QEMU process does not exist.
+    - name: Run the hook on an ignored event
+      ansible.builtin.command: /etc/libvirt/hooks/qemu.d/10-seapath-pinning vm0 stopped end -
+      changed_when: false
+
+    - name: Run the hook on a VM start without QEMU
+      ansible.builtin.shell: >-
+        set -o pipefail;
+        echo '<domain><name>vm0</name><vcpu>1</vcpu></domain>'
+        | /etc/libvirt/hooks/qemu.d/10-seapath-pinning vm0 started begin -
+      args:
+        executable: /bin/bash
+      changed_when: false
+
+    - name: Read the hook log
+      ansible.builtin.slurp:
+        src: /var/log/seapath/alloc.log
+      register: seapath_alloc_log
+
+    - name: Assert the hook ran the package
+      ansible.builtin.assert:
+        that:
+          - "'no QEMU process for VM vm0' in (seapath_alloc_log.content | b64decode)"

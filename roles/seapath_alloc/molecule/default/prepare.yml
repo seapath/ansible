@@ -1,0 +1,17 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+- name: Prepare test environment (Debian 13)
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    # rsync for the synchronize task, PyYAML for the profiles.
+    - name: Install the role's prerequisites
+      ansible.builtin.apt:
+        name:
+          - rsync
+          - python3-yaml
+        state: present
+        update_cache: true

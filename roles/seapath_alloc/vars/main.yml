@@ -1,0 +1,8 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+# PyYAML package name per seapath_distro; any other distro uses python3-yaml.
+seapath_alloc_pyyaml_package:
+  CentOS: python3-pyyaml
+  OracleLinux: python3-pyyaml
+  SLES: python3-PyYAML
