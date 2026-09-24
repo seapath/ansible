@@ -13,4 +13,4 @@
     - standalone_machine
   become: true
   roles:
-    - deploy_seapath_webui
+    - seapath_webui
