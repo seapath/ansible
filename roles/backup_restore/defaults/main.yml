@@ -1,0 +1,29 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+# Where the backup-restore tool sends the backups, and what it leaves out.
+# These are the seven keys of /etc/backup-restore.conf. Setting any of them in
+# the inventory makes the inventory the source of truth: the role renders the
+# file from them at every convergence, and the menu's own writes are replaced.
+# Leaving all seven unset keeps the previous behaviour, where the file is
+# created empty and filled from the menu on the machine.
+backup_restore_local_dir: ""
+backup_restore_local_tmp_dir: ""
+backup_restore_remote_serv: ""
+backup_restore_remote_dir: ""
+backup_restore_remote_shell: ""
+backup_restore_include_vm: ""
+backup_restore_exclude_vm: ""
+
+# The key the machines push the backups with, and what they expect the backup
+# server to present. Both optional: a site whose root key already reaches the
+# server leaves them empty and nothing changes.
+#
+# backup_restore_ssh_key is a path. When it is set the role generates an
+# ed25519 key pair there, once, and remote_shell defaults to `ssh -i <path>`.
+# Its public half is what goes in the backup server's authorized_keys.
+backup_restore_ssh_key: ""
+# Lines in known_hosts format, `<host> <type> <key>`, for the backup server.
+# They are added to root's known_hosts, so the first backup does not stop on
+# a host key nobody accepted.
+backup_restore_remote_host_keys: []
