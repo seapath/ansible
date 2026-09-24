@@ -49,6 +49,19 @@
     group: root
   when: backup_restore_from_inventory | bool
 
+# backup_full.sh creates the dated directory it assembles a backup in, but
+# not the directory above it, so a staging directory that was never created
+# fails the first backup after the whole list of guests has been printed. They
+# are root's only: they hold the disks of every guest backed up.
+- name: Create the directories the backups are staged in
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  loop: "{{ [backup_restore_local_dir, backup_restore_local_tmp_dir] | select('truthy') | list }}"
+
 - name: Create /etc/backup-restore.conf file
   ansible.builtin.file:
     path: "/etc/backup-restore.conf"
