@@ -1,0 +1,92 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+- name: Check seapath_alloc_strategy
+  ansible.builtin.assert:
+    that:
+      - seapath_alloc_strategy in ["spreading", "packing", "repacking"]
+    fail_msg: >-
+      seapath_alloc_strategy is {{ seapath_alloc_strategy }}; valid values
+      are spreading, packing and repacking.
+    quiet: true
+
+- name: Install PyYAML, needed to read the pinning profiles
+  ansible.builtin.package:
+    name: "{{ seapath_alloc_pyyaml_package[seapath_distro | default('')] | default('python3-yaml') }}"
+    state: present
+  tags:
+    - package-install
+
+# Without PyYAML every VM would silently start unpinned.
+- name: Check that PyYAML is available
+  ansible.builtin.command: python3 -c "import yaml"
+  changed_when: false
+
+- name: Create /usr/lib/seapath directory
+  ansible.builtin.file:
+    path: /usr/lib/seapath
+    state: directory
+    mode: "0755"
+
+- name: Copy seapath_alloc Python modules to target
+  ansible.posix.synchronize:
+    src: seapath_alloc/seapath_alloc/
+    dest: /usr/lib/seapath/seapath_alloc/
+    rsync_opts:
+      - "--chown=root:root"
+      - "--exclude=__pycache__"
+      - "--exclude=*.pyc"
+      - "--delete"
+      - "--delete-excluded"
+
+- name: Install seapath-qemu-hook entry point
+  ansible.builtin.copy:
+    src: seapath-qemu-hook
+    dest: /usr/bin/seapath-qemu-hook
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Ensure /etc/libvirt/hooks/qemu.d exists
+  ansible.builtin.file:
+    path: /etc/libvirt/hooks/qemu.d
+    state: directory
+    mode: "0755"
+
+# libvirt only discovers hook scripts at daemon startup: installing the
+# hook on a host where the daemon is already running has no effect until it
+# is restarted. Running VMs keep running; see the README for Pacemaker.
+- name: Register hook with libvirt
+  ansible.builtin.file:
+    src: /usr/bin/seapath-qemu-hook
+    dest: /etc/libvirt/hooks/qemu.d/10-seapath-pinning
+    state: link
+  notify: Restart the libvirt QEMU daemon
+
+- name: Ensure /etc/seapath directory exists
+  ansible.builtin.file:
+    path: /etc/seapath
+    state: directory
+    mode: "0755"
+
+- name: Deploy alloc settings
+  ansible.builtin.template:
+    src: alloc.yaml.j2
+    dest: /etc/seapath/alloc.yaml
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Ensure /var/log/seapath exists for hook log output
+  ansible.builtin.file:
+    path: /var/log/seapath
+    state: directory
+    mode: "0755"
+
+- name: Deploy logrotate config for hook log
+  ansible.builtin.copy:
+    src: seapath-alloc.logrotate
+    dest: /etc/logrotate.d/seapath-alloc
+    owner: root
+    group: root
+    mode: "0644"
