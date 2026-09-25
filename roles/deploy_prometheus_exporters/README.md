@@ -17,7 +17,7 @@ exposes.
 - Yocto and SLES are not supported yet; the role is skipped when
   `seapath_distro` is `Yocto` or `SLES` until compatibility is added
 - `podman.socket` for the podman exporter (API socket at `/run/podman/podman.sock`)
-- Libvirt socket access for libvirt and insatomcat exporters (`libvirtd.service` on
+- Libvirt socket access for libvirt and SEAPATH exporters (`libvirtd.service` on
   Debian, `virtqemud.service` on Oracle Linux)
 - Pacemaker/Corosync tools on the host for the HA cluster exporter
 - `seapath_distro` should be set, typically by calling `detect_seapath_distro`
@@ -34,14 +34,14 @@ exposes.
 | `deploy_prometheus_exporters_node_exporter_image` | No | String | see defaults | Node exporter container image |
 | `deploy_prometheus_exporters_podman_exporter_image` | No | String | see defaults | Podman exporter container image |
 | `deploy_prometheus_exporters_libvirt_exporter_image` | No | String | see defaults | Libvirt exporter container image |
-| `deploy_prometheus_exporters_insatomcat_exporter_image` | No | String | see defaults | Insatomcat exporter container image |
+| `deploy_prometheus_exporters_seapath_exporter_image` | No | String | see defaults | SEAPATH exporter container image |
 | `deploy_prometheus_exporters_ha_cluster_exporter_image` | No | String | see defaults | HA cluster exporter container image |
 | `deploy_prometheus_exporters_manage_services` | No | Boolean | `true` | Start systemd units and restart them on unit file changes |
 | `deploy_prometheus_exporters_lvm_enabled` | No | Boolean | `true` | Write the LVM metrics to the node exporter textfile collector, see below |
 | `deploy_prometheus_exporters_register_essential_services` | No | Boolean | `true` | Publish deployed services for cukinia tests |
 | `deploy_prometheus_exporters_libvirt_exporter_socket` | No | String | see vars | Host libvirt socket mounted in libvirt exporter |
-| `deploy_prometheus_exporters_insatomcat_libvirt_socket` | No | String | see vars | Host libvirt socket mounted in insatomcat exporter |
-| `deploy_prometheus_exporters_insatomcat_qemu_dir` | No | String | `/var/run/libvirt/qemu` | Host QEMU runtime dir for insatomcat exporter |
+| `deploy_prometheus_exporters_seapath_exporter_libvirt_socket` | No | String | see vars | Host libvirt socket mounted in SEAPATH exporter |
+| `deploy_prometheus_exporters_seapath_exporter_qemu_dir` | No | String | `/var/run/libvirt/qemu` | Host QEMU runtime dir for SEAPATH exporter |
 | `deploy_prometheus_exporters_libvirt_systemd_unit` | No | String | see vars | Libvirt systemd unit to order exporter startup after |
 
 Default upstream images are defined in `vars/main.yml` under
@@ -58,7 +58,7 @@ variables.
 | `node-exporter` | 9100 | all |
 | `podman-exporter` | 9882 | hypervisors |
 | `libvirt-exporter` | 9177 | hypervisors |
-| `insatomcat-exporter` | 9184 | hypervisors |
+| `seapath-exporter` | 9184 | hypervisors |
 | `ha_cluster_exporter` | 9664 | cluster machines |
 
 ### Default exporter selection
@@ -70,7 +70,7 @@ added from the inventory groups the host belongs to:
 |---|---|
 | `node-exporter` | always |
 | `ha_cluster_exporter` | `cluster_machines` |
-| `podman-exporter`, `libvirt-exporter`, `insatomcat-exporter` | `hypervisors` |
+| `podman-exporter`, `libvirt-exporter`, `seapath-exporter` | `hypervisors` |
 
 Examples:
 
@@ -78,7 +78,7 @@ Examples:
 |---|---|---|
 | Cluster hypervisor | `cluster_machines`, `hypervisors` | all exporters |
 | Observer | `cluster_machines` only | node + ha cluster |
-| Standalone hypervisor | `hypervisors` | node + podman + libvirt + insatomcat |
+| Standalone hypervisor | `hypervisors` | node + podman + libvirt + seapath |
 | VM | `VMs` | node only |
 
 The mapping is defined in `vars/main.yml` as
@@ -86,7 +86,7 @@ The mapping is defined in `vars/main.yml` as
 
 ### Libvirt socket paths per flavor
 
-| Flavor | Libvirt exporter socket | insatomcat libvirt socket | systemd unit |
+| Flavor | Libvirt exporter socket | SEAPATH exporter libvirt socket | systemd unit |
 |---|---|---|---|
 | Debian, CentOS, SLES | `/var/run/libvirt/libvirt-sock-ro` | `/var/run/libvirt/libvirt-sock` | `libvirtd.service` |
 | Oracle Linux | `/run/libvirt/virtqemud-sock` | `/run/libvirt/virtqemud-sock` | `virtqemud.service` |
@@ -176,7 +176,7 @@ deploy_prometheus_exporters_images:
   node-exporter: registry.local/seapath/node-exporter:1.8.2
   podman-exporter: registry.local/seapath/prometheus-podman-exporter:1.14.0
   libvirt-exporter: registry.local/seapath/prometheus-libvirt-exporter:2.3.1
-  insatomcat-exporter: registry.local/seapath/insatomcat-exporter:1.0.0
+  seapath-exporter: registry.local/seapath/seapath-exporter:1.0.0
   ha_cluster_exporter: registry.local/seapath/ha-cluster-exporter:0.0.1
 ```
 
