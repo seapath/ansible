@@ -5,14 +5,14 @@ deploy_prometheus_exporters_supported_exporters:
   - node-exporter
   - podman-exporter
   - libvirt-exporter
-  - insatomcat-exporter
+  - seapath-exporter
   - ha_cluster_exporter
 
 deploy_prometheus_exporters_default_images:
   node-exporter: quay.io/prometheus/node-exporter:latest
   podman-exporter: quay.io/navidys/prometheus-podman-exporter
   libvirt-exporter: ghcr.io/inovex/prometheus-libvirt-exporter:2.3.1
-  insatomcat-exporter: docker.io/insatomcat/insatomcat-exporter:latest
+  seapath-exporter: ghcr.io/seapath/seapath-exporter:0.1.0
   ha_cluster_exporter: docker.io/insatomcat/ha-cluster-exporter:0.0.1
 
 deploy_prometheus_exporters_group_exporters:
@@ -21,7 +21,7 @@ deploy_prometheus_exporters_group_exporters:
   hypervisors:
     - podman-exporter
     - libvirt-exporter
-    - insatomcat-exporter
+    - seapath-exporter
 
 deploy_prometheus_exporters_lvm_deployed: >-
   {{

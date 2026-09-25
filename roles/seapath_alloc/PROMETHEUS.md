@@ -37,7 +37,7 @@ what the `file_sd_configs` plus static labels pattern below is for.
 | `node` | `node_exporter` (also serves the `seapath-alloc` textfile metrics) | 9100 | `deploy_prometheus_exporters` | every host: `cluster_machines`, `hypervisors`, `VMs`, `standalone_machine` |
 | `ceph` | Ceph mgr `prometheus` module | 9283 | `cephadm` (`cephadm_prometheus_exporter_enabled`, see [cephadm README](../cephadm/README.md#ceph-prometheus-exporter)) | hosts that run a mgr daemon, i.e. `cluster_machines` |
 | `ha` | `ha_cluster_exporter` | 9664 | `deploy_prometheus_exporters` | `cluster_machines` |
-| `seapath_custom_exporter` | `insatomcat-exporter` | 9184 | `deploy_prometheus_exporters` | `hypervisors` |
+| `seapath_custom_exporter` | `seapath-exporter` | 9184 | `deploy_prometheus_exporters` | `hypervisors` |
 | `libvirt_exporter` | `prometheus-libvirt-exporter` | 9177 | `deploy_prometheus_exporters` | `hypervisors` |
 | `podman_exporter` | `prometheus-podman-exporter` | 9882 | `deploy_prometheus_exporters` | `hypervisors` |
 
@@ -216,7 +216,7 @@ other projects) on hosts that have nothing to do with SEAPATH at all.
 **Caveat, 2-hypervisor + 1-observer clusters:** an observer is in
 `cluster_machines` (so it correctly gets `cluster`/`ha` scraping) but not in
 `hypervisors`, so it never runs `podman-exporter` / `libvirt-exporter` /
-`insatomcat-exporter`. The `keep` rule above cannot tell an observer apart
+`seapath-exporter`. The `keep` rule above cannot tell an observer apart
 from a hypervisor (both simply carry `cluster: <name>`), so those three jobs
 will show a permanently down target for the observer. This is harmless
 (Prometheus just reports the target as down) but worth silencing in
