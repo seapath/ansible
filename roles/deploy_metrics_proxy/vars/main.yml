@@ -20,7 +20,7 @@ deploy_metrics_proxy_target_map:
   libvirt-exporter:
     job: libvirt_exporter
     port: 9177
-  insatomcat-exporter:
+  seapath-exporter:
     job: seapath_custom_exporter
     port: 9184
   ha_cluster_exporter:
@@ -36,7 +36,7 @@ deploy_metrics_proxy_group_exporters:
   hypervisors:
     - podman-exporter
     - libvirt-exporter
-    - insatomcat-exporter
+    - seapath-exporter
 
 deploy_metrics_proxy_ceph_job: ceph
 deploy_metrics_proxy_ceph_port: 9283

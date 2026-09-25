@@ -15,7 +15,7 @@ bind.
 
 A hypervisor of a cluster exposes six HTTP endpoints on its administration
 address, all in the clear and unauthenticated: node-exporter (9100),
-libvirt-exporter (9177), insatomcat-exporter (9184), podman-exporter (9882),
+libvirt-exporter (9177), seapath-exporter (9184), podman-exporter (9882),
 ha_cluster_exporter (9664) and the Ceph mgr `prometheus` module (9283). Among
 other things, 9100 serves the `seapath_rt_*` textfile block: the tuned profile,
 the kernel command line, the RT throttling window, the hugepages per NUMA node,
@@ -38,7 +38,7 @@ exporter wrote it, each exporter stays its own Prometheus job with its own
 | `/metrics/node` | node-exporter | 9100 |
 | `/metrics/ceph` | Ceph mgr `prometheus` module | 9283 |
 | `/metrics/ha` | ha_cluster_exporter | 9664 |
-| `/metrics/seapath_custom_exporter` | insatomcat-exporter | 9184 |
+| `/metrics/seapath_custom_exporter` | seapath-exporter | 9184 |
 | `/metrics/libvirt_exporter` | libvirt-exporter | 9177 |
 | `/metrics/podman_exporter` | podman-exporter | 9882 |
 
