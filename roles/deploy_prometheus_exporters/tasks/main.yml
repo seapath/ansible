@@ -18,6 +18,38 @@
           {{ deploy_prometheus_exporters_supported_exporters | join(', ') }}.
           Got: {{ deploy_prometheus_exporters_exporters | join(', ') }}
 
+    # The exporter was published as insatomcat-exporter before it moved to
+    # the seapath organization. An image still set under the old key would
+    # otherwise be ignored without notice.
+    - name: Reject an image set under the former exporter name
+      ansible.builtin.assert:
+        that:
+          - "'insatomcat-exporter' not in deploy_prometheus_exporters_images"
+        fail_msg: >-
+          insatomcat-exporter was renamed seapath-exporter: rename the key in
+          deploy_prometheus_exporters_images.
+
+    # Its unit held the port the seapath-exporter unit now binds, so it is
+    # stopped before the new unit starts.
+    - name: Look for the former insatomcat-exporter unit
+      ansible.builtin.stat:
+        path: /etc/containers/systemd/insatomcat-exporter.container
+      register: deploy_prometheus_exporters_former_unit
+
+    - name: Stop and remove the former insatomcat-exporter unit
+      when: deploy_prometheus_exporters_former_unit.stat.exists
+      block:
+        - name: Stop the former insatomcat-exporter service
+          ansible.builtin.systemd:
+            name: insatomcat-exporter
+            state: stopped
+
+        - name: Remove the former insatomcat-exporter unit
+          ansible.builtin.file:
+            path: /etc/containers/systemd/insatomcat-exporter.container
+            state: absent
+          notify: Reload systemd after exporter container unit changes
+
     - name: Ensure node exporter textfile collector directory exists
       ansible.builtin.file:
         path: /var/lib/prometheus/node_exporter

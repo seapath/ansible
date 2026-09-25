@@ -8,7 +8,7 @@
     deploy_prometheus_exporters_other_exporters:
       - podman-exporter
       - libvirt-exporter
-      - insatomcat-exporter
+      - seapath-exporter
       - ha_cluster_exporter
 
   tasks:
