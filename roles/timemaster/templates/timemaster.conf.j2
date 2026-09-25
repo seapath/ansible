@@ -16,6 +16,14 @@ delay 1e-9
 # source selection or to make it prefer other sources.
 # The default is 1e-9 (1 nanosecond).
 # Leave as default to leave the error be computed via the std dev of measured samples.
+{% if timemaster_ptp_ntp_options %}
+ntp_options {{ timemaster_ptp_ntp_options }}
+# ntp_options:
+# Options added to the chrony refclock line of the PTP source. With trust,
+# chrony keeps PTP as the reference when an NTP source disagrees with it:
+# PTP and a single NTP server one second apart leave no majority, and chrony
+# then follows no source at all. When PTP is lost, NTP still takes over.
+{% endif %}
 {% endif %}
 
 [timemaster]
