@@ -6,4 +6,5 @@ timemaster_ptp_network_transport: "L2"
 timemaster_ptp_delay_mechanism: "P2P"
 timemaster_ptp_domain_number: 0
 timemaster_ptp_minor_version: 1
+timemaster_ptp_ntp_options: "trust prefer"
 timemaster_ptp_custom_options:

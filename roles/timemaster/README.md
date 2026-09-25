@@ -18,6 +18,7 @@ No requirement.
 | timemaster_ptp_delay_mechanism   | no       | String  | "P2P"   | PTP delay mechanism. "P2P" or "E2E"                                                                                                    |
 | timemaster_ptp_domain_number     | no       | Integer | 0       | PTP domain number. Value from 0 to 255                                                                                                      |
 | timemaster_ptp_minor_version     | no       | Integer | 1       | PTP minor version. 0 or 1                                                                                                        |
+| timemaster_ptp_ntp_options       | no       | String  | "trust prefer" | chrony options of the PTP source. trust keeps PTP as the reference when an NTP server disagrees with it. Set to "" to drop them |
 | timemaster_ptp_custom_options    | no       | String  | null    | List of options to add to the ptp4l configuration section separated by a new line. Skipped if not set                                                                                                      |
 
 
