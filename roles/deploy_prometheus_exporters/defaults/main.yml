@@ -17,10 +17,10 @@ deploy_prometheus_exporters_libvirt_exporter_image: >-
   {{ deploy_prometheus_exporters_images.get(
        'libvirt-exporter',
        deploy_prometheus_exporters_default_images['libvirt-exporter']) }}
-deploy_prometheus_exporters_insatomcat_exporter_image: >-
+deploy_prometheus_exporters_seapath_exporter_image: >-
   {{ deploy_prometheus_exporters_images.get(
-       'insatomcat-exporter',
-       deploy_prometheus_exporters_default_images['insatomcat-exporter']) }}
+       'seapath-exporter',
+       deploy_prometheus_exporters_default_images['seapath-exporter']) }}
 deploy_prometheus_exporters_ha_cluster_exporter_image: >-
   {{ deploy_prometheus_exporters_images.get(
        'ha_cluster_exporter',
