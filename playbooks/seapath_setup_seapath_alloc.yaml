@@ -1,0 +1,16 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+# Deploy seapath-alloc on hypervisors: the CPU allocation library and the
+# libvirt QEMU hook that pins the VM threads at start and migration.
+
+---
+- name: Deploy seapath-alloc
+  hosts: hypervisors
+  gather_facts: false
+  become: true
+  roles:
+    # On Yocto the root filesystem is read-only: seapath-alloc must be
+    # shipped by the image itself (meta-seapath).
+    - role: seapath_alloc
+      when: seapath_distro != "Yocto"
