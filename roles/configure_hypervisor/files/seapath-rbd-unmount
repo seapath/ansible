@@ -32,7 +32,8 @@ log() { echo "seapath-rbd-unmount: $*" >&2; }
 # ---------------------------------------------------------------------------
 # mapped_devices - print the device node of every kernel mapping of this image
 #
-# Same selection as seapath-rbd-mount, deliberately kept identical: match on
+# Same selection as seapath-rbd-mount, deliberately kept identical (the image
+# is the JSON's "name", a missing namespace the default one): match on
 # pool, namespace, image and snap rather than on the image name alone, so
 # neither a same-named image in another pool/namespace nor a snapshot mapping
 # made by something else is force-unmapped from under its user.
@@ -46,8 +47,8 @@ mapped_devices() {
     rbd device list --format json 2> /dev/null | jq -r \
         --arg pool "$POOL" --arg image "$IMAGE" '
             .[]
-            | select(.pool == $pool and .namespace == ""
-                     and .image == $image and .snap == "-")
+            | select(.pool == $pool and (.namespace // "") == ""
+                     and .name == $image and .snap == "-")
             | .device
         '
 }
