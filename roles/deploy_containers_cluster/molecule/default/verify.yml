@@ -1,0 +1,193 @@
+---
+- name: Verify the node side of a workload
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Read the quadlets and the drop-in
+      ansible.builtin.slurp:
+        path: "{{ item }}"
+      loop:
+        - /etc/containers/systemd/web.container
+        - /etc/containers/systemd/web.network
+        - /etc/systemd/system/web.service.d/seapath-rbd.conf
+      register: deploy_containers_cluster_verify_files
+
+    - name: Assert the template is rendered and the plain file is copied as it is
+      ansible.builtin.assert:
+        that:
+          - "'Network=web.network:ip=192.0.2.10' in _container"
+          - _network == lookup('ansible.builtin.file', _scenario ~ '/files/web.network') ~ '\n'
+          - "'Requires=seapath-rbd@web.service' in _dropin"
+          - "'After=seapath-rbd@web.service' in _dropin"
+      vars:
+        _container: "{{ deploy_containers_cluster_verify_files.results[0].content | b64decode }}"
+        _network: "{{ deploy_containers_cluster_verify_files.results[1].content | b64decode }}"
+        _dropin: "{{ deploy_containers_cluster_verify_files.results[2].content | b64decode }}"
+        _scenario: "{{ lookup('ansible.builtin.env', 'MOLECULE_SCENARIO_DIRECTORY') }}"
+
+    - name: Check the image was loaded from its archive
+      ansible.builtin.command:
+        cmd: podman image exists localhost/molecule-web:1
+      changed_when: false
+
+    - name: Check quadlet made the units # noqa: command-instead-of-module
+      ansible.builtin.command:
+        cmd: systemctl cat web.service web-network.service seapath-rbd@web.service
+      changed_when: false
+
+    # A new version while a container still runs the old one: the old image
+    # stays, and goes with its container at the next run.
+    - name: Run a container on the first version
+      ansible.builtin.command:
+        cmd: podman create --name deploy-containers-cluster-verify localhost/molecule-web:1 true
+      changed_when: true
+
+    - name: Deploy the second version
+      ansible.builtin.include_role:
+        name: deploy_containers_cluster
+        tasks_from: node.yml
+      vars:
+        deploy_containers_cluster_containers:
+          web: "{{ cluster_containers.web | combine(_second) }}"
+        _second:
+          images:
+            - name: localhost/molecule-web:2
+              archive: /tmp/molecule-web-2.tar
+
+    - name: Check the first version is kept while a container uses it
+      ansible.builtin.command:
+        cmd: podman image exists localhost/molecule-web:1
+      changed_when: false
+
+    - name: Remove the container of the first version
+      ansible.builtin.command:
+        cmd: podman rm deploy-containers-cluster-verify
+      changed_when: true
+
+    - name: Deploy the second version again
+      ansible.builtin.include_role:
+        name: deploy_containers_cluster
+        tasks_from: node.yml
+      vars:
+        deploy_containers_cluster_containers:
+          web: "{{ cluster_containers.web | combine(_second) }}"
+        _second:
+          images:
+            - name: localhost/molecule-web:2
+              archive: /tmp/molecule-web-2.tar
+
+    - name: Look for the first version and the archives
+      ansible.builtin.command:
+        cmd: podman image exists {{ item }}
+      loop:
+        - localhost/molecule-web:1
+        - localhost/molecule-web:2
+      register: deploy_containers_cluster_verify_versions
+      changed_when: false
+      failed_when: false
+
+    - name: Look for the archives of the two versions
+      ansible.builtin.stat:
+        path: "/var/lib/seapath/containers/molecule-web-{{ item }}.tar"
+      loop: [1, 2]
+      register: deploy_containers_cluster_verify_archives
+
+    - name: Assert only the second version is left
+      ansible.builtin.assert:
+        that:
+          - deploy_containers_cluster_verify_versions.results | map(attribute='rc') | list == [1, 0]
+          - deploy_containers_cluster_verify_archives.results | map(attribute='stat.exists') | list == [false, true]
+
+    # A new version that drops a quadlet: the node loses it too.
+    - name: Deploy a version without its network quadlet
+      ansible.builtin.include_role:
+        name: deploy_containers_cluster
+        tasks_from: node.yml
+      vars:
+        deploy_containers_cluster_containers:
+          web: "{{ cluster_containers.web | combine(_second) }}"
+        _second:
+          images:
+            - name: localhost/molecule-web:2
+              archive: /tmp/molecule-web-2.tar
+          quadlets:
+            - "{{ lookup('ansible.builtin.env', 'MOLECULE_SCENARIO_DIRECTORY') }}/files/web.container.j2"
+
+    - name: Look for the quadlets of that version
+      ansible.builtin.stat:
+        path: "/etc/containers/systemd/{{ item }}"
+      loop:
+        - web.container
+        - web.network
+      register: deploy_containers_cluster_verify_dropped
+
+    - name: Assert the dropped quadlet is gone and the other one kept
+      ansible.builtin.assert:
+        that:
+          - deploy_containers_cluster_verify_dropped.results | map(attribute='stat.exists') | list == [true, false]
+
+    - name: Check a quadlet with an [Install] section is refused
+      block:
+        - name: Deploy a workload whose quadlet has an [Install] section
+          ansible.builtin.include_role:
+            name: deploy_containers_cluster
+            tasks_from: node.yml
+          vars:
+            deploy_containers_cluster_containers:
+              bad:
+                quadlets:
+                  - "{{ lookup('ansible.builtin.env', 'MOLECULE_SCENARIO_DIRECTORY') }}/files/bad.container"
+
+        - name: Fail, the quadlet was accepted
+          ansible.builtin.fail:
+            msg: A quadlet with an [Install] section was deployed
+      rescue:
+        - name: Assert the refusal names the section
+          ansible.builtin.assert:
+            that: "'[Install] section' in (ansible_failed_result | string)"
+
+        - name: Check the refused quadlet was not written
+          ansible.builtin.stat:
+            path: /etc/containers/systemd/bad.container
+          register: deploy_containers_cluster_verify_bad
+
+        - name: Assert the refused quadlet is absent
+          ansible.builtin.assert:
+            that: not deploy_containers_cluster_verify_bad.stat.exists
+
+    - name: Remove the workload
+      ansible.builtin.include_role:
+        name: deploy_containers_cluster
+        tasks_from: node.yml
+      vars:
+        deploy_containers_cluster_containers:
+          web: "{{ cluster_containers.web | combine({'state': 'absent'}, _second) }}"
+        _second:
+          images:
+            - name: localhost/molecule-web:2
+              archive: /tmp/molecule-web-2.tar
+
+    - name: Look for what is left of the workload
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - /etc/containers/systemd/web.container
+        - /etc/containers/systemd/web.network
+        - /etc/systemd/system/web.service.d
+        - /var/lib/seapath/containers/molecule-web-2.tar
+        - /var/lib/seapath/containers/quadlets/web
+      register: deploy_containers_cluster_verify_left
+
+    - name: Assert nothing is left of the workload
+      ansible.builtin.assert:
+        that: deploy_containers_cluster_verify_left.results | selectattr('stat.exists') | list | length == 0
+        fail_msg: "{{ deploy_containers_cluster_verify_left.results | selectattr('stat.exists') | map(attribute='item') | list }}"
+
+    - name: Check the image is removed
+      ansible.builtin.command:
+        cmd: podman image exists localhost/molecule-web:2
+      register: deploy_containers_cluster_verify_image
+      changed_when: false
+      failed_when: deploy_containers_cluster_verify_image.rc != 1

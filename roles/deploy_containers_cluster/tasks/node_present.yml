@@ -1,0 +1,111 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+- name: "Get the images of {{ _name }}"
+  ansible.builtin.include_tasks: node_image.yml
+  loop: "{{ container.images | default([]) }}"
+  loop_control:
+    loop_var: _image
+    label: "{{ _image.name }}"
+
+# A quadlet with [Install] would start at boot on every node, behind
+# Pacemaker's back.
+- name: "Check that Pacemaker alone starts the quadlets of {{ _name }}"
+  ansible.builtin.assert:
+    that: _content is not search('^\s*\[Install\]', multiline=true)
+    fail_msg: >-
+      {{ _name }}: {{ _quadlet }} has an [Install] section. Pacemaker starts
+      the workload on one node: remove it.
+    quiet: true
+  loop: "{{ container.quadlets }}"
+  loop_control:
+    loop_var: _quadlet
+  vars:
+    _content: "{{ lookup('ansible.builtin.template' if _quadlet.endswith('.j2') else 'ansible.builtin.file', _quadlet) }}"
+
+- name: "Write the quadlets of {{ _name }}"
+  ansible.builtin.copy:
+    content: "{{ _content.rstrip() ~ '\n' }}"
+    dest: "/etc/containers/systemd/{{ _quadlet | basename | regex_replace('\\.j2$', '') }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ container.quadlets }}"
+  loop_control:
+    loop_var: _quadlet
+  vars:
+    _content: "{{ lookup('ansible.builtin.template' if _quadlet.endswith('.j2') else 'ansible.builtin.file', _quadlet) }}"
+  register: deploy_containers_cluster_quadlets
+  notify: Reload systemd
+
+# A quadlet a new version renames or drops is removed. Only what the role wrote
+# for this workload is: a file name alone cannot tell the quadlets of `web`
+# from those of a workload called `web-lb`.
+- name: "Read the quadlets the last run wrote for {{ _name }}"
+  ansible.builtin.slurp:
+    path: "{{ deploy_containers_cluster_written_dir }}/{{ _name }}"
+  register: deploy_containers_cluster_written
+  failed_when: false
+
+- name: "Remove the quadlets no longer declared for {{ _name }}"
+  ansible.builtin.file:
+    path: "/etc/containers/systemd/{{ _stale }}"
+    state: absent
+  loop: >-
+    {{ (deploy_containers_cluster_written.content | default('') | b64decode).splitlines()
+       | select | reject('search', '/') | difference(_written) }}
+  loop_control:
+    loop_var: _stale
+  vars:
+    _written: "{{ container.quadlets | map('basename') | map('regex_replace', '\\.j2$', '') | list }}"
+  notify: Reload systemd
+
+- name: "Record the quadlets written for {{ _name }}"
+  ansible.builtin.copy:
+    content: "{{ _written | join('\n') ~ '\n' }}"
+    dest: "{{ deploy_containers_cluster_written_dir }}/{{ _name }}"
+    owner: root
+    group: root
+    mode: "0644"
+  vars:
+    _written: "{{ container.quadlets | map('basename') | map('regex_replace', '\\.j2$', '') | list }}"
+
+- name: "Create the drop-in directory of {{ _unit }}"
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ _unit }}.d"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: container.rbd is defined
+
+- name: "Mount the RBD image when this unit starts: {{ _unit }}"
+  ansible.builtin.copy:
+    content: |
+      # Managed by the deploy_containers_cluster role.
+      [Unit]
+      Requires=seapath-rbd@{{ _name }}.service
+      After=seapath-rbd@{{ _name }}.service
+    dest: "/etc/systemd/system/{{ _unit }}.d/seapath-rbd.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  when: container.rbd is defined
+  register: deploy_containers_cluster_dropin
+  notify: Reload systemd
+
+- name: "Detach from any RBD image the unit {{ _unit }}"
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ _unit }}.d/seapath-rbd.conf"
+    state: absent
+  when: container.rbd is not defined
+  notify: Reload systemd
+
+# A running workload is never restarted: on a substation that is for the
+# operator to decide.
+- name: "Tell how the changes apply to {{ _name }}"
+  ansible.builtin.debug:
+    msg: >-
+      {{ _name }} changed on this node. It applies when Pacemaker next starts
+      the workload here; if it runs here now: crm resource restart {{ _name }}
+  when: deploy_containers_cluster_quadlets is changed or deploy_containers_cluster_dropin is changed

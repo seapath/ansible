@@ -1,0 +1,52 @@
+---
+- name: Prepare test environment (Debian 13)
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Install podman
+      ansible.builtin.apt:
+        name:
+          - podman
+        state: present
+        update_cache: true
+
+    # Nested in a container: overlay on overlay is not available.
+    - name: Use the vfs storage driver
+      ansible.builtin.copy:
+        content: |
+          [storage]
+          driver = "vfs"
+          runroot = "/run/containers/storage"
+          graphroot = "/var/lib/containers/storage"
+        dest: /etc/containers/storage.conf
+        mode: "0644"
+
+    # Two versions of an image made from an empty tarball: no registry
+    # needed. They are saved then removed, so the role has to load them from
+    # the archives. The label makes them two images rather than two tags.
+    - name: Build the test image archives
+      ansible.builtin.shell: |
+        set -e
+        tar -cf /tmp/empty.tar --files-from /dev/null
+        for version in 1 2; do
+          podman import --change "LABEL version=$version" /tmp/empty.tar localhost/molecule-web:$version
+          podman save -o /tmp/molecule-web-$version.tar localhost/molecule-web:$version
+          podman rmi localhost/molecule-web:$version
+        done
+      args:
+        creates: /tmp/molecule-web-2.tar
+
+    - name: Bring the archives to the Ansible machine
+      ansible.builtin.fetch:
+        src: "/tmp/molecule-web-{{ item }}.tar"
+        dest: "/tmp/molecule-web-{{ item }}.tar"
+        flat: true
+      loop: [1, 2]
+
+    - name: Remove the archives from the node
+      ansible.builtin.file:
+        path: "/tmp/molecule-web-{{ item }}.tar"
+        state: absent
+      loop: [1, 2]

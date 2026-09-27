@@ -1,0 +1,8 @@
+[Unit]
+Description=molecule test workload
+
+[Container]
+Image=localhost/molecule-web:1
+Network=web.network:ip={{ container.ip }}
+Volume=/mnt/rbd/web:/data
+Exec=/bin/true
