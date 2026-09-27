@@ -38,6 +38,13 @@ deploy_containers_cluster_only: []
 # aside what the workload wrote. A name or a list of names.
 deploy_containers_cluster_recreate: []
 
+# Workloads this run restarts once deployed, so that their new images,
+# quadlets, configuration and site values apply now. Given to one run (-e),
+# never written in the inventory: a running workload is otherwise never
+# restarted, which on a substation is the operator's decision. A name or a
+# list of names.
+deploy_containers_cluster_restart: []
+
 # Pacemaker operations, unless the workload sets its own. The start timeout
 # covers seapath-rbd-mount waiting up to 300 s for Ceph at cluster boot.
 deploy_containers_cluster_monitor_interval: 10s
