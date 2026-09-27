@@ -63,20 +63,20 @@
 - name: Check the configuration files of the workloads
   ansible.builtin.include_tasks: checks.yml
 
-- name: Check the workloads to recreate
+- name: Check the workloads to recreate and to restart
   ansible.builtin.assert:
     that: _unknown | length == 0
     fail_msg: >-
-      deploy_containers_cluster_recreate names {{ _unknown | join(', ') }},
-      which cluster_containers does not declare as present{{
+      deploy_containers_cluster_recreate or deploy_containers_cluster_restart
+      names {{ _unknown | join(', ') }}, which cluster_containers does not
+      declare as present{{
       ', or which deploy_containers_cluster_only leaves out of this run'
       if deploy_containers_cluster_only_list else '' }}.
     quiet: true
   vars:
     _unknown: >-
-      {{ deploy_containers_cluster_recreate_list
-         | difference(deploy_containers_cluster_scope
-                      | community.general.json_query("[?value.state != 'absent'].key")) }}
+      {{ (deploy_containers_cluster_recreate_list + deploy_containers_cluster_restart_list)
+         | difference(deploy_containers_cluster_present | map(attribute='key')) }}
   run_once: true
 
 # Before the node tasks: the units must be stopped before their quadlets go.
@@ -125,3 +125,16 @@
   when:
     - inventory_hostname == ansible_play_hosts[0]
     - _workload.value.state | default('present') == 'present'
+
+# Last, once every node has the new images, quadlets and configuration. A
+# resource this run created, or created again, has just started with them.
+- name: Restart the workloads the run was asked to
+  ansible.builtin.command:
+    cmd: crm --wait resource restart {{ _restart }}
+  loop: "{{ deploy_containers_cluster_restart_list | difference(deploy_containers_cluster_recreate_list) }}"
+  loop_control:
+    loop_var: _restart
+  when:
+    - inventory_hostname == ansible_play_hosts[0]
+    - _restart not in deploy_containers_cluster_created | default([])
+  changed_when: true

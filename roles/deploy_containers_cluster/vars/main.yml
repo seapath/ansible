@@ -29,6 +29,10 @@ deploy_containers_cluster_present: >-
   {{ deploy_containers_cluster_scope
      | community.general.json_query("[?value.state != 'absent']") }}
 
+deploy_containers_cluster_restart_list: >-
+  {{ ([deploy_containers_cluster_restart] if deploy_containers_cluster_restart is string
+      else deploy_containers_cluster_restart) | select | list }}
+
 deploy_containers_cluster_recreate_list: >-
   {{ ([deploy_containers_cluster_recreate] if deploy_containers_cluster_recreate is string
       else deploy_containers_cluster_recreate) | select | list }}
