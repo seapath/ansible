@@ -36,6 +36,7 @@ RUN set -x \
         six \
         netaddr \
         jmespath \
+        lxml \
     && rm -rf /var/lib/{apt,dpkg,cache,log}/*
 
 ENV PATH="/env/bin:/env/usr/bin:/env/sbin:/env/usr/sbin:$PATH"

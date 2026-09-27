@@ -1,8 +1,8 @@
 # Copyright (C) 2026 RTE
 # SPDX-License-Identifier: Apache-2.0
 #
-# What every node needs to run a workload: its images, its quadlets and the
-# drop-in that mounts its RBD image. Nothing is started here: Pacemaker does.
+# What every node needs to run a workload: its images, its quadlets, its
+# configuration and the drop-in that mounts its RBD image. Nothing is started here: Pacemaker does.
 ---
 - name: Create the directories of the role on the node
   ansible.builtin.file:
@@ -35,6 +35,8 @@
   vars:
     _name: "{{ _workload.key }}"
     _unit: "{{ _workload.value.unit | default(_workload.key ~ '.service') }}"
+    _config_dir: "{{ deploy_containers_cluster_config_dir }}/{{ _workload.key }}"
+    _config_names: "{{ _workload.value.config | default([]) | map('basename') | map('regex_replace', '\\.j2$', '') | list }}"
     # The templates name what the workload makes on a node after its entry,
     # so that one delivery can be installed twice under two names.
     container: "{{ _workload.value | combine({'name': _workload.key}) }}"
@@ -49,6 +51,7 @@
   vars:
     _name: "{{ _workload.key }}"
     _unit: "{{ _workload.value.unit | default(_workload.key ~ '.service') }}"
+    _config_dir: "{{ deploy_containers_cluster_config_dir }}/{{ _workload.key }}"
     container: "{{ _workload.value }}"
   when: _workload.value.state | default('present') == 'absent'
 

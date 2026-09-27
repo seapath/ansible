@@ -2,13 +2,13 @@
 
 This role deploys container workloads in a SEAPATH cluster, the way
 `deploy_vms_cluster` deploys VMs. A workload is one or more images, the
-quadlets that run them, optionally a Ceph RBD image for the data that must
-follow the workload from node to node, and a Pacemaker resource that starts it
-on one node.
+quadlets that run them, the configuration files of the site, optionally a Ceph
+RBD image for the state the workload writes and that must follow it from node
+to node, and a Pacemaker resource that starts it on one node.
 
-The role does not read the quadlets. It puts the images and the quadlets on
-every hypervisor of the cluster, fills the RBD image when it is created, and
-creates the Pacemaker resource. CPU pinning, networks and gratuitous ARP stay
+The role does not read the quadlets. It puts the images, the quadlets and the
+configuration on every hypervisor of the cluster, creates the RBD image,
+snapshots it when the images change, and creates the Pacemaker resource. CPU pinning, networks and gratuitous ARP stay
 in the quadlets.
 
 It is run by `playbooks/deploy_containers_cluster.yaml`.
@@ -22,6 +22,8 @@ in [DELIVERY.md](DELIVERY.md).
 * `seapath-rbd-mount` and `seapath-rbd-unmount`, installed by
   `configure_hypervisor` (see its README, section "RBD volume helpers"), for
   the workloads with an RBD image.
+* The `lxml` Python module on the Ansible machine, for the workloads that
+  declare `checks`.
 
 ## Inventory
 
@@ -34,7 +36,9 @@ inventory host: Ansible never connects to it.
 | `quadlets` | Yes | | Quadlet files on the Ansible machine, copied to `/etc/containers/systemd/`. A file ending in `.j2` is a template, written without that suffix. Their names are the workload's own, `<name>.pod` or `<name>-<container>.container`: two workloads never write the same one. |
 | `images` | No | `[]` | List of `name` and optional `archive`. Without `archive` the nodes pull `name`. With it, `archive` is a `podman save` file on the Ansible machine, loaded on every node: nothing is downloaded. |
 | `unit` | No | `<name>.service` | The unit Pacemaker starts. For a pod `foo.pod` it is `foo-pod.service`. |
-| `rbd` | No | | `size` (required) and `files`, a list of `src` and `dest` (relative to the image root), with optional `owner`, `group` and `mode`. |
+| `config` | No | `[]` | Configuration files on the Ansible machine, written to `/etc/seapath-containers/<name>/` on every node. A file ending in `.j2` is a template, written without that suffix. See "Configuration". |
+| `checks` | No | `[]` | Values of the `config` files compared with site values before the run changes anything. See "Checks". |
+| `rbd` | No | | `size` (required). `files`, a list of `src` and `dest` copied once when the image is created, is still read for the workloads that have it; `config` replaces it. |
 | `preferred_host` | No | | Node the workload runs on when it is up, written as the constraint `seapath-preferred-<name>` with an infinite score, as `vm_manager` does for a VM. |
 | `pinned_host` | No | | Node the workload runs on, and only there: `pin-<name>`. |
 | `colocated_with` | No | `[]` | Pacemaker resources (VMs or workloads) to run on the same node. |
@@ -65,6 +69,9 @@ Role variables:
 | `deploy_containers_cluster_containers` | `cluster_containers` | The workloads. |
 | `deploy_containers_cluster_archive_dir` | `/var/lib/seapath/containers` | Where the image archives are kept on the nodes. |
 | `deploy_containers_cluster_written_dir` | `/var/lib/seapath/containers/quadlets` | Where each node records the quadlets it wrote for each workload. |
+| `deploy_containers_cluster_config_dir` | `/etc/seapath-containers` | Where each node keeps the configuration of each workload. |
+| `deploy_containers_cluster_checks_fatal` | `false` | Whether a failed check stops the run, or only warns. |
+| `deploy_containers_cluster_snapshots_kept` | `3` | Snapshots of its RBD image a workload keeps, and RBD images put aside by recreations. |
 | `deploy_containers_cluster_only` | `[]` | Workloads this run is limited to, a name or a list, every workload when empty (see below). Given with `-e`, never in the inventory. |
 | `deploy_containers_cluster_recreate` | `[]` | Workloads to start again from nothing in this run, a name or a list (see below). Given with `-e`, never in the inventory. |
 | `deploy_containers_cluster_monitor_interval` | `10s` | Default monitor interval. |
@@ -133,8 +140,11 @@ ExecStop=/usr/bin/podman network rm --force nginxquadlet
 ### A pod: a protection relay
 
 Two containers in a pod, two networks, one of them on an Open vSwitch port of
-its own, the settings on the RBD image, and an image delivered as an archive
-because the substation has no registry:
+its own, its whole configuration (the bays, their settings, the CID generated
+from them) on the RBD image, made through its HMI and MMS, and an image
+delivered as an archive because the substation has no registry. A workload
+whose configuration comes from an engineering tool lists its files under
+`config` instead (see "Configuration"):
 
 ```yaml
       open61850-protect:
@@ -150,9 +160,6 @@ because the substation has no registry:
           - ../inventories/open61850-protect-shell.container.j2
         rbd:
           size: 128M
-          files:
-            - { src: ../inventories/protect/settings.json, dest: settings.json }
-            - { src: ../inventories/protect/O61850PROT.cid, dest: O61850PROT.cid }
         preferred_host: node3
         pb_bridge: processbus
         pb_vlans: "100,300"
@@ -185,8 +192,63 @@ ExecStop=/usr/bin/podman network rm --force open61850-protect-pb
 ExecStopPost=/usr/bin/ovs-vsctl --if-exists del-port {{ container.pb_bridge }} o61850pb
 ```
 
+The containers mount the RBD image, where the relay keeps its configuration
+and what it records:
+
+```ini
+Volume=/mnt/rbd/open61850-protect:/var/lib/open61850-protect
+```
+
+A workload with configuration files mounts them read only as well:
+
+```ini
+Volume=/etc/seapath-containers/<name>:/etc/<name>:ro
+```
+
 The real-time container is pinned by `seapath-container-pin` in its own
 quadlet, as without this role (see `roles/seapath_alloc`).
+
+## Configuration
+
+A workload may have no configuration file and keep all of its configuration on
+its RBD image, made through its own HMI or protocol (see DELIVERY.md): its
+entry has no `config`, and the role writes nothing to
+`/etc/seapath-containers/<name>/`.
+
+The configuration files of a workload belong to the site: a CID produced by
+the system configuration tool, base settings. They sit in the inventory, next
+to the entry, and a new version of the delivery never replaces them.
+
+Every run writes them to `/etc/seapath-containers/<name>/` on every node, the
+templates rendered with the entry, and removes from that directory what the
+entry no longer lists. The quadlets mount it read only, so the node Pacemaker
+starts the workload on already has it, and a change applies when the workload
+restarts, as for a quadlet: the role says so and never restarts it. A node that
+was unreachable during the run keeps the previous configuration until the next
+run, as it keeps the previous quadlets.
+
+A file the entry lists and the inventory lacks stops the run before any node
+changes. A delivery gives an example of each configuration file it expects;
+the run never takes the example in the site's place.
+
+## Checks
+
+A configuration file can repeat values the inventory also holds: the address
+of the IED and the VLANs of its GOOSE are in the CID and in the site values.
+A check compares them, on the Ansible machine, before any node changes:
+
+| Key | Required | Description |
+|---|---|---|
+| `file` | Yes | The name of a `config` file, as written on the nodes. A template is rendered from the site values and is not checked. |
+| `xpath` | Yes | The XML elements whose text is compared. |
+| `namespaces` | No | Prefixes the XPath uses. |
+| `value` | Yes | The site value, a key of the entry. |
+| `match` | No | `equal` (default): every element holds the site value. `in_list`: every element holds one of the integers of a comma-separated site value. |
+| `base` | No | The base the elements write their integers in: `16` for the VLAN-ID of a CID. |
+
+A check that fails, or whose XPath finds nothing, is reported in red and the
+run goes on. With `deploy_containers_cluster_checks_fatal: true` it stops the
+run.
 
 ## How a workload runs
 
@@ -224,10 +286,20 @@ other tags of the same image that no declared workload uses, and every image
 archive no workload declares any more. A version still used by a container,
 the workload not restarted yet, stays until the next run after the restart.
 
-The RBD image is filled once, when the role creates it. From then on it
-belongs to the workload: a new deployment never writes to it, so what the
-workload wrote there (settings changed in operation) is kept. If filling it
-fails, the role removes the half-filled image, so the next run starts over.
+The RBD image belongs to the workload: a new deployment never writes to it, so
+what the workload wrote there (settings changed in operation) is kept. The
+images a workload was deployed with are recorded in the metadata of its RBD
+image (`seapath.images`). When they change, the role first takes a snapshot,
+`rbd/<name>@<date>-<version left>`, and keeps the newest
+`deploy_containers_cluster_snapshots_kept`. The workload runs meanwhile, so the
+snapshot holds what a power cut would leave: an application that writes its
+state atomically reads it back. To go back to a version, revert the inventory
+commit, stop the workload, `rbd snap rollback` to the snapshot, run the playbook
+and start the workload.
+
+A workload that still has `rbd.files` gets them copied once, when the role
+creates the image. If that fails, the role removes the half-filled image, so
+the next run starts over.
 
 A quadlet a new version renames or drops is removed from every node: each node
 records in `deploy_containers_cluster_written_dir` the quadlets it wrote for a
@@ -253,12 +325,12 @@ A run goes through every workload of `cluster_containers`, which on a cluster
 that holds many takes long for a change to one. A run given
 `deploy_containers_cluster_only` deploys, or removes when they are marked
 `state: absent`, the workloads it names, and leaves every other one as it is:
-its images, quadlets, RBD image and resource are neither checked nor written.
-What a node keeps is still read from every workload declared, so the images and
-archives of the others stay. A name `cluster_containers` does not declare stops
-the run, and so does a workload named in `deploy_containers_cluster_recreate`
-that the run leaves out. The variable is for one run: written in the inventory,
-no run would reach the other workloads.
+its images, quadlets, configuration, RBD image and resource are neither checked
+nor written. What a node keeps is still read from every workload declared, so
+the images and archives of the others stay. A name `cluster_containers` does
+not declare stops the run, and so does a workload named in
+`deploy_containers_cluster_recreate` that the run leaves out. The variable is
+for one run: written in the inventory, no run would reach the other workloads.
 
 ## Starting a workload again from nothing
 
@@ -267,22 +339,26 @@ ansible-playbook playbooks/deploy_containers_cluster.yaml \
   -e deploy_containers_cluster_recreate=nginxquadlet
 ```
 
-The run stops the workload, deletes its Pacemaker resource and its RBD image,
-then deploys it as on a first deployment: a new RBD image filled from
-`rbd.files`, a new resource, started. What the workload wrote on its RBD image
-is lost. The variable is for one run: written in the inventory, every run
-would throw that data away again.
+The run stops the workload, deletes its Pacemaker resource, and puts its RBD
+image aside as `rbd/<name>.<date>-<version left>`, with its snapshots. It then
+deploys the workload as on a first deployment: a new empty RBD image, a new
+resource, started. The configuration of the site is untouched; the state the
+workload wrote is on the image put aside, of which the role keeps the newest
+`deploy_containers_cluster_snapshots_kept`. The variable is for one run:
+written in the inventory, every run would put the state aside again.
 
 ## Removing a workload
 
 Set `state: absent` and run the playbook. The role stops the resource and
-deletes it with its constraints, removes the quadlets, the drop-in and the
-image archives from every node, and the images no other declared workload
-uses. The RBD image is deleted only with `remove_rbd: true`. The entry can then
-be deleted from the inventory.
+deletes it with its constraints, removes the quadlets, the drop-in, the
+configuration and the image archives from every node, and the images no other
+declared workload uses. The RBD image is deleted only with `remove_rbd: true`,
+with its snapshots and the images put aside. The entry can then be deleted
+from the inventory.
 
 ## Tests
 
 The molecule scenario covers the node side: quadlet templates and plain files,
-the image loaded from an archive, the RBD drop-in, a quadlet a new version
-drops, the refusal of `[Install]`, idempotence and removal. Ceph and Pacemaker are tested on a lab cluster.
+the configuration, the image loaded from an archive, the RBD drop-in, a quadlet
+and a configuration file a new version drops, the refusal of `[Install]`,
+idempotence and removal. Ceph and Pacemaker are tested on a lab cluster.

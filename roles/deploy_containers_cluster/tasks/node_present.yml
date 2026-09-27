@@ -101,6 +101,67 @@
   when: container.rbd is not defined
   notify: Reload systemd
 
+# The configuration of the site, on every node, where the quadlets mount it
+# read only: the node Pacemaker starts the workload on already has it. The
+# directory holds what the entry lists and nothing else.
+- name: "Create the configuration directory of {{ _name }}"
+  ansible.builtin.file:
+    path: "{{ _config_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: container.config | default([]) | length > 0
+
+- name: "Write the configuration templates of {{ _name }}"
+  ansible.builtin.template:
+    src: "{{ _file }}"
+    dest: "{{ _config_dir }}/{{ _file | basename | regex_replace('\\.j2$', '') }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ container.config | default([]) | select('match', '.*\\.j2$') | list }}"
+  loop_control:
+    loop_var: _file
+  register: deploy_containers_cluster_config_templates
+
+- name: "Copy the configuration files of {{ _name }}"
+  ansible.builtin.copy:
+    src: "{{ _file }}"
+    dest: "{{ _config_dir }}/{{ _file | basename }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ container.config | default([]) | reject('match', '.*\\.j2$') | list }}"
+  loop_control:
+    loop_var: _file
+  register: deploy_containers_cluster_config_files
+
+- name: "List the configuration on the node of {{ _name }}"
+  ansible.builtin.find:
+    paths: "{{ _config_dir }}"
+    file_type: any
+    hidden: true
+  register: deploy_containers_cluster_config_found
+
+- name: "Remove the configuration files no longer listed for {{ _name }}"
+  ansible.builtin.file:
+    path: "{{ _found.path }}"
+    state: absent
+  loop: "{{ deploy_containers_cluster_config_found.files }}"
+  loop_control:
+    loop_var: _found
+    label: "{{ _found.path | basename }}"
+  when: _found.path | basename not in _config_names
+  register: deploy_containers_cluster_config_stale
+
+- name: "Remove the configuration directory of {{ _name }}"
+  ansible.builtin.file:
+    path: "{{ _config_dir }}"
+    state: absent
+  when: container.config | default([]) | length == 0
+  register: deploy_containers_cluster_config_dir_removed
+
 # A running workload is never restarted: on a substation that is for the
 # operator to decide.
 - name: "Tell how the changes apply to {{ _name }}"
@@ -108,4 +169,10 @@
     msg: >-
       {{ _name }} changed on this node. It applies when Pacemaker next starts
       the workload here; if it runs here now: crm resource restart {{ _name }}
-  when: deploy_containers_cluster_quadlets is changed or deploy_containers_cluster_dropin is changed
+  when: >-
+    deploy_containers_cluster_quadlets is changed
+    or deploy_containers_cluster_dropin is changed
+    or deploy_containers_cluster_config_templates is changed
+    or deploy_containers_cluster_config_files is changed
+    or deploy_containers_cluster_config_stale is changed
+    or deploy_containers_cluster_config_dir_removed is changed
