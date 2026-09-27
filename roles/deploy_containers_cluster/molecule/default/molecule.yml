@@ -33,6 +33,9 @@ provisioner:
             quadlets:
               - "${MOLECULE_SCENARIO_DIRECTORY}/files/web.container.j2"
               - "${MOLECULE_SCENARIO_DIRECTORY}/files/web.network"
+            config:
+              - "${MOLECULE_SCENARIO_DIRECTORY}/files/web.conf.j2"
+              - "${MOLECULE_SCENARIO_DIRECTORY}/files/web.cid"
             rbd:
               size: 64M
             ip: 192.0.2.10

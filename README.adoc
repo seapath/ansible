@@ -123,6 +123,7 @@ https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.ht
 will not work.
 
 You must also install the `netaddr`, `six` and `jmespath` python3 modules as well as the `rsync` package.
+The `lxml` python3 module is needed as well when a container workload declares `checks` (see `roles/deploy_containers_cluster`).
 
 === Additional components
 

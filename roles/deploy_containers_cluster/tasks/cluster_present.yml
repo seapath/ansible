@@ -73,6 +73,58 @@
           {{ ansible_failed_task.name }}: {{ ansible_failed_result.msg | default(ansible_failed_result) }}.
           The image was removed, run the playbook again once fixed.
 
+# The images the workload was last deployed with are kept in the metadata of
+# its RBD image. When they change, a snapshot keeps the state the workload
+# wrote with the version it leaves, before the new one reads or migrates it.
+# The workload runs meanwhile: the snapshot is what a power cut would leave,
+# which an application that writes its state atomically reads back.
+- name: "Snapshot before its images change the state of {{ _name }}"
+  when: container.rbd is defined
+  vars:
+    _images: "{{ container.images | default([]) | map(attribute='name') | join(' ') }}"
+  block:
+    - name: "Read the images deployed for {{ _name }}"
+      ansible.builtin.command:
+        cmd: rbd image-meta list rbd/{{ _name }} --format json
+      register: deploy_containers_cluster_rbd_meta
+      changed_when: false
+
+    - name: "Snapshot the RBD image of {{ _name }}"
+      ansible.builtin.command:
+        cmd: rbd snap create rbd/{{ _name }}@{{ now(utc=true, fmt='%Y%m%dT%H%M%SZ') }}-{{ _left | regex_replace('[^A-Za-z0-9_.-]', '_') }}
+      vars:
+        _deployed: "{{ ((deploy_containers_cluster_rbd_meta.stdout | trim or '{}') | from_json)['seapath.images'] | default('') }}"
+        _left: "{{ (_deployed.split(' ') | first).split(':') | last }}"
+      when:
+        - _deployed | length > 0
+        - _deployed != _images
+      changed_when: true
+
+    - name: "Record the images deployed for {{ _name }}"
+      ansible.builtin.command:
+        cmd: rbd image-meta set rbd/{{ _name }} seapath.images "{{ _images }}"
+      when: ((deploy_containers_cluster_rbd_meta.stdout | trim or '{}') | from_json)['seapath.images'] | default('') != _images
+      changed_when: true
+
+    - name: "List the snapshots of {{ _name }}"
+      ansible.builtin.command:
+        cmd: rbd snap ls rbd/{{ _name }} --format json
+      register: deploy_containers_cluster_rbd_snaps
+      changed_when: false
+
+    # Only the snapshots this role took: an operator's own stay.
+    - name: "Remove the oldest snapshots of {{ _name }}"
+      ansible.builtin.command:
+        cmd: rbd snap rm rbd/{{ _name }}@{{ _snap }}
+      loop: "{{ _ours[: -(deploy_containers_cluster_snapshots_kept | int)] if deploy_containers_cluster_snapshots_kept | int > 0 else _ours }}"
+      loop_control:
+        loop_var: _snap
+      vars:
+        _ours: >-
+          {{ (deploy_containers_cluster_rbd_snaps.stdout | trim or '[]') | from_json | map(attribute='name')
+             | select('match', '^[0-9]{8}T[0-9]{6}Z-') | sort | list }}
+      changed_when: true
+
 # Created once, like a VM: an existing resource keeps its operations and its
 # colocations. Its placement follows the entry (below).
 - name: "Look for the Pacemaker resource of {{ _name }}"
