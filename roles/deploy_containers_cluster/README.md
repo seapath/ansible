@@ -66,6 +66,7 @@ Role variables:
 | `deploy_containers_cluster_config_dir` | `/etc/seapath-containers` | Where each node keeps the configuration of each workload. |
 | `deploy_containers_cluster_checks_fatal` | `false` | Whether a failed check stops the run, or only warns. |
 | `deploy_containers_cluster_snapshots_kept` | `3` | Snapshots of its RBD image a workload keeps, and RBD images put aside by recreations. |
+| `deploy_containers_cluster_restart` | `[]` | Workloads to restart at the end of this run, a name or a list (see below). Given with `-e`, never in the inventory. |
 | `deploy_containers_cluster_recreate` | `[]` | Workloads to start again from nothing in this run, a name or a list (see below). Given with `-e`, never in the inventory. |
 | `deploy_containers_cluster_monitor_interval` | `10s` | Default monitor interval. |
 | `deploy_containers_cluster_monitor_timeout` | `100s` | Monitor timeout. |
@@ -306,6 +307,20 @@ entry: `seapath-preferred-<name>` and `pin-<name>` are written again when
 has them. Pacemaker then moves a running workload to the node they name, which
 is a stop and a start. The resource is banned from the cluster members that
 are not hypervisors, the observers.
+
+## Applying a change now
+
+```sh
+ansible-playbook playbooks/deploy_containers_cluster.yaml \
+  -e deploy_containers_cluster_restart=open61850-protect
+```
+
+Once every node has the new images, quadlets and configuration, the run
+restarts the workloads it names (`crm --wait resource restart`), so that a new
+version, configuration or site value applies at once. A workload whose
+resource the run created or recreated has just started and is not restarted
+again. The variable is for one run: written in the inventory, every run would
+restart the workload.
 
 ## Starting a workload again from nothing
 
