@@ -276,3 +276,16 @@ def test_main_on_a_quadlet_tree_leaves_conmon_on_housekeeping(
         ("policy", 200, 50), ("policy", 201, 50), ("policy", 202, 50),
     ]
     assert "pinned sv.service to core(s) 6 (FIFO/50)" in capsys.readouterr().out
+
+
+def test_main_leaves_the_policy_to_an_application_that_sets_its_own(harness):
+    # A real-time engine and a non real-time agent in one container: one
+    # policy for every thread would be wrong for one of them.
+    record = harness(["sv", "exclusive_logical", "app", "0"], cores=(6,))
+
+    assert record["exit"] == 0
+    assert record["cpuset"] == [
+        ("/sys/fs/cgroup/system.slice/sv.service", [6], [0, 1, 2, 3])
+    ]
+    assert record["chrt"] == []
+    assert record["claim"]["scheduler"] == "APP"
