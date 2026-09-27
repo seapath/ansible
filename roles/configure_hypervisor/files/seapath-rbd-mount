@@ -59,10 +59,15 @@ command -v jq > /dev/null 2>&1 || die "jq is required but not installed"
 # ---------------------------------------------------------------------------
 # mapped_devices - print the device node of every kernel mapping of this image
 #
-# `rbd device list --format json` returns one object per mapping:
+# `rbd device list --format json` returns one object per mapping, the image
+# under "name" (the text output heads that column "image", the JSON never
+# did):
 #
-#   [{"id":"0","pool":"rbd","namespace":"","image":"foo",
+#   [{"id":"0","pool":"rbd","namespace":"","name":"foo",
 #     "snap":"-","device":"/dev/rbd0"}]
+#
+# Clients older than Nautilus (14) write no "namespace" (nor, before 13, any
+# "id"): a missing namespace is the default one, "".
 #
 # All four identity fields are matched rather than the image name alone, so a
 # different pool or namespace holding an image of the same name is never
@@ -80,8 +85,8 @@ mapped_devices() {
     rbd device list --format json 2> /dev/null | jq -r \
         --arg pool "$POOL" --arg image "$IMAGE" '
             .[]
-            | select(.pool == $pool and .namespace == ""
-                     and .image == $image and .snap == "-")
+            | select(.pool == $pool and (.namespace // "") == ""
+                     and .name == $image and .snap == "-")
             | .device
         '
 }
