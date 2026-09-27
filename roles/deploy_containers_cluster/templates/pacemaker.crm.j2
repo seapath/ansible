@@ -1,0 +1,13 @@
+{# Loaded in one transaction by crm configure load update, so the resource
+   never starts before its constraints exist. #}
+primitive {{ _name }} systemd:{{ _unit }} op monitor interval={{ container.monitor_interval | default(deploy_containers_cluster_monitor_interval) }} timeout={{ deploy_containers_cluster_monitor_timeout }} op start interval=0 timeout={{ container.start_timeout | default(deploy_containers_cluster_start_timeout) }} op stop interval=0 timeout={{ container.stop_timeout | default(deploy_containers_cluster_stop_timeout) }}
+{% for _rule in deploy_containers_cluster_placement.values() if _rule %}
+{{ _rule }}
+{% endfor %}
+{# Cluster members without the quadlets, the observers. #}
+{% for node in groups['cluster_machines'] | difference(ansible_play_hosts_all) %}
+location ban-{{ _name }}-on-{{ node }} {{ _name }} -inf: {{ node }}
+{% endfor %}
+{% for other in container.colocated_with | default([]) %}
+colocation colocation-{{ _name }}-with-{{ other }} {{ 'inf' if container.strong_colocation | default(false) else '700' }}: {{ _name }} {{ other }}
+{% endfor %}

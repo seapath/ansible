@@ -1,0 +1,5 @@
+[Container]
+Image=localhost/molecule-web:1
+
+[Install]
+WantedBy=multi-user.target

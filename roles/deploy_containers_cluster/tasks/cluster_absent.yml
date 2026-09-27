@@ -1,0 +1,42 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+- name: "Look for the Pacemaker resource of {{ _name }}"
+  ansible.builtin.command:
+    cmd: crm configure show {{ _name }}
+  register: deploy_containers_cluster_resource
+  changed_when: false
+  failed_when: false
+
+- name: "Remove the Pacemaker resource of {{ _name }}"
+  when: deploy_containers_cluster_resource.rc == 0
+  block:
+    # --wait returns once the transition is over: the units are stopped and
+    # the RBD image is unmounted on the node that ran the workload.
+    - name: "Stop {{ _name }}"
+      ansible.builtin.command:
+        cmd: crm --wait resource stop {{ _name }}
+      changed_when: true
+
+    # Its constraints go with it.
+    - name: "Delete the Pacemaker resource of {{ _name }}"
+      ansible.builtin.command:
+        cmd: crm configure delete --force {{ _name }}
+      changed_when: true
+
+- name: "Look for the RBD image of {{ _name }}"
+  ansible.builtin.command:
+    cmd: rbd info rbd/{{ _name }}
+  register: deploy_containers_cluster_rbd_info
+  changed_when: false
+  failed_when: deploy_containers_cluster_rbd_info.rc not in [0, 2]
+  when: container.remove_rbd | default(false)
+
+# Fails if the image is still mapped somewhere, which is the safe outcome.
+- name: "Remove the RBD image of {{ _name }}"
+  ansible.builtin.command:
+    cmd: rbd rm rbd/{{ _name }}
+  when:
+    - container.remove_rbd | default(false)
+    - deploy_containers_cluster_rbd_info.rc == 0
+  changed_when: true
