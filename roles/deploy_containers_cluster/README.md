@@ -73,6 +73,7 @@ Role variables:
 | `deploy_containers_cluster_checks_fatal` | `false` | Whether a failed check stops the run, or only warns. |
 | `deploy_containers_cluster_snapshots_kept` | `3` | Snapshots of its RBD image a workload keeps, and RBD images put aside by recreations. |
 | `deploy_containers_cluster_only` | `[]` | Workloads this run is limited to, a name or a list, every workload when empty (see below). Given with `-e`, never in the inventory. |
+| `deploy_containers_cluster_restart` | `[]` | Workloads to restart at the end of this run, a name or a list (see below). Given with `-e`, never in the inventory. |
 | `deploy_containers_cluster_recreate` | `[]` | Workloads to start again from nothing in this run, a name or a list (see below). Given with `-e`, never in the inventory. |
 | `deploy_containers_cluster_monitor_interval` | `10s` | Default monitor interval. |
 | `deploy_containers_cluster_monitor_timeout` | `100s` | Monitor timeout. |
@@ -329,8 +330,23 @@ its images, quadlets, configuration, RBD image and resource are neither checked
 nor written. What a node keeps is still read from every workload declared, so
 the images and archives of the others stay. A name `cluster_containers` does
 not declare stops the run, and so does a workload named in
-`deploy_containers_cluster_recreate` that the run leaves out. The variable is
-for one run: written in the inventory, no run would reach the other workloads.
+`deploy_containers_cluster_restart` or `deploy_containers_cluster_recreate`
+that the run leaves out. The variable is for one run: written in the inventory,
+no run would reach the other workloads.
+
+## Applying a change now
+
+```sh
+ansible-playbook playbooks/deploy_containers_cluster.yaml \
+  -e deploy_containers_cluster_restart=open61850-protect
+```
+
+Once every node has the new images, quadlets and configuration, the run
+restarts the workloads it names (`crm --wait resource restart`), so that a new
+version, configuration or site value applies at once. A workload whose
+resource the run created or recreated has just started and is not restarted
+again. The variable is for one run: written in the inventory, every run would
+restart the workload.
 
 ## Starting a workload again from nothing
 
