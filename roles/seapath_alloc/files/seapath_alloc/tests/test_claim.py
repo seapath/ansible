@@ -425,6 +425,15 @@ def test_a_command_line_policy_is_normalised(allocator, run_calls):
     assert state["specs"][0]["priority"] == 10
 
 
+def test_app_is_a_command_line_scheduler(allocator, run_calls):
+    """APP leaves the policy to the application: no priority is required."""
+    state = allocator()
+
+    claim("relay", scheduler="APP", priority=0, target_pid=1, no_apply=True)
+
+    assert state["specs"][0]["scheduler"] == "APP"
+
+
 # --- release --------------------------------------------------------------
 
 

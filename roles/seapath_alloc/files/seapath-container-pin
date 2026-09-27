@@ -21,8 +21,12 @@ Usage:
                 application places its own threads; never repacked
                 | slot:<name>[:<isolation>]  — join the named shared-core
                 slot (created on first use, default exclusive_logical)
-    scheduler   FIFO | RR | OTHER | BATCH
-    priority    RT priority (0 for OTHER and BATCH)
+    scheduler   FIFO | RR | OTHER | BATCH | APP
+                APP: the cores are placed and the threads keep the
+                policy the application gives them, for a container that
+                runs a real-time engine next to threads that must not be
+                real time (it cannot be told apart from outside)
+    priority    RT priority (0 for OTHER, BATCH and APP)
 
 <service-name> may be given with or without the .service suffix.
 The script is designed to be called from ExecStartPost= in a quadlet.
@@ -112,8 +116,10 @@ def main():
         sys.exit(1)
     cores = alloc.cpus
     # The policy applied is the allocation's: after a hard fallback to the
-    # housekeeping cores, FIFO and RR are dropped to OTHER.
-    scheduler, priority = alloc.scheduler.upper(), alloc.priority
+    # housekeeping cores, FIFO and RR are dropped to OTHER. APP is left to
+    # the application.
+    if scheduler != "APP":
+        scheduler, priority = alloc.scheduler.upper(), alloc.priority
 
     cpu_str = format_cpu_list(cores) or "housekeeping"
     if alloc.warning:
@@ -140,7 +146,7 @@ def main():
                 f"warning: {service}: {placement.refused} thread(s) refused"
                 f" the affinity {cpu_str}\n")
     # isolation=none still honours an RT scheduler request.
-    if cores or scheduler in ("FIFO", "RR"):
+    if scheduler != "APP" and (cores or scheduler in ("FIFO", "RR")):
         tids, refused = schedule_payload(root, scheduler, priority)
         if refused:
             applied = False

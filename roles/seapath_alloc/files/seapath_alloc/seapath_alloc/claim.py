@@ -118,16 +118,19 @@ def _check_request(isolation, scheduler, priority):
         raise ClaimError(f"unknown isolation {isolation!r}"
                          f" (expected one of {', '.join(_ISOLATIONS)})")
     sched = str(scheduler).upper()
-    if sched not in _SCHEDULERS:
+    # APP places the cores and leaves each thread's policy to the
+    # application (seapath-container-pin).
+    accepted = _SCHEDULERS + ("APP",)
+    if sched not in accepted:
         raise ClaimError(f"unknown scheduler {scheduler!r}"
-                         f" (expected one of {', '.join(_SCHEDULERS)})")
+                         f" (expected one of {', '.join(accepted)})")
     try:
         prio = int(priority)
     except (TypeError, ValueError):
         raise ClaimError(f"priority must be an integer, got {priority!r}") from None
     if sched in ("FIFO", "RR") and not 1 <= prio <= 99:
         raise ClaimError(f"{sched} priority must be within 1-99, got {prio}")
-    if sched in ("OTHER", "BATCH") and prio != 0:
+    if sched in ("OTHER", "BATCH", "APP") and prio != 0:
         raise ClaimError(f"{sched} priority must be 0, got {prio}")
     return sched, prio
 
