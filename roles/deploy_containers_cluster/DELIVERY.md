@@ -9,8 +9,9 @@ application as a container workload, deployed by the
 * Pacemaker runs the workload on one hypervisor of the cluster at a time, and
   starts it on another one when that node fails or is put in maintenance.
 * Everything the workload needs on a node comes with it when it starts there:
-  its networks, its data volume, its CPU cores. The other nodes keep nothing
-  of it.
+  its networks, its data volume, its CPU cores. Its configuration files,
+  when it has any, are already on every node, written from the inventory by
+  each deployment.
 * The site values (addresses, VLANs, interfaces) are written in the SEAPATH
   inventory, and Ansible renders them into the quadlets the supplier delivers.
 * A substation has no container registry and often no Internet access. Nothing
@@ -24,6 +25,7 @@ A directory, or an archive of one:
 <application>-<version>/
   README.md                  the application, for the people who run it
   values.yaml                the site values the quadlets use
+  checks.yaml                optional: values of the configuration files that repeat site values
   inventory-example.yaml     the cluster_containers entry, with example values
   images/
     <image>-<version>.tar    one per image
@@ -32,7 +34,7 @@ A directory, or an archive of one:
     <name>.pod.j2            when there is more than one container
     <name>-<container>.container.j2
     <name>-<network>.network.j2
-  files/                     the first content of the data volume
+  examples/                  optional: an example of each configuration file
 ```
 
 `<name>` is the workload name, the key of its `cluster_containers` entry. The
@@ -55,7 +57,7 @@ everything the workload makes on a node is named after the entry:
   interface name has 15 characters at most.
 
 Inside a container, paths are the application's, the same whatever the
-workload is called.
+workload is called: `/etc/<application>`, `/var/lib/<application>`.
 
 A delivery whose quadlets write the proposed name literally runs under that
 name only.
@@ -108,12 +110,19 @@ Target Podman 5.4 (SEAPATH Debian 13), with systemd 257.
      name is a site value.
    * A check that an address is present on a host interface has no place:
      the address is in the pod.
-4. **State on the data volume.** Everything the application writes and must
-   keep (settings changed in operation, its HMI's state, secrets) is under
-   `/mnt/rbd/<name>/`, mounted with `Volume=` into the containers. That
-   directory is a Ceph RBD image: it follows the workload from node to node.
-   No named volume, no other host directory. A directory the application needs
-   and the delivery does not fill is created by the quadlet
+4. **Two host directories, and no other.** The configuration of the site,
+   read only, and the state the application writes, which follows the workload
+   from node to node on a Ceph RBD image:
+
+   ```ini
+   Volume=/etc/seapath-containers/{{ container.name }}:/etc/<application>:ro
+   Volume=/mnt/rbd/{{ container.name }}:/var/lib/<application>
+   ```
+
+   No named volume, no other host directory. A workload without configuration
+   files has no first line, one that writes nothing to keep has no second.
+   A directory the application needs under `/var/lib/<application>` is created
+   by the application, or by the quadlet
    (`ExecStartPre=/usr/bin/mkdir -p /mnt/rbd/{{ container.name }}/<dir>`).
 5. **CPU cores are allocated, never written.** No `--cpuset-cpus`,
    `CPUAffinity=`, `Slice=` or core number in an environment variable. A
@@ -148,13 +157,55 @@ Target Podman 5.4 (SEAPATH Debian 13), with systemd 257.
    `Ulimit=`, `AddCapability=` and `Environment=` are used as usual. Never
    `--privileged`.
 
-### Data volume
+### Configuration files
 
-`files/` holds the first content of `/mnt/rbd/<name>/`: configuration, SCL
-files. SEAPATH copies it once, when it creates the volume, and never again: a
-new version of the delivery leaves what the application wrote in operation
-alone. A file the new version needs is created by the application when it is
-missing, or by the quadlet.
+Configuration files are optional. A workload whose configuration is made in
+operation, through its own HMI, API or protocol (MMS), may keep all of it in
+its state instead, on the RBD image (see "State"): it has no configuration
+file, its delivery no `examples/` and no `checks.yaml`, and it starts empty on
+an empty image. Its configuration then follows it from node to node, is kept by
+the snapshots of the image, and is never deployed by SEAPATH; the application
+offers its export and import. Configuration files suit a configuration made by
+an engineering tool and deployed with the site values; the state suits one the
+operators make on the workload itself. The rest of this section is for the
+workloads that have configuration files.
+
+The configuration files belong to the site: a CID produced by the system
+configuration tool, base settings. The delivery gives an example of each in
+`examples/`, with the example values of `values.yaml`. A file ending in `.j2`
+is a template rendered with the site values, as a quadlet.
+
+* At the first installation, the site starts from the examples and replaces
+  them with its own. A new version of the delivery never replaces them.
+* Each deployment writes them to `/etc/seapath-containers/<name>/` on every
+  node, mounted read only on `/etc/<application>`. A change applies when the workload
+  restarts.
+* A new version that expects one more file gives an example of it and says so
+  in its README. The site adds it before deploying: SEAPATH stops the
+  deployment while it is missing, and never takes the example in its place.
+* The application reads its configuration in `/etc/<application>` and never writes
+  there.
+
+### State
+
+What the application writes in operation and must keep (settings changed by
+MMS, an HMI's state, or its whole configuration when it has no configuration
+file) goes to `/var/lib/<application>`, on the RBD image. SEAPATH creates the image
+empty and never writes to it.
+
+* Write it in a file that carries a format number, atomically: a temporary
+  file, `fsync`, then a rename. SEAPATH snapshots the image while the workload
+  runs, before each new version; the snapshot holds what a power cut would
+  leave.
+* With configuration files, store only what changed in operation, keyed by what the configuration names
+  (the 61850 references of the CID): the site can then deliver a new CID and
+  keep the settings changed in operation. A setting written in operation keeps the base value it replaced; when
+  the configuration gives that setting another base value, the new one wins.
+* A new version reads the state the previous one wrote, and migrates it forward
+  when its format changes. The README of the delivery says so when it does.
+* Starting the workload again from nothing puts the image aside and gives the
+  workload an empty one: the application starts from its configuration files
+  alone, or empty when it has none.
 
 ### Configuration
 
@@ -164,17 +215,18 @@ A workload is configured in three places, one per kind of value:
 |---|---|---|---|
 | Fixed by the supplier | internal ports, interface names in the pod, real-time priority | written in the quadlets | a new version of the delivery |
 | Proper to the site | addresses, MACs, VLANs, whether the clock is checked | `values.yaml` keys, rendered into `Environment=` lines and networks | the SEAPATH inventory, then a run and a restart of the workload |
-| Set in operation | thresholds, SCL files, an HMI's state | the data volume, written by the application | by the application, through its HMI or MMS; kept by every redeployment |
+| Configuration of the site | CID, base settings | configuration files, in `/etc/<application>`; or, for a workload configured in operation, its state in `/var/lib/<application>` | the SEAPATH inventory, then a run and a restart of the workload; or the application |
+| Set in operation | thresholds changed by MMS, an HMI's state | `/var/lib/<application>`, written by the application | by the application, through its HMI or MMS; kept by every redeployment |
 
 An environment variable is read once, when the process starts: changing one
 restarts the workload. So an environment variable carries what the
 application needs to start (identity, addresses), and a value an operator
-tunes in service belongs to the application's own configuration, on the data
-volume, where it changes without a redeployment.
+tunes in service belongs to the application's state, where it changes without
+a redeployment.
 
-Secrets (passwords, tokens) are neither in the quadlets nor in `values.yaml`:
-the application reads them from files under `/mnt/rbd/<name>/`, and the
-delivery's README names those files.
+Secrets (passwords, tokens) are neither in the quadlets, nor in `values.yaml`,
+nor in the configuration files: the application reads them from files under
+`/var/lib/<application>`, and the delivery's README names those files.
 
 ### Site values
 
@@ -212,6 +264,29 @@ A new version of a delivery keeps the keys of the previous one. A key it adds
 has a default, so that a site can take the new version with the values it
 already has.
 
+### Checks
+
+A configuration file written by the site's own tool can repeat site values:
+the CID holds the address of the IED and the VLANs of its GOOSE, which the
+quadlets also get from `values.yaml`. When they differ, the workload starts
+and its frames are dropped. `checks.yaml` lists these values, and SEAPATH
+compares them before each deployment:
+
+```yaml
+- file: O61850PROT.cid
+  xpath: "//scl:GSE/scl:Address/scl:P[@type='VLAN-ID']"
+  namespaces: { scl: "http://www.iec.ch/61850/2003/SCL" }
+  base: 16
+  match: in_list
+  value: pb_vlans
+```
+
+`file` names a configuration file, `xpath` the XML elements, `value` the key
+of `values.yaml`. `match` is `equal` (the default) or `in_list`, for a key that
+is a comma-separated list of integers; `base: 16` reads integers written in
+hexadecimal. A file the site renders from a `.j2` gets its values from
+`values.yaml` and is not checked.
+
 ### Inventory example
 
 The `cluster_containers` entry SEAPATH adds to its inventory, with a value for
@@ -231,10 +306,11 @@ cluster_containers:
     quadlets:
       - ../inventories/<name>/<name>.pod.j2
       - ...
+    config:
+      - ../inventories/<name>/site/<file>
+    checks: [...]                # the content of checks.yaml
     rbd:
       size: 256M
-      files:
-        - { src: ../inventories/<name>/files/<file>, dest: <file> }
     sbus_ip: 192.0.2.30
     ...
 ```
@@ -254,6 +330,9 @@ cluster_containers:
   proposed one: `grep -l <name>` on the rendered files prints nothing, and the
   workload can be installed twice.
 * Started by hand on a machine with Podman 5.4 (`systemctl start
-  <name>-pod.service`), the workload runs with an empty `/mnt/rbd/<name>/`
-  filled from `files/`, stops cleanly, and leaves no network behind
-  (`podman network ls`).
+  <name>-pod.service`), with `examples/`, if any, in
+  `/etc/seapath-containers/<name>/` and an empty `/mnt/rbd/<name>/`, the
+  workload runs, stops cleanly, and leaves
+  no network behind (`podman network ls`).
+* Started again with the state the previous version wrote, it reads it.
+* The checks of `checks.yaml`, if any, pass on the examples with the example values.

@@ -24,6 +24,11 @@ deploy_containers_cluster_scope: >-
                                or deploy_containers_cluster_containers.keys() | list)
      | list }}
 
+# Among them, the workloads to deploy.
+deploy_containers_cluster_present: >-
+  {{ deploy_containers_cluster_scope
+     | community.general.json_query("[?value.state != 'absent']") }}
+
 deploy_containers_cluster_recreate_list: >-
   {{ ([deploy_containers_cluster_recreate] if deploy_containers_cluster_recreate is string
       else deploy_containers_cluster_recreate) | select | list }}
