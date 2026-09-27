@@ -13,6 +13,9 @@ in the quadlets.
 
 It is run by `playbooks/deploy_containers_cluster.yaml`.
 
+What a supplier hands over for this role, and the rules its quadlets follow, is
+in [DELIVERY.md](DELIVERY.md).
+
 ## Requirements
 
 * A cluster set up by `cluster_setup_cephadm.yaml` and `cluster_setup_ha.yaml`.
