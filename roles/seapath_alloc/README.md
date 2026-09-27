@@ -386,6 +386,10 @@ shared-core slot instead of consuming a dedicated core (same grammar as
   writing `cpuset.cpus` at each level and the affinity of each thread.
 - Applies the scheduling policy to every thread of the container, including
   those it started before the pin. conmon keeps SCHED_OTHER.
+- With the scheduler `APP`, applies no policy: the application gives each of
+  its threads its own, which is what a container running a real-time engine
+  next to an agent that must stay in SCHED_OTHER needs. It then needs
+  `CAP_SYS_NICE` and `Ulimit=rtprio=<priority>`.
 - A service without a `libpod-payload-*` sub-cgroup is pinned as a whole:
   every thread of its cgroup tree gets the core and the policy.
 

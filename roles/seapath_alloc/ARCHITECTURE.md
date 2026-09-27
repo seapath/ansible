@@ -283,6 +283,12 @@ inherit from their creator, which by then has the policy.  A thread vanishing
 between the read and the call is skipped, any other refusal is logged, and
 the pin carries on: a failing ExecStartPost= would fail the service.
 
+The scheduler `APP` skips this step.  It is for a container whose threads
+must not share a policy: a real-time engine process next to an agent that has
+to stay in SCHED_OTHER, where no lock is shared between the two.  The
+application sets each thread's policy itself, and the pin only places the
+cores.
+
 **conmon goes to the housekeeping cores.**  conmon wakes on every write the
 container makes to stdout/stderr.  With the workload's policy on the
 isolated core, it competes with the workload at equal priority.  In
