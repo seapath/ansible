@@ -30,13 +30,62 @@
   register: deploy_containers_cluster_rbd_info
   changed_when: false
   failed_when: deploy_containers_cluster_rbd_info.rc not in [0, 2]
-  when: container.remove_rbd | default(false)
+  when: container.remove_rbd | default(false) or container.retire_rbd | default(false)
 
-# Fails if the image is still mapped somewhere, which is the safe outcome.
-- name: "Remove the RBD image of {{ _name }}"
-  ansible.builtin.command:
-    cmd: rbd rm rbd/{{ _name }}
+# A recreation keeps the state aside, under <name>.<date>-<version>, with its
+# snapshots: a workload name has no dot, so no other workload's image matches.
+- name: "Put aside the RBD image of {{ _name }}"
   when:
-    - container.remove_rbd | default(false)
+    - container.retire_rbd | default(false)
     - deploy_containers_cluster_rbd_info.rc == 0
+  block:
+    - name: "Read the images deployed for {{ _name }}"
+      ansible.builtin.command:
+        cmd: rbd image-meta list rbd/{{ _name }} --format json
+      register: deploy_containers_cluster_rbd_meta
+      changed_when: false
+
+    # rbd rm refuses a mapped image, rbd mv does not: a node still using it
+    # would go on writing to the image put aside.
+    - name: "Check that no node uses the RBD image of {{ _name }}"
+      ansible.builtin.command:
+        cmd: rbd status rbd/{{ _name }} --format json
+      register: deploy_containers_cluster_rbd_status
+      changed_when: false
+      failed_when: >-
+        deploy_containers_cluster_rbd_status.rc != 0
+        or (deploy_containers_cluster_rbd_status.stdout | from_json).watchers | default([]) | length > 0
+
+    - name: "Rename the RBD image of {{ _name }}"
+      ansible.builtin.command:
+        cmd: rbd mv rbd/{{ _name }} rbd/{{ _name }}.{{ now(utc=true, fmt='%Y%m%dT%H%M%SZ') }}-{{ _left | regex_replace('[^A-Za-z0-9_.-]', '_') }}
+      vars:
+        _deployed: "{{ ((deploy_containers_cluster_rbd_meta.stdout | trim or '{}') | from_json)['seapath.images'] | default('unknown') }}"
+        _left: "{{ (_deployed.split(' ') | first).split(':') | last }}"
+      changed_when: true
+
+- name: "List the RBD images put aside for {{ _name }}"
+  ansible.builtin.command:
+    cmd: rbd ls rbd --format json
+  register: deploy_containers_cluster_rbd_ls
+  changed_when: false
+  when: container.remove_rbd | default(false) or container.retire_rbd | default(false)
+
+# A recreation keeps the newest ones, a removal none. A snapshot would make
+# rbd rm fail: they go first.
+- name: "Remove the RBD images no longer kept for {{ _name }}"
+  ansible.builtin.shell:
+    cmd: rbd snap purge rbd/{{ _image }} && rbd rm rbd/{{ _image }}
+  loop: >-
+    {{ ([_name] if container.remove_rbd | default(false) and deploy_containers_cluster_rbd_info.rc == 0 else [])
+       + (_aside if container.remove_rbd | default(false)
+          else _aside[: -(deploy_containers_cluster_snapshots_kept | int)] if deploy_containers_cluster_snapshots_kept | int > 0
+          else _aside) }}
+  loop_control:
+    loop_var: _image
+  vars:
+    _aside: >-
+      {{ (deploy_containers_cluster_rbd_ls.stdout | trim or '[]') | from_json
+         | select('match', '^' ~ (_name | regex_escape) ~ '\.[0-9]{8}T[0-9]{6}Z-') | sort | list }}
+  when: container.remove_rbd | default(false) or container.retire_rbd | default(false)
   changed_when: true

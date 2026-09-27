@@ -35,6 +35,11 @@
     path: "{{ deploy_containers_cluster_written_dir }}/{{ _name }}"
     state: absent
 
+- name: "Remove the configuration of {{ _name }}"
+  ansible.builtin.file:
+    path: "{{ _config_dir }}"
+    state: absent
+
 - name: "Remove the drop-ins of {{ _unit }}"
   ansible.builtin.file:
     path: "/etc/systemd/system/{{ _unit }}.d"

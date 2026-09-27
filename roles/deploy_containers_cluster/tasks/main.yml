@@ -60,6 +60,9 @@
     _shared: "{{ _written | community.general.counter | dict2items | selectattr('value', 'gt', 1) | map(attribute='key') | list }}"
   run_once: true
 
+- name: Check the configuration files of the workloads
+  ansible.builtin.include_tasks: checks.yml
+
 - name: Check the workloads to recreate
   ansible.builtin.assert:
     that: _unknown | length == 0
@@ -77,9 +80,9 @@
   run_once: true
 
 # Before the node tasks: the units must be stopped before their quadlets go.
-# A workload to recreate goes the same way, RBD image included, and the rest of
-# the run deploys it as if for the first time.
-- name: Remove the Pacemaker resources and RBD images of the workloads to recreate
+# A workload to recreate goes the same way, its RBD image put aside, and the
+# rest of the run deploys it as if for the first time.
+- name: Remove the Pacemaker resources of the workloads to recreate
   ansible.builtin.include_tasks: cluster_absent.yml
   loop: "{{ deploy_containers_cluster_scope | selectattr('key', 'in', deploy_containers_cluster_recreate_list) }}"
   loop_control:
@@ -87,7 +90,7 @@
     label: "{{ _workload.key }}"
   vars:
     _name: "{{ _workload.key }}"
-    container: "{{ _workload.value | combine({'remove_rbd': true}) }}"
+    container: "{{ _workload.value | combine({'retire_rbd': true}) }}"
   when: inventory_hostname == ansible_play_hosts[0]
 
 - name: Remove the Pacemaker resources of the removed workloads
