@@ -1,0 +1,105 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+#
+# The configuration files of the workloads, checked on the Ansible machine
+# before any node changes.
+---
+# A configuration file the entry lists and the inventory lacks stops the run
+# before any node changes: taking the supplier's example in its place is how a
+# reference CID once replaced the site's.
+- name: Check the configuration files of the workloads
+  ansible.builtin.assert:
+    that:
+      - query('ansible.builtin.first_found', _item.1, errors='ignore') | length > 0
+    fail_msg: >-
+      {{ _item.0.key }}: its configuration file {{ _item.1 }} is missing. A
+      new version of a delivery that expects a new file gives an example of it
+      in its examples/: copy it to {{ _item.1 }}, adapt it to the site, and run
+      again.
+    quiet: true
+  loop: "{{ deploy_containers_cluster_present | subelements('value.config', skip_missing=True) }}"
+  loop_control:
+    loop_var: _item
+    label: "{{ _item.0.key }}: {{ _item.1 | basename }}"
+  run_once: true
+
+- name: Check the configuration file names of the workloads
+  ansible.builtin.assert:
+    that: _names | length == _names | unique | length
+    fail_msg: >-
+      {{ _workload.key }}: two of its configuration files are written under
+      the same name, {{ _names | join(', ') }}.
+    quiet: true
+  vars:
+    _names: "{{ _workload.value.config | default([]) | map('basename') | map('regex_replace', '\\.j2$', '') | list }}"
+  loop: "{{ deploy_containers_cluster_scope }}"
+  loop_control:
+    loop_var: _workload
+    label: "{{ _workload.key }}"
+  run_once: true
+
+# The checks of a workload compare a value its configuration file holds with
+# a site value: a CID written by the system configuration tool carries the
+# addresses and VLANs the inventory also has. Read on the Ansible machine, with
+# lxml. A template is rendered from the site values and has nothing to compare.
+- name: Read the values the checks of the workloads compare
+  community.general.xml:
+    path: "{{ query('ansible.builtin.first_found', _source) | first }}"
+    xpath: "{{ _item.1.xpath }}"
+    namespaces: "{{ _item.1.namespaces | default({}) }}"
+    content: text
+  vars:
+    _source: >-
+      {{ _item.0.value.config | default([])
+         | select('match', '(.*/)?' ~ (_item.1.file | regex_escape) ~ '$') | first | default('') }}
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  loop: "{{ deploy_containers_cluster_present | subelements('value.checks', skip_missing=True) }}"
+  loop_control:
+    loop_var: _item
+    label: "{{ _item.0.key }}: {{ _item.1.file }} {{ _item.1.xpath }}"
+  when: _source | length > 0
+  register: deploy_containers_cluster_checks
+  # An XPath that finds nothing is a finding, reported below.
+  failed_when:
+    - deploy_containers_cluster_checks.failed | default(false)
+    - "'does not reference a node' not in deploy_containers_cluster_checks.msg | default('')"
+  delegate_to: localhost
+  # The play becomes root on the nodes, not on the Ansible machine.
+  become: false
+  run_once: true
+
+- name: Compare the configuration files of the workloads with their site values
+  ansible.builtin.assert:
+    that:
+      - _found | length > 0
+      - _found | reject('in', _allowed) | list | length == 0
+    fail_msg: >-
+      {{ _result._item.0.key }}: {{ _check.file }} has
+      {{ _texts | join(', ') if _texts else 'nothing' }} at {{ _check.xpath }},
+      where the site value {{ _check.value }} is {{ _site }}. Correct the file
+      or the value before restarting the workload.
+    quiet: true
+  vars:
+    _result: "{{ _results[_index] }}"
+    _check: "{{ _result._item.1 }}"
+    _match: "{{ _check.match | default('equal') }}"
+    _site: "{{ _result._item.0.value[_check.value] }}"
+    _texts: "{{ _result.matches | default([]) | map('dict2items') | map('first') | map(attribute='value') | list }}"
+    # base: 16 reads an integer written in hexadecimal, a VLAN-ID of a CID.
+    _numbers: "{{ _texts | map('int', base=_check.base | default(10)) | list }}"
+    _found: >-
+      {{ _numbers if _match == 'in_list'
+         else (_numbers if _check.base is defined else _texts) | map('string') | list }}
+    _allowed: >-
+      {{ (_site | string).split(',') | map('trim') | map('int') | list
+         if _match == 'in_list'
+         else [_site | string] }}
+    _results: "{{ deploy_containers_cluster_checks.results | default([]) | rejectattr('skipped', 'defined') | list }}"
+  # Looped by index: a failed item shows the loop variable, a number is short.
+  loop: "{{ range(deploy_containers_cluster_checks.results | default([]) | rejectattr('skipped', 'defined') | list | length) | list }}"
+  loop_control:
+    loop_var: _index
+    label: "{{ _result._item.0.key }}: {{ _check.file }} {{ _check.value }}"
+  # A warning is a failure the run goes past: shown in red, counted as ignored.
+  ignore_errors: "{{ not deploy_containers_cluster_checks_fatal | bool }}" # noqa: ignore-errors
+  run_once: true
