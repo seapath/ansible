@@ -18,8 +18,12 @@ Usage:
     isolation   exclusive_logical | exclusive_physical | none
                 | slot:<name>[:<isolation>]  — join the named shared-core
                 slot (created on first use, default exclusive_logical)
-    scheduler   FIFO | RR | OTHER
-    priority    RT priority (0 for OTHER)
+    scheduler   FIFO | RR | OTHER | APP
+                APP: the cores are placed and the threads keep the
+                policy the application gives them, for a container that
+                runs a real-time engine next to threads that must not be
+                real time (it cannot be told apart from outside)
+    priority    RT priority (0 for OTHER and APP)
 
 <service-name> may be given with or without the .service suffix.
 The script is designed to be called from ExecStartPost= in a quadlet.
@@ -105,7 +109,7 @@ def main():
         if cores:
             place_service(root, cores, Topology().housekeeping_cpus())
         # isolation=none still honours an RT scheduler request.
-        if cores or scheduler in ("FIFO", "RR"):
+        if scheduler != "APP" and (cores or scheduler in ("FIFO", "RR")):
             schedule_payload(root, scheduler, priority)
 
     print(f"pinned {service} to core(s) {cpu_str} ({scheduler}/{priority})")
