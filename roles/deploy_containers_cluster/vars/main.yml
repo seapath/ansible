@@ -11,6 +11,11 @@ deploy_containers_cluster_archives_in_use: >-
      | community.general.json_query("values(@)[?state != 'absent'].images[].archive")
      | map('basename') | list }}
 
+# The workloads to deploy, as dict2items gives them.
+deploy_containers_cluster_present: >-
+  {{ deploy_containers_cluster_containers | dict2items
+     | community.general.json_query("[?value.state != 'absent']") }}
+
 deploy_containers_cluster_recreate_list: >-
   {{ ([deploy_containers_cluster_recreate] if deploy_containers_cluster_recreate is string
       else deploy_containers_cluster_recreate) | select | list }}

@@ -13,10 +13,22 @@ deploy_containers_cluster_archive_dir: /var/lib/seapath/containers
 # quadlet a new version renames or drops is removed.
 deploy_containers_cluster_written_dir: /var/lib/seapath/containers/quadlets
 
-# Workloads this run starts again from nothing: the resource and the RBD image
-# are deleted, then created and filled as on a first deployment. Given to one
-# run (-e), never written in the inventory, since every run would then throw
-# away what the workload wrote. A name or a list of names.
+# Where every node keeps the configuration of each workload, rendered from its
+# `config` files: <dir>/<name>/, which the quadlets mount read only.
+deploy_containers_cluster_config_dir: /etc/seapath-containers
+
+# How many snapshots of its RBD image a workload keeps, one taken each time
+# its images change, and how many RBD images put aside by a recreation.
+deploy_containers_cluster_snapshots_kept: 3
+
+# Whether a configuration file that does not match the site values (the
+# `checks` of a workload) stops the run, or only warns.
+deploy_containers_cluster_checks_fatal: false
+
+# Workloads this run starts again from nothing: the resource is deleted and the
+# RBD image put aside, then both are created as on a first deployment. Given to
+# one run (-e), never written in the inventory, since every run would then put
+# aside what the workload wrote. A name or a list of names.
 deploy_containers_cluster_recreate: []
 
 # Pacemaker operations, unless the workload sets its own. The start timeout

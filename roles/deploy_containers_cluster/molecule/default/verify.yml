@@ -27,6 +27,20 @@
         _dropin: "{{ deploy_containers_cluster_verify_files.results[2].content | b64decode }}"
         _scenario: "{{ lookup('ansible.builtin.env', 'MOLECULE_SCENARIO_DIRECTORY') }}"
 
+    - name: Read the configuration of the workload
+      ansible.builtin.slurp:
+        path: "/etc/seapath-containers/web/{{ item }}"
+      loop:
+        - web.conf
+        - web.cid
+      register: deploy_containers_cluster_verify_config
+
+    - name: Assert the configuration template is rendered and the plain file copied
+      ansible.builtin.assert:
+        that:
+          - (deploy_containers_cluster_verify_config.results[0].content | b64decode) == 'address=192.0.2.10\n'
+          - (deploy_containers_cluster_verify_config.results[1].content | b64decode) == '<SCL>reference</SCL>\n'
+
     - name: Check the image was loaded from its archive
       ansible.builtin.command:
         cmd: podman image exists localhost/molecule-web:1
@@ -114,19 +128,23 @@
               archive: /tmp/molecule-web-2.tar
           quadlets:
             - "{{ lookup('ansible.builtin.env', 'MOLECULE_SCENARIO_DIRECTORY') }}/files/web.container.j2"
+          config:
+            - "{{ lookup('ansible.builtin.env', 'MOLECULE_SCENARIO_DIRECTORY') }}/files/web.conf.j2"
 
-    - name: Look for the quadlets of that version
+    - name: Look for the quadlets and the configuration of that version
       ansible.builtin.stat:
-        path: "/etc/containers/systemd/{{ item }}"
+        path: "{{ item }}"
       loop:
-        - web.container
-        - web.network
+        - /etc/containers/systemd/web.container
+        - /etc/containers/systemd/web.network
+        - /etc/seapath-containers/web/web.conf
+        - /etc/seapath-containers/web/web.cid
       register: deploy_containers_cluster_verify_dropped
 
-    - name: Assert the dropped quadlet is gone and the other one kept
+    - name: Assert the dropped quadlet and configuration file are gone, the others kept
       ansible.builtin.assert:
         that:
-          - deploy_containers_cluster_verify_dropped.results | map(attribute='stat.exists') | list == [true, false]
+          - deploy_containers_cluster_verify_dropped.results | map(attribute='stat.exists') | list == [true, false, true, false]
 
     - name: Check a quadlet with an [Install] section is refused
       block:
@@ -178,6 +196,7 @@
         - /etc/systemd/system/web.service.d
         - /var/lib/seapath/containers/molecule-web-2.tar
         - /var/lib/seapath/containers/quadlets/web
+        - /etc/seapath-containers/web
       register: deploy_containers_cluster_verify_left
 
     - name: Assert nothing is left of the workload
