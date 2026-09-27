@@ -56,6 +56,10 @@ ExecStartPre=/usr/local/bin/seapath-rbd-mount <image> [<size>]
 ExecStopPost=/usr/local/bin/seapath-rbd-unmount <image>
 ```
 
+A workload run by Pacemaker and deployed by `deploy_containers_cluster` has
+neither line: the role mounts the image from a `seapath-rbd@<image>.service`
+unit the workload requires, and that works for pods too (see its README).
+
 `seapath-rbd-mount` carries the wait for Ceph itself: at boot the quorum forms
 a minute or two after `network-online.target`, which is when the container unit
 starts, so the mount would otherwise run against a cluster that is still

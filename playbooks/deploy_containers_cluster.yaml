@@ -1,0 +1,12 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+# Deploy, update or remove the container workloads declared in
+# `cluster_containers`: see roles/deploy_containers_cluster/README.md.
+
+---
+- name: Deploy the container workloads of the cluster
+  hosts: cluster_machines:&hypervisors
+  gather_facts: false
+  become: true
+  roles:
+    - deploy_containers_cluster
