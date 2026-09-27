@@ -1,0 +1,34 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+# The workloads, keyed by name. The inventory declares them as
+# `cluster_containers`: see the README for the fields.
+deploy_containers_cluster_containers: "{{ cluster_containers | default({}) }}"
+
+# Where the image archives are kept on every node, so that a changed archive
+# is loaded again and an unchanged one is not.
+deploy_containers_cluster_archive_dir: /var/lib/seapath/containers
+
+# Where each node records the quadlets it wrote for each workload, so that a
+# quadlet a new version renames or drops is removed.
+deploy_containers_cluster_written_dir: /var/lib/seapath/containers/quadlets
+
+# Workloads this run is limited to: the others are left as they are, neither
+# deployed nor removed, and the run is as long as the ones it names. Given to
+# one run (-e), never written in the inventory, where it would keep every run
+# from the other workloads. A name or a list of names, every workload when
+# empty.
+deploy_containers_cluster_only: []
+
+# Workloads this run starts again from nothing: the resource and the RBD image
+# are deleted, then created and filled as on a first deployment. Given to one
+# run (-e), never written in the inventory, since every run would then throw
+# away what the workload wrote. A name or a list of names.
+deploy_containers_cluster_recreate: []
+
+# Pacemaker operations, unless the workload sets its own. The start timeout
+# covers seapath-rbd-mount waiting up to 300 s for Ceph at cluster boot.
+deploy_containers_cluster_monitor_interval: 10s
+deploy_containers_cluster_monitor_timeout: 100s
+deploy_containers_cluster_start_timeout: 360s
+deploy_containers_cluster_stop_timeout: 100s

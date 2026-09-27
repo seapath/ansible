@@ -87,6 +87,10 @@ You can use default SEAPATH playbooks or write your own.
 - `deploy_vms_cluster`: Deploy all VMs under the `VMs` group on the SEAPATH cluster
 - `deploy_vms_standalone`: Deploy all VMs under the `VMs` group on all standalone machines
 
+## Container deployment
+
+- `deploy_containers_cluster`: Deploy the container workloads declared in `cluster_containers` (images, quadlets, RBD image, Pacemaker resource) on the SEAPATH cluster
+
 ## SEAPATH distribution configuration
 
 All these roles configure the bare requirements for a SEAPATH distribution, excepts for SEAPATH Yocto.
@@ -173,6 +177,10 @@ The other playbooks can be called alone to re-configure a specific part, when yo
 
 - `deploy_vms_cluster.yaml`: Deploy all VMs under the `VMs` group on the SEAPATH cluster
 - `deploy_vms_standalone.yaml`: Deploy all VMs under the `VMs` group on a SEAPATH standalone machine
+
+## Container deployment
+
+- `deploy_containers_cluster.yaml`: Deploy, update or remove the container workloads declared in `cluster_containers` on the SEAPATH cluster
 
 ## Prerequisites per distribution
 

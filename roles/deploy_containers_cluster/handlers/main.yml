@@ -1,0 +1,7 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+# Also what makes the quadlet generator turn new quadlets into units.
+- name: Reload systemd
+  ansible.builtin.systemd_service:
+    daemon_reload: true

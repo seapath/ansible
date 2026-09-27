@@ -1,0 +1,70 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+#
+# What every node needs to run a workload: its images, its quadlets and the
+# drop-in that mounts its RBD image. Nothing is started here: Pacemaker does.
+---
+- name: Create the directories of the role on the node
+  ansible.builtin.file:
+    path: "{{ _directory }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - "{{ deploy_containers_cluster_archive_dir }}"
+    - "{{ deploy_containers_cluster_written_dir }}"
+  loop_control:
+    loop_var: _directory
+
+- name: Install the RBD mount unit
+  ansible.builtin.copy:
+    src: seapath-rbd@.service
+    dest: /etc/systemd/system/seapath-rbd@.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Install the workloads
+  ansible.builtin.include_tasks: node_present.yml
+  loop: "{{ deploy_containers_cluster_scope }}"
+  loop_control:
+    loop_var: _workload
+    label: "{{ _workload.key }}"
+  vars:
+    _name: "{{ _workload.key }}"
+    _unit: "{{ _workload.value.unit | default(_workload.key ~ '.service') }}"
+    # The templates name what the workload makes on a node after its entry,
+    # so that one delivery can be installed twice under two names.
+    container: "{{ _workload.value | combine({'name': _workload.key}) }}"
+  when: _workload.value.state | default('present') == 'present'
+
+- name: Remove the workloads
+  ansible.builtin.include_tasks: node_absent.yml
+  loop: "{{ deploy_containers_cluster_scope }}"
+  loop_control:
+    loop_var: _workload
+    label: "{{ _workload.key }}"
+  vars:
+    _name: "{{ _workload.key }}"
+    _unit: "{{ _workload.value.unit | default(_workload.key ~ '.service') }}"
+    container: "{{ _workload.value }}"
+  when: _workload.value.state | default('present') == 'absent'
+
+# An archive is kept for as long as a workload declares it: a new version of a
+# workload, or its removal, takes the old one away.
+- name: List the image archives on the node
+  ansible.builtin.find:
+    paths: "{{ deploy_containers_cluster_archive_dir }}"
+  register: deploy_containers_cluster_archives
+
+- name: Remove the image archives no workload declares any more
+  ansible.builtin.file:
+    path: "{{ _archive.path }}"
+    state: absent
+  loop: "{{ deploy_containers_cluster_archives.files }}"
+  loop_control:
+    loop_var: _archive
+    label: "{{ _archive.path | basename }}"
+  when: _archive.path | basename not in deploy_containers_cluster_archives_in_use

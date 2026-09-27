@@ -1,0 +1,79 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+#
+# An image comes from a registry the node reaches, or, offline, from an
+# archive on the Ansible machine (podman save). The archive stays on the node:
+# its checksum is what tells that a new one has to be loaded.
+---
+- name: "Pull {{ _image.name }}"
+  containers.podman.podman_image:
+    name: "{{ _image.name }}"
+  when: _image.archive is not defined
+
+- name: "Load from its archive the image {{ _image.name }}"
+  when: _image.archive is defined
+  vars:
+    _archive_path: "{{ deploy_containers_cluster_archive_dir }}/{{ _image.archive | basename }}"
+  block:
+    - name: "Copy the archive of {{ _image.name }}"
+      ansible.builtin.copy:
+        src: "{{ _image.archive }}"
+        dest: "{{ _archive_path }}"
+        owner: root
+        group: root
+        mode: "0644"
+      register: deploy_containers_cluster_archive
+
+    - name: "Check whether podman has the image {{ _image.name }}"
+      ansible.builtin.command:
+        cmd: podman image exists {{ _image.name }}
+      register: deploy_containers_cluster_image_exists
+      changed_when: false
+      failed_when: deploy_containers_cluster_image_exists.rc not in [0, 1]
+
+    - name: "Load the archive of {{ _image.name }}"
+      ansible.builtin.command:
+        cmd: podman load --input {{ _archive_path }}
+      when: deploy_containers_cluster_archive is changed or deploy_containers_cluster_image_exists.rc == 1
+      changed_when: true
+
+    - name: "Check the archive holds {{ _image.name }}"
+      ansible.builtin.command:
+        cmd: podman image exists {{ _image.name }}
+      changed_when: false
+
+# The other tags of the same image are the versions this workload ran before.
+# One still used by a container stays: the workload runs on until Pacemaker
+# restarts it, and the next run takes the old version away.
+- name: "List the versions on the node of {{ _image.name }}"
+  ansible.builtin.command:
+    cmd: >-
+      podman images --noheading --format {% raw %}'{{.Repository}}:{{.Tag}}'{% endraw %}
+      --filter reference={{ _image.name | regex_replace('(@.*|:[^/:]*)$', '') }}
+  register: deploy_containers_cluster_versions
+  changed_when: false
+
+- name: "Remove the replaced versions of {{ _image.name }}"
+  ansible.builtin.command:
+    cmd: podman image rm {{ _version }}
+  loop: >-
+    {{ deploy_containers_cluster_versions.stdout_lines
+       | reject('search', '<none>')
+       | reject('in', deploy_containers_cluster_images_in_use) | list }}
+  loop_control:
+    loop_var: _version
+  register: deploy_containers_cluster_removed
+  changed_when: deploy_containers_cluster_removed.rc == 0
+  failed_when: deploy_containers_cluster_removed.rc not in [0, 2]
+
+- name: "Tell which replaced versions are still in use, for {{ _image.name }}"
+  ansible.builtin.debug:
+    msg: >-
+      {{ _in_use | join(', ') }} still used by a container of {{ _name }}:
+      removed by the next run once the workload has restarted.
+  vars:
+    _in_use: >-
+      {{ deploy_containers_cluster_removed.results | default([])
+         | selectattr('rc', 'defined') | selectattr('rc', 'eq', 2)
+         | map(attribute='_version') | list }}
+  when: _in_use | length > 0
