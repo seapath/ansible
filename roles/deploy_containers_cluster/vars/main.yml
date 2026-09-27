@@ -1,0 +1,46 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+# What the workloads still declared use, which is what a node keeps: every
+# other version of their images and every other archive goes.
+deploy_containers_cluster_images_in_use: >-
+  {{ deploy_containers_cluster_containers
+     | community.general.json_query("values(@)[?state != 'absent'].images[].name") }}
+deploy_containers_cluster_archives_in_use: >-
+  {{ deploy_containers_cluster_containers
+     | community.general.json_query("values(@)[?state != 'absent'].images[].archive")
+     | map('basename') | list }}
+
+deploy_containers_cluster_only_list: >-
+  {{ ([deploy_containers_cluster_only] if deploy_containers_cluster_only is string
+      else deploy_containers_cluster_only) | select | list }}
+
+# The workloads this run deploys or removes, as dict2items gives them: all of
+# them, or the ones it is limited to. What a node keeps is read above from
+# every workload declared, whatever the run is limited to.
+deploy_containers_cluster_scope: >-
+  {{ deploy_containers_cluster_containers | dict2items
+     | selectattr('key', 'in', deploy_containers_cluster_only_list
+                               or deploy_containers_cluster_containers.keys() | list)
+     | list }}
+
+deploy_containers_cluster_recreate_list: >-
+  {{ ([deploy_containers_cluster_recreate] if deploy_containers_cluster_recreate is string
+      else deploy_containers_cluster_recreate) | select | list }}
+
+# The members a workload may run on, which placement names.
+deploy_containers_cluster_members: "{{ groups['cluster_machines'] | intersect(groups['hypervisors']) }}"
+
+# The placement rules of a workload, by id, as crm writes them and shows them
+# back, empty for a rule the entry does not ask for. `seapath-preferred-` is the
+# name and the infinite score vm_manager gives a guest's preferred_host. Read
+# with `_name` and `container` set.
+deploy_containers_cluster_placement: >-
+  {{ {
+       'seapath-preferred-' ~ _name:
+         ('location seapath-preferred-' ~ _name ~ ' ' ~ _name ~ ' inf: ' ~ container.preferred_host)
+         if container.preferred_host is defined else '',
+       'pin-' ~ _name:
+         ('location pin-' ~ _name ~ ' ' ~ _name ~ ' resource-discovery=exclusive inf: ' ~ container.pinned_host)
+         if container.pinned_host is defined else '',
+  } }}

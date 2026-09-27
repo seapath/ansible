@@ -1,0 +1,67 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+#
+# The Pacemaker resource is already gone (cluster_absent.yml): nothing of the
+# workload runs anymore.
+---
+- name: "Remove the quadlets of {{ _name }}"
+  ansible.builtin.file:
+    path: "/etc/containers/systemd/{{ _quadlet | basename | regex_replace('\\.j2$', '') }}"
+    state: absent
+  loop: "{{ container.quadlets }}"
+  loop_control:
+    loop_var: _quadlet
+  notify: Reload systemd
+
+- name: "Read the quadlets the last run wrote for {{ _name }}"
+  ansible.builtin.slurp:
+    path: "{{ deploy_containers_cluster_written_dir }}/{{ _name }}"
+  register: deploy_containers_cluster_written
+  failed_when: false
+
+- name: "Remove the other quadlets written for {{ _name }}"
+  ansible.builtin.file:
+    path: "/etc/containers/systemd/{{ _stale }}"
+    state: absent
+  loop: >-
+    {{ (deploy_containers_cluster_written.content | default('') | b64decode).splitlines()
+       | select | reject('search', '/') | list }}
+  loop_control:
+    loop_var: _stale
+  notify: Reload systemd
+
+- name: "Forget the quadlets written for {{ _name }}"
+  ansible.builtin.file:
+    path: "{{ deploy_containers_cluster_written_dir }}/{{ _name }}"
+    state: absent
+
+- name: "Remove the drop-ins of {{ _unit }}"
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ _unit }}.d"
+    state: absent
+  notify: Reload systemd
+
+# A container stopped by SIGKILL leaves its unit failed, and systemd keeps
+# showing a failed unit after its file is gone. The unit names are the ones
+# quadlet gives: foo.container runs as foo.service, foo.pod as foo-pod.service.
+- name: "Forget the failed units of {{ _name }}"
+  ansible.builtin.command:
+    cmd: systemctl reset-failed {{ _units | join(' ') }}
+  vars:
+    _units: >-
+      {{ container.quadlets | map('basename') | map('regex_replace', '\.j2$', '')
+         | map('regex_replace', '\.(container|kube)$', '.service')
+         | map('regex_replace', '\.(pod|network|volume|image|build)$', '-\1.service') | list }}
+  changed_when: false
+  failed_when: false
+
+# An image another declared workload uses stays.
+- name: "Remove the images of {{ _name }}"
+  containers.podman.podman_image:
+    name: "{{ _image.name }}"
+    state: absent
+  loop: "{{ container.images | default([]) }}"
+  loop_control:
+    loop_var: _image
+    label: "{{ _image.name }}"
+  when: _image.name not in deploy_containers_cluster_images_in_use

@@ -1,0 +1,124 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+#
+# Runs on every hypervisor of the cluster. The node tasks run everywhere,
+# because Pacemaker may start a workload on any of them; the Ceph and
+# Pacemaker tasks run once, on the first host.
+---
+- name: Check the workloads the run is limited to
+  ansible.builtin.assert:
+    that: _unknown | length == 0
+    fail_msg: >-
+      deploy_containers_cluster_only names {{ _unknown | join(', ') }}, which
+      cluster_containers does not declare.
+    quiet: true
+  vars:
+    _unknown: "{{ deploy_containers_cluster_only_list | difference(deploy_containers_cluster_containers.keys()) }}"
+  run_once: true
+
+- name: Check the declared container workloads
+  ansible.builtin.assert:
+    that:
+      - _workload.key is match('^[A-Za-z0-9][A-Za-z0-9_-]*$')
+      - _workload.value.state | default('present') in ['present', 'absent']
+      - _workload.value.quadlets | default([]) | length > 0
+      - _workload.value.name is not defined
+      - _workload.value.rbd is not defined or _workload.value.rbd.size is defined
+      - _workload.value.preferred_host | default(deploy_containers_cluster_members[0]) in deploy_containers_cluster_members
+      - _workload.value.pinned_host | default(deploy_containers_cluster_members[0]) in deploy_containers_cluster_members
+    fail_msg: >-
+      {{ _workload.key }}: a workload needs a name made of letters, digits,
+      '-' and '_', a state of present or absent, a list of quadlets, a size
+      for its RBD image, and a preferred_host or pinned_host among
+      {{ deploy_containers_cluster_members | join(', ') }}. No site value is
+      called `name`: the templates read the workload's own as
+      `container.name`.
+    quiet: true
+  loop: "{{ deploy_containers_cluster_scope }}"
+  loop_control:
+    loop_var: _workload
+    label: "{{ _workload.key }}"
+  run_once: true
+
+# Every workload declared, whatever the run is limited to: a quadlet is
+# written in /etc/containers/systemd/ under its file name alone, so two
+# workloads with the same one would each replace the other's on every node.
+- name: Check that no two workloads write the same quadlet
+  ansible.builtin.assert:
+    that: _shared | length == 0
+    fail_msg: >-
+      {{ _shared | join(', ') }} would be written by more than one workload,
+      each replacing the other's. The quadlets of a workload are named after
+      it, <name>.pod or <name>-<container>.container, which is how one
+      delivery is installed twice.
+    quiet: true
+  vars:
+    _written: >-
+      {{ deploy_containers_cluster_containers
+         | community.general.json_query("values(@)[?state != 'absent'].quadlets[]")
+         | map('basename') | map('regex_replace', '\.j2$', '') | list }}
+    _shared: "{{ _written | community.general.counter | dict2items | selectattr('value', 'gt', 1) | map(attribute='key') | list }}"
+  run_once: true
+
+- name: Check the workloads to recreate
+  ansible.builtin.assert:
+    that: _unknown | length == 0
+    fail_msg: >-
+      deploy_containers_cluster_recreate names {{ _unknown | join(', ') }},
+      which cluster_containers does not declare as present{{
+      ', or which deploy_containers_cluster_only leaves out of this run'
+      if deploy_containers_cluster_only_list else '' }}.
+    quiet: true
+  vars:
+    _unknown: >-
+      {{ deploy_containers_cluster_recreate_list
+         | difference(deploy_containers_cluster_scope
+                      | community.general.json_query("[?value.state != 'absent'].key")) }}
+  run_once: true
+
+# Before the node tasks: the units must be stopped before their quadlets go.
+# A workload to recreate goes the same way, RBD image included, and the rest of
+# the run deploys it as if for the first time.
+- name: Remove the Pacemaker resources and RBD images of the workloads to recreate
+  ansible.builtin.include_tasks: cluster_absent.yml
+  loop: "{{ deploy_containers_cluster_scope | selectattr('key', 'in', deploy_containers_cluster_recreate_list) }}"
+  loop_control:
+    loop_var: _workload
+    label: "{{ _workload.key }}"
+  vars:
+    _name: "{{ _workload.key }}"
+    container: "{{ _workload.value | combine({'remove_rbd': true}) }}"
+  when: inventory_hostname == ansible_play_hosts[0]
+
+- name: Remove the Pacemaker resources of the removed workloads
+  ansible.builtin.include_tasks: cluster_absent.yml
+  loop: "{{ deploy_containers_cluster_scope }}"
+  loop_control:
+    loop_var: _workload
+    label: "{{ _workload.key }}"
+  vars:
+    _name: "{{ _workload.key }}"
+    container: "{{ _workload.value }}"
+  when:
+    - inventory_hostname == ansible_play_hosts[0]
+    - _workload.value.state | default('present') == 'absent'
+
+- name: Install or remove the workloads on the node
+  ansible.builtin.include_tasks: node.yml
+
+- name: Apply the new quadlets before Pacemaker starts them
+  ansible.builtin.meta: flush_handlers
+
+- name: Create the RBD images and the Pacemaker resources of the workloads
+  ansible.builtin.include_tasks: cluster_present.yml
+  loop: "{{ deploy_containers_cluster_scope }}"
+  loop_control:
+    loop_var: _workload
+    label: "{{ _workload.key }}"
+  vars:
+    _name: "{{ _workload.key }}"
+    _unit: "{{ _workload.value.unit | default(_workload.key ~ '.service') }}"
+    container: "{{ _workload.value }}"
+  when:
+    - inventory_hostname == ansible_play_hosts[0]
+    - _workload.value.state | default('present') == 'present'

@@ -1,0 +1,11 @@
+---
+# The node side only: Ceph and Pacemaker are proven on a lab cluster.
+- name: Converge
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Apply the node tasks of the role
+      ansible.builtin.include_role:
+        name: deploy_containers_cluster
+        tasks_from: node.yml
