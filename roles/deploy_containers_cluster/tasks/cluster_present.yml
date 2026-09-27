@@ -141,6 +141,11 @@
   when: deploy_containers_cluster_resource.rc != 0
   changed_when: true
 
+- name: "Note that the run created the resource of {{ _name }}"
+  ansible.builtin.set_fact:
+    deploy_containers_cluster_created: "{{ deploy_containers_cluster_created | default([]) + [_name] }}"
+  when: deploy_containers_cluster_resource.rc != 0
+
 # The placement rules of an existing resource follow the entry: written again
 # when it changed them, deleted when it no longer has them. Pacemaker then moves
 # a running workload to the node they name, which is a stop and a start.
