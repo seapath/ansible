@@ -1,0 +1,9 @@
+# Copied as it is: a Go template of podman stays untouched.
+[Unit]
+StopWhenUnneeded=yes
+
+[Network]
+NetworkName=web
+
+[Service]
+ExecStop=/bin/sh -c 'podman network inspect -f "{{.Name}}" web && podman network rm --force web'

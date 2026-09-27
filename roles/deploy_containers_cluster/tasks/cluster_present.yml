@@ -1,0 +1,137 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+# The RBD image is filled once, when it is created: nothing can have it
+# mounted then, and a redeployment never overwrites what the workload wrote
+# there since. rbd info exits 2 when the image does not exist; any other
+# failure (Ceph unreachable) must not be taken for a missing image.
+- name: "Look for the RBD image of {{ _name }}"
+  ansible.builtin.command:
+    cmd: rbd info rbd/{{ _name }}
+  register: deploy_containers_cluster_rbd_info
+  changed_when: false
+  failed_when: deploy_containers_cluster_rbd_info.rc not in [0, 2]
+  when: container.rbd is defined
+
+- name: "Create and fill the RBD image of {{ _name }}"
+  when:
+    - container.rbd is defined
+    - deploy_containers_cluster_rbd_info.rc == 2
+  vars:
+    _mountpoint: "/mnt/rbd/{{ _name }}"
+  block:
+    - name: "Create and mount the RBD image of {{ _name }}"
+      ansible.builtin.command:
+        cmd: seapath-rbd-mount {{ _name }} {{ container.rbd.size }}
+      changed_when: true
+
+    - name: "Create the directories of the files of {{ _name }}"
+      ansible.builtin.file:
+        path: "{{ (_mountpoint ~ '/' ~ _file.dest) | dirname }}"
+        state: directory
+        owner: "{{ _file.owner | default('root') }}"
+        group: "{{ _file.group | default('root') }}"
+        mode: "0755"
+      loop: "{{ container.rbd.files | default([]) }}"
+      loop_control:
+        loop_var: _file
+        label: "{{ _file.dest }}"
+
+    - name: "Copy to the RBD image the files of {{ _name }}"
+      ansible.builtin.copy:
+        src: "{{ _file.src }}"
+        dest: "{{ _mountpoint }}/{{ _file.dest }}"
+        owner: "{{ _file.owner | default('root') }}"
+        group: "{{ _file.group | default('root') }}"
+        mode: "{{ _file.mode | default('0644') }}"
+      loop: "{{ container.rbd.files | default([]) }}"
+      loop_control:
+        loop_var: _file
+        label: "{{ _file.dest }}"
+
+    - name: "Unmount the RBD image of {{ _name }}"
+      ansible.builtin.command:
+        cmd: seapath-rbd-unmount {{ _name }}
+      changed_when: true
+
+  # A half-filled image would be taken for a filled one on the next run.
+  rescue:
+    - name: "Unmount after the failure the RBD image of {{ _name }}"
+      ansible.builtin.command:
+        cmd: seapath-rbd-unmount {{ _name }}
+      changed_when: true
+
+    - name: "Remove after the failure the RBD image of {{ _name }}"
+      ansible.builtin.command:
+        cmd: rbd rm rbd/{{ _name }}
+      changed_when: true
+
+    - name: "Report the failure to fill the RBD image of {{ _name }}"
+      ansible.builtin.fail:
+        msg: >-
+          {{ _name }}: filling the RBD image failed on
+          {{ ansible_failed_task.name }}: {{ ansible_failed_result.msg | default(ansible_failed_result) }}.
+          The image was removed, run the playbook again once fixed.
+
+# Created once, like a VM: an existing resource keeps its operations and its
+# colocations. Its placement follows the entry (below).
+- name: "Look for the Pacemaker resource of {{ _name }}"
+  ansible.builtin.command:
+    cmd: crm configure show {{ _name }}
+  register: deploy_containers_cluster_resource
+  changed_when: false
+  failed_when: false
+
+- name: "Create the Pacemaker resource of {{ _name }}"
+  ansible.builtin.command:
+    cmd: crm configure load update -
+    stdin: "{{ lookup('ansible.builtin.template', 'pacemaker.crm.j2') }}"
+  when: deploy_containers_cluster_resource.rc != 0
+  changed_when: true
+
+# The placement rules of an existing resource follow the entry: written again
+# when it changed them, deleted when it no longer has them. Pacemaker then moves
+# a running workload to the node they name, which is a stop and a start.
+- name: "Read the placement rules of {{ _name }}"
+  ansible.builtin.command:
+    cmd: crm configure show {{ _rule }}
+  loop: "{{ deploy_containers_cluster_placement.keys() | list }}"
+  loop_control:
+    loop_var: _rule
+  register: deploy_containers_cluster_rules
+  changed_when: false
+  failed_when: false
+  when: deploy_containers_cluster_resource.rc == 0
+
+- name: "Write the placement rules of {{ _name }}"
+  ansible.builtin.command:
+    cmd: crm configure load update -
+    stdin: "{{ _wanted }}"
+  loop: "{{ deploy_containers_cluster_rules.results | default([]) }}"
+  loop_control:
+    loop_var: _found
+    label: "{{ _found._rule }}"
+  when:
+    - _found.rc is defined
+    - _wanted | length > 0
+    - _wanted != _shown
+  vars:
+    _wanted: "{{ deploy_containers_cluster_placement[_found._rule] }}"
+    # crm folds a long line with a lone backslash.
+    _shown: >-
+      {{ (_found.stdout if _found.rc == 0 else '') | split
+         | reject('match', '^[^a-zA-Z0-9]$') | join(' ') }}
+  changed_when: true
+
+- name: "Delete the placement rules the entry no longer has for {{ _name }}"
+  ansible.builtin.command:
+    cmd: crm configure delete {{ _found._rule }}
+  loop: "{{ deploy_containers_cluster_rules.results | default([]) }}"
+  loop_control:
+    loop_var: _found
+    label: "{{ _found._rule }}"
+  when:
+    - _found.rc is defined
+    - _found.rc == 0
+    - deploy_containers_cluster_placement[_found._rule] | length == 0
+  changed_when: true

@@ -1,0 +1,28 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+#
+# Managed by the deploy_containers_cluster role.
+#
+# The Ceph RBD image rbd/<instance>, mounted at /mnt/rbd/<instance> for as
+# long as a workload unit requires it, and unmounted and unmapped once none
+# does (StopWhenUnneeded). The role attaches it to a workload with a drop-in:
+#
+#   [Unit]
+#   Requires=seapath-rbd@<name>.service
+#   After=seapath-rbd@<name>.service
+#
+# It is a unit of its own so that seapath-rbd-mount can wait for Ceph beyond
+# TimeoutStartSec: its EXTEND_TIMEOUT_USEC notifications need
+# NotifyAccess=all, which the units quadlet generates for pods do not have.
+[Unit]
+Description=Ceph RBD image %i mounted at /mnt/rbd/%i
+After=network-online.target
+Wants=network-online.target
+StopWhenUnneeded=yes
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+NotifyAccess=all
+ExecStart=seapath-rbd-mount %i
+ExecStop=seapath-rbd-unmount %i
