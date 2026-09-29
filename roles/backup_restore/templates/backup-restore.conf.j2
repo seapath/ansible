@@ -1,0 +1,25 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+#
+# Rendered by the backup_restore role from the inventory. The backup-restore.sh
+# menu writes this file too, and what it writes is replaced at the next
+# convergence: the inventory is where these values belong.
+{% if backup_restore_local_dir %}
+local_dir={{ backup_restore_local_dir }}
+{% endif %}
+{% if backup_restore_local_tmp_dir %}
+local_tmp_dir={{ backup_restore_local_tmp_dir }}
+{% endif %}
+{% if backup_restore_remote_serv %}
+remote_serv={{ backup_restore_remote_serv }}
+{% endif %}
+{% if backup_restore_remote_dir %}
+remote_dir={{ backup_restore_remote_dir }}
+{% endif %}
+remote_shell="{{ backup_restore_remote_shell | default(('ssh -i ' ~ backup_restore_ssh_key) if backup_restore_ssh_key else 'ssh', true) }}"
+{% if backup_restore_include_vm %}
+include_vm={{ backup_restore_include_vm }}
+{% endif %}
+{% if backup_restore_exclude_vm %}
+exclude_vm={{ backup_restore_exclude_vm }}
+{% endif %}
