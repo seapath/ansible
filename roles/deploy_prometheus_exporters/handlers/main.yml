@@ -19,3 +19,10 @@
       | list
     }}
   when: deploy_prometheus_exporters_manage_services | bool
+
+- name: Restart the LVM metrics timer
+  ansible.builtin.systemd:
+    name: seapath-lvm-textfile.timer
+    state: restarted
+    daemon_reload: true
+  when: deploy_prometheus_exporters_manage_services | bool
