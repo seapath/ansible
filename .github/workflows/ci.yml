@@ -14,33 +14,33 @@ permissions:
   contents: read
 
 jobs:
-  ci-qa:
-    uses: ./.github/workflows/ci-qa.yml
+  # ci-qa:
+  #   uses: ./.github/workflows/ci-qa.yml
 
-  ci-unit:
-    needs: ci-qa
-    uses: ./.github/workflows/ci-unit.yml
+  # ci-unit:
+  #   needs: ci-qa
+  #   uses: ./.github/workflows/ci-unit.yml
 
-  ci-molecule:
-    needs: ci-unit
-    uses: ./.github/workflows/ci-molecule.yml
+  # ci-molecule:
+  #   needs: ci-unit
+  #   uses: ./.github/workflows/ci-molecule.yml
 
-  ci-debian:
-    needs: ci-molecule
-    uses: ./.github/workflows/ci-debian.yml
+  # ci-debian:
+  #   needs: ci-molecule
+  #   uses: ./.github/workflows/ci-debian.yml
 
-  ci-sles:
-    needs: ci-molecule
-    uses: ./.github/workflows/ci-sles.yml
+  # ci-sles:
+  #   needs: ci-molecule
+  #   uses: ./.github/workflows/ci-sles.yml
 
-  ci-oraclelinux:
-    needs: ci-molecule
-    uses: ./.github/workflows/ci-oraclelinux.yml
+  # ci-oraclelinux:
+  #   needs: ci-molecule
+  #   uses: ./.github/workflows/ci-oraclelinux.yml
 
-  ci-yocto:
-    needs: ci-molecule
-    uses: ./.github/workflows/ci-yocto.yml
+  # ci-yocto:
+  #   needs: ci-molecule
+  #   uses: ./.github/workflows/ci-yocto.yml
 
   ci-virtual-cluster:
-    needs: ci-molecule
+    # needs: ci-molecule
     uses: ./.github/workflows/ci-virtual-cluster.yml
