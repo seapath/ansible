@@ -27,7 +27,10 @@ function getVars {
   exclude_vm=${exclude_vm:-NonExistingGuestNameForDefault}
 }
 
-function restoreVMChooseFullDate {
+# Ask for a full backup date, then hand over to the function given, which
+# asks for what to restore out of it.
+function restoreChooseFullDate {
+  local next=$1
   while true
   do
     getVars
@@ -38,10 +41,10 @@ function restoreVMChooseFullDate {
 
     local listFullDate=($($remote_shell $remote_serv "cd $remote_dir ; ls"))
     local idx
-    idx=$(menuChooseIndex "restore vm" "Choose full backup date:" "${listFullDate[@]}")
+    idx=$(menuChooseIndex "restore" "Choose full backup date:" "${listFullDate[@]}")
     case $? in 1) break ;; 2) exit ;; esac
     fulldate=${listFullDate[$idx]}
-    restoreVMChooseVM
+    $next
   done
 }
 
@@ -68,6 +71,33 @@ function restoreVMChooseIncDate {
   case $? in 1) return ;; 2) exit ;; esac
   incdate=${listIncDateRaw[$idx]}
   /usr/local/bin/restore_vm.sh "$local_tmp_dir" "$remote_shell" "$remote_serv:$remote_dir" "$fulldate" "$vm" "$incdate"
+}
+
+# A full backup holds the container workloads under containers/<name>/, with
+# a <date>.json of the metadata for every date it can be restored to.
+function restoreContainerChooseName {
+  while true
+  do
+    local listName=($($remote_shell $remote_serv "cd $remote_dir ; cd $fulldate/containers 2>/dev/null && ls"))
+    local idx
+    idx=$(menuChooseIndex "restore container" "Choose container workload:" "${listName[@]}")
+    case $? in 1) break ;; 2) exit ;; esac
+    name=${listName[$idx]}
+    restoreContainerChooseIncDate
+  done
+}
+
+function restoreContainerChooseIncDate {
+  local listIncDateRaw=($($remote_shell $remote_serv "cd $remote_dir ; cd $fulldate/containers/$name; ls *.json | cut -d. -f1"))
+  local listIncDate=() rawdate
+  for rawdate in "${listIncDateRaw[@]}"; do
+    listIncDate+=("$(echo "$rawdate" | sed 's/./&-/4;s/./&-/7;s/./& /10;s/./&:/13')")
+  done
+  local idx
+  idx=$(menuChooseIndex "restore container" "Choose Incremental backup:" "${listIncDate[@]}")
+  case $? in 1) return ;; 2) exit ;; esac
+  incdate=${listIncDateRaw[$idx]}
+  /usr/local/bin/restore_container.sh "$local_tmp_dir" "$remote_shell" "$remote_serv:$remote_dir" "$fulldate" "$name" "$incdate"
 }
 
 function writeVar {
@@ -129,8 +159,9 @@ do
     "1)" "backup full"   \
     "2)" "backup inc"   \
     "3)" "restore vm"   \
-    "4)" "change settings"   \
-    "5)" "estimate backup volume"   \
+    "4)" "restore container"   \
+    "5)" "change settings"   \
+    "6)" "estimate backup volume"   \
     3>&2 2>&1 1>&3
   ) || break
 
@@ -139,11 +170,13 @@ do
     ;;
     "2)") backupInc
     ;;
-    "3)") restoreVMChooseFullDate
+    "3)") restoreChooseFullDate restoreVMChooseVM
     ;;
-    "4)") settings
+    "4)") restoreChooseFullDate restoreContainerChooseName
     ;;
-    "5)") estimate
+    "5)") settings
+    ;;
+    "6)") estimate
     ;;
   esac
 done

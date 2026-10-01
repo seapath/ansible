@@ -22,10 +22,40 @@ latest_full=$(ls -d "$local_dir"* | tail -n 1)
 # additional disks (data_<guest>_<n>) are backed up along with them.
 LIST_GUESTS=$( rbd list | grep -E "^system_" | sed -e "s/^system_//" | grep -E "($include_vm)" | grep -E -v "($exclude_vm)" )
 
-echo "Include VM : $include_vm"
-echo "Exclude VM : $exclude_vm"
+# Container workloads, as backup_full.sh selects them.
+LIST_CONTAINERS=$( python3 /usr/local/bin/get_containers.py | grep -E "($include_vm)" | grep -E -v "($exclude_vm)" )
+
+# The snapshots the backups took of an image, named after a minute and
+# nothing else.
+function backup_snapshots {
+  rbd snap ls "rbd/$1" | awk 'NR > 1 { print $2 }' | grep -E '^[0-9]{12}$' | sort
+}
+
+# The container images a workload runs, as deploy_containers_cluster recorded
+# them in seapath.images. With the definition the role records in the
+# metadata, they make a backup enough to deploy the workload on a cluster
+# that never had it. Saved under images/, one file per image, and a file
+# already there is not saved again: once per full backup, and an incremental
+# backup adds the images a new version brought.
+function save_images {
+  mkdir -p "$2/images"
+  for image in $(rbd image-meta get "rbd/$1" seapath.images 2> /dev/null)
+  do
+    file="$2/images/$(echo "$image" | tr '/:@' '___').tar"
+    [ -e "$file" ] && continue
+    echo "    $image"
+    if ! podman image save --format docker-archive -o "$file" "$image"; then
+      rm -f "$file"
+      echo "WARNING: $image is not on this node, and is not in the backup of $1"
+    fi
+  done
+}
+
+echo "Include (guests and containers) : $include_vm"
+echo "Exclude (guests and containers) : $exclude_vm"
 echo "------------------------------------"
 echo "List of Guests to backup: " $LIST_GUESTS
+echo "List of Containers to backup: " $LIST_CONTAINERS
 echo "------------------------------------"
 echo "press enter to proceed"
 read -r
@@ -59,6 +89,28 @@ do
     echo "    $j"
     rbd image-meta get "rbd/$i" "$j" > "$latest_full/$i-meta-$j-$d.txt"
   done
+done
+# A workload's diff is taken against the latest snapshot of a backup, and
+# never against one deploy_containers_cluster took before a new version,
+# which no backup holds and a restore could not replay the diff onto.
+for name in $LIST_CONTAINERS
+do
+  echo "container $name"
+  c="$latest_full/containers/$name"
+  latest=$(backup_snapshots "$name" | tail -n 1)
+  if [ -z "$latest" ] || [ ! -d "$c" ]; then
+    echo "WARNING: rbd/$name is not part of the latest full backup and cannot be backed up incrementally"
+    not_in_full="$not_in_full $name"
+    continue
+  fi
+  echo creating new snapshot
+  rbd snap create "rbd/$name@$d"
+  echo creating diff
+  rbd export-diff --from-snap "$latest" "rbd/$name@$d" "$c/${latest}_${d}.diff"
+  echo backuping metadata
+  rbd image-meta list "rbd/$name" --format json > "$c/$d.json"
+  echo backuping the container images
+  save_images "$name" "$c"
 done
 if [ -n "$not_in_full" ]; then
   echo "------------------------------------"

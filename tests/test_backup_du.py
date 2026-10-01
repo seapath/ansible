@@ -19,10 +19,12 @@ system_guest1 20 GiB 1 GiB
 
 @pytest.fixture
 def fake_rbd_du(monkeypatch):
-    def install(output):
+    def install(output, containers=""):
         recorded = {}
 
         def check_output(cmd, **kwargs):
+            if cmd == ["python3", "/usr/local/bin/get_containers.py"]:
+                return containers
             recorded["cmd"] = cmd
             recorded["kwargs"] = kwargs
             return output
@@ -112,8 +114,21 @@ def test_pr_table_of_an_empty_mapping_totals_zero(capsys):
         ("", None),
     ],
 )
-def test_image_to_guest(name, expected):
-    assert backup_du.image_to_guest(name) == expected
+def test_image_to_owner(name, expected):
+    assert backup_du.image_to_owner(name) == expected
+
+
+@pytest.mark.parametrize(
+    "name,expected",
+    [
+        ("nginx", "nginx"),
+        ("nginx@202603110733", "nginx"),
+        ("nginx.20260927T101500Z-1.0", None),
+        ("system_guest0", "guest0"),
+    ],
+)
+def test_image_to_owner_knows_the_container_workloads(name, expected):
+    assert backup_du.image_to_owner(name, ["nginx"]) == expected
 
 
 def test_read_du_rbd_sums_system_and_data_disks_per_guest(fake_rbd_du):
@@ -188,3 +203,36 @@ def test_compute_reads_its_filters_from_the_command_line(
     assert "guest1" in out
     assert "guest0" not in out
     assert "TOTAL :" in out
+
+
+def test_read_du_rbd_selects_the_images_of_the_container_workloads(fake_rbd_du):
+    recorded = fake_rbd_du(RBD_DU, containers="nginx\nrelay_1\n")
+
+    backup_du.read_du_rbd(du())
+
+    assert recorded["cmd"] == (
+        "/usr/bin/rbd du 2>/dev/null | "
+        'grep -E "^((system|data)_|(nginx|relay_1)[@ ])"'
+    )
+
+
+def test_read_du_rbd_counts_a_workload_with_its_snapshots(fake_rbd_du):
+    fake_rbd_du(
+        "nginx@202603110733 1 GiB 100 MiB\nnginx 1 GiB 10 MiB\n"
+        + RBD_DU,
+        containers="nginx\n",
+    )
+
+    volume = backup_du.read_du_rbd(du())
+
+    # 100 MiB is 105 MB, 10 MiB is 10 MB.
+    assert volume["nginx"] == 105 + 10
+    assert volume["guest1"] == 1074
+
+
+def test_read_du_rbd_filters_the_workloads_by_name(fake_rbd_du):
+    fake_rbd_du("nginx 1 GiB 10 MiB\n" + RBD_DU, containers="nginx\n")
+
+    volume = backup_du.read_du_rbd(du(exclude_vm='"nginx"'))
+
+    assert sorted(volume) == ["guest0", "guest1"]

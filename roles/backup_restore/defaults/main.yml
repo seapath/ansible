@@ -12,6 +12,8 @@ backup_restore_local_tmp_dir: ""
 backup_restore_remote_serv: ""
 backup_restore_remote_dir: ""
 backup_restore_remote_shell: ""
+# Matched against the names of the guests and of the container workloads:
+# `_vm` is what they were called when only guests were backed up.
 backup_restore_include_vm: ""
 backup_restore_exclude_vm: ""
 

@@ -51,8 +51,9 @@
 
 # backup_full.sh creates the dated directory it assembles a backup in, but
 # not the directory above it, so a staging directory that was never created
-# fails the first backup after the whole list of guests has been printed. They
-# are root's only: they hold the disks of every guest backed up.
+# fails the first backup after the whole list of guests and containers has
+# been printed. They are root's only: they hold the disks of every guest and
+# the state and images of every container workload backed up.
 - name: Create the directories the backups are staged in
   ansible.builtin.file:
     path: "{{ item }}"
