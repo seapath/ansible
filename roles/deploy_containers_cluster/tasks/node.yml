@@ -26,6 +26,16 @@
     mode: "0644"
   notify: Reload systemd
 
+# What records the definition of a workload on its RBD image, which the first
+# host does (cluster_present.yml) and any host may be.
+- name: Install the RBD metadata tool
+  ansible.builtin.copy:
+    src: seapath-rbd-meta
+    dest: /usr/local/bin/seapath-rbd-meta
+    owner: root
+    group: root
+    mode: "0755"
+
 - name: Install the workloads
   ansible.builtin.include_tasks: node_present.yml
   loop: "{{ deploy_containers_cluster_containers | dict2items }}"

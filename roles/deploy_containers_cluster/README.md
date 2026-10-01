@@ -291,6 +291,22 @@ state atomically reads it back. To go back to a version, revert the inventory
 commit, stop the workload, `rbd snap rollback` to the snapshot, run the playbook
 and start the workload.
 
+The definition of the workload is recorded there too, `seapath.definition`: a
+JSON object of `format` (1), `name`, `entry`, the entry as the inventory
+declares it, and `files`, in base64 and keyed by their path from the playbook
+directory: each quadlet, `config` and `rbd.files` source, and every file of
+the folder a delivery is installed from, `../inventories/<name>/` (its
+`values.yaml`, `checks.yaml`, README, examples and site files), image
+archives apart. They are read byte for byte on the Ansible machine. It is written again when
+it changes, through `seapath-rbd-meta`, which reads the value from standard
+input. A VM carries its XML on its disk the same way: the image and its
+metadata are enough to put the workload back anywhere.
+
+The RBD image is backed up with the guests by `backup_restore`, which
+recognises it by `seapath.images`, leaves these snapshots alone, exports its
+metadata and saves the container images (see its README, section "Container
+workloads").
+
 A workload that still has `rbd.files` gets them copied once, when the role
 creates the image. If that fails, the role removes the half-filled image, so
 the next run starts over.
