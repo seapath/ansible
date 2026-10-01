@@ -42,10 +42,13 @@ def pr_table(d):
     print()
     pr_lig(" Estimating En GB",  int((total/1000)+0.5), " GB" )
 
-def image_to_guest(name):
-    """Map an image name (system_<guest> or data_<guest>_<n>) to its guest."""
+def image_to_owner(name, containers=()):
+    """Map an image name (system_<guest>, data_<guest>_<n>, or the image of a
+    container workload, named after it) to the guest or workload owning it."""
     if '@' in name:
         name = name[0:name.index('@')]
+    if name in containers:
+        return name
     if name.startswith("system_"):
         return name[len("system_"):]
     if name.startswith("data_"):
@@ -56,24 +59,33 @@ def read_du_rbd(data):
     volume={}
     include_vm = data["include_vm"].replace('"', '') or ".*"
     exclude_vm = data["exclude_vm"].replace('"', '')
-    cmd = '/usr/bin/rbd du 2>/dev/null | grep -E "^(system|data)_"'
+    containers = check_output(
+        ["python3", "/usr/local/bin/get_containers.py"], text=True
+    ).split()
+    # A workload name is letters, digits, dashes and underscores: nothing a
+    # regular expression reads otherwise. Its rows are the image, then
+    # <name>@<snapshot>.
+    pattern = "(system|data)_"
+    if containers:
+        pattern = "((system|data)_|(" + "|".join(containers) + ")[@ ])"
+    cmd = '/usr/bin/rbd du 2>/dev/null | grep -E "^' + pattern + '"'
 
     out = check_output(cmd, shell=True, text=True, universal_newlines=True)
     for l in out.split('\n'):
         if l:
             name, prov, punit, used, uunit = l.split()
-            guest = image_to_guest(name)
-            if guest is None:
+            owner = image_to_owner(name, containers)
+            if owner is None:
                 continue
-            if not re.search(include_vm, guest):
+            if not re.search(include_vm, owner):
                 continue
-            if exclude_vm and re.search(exclude_vm, guest):
+            if exclude_vm and re.search(exclude_vm, owner):
                 continue
             t = convert_mo(convert_size(used, uunit))
-            if guest in volume:
-                volume[guest] += t
+            if owner in volume:
+                volume[owner] += t
             else:
-                volume[guest] = t
+                volume[owner] = t
     return volume
 
 

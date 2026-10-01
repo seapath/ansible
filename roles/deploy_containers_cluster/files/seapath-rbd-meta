@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+"""Set one metadata key of an RBD image, from standard input.
+
+Usage: seapath-rbd-meta <pool>/<image> <key> < value
+
+The value is read from standard input rather than the command line: the
+definition of a workload carries its quadlets and configuration files, and
+one argument of a command line is limited to 128 KiB, which `rbd image-meta
+set` would be held to. Prints "changed" when the value was written and
+"unchanged" when the image already held it, which is what tells Ansible.
+"""
+import sys
+
+import rados
+import rbd
+
+
+def set_metadata(spec, key, value, conffile="/etc/ceph/ceph.conf"):
+    """Write `key` on the image `spec`, `<pool>/<image>`, unless it holds it."""
+    pool, _, name = spec.partition("/")
+    if not pool or not name:
+        raise ValueError(f"{spec} is not <pool>/<image>")
+    cluster = rados.Rados(conffile=conffile)
+    cluster.connect()
+    try:
+        ioctx = cluster.open_ioctx(pool)
+        try:
+            with rbd.Image(ioctx, name) as image:
+                if dict(image.metadata_list()).get(key) == value:
+                    return False
+                image.metadata_set(key, value)
+                return True
+        finally:
+            ioctx.close()
+    finally:
+        cluster.shutdown()
+
+
+def main(argv=None, stdin=None):
+    argv = sys.argv if argv is None else argv
+    stdin = sys.stdin if stdin is None else stdin
+    if len(argv) != 3:
+        print(f"usage: {argv[0]} <pool>/<image> <key> < value", file=sys.stderr)
+        sys.exit(1)
+    try:
+        changed = set_metadata(argv[1], argv[2], stdin.read())
+    except ValueError as error:
+        print(error, file=sys.stderr)
+        sys.exit(1)
+    print("changed" if changed else "unchanged")
+
+
+if __name__ == "__main__":
+    main()

@@ -125,6 +125,76 @@
              | select('match', '^[0-9]{8}T[0-9]{6}Z-') | sort | list }}
       changed_when: true
 
+# The definition of the workload travels with its state, as a VM's XML and
+# metadata travel with its disk: the entry as the inventory declares it, the
+# files it names, and the whole folder a delivery installs it from,
+# `inventories/<name>/` (DELIVERY.md), whose values.yaml, checks.yaml, README,
+# examples and site files the entry does not all name. backup_restore exports
+# every metadata key of the image and restores them, so a backup is enough to
+# declare the workload again on a cluster that never had it. The image
+# archives are left out: the backup saves the container images themselves.
+- name: "Record the definition of {{ _name }}"
+  when: container.rbd is defined
+  vars:
+    _base: "{{ playbook_dir }}"
+    _named: >-
+      {{ (container.quadlets | default([]))
+         + (container.config | default([]))
+         + (container.rbd.files | default([]) | map(attribute='src') | list) }}
+    _archives: "{{ container.images | default([]) | selectattr('archive', 'defined') | map(attribute='archive') | map('basename') | list }}"
+  block:
+    - name: "Find the delivery folder of {{ _name }}"
+      ansible.builtin.find:
+        paths: "{{ _base }}/../inventories/{{ _name }}"
+        recurse: true
+        file_type: file
+        hidden: true
+        # Where a run stages the site's tree, the folder can be a symlink.
+        follow: true
+      delegate_to: localhost
+      become: false
+      register: deploy_containers_cluster_folder
+
+    # Read on the Ansible machine, byte for byte: a site file is not always
+    # text.
+    - name: "Read the files of {{ _name }}"
+      ansible.builtin.slurp:
+        src: "{{ _source }}"
+      loop: >-
+        {{ ((_named | map('regex_replace', '^(?!/)', _base ~ '/') | list)
+            + (deploy_containers_cluster_folder.files | map(attribute='path')
+               | reject('search', '\.tar$')
+               | reject('search', '/(' ~ (_archives | map('regex_escape') | join('|') or '$^') ~ ')$')
+               | list))
+           | unique | list }}
+      loop_control:
+        loop_var: _source
+      delegate_to: localhost
+      become: false
+      register: deploy_containers_cluster_sources
+
+    - name: "Write the definition of {{ _name }} on its RBD image"
+      ansible.builtin.command:
+        argv:
+          - /usr/local/bin/seapath-rbd-meta
+          - rbd/{{ _name }}
+          - seapath.definition
+        stdin: "{{ _definition | to_json(sort_keys=true) }}"
+        stdin_add_newline: false
+      vars:
+        _definition:
+          format: 1
+          name: "{{ _name }}"
+          entry: "{{ container }}"
+          # Keyed by the path as an entry gives it, from the playbook
+          # directory: `../inventories/<name>/values.yaml`.
+          files: >-
+            {{ dict(deploy_containers_cluster_sources.results
+                    | map(attribute='_source') | map('relpath', _base)
+                    | zip(deploy_containers_cluster_sources.results | map(attribute='content'))) }}
+      register: deploy_containers_cluster_definition
+      changed_when: deploy_containers_cluster_definition.stdout == 'changed'
+
 # Created once, like a VM: an existing resource keeps its operations and its
 # colocations. Its placement follows the entry (below).
 - name: "Look for the Pacemaker resource of {{ _name }}"
