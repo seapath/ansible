@@ -28,7 +28,7 @@
         path: /etc/corosync/authkey
       register: update_debian_authkey
 
-    - name: Check if Pacemaker runs on the machine
+    - name: Check if Pacemaker runs on the machine # noqa: command-instead-of-module
       ansible.builtin.command: systemctl is-active --quiet pacemaker
       register: update_debian_pacemaker
       changed_when: false
