@@ -1,0 +1,16 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+# Create the local volumes each machine declares in
+# configure_local_storage_volumes: a partition in the free space of a disk,
+# directly formatted or under LVM, mounted by UUID. A machine that declares
+# none is left untouched.
+
+---
+- name: Configure local storage
+  hosts:
+    - cluster_machines
+    - standalone_machine
+  become: true
+  roles:
+    - configure_local_storage
