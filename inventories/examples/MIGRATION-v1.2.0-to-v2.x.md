@@ -82,8 +82,6 @@ the `mons` group:
 
 ```yaml
   vars:
-    deploy_cephfs: false # Change to true to deploy cephfs on your cluster
-
     # Ceph configuration
     cephadm_network: "192.168.55.0/24" # IP range of your cluster.
     ceph_conf_overrides:
@@ -93,27 +91,29 @@ the `mons` group:
         osd_crush_chooseleaf_type: 1
         mon_osd_min_down_reporters: 1
       mon:
-        paxos prop interval: 100ms
+        auth_allow_insecure_global_id_reclaim: false
       osd:
         osd memory target: 8076326604
 ```
 
+On Debian, add `grub_password` (in `all.vars`), the GRUB protected
+password. Generate it with
+`grub2-mkpasswd-pbkdf2 -c 65536 / grub-mkpasswd-pbkdf2 -c 65536`.
+The hash shipped in the example inventory is the hash of the `seapath`
+password.
+
 ### New optional variables
 
 - `ptp_domain_number` (in `all.vars`) — PTP domain number (0 to 255).
-  The variables `timemaster_ptp_domain_number` and
-  `ptp_status_vsock_domain_number` default to it:
+  `timemaster_ptp_domain_number` and `ptp_status_vsock_domain_number`
+  both default to `0`; add these two lines so they follow
+  `ptp_domain_number`:
 
   ```yaml
   ptp_domain_number: 0
   timemaster_ptp_domain_number: "{{ ptp_domain_number }}"
   ptp_status_vsock_domain_number: "{{ ptp_domain_number }}"
   ```
-
-- `grub_password` (in `all.vars`) — Debian hardening specific: GRUB
-  protected password. Default password is `seapath`. Generate it with
-  `grub2-mkpasswd-pbkdf2 -c 65536 / grub-mkpasswd-pbkdf2 -c 65536`.
-  If not defined, the default password is used.
 
 - `deploy_cephfs` (in `cluster_machines:vars`) — set to `true` to deploy
   CephFS on your cluster (default `false`).
@@ -143,11 +143,11 @@ rgws:
 
 ### New mandatory variables
 
-None.
+On Debian, `grub_password` (in `all.vars`) — GRUB protected password.
+See the cluster section above.
 
 ### New optional variables
 
-- `grub_password` (in `all.vars`) — see above.
 - `ansible_ssh_private_key_file` — uncomment if you use a non standard
   SSH private key.
 
@@ -161,15 +161,19 @@ None.
 
 ### New mandatory variables
 
-Per VM host, add `live_migration`:
-
-```yaml
-seapath-vm:
-  # ...
-  live_migration: true # Enable live_migration for this VM
-```
+None.
 
 ### New optional variables
+
+- `live_migration` (per VM host, in `VMs`) — set to `true` to enable live
+  migration for that VM (default `false`). In the example inventory it is
+  set on `rtvm` only:
+
+  ```yaml
+  rtvm:
+    # ...
+    live_migration: true # Enable live migration for this VM
+  ```
 
 - `ansible_ssh_private_key_file` (in `VMs:vars`) — uncomment if you use a
   non standard SSH private key.
