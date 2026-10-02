@@ -19,10 +19,25 @@
     # be rolled back to. The run stops before anything changes instead.
     update_debian_snapshot_min_gib: "{{ snapshot_min_size_gib | default(2) }}"
   tasks:
+    # The authkey, and never corosync.conf: Debian's corosync package ships a
+    # default corosync.conf, and a standalone machine has it too. The authkey
+    # is written by corosync-keygen in configure_ha, so it exists exactly
+    # where a cluster was formed.
     - name: Check if the machine is a cluster member
       ansible.builtin.stat:
-        path: /etc/corosync/corosync.conf
-      register: update_debian_corosync_conf
+        path: /etc/corosync/authkey
+      register: update_debian_authkey
+
+    - name: Check if Pacemaker runs on the machine
+      ansible.builtin.command: systemctl is-active --quiet pacemaker
+      register: update_debian_pacemaker
+      changed_when: false
+      failed_when: false
+      when: update_debian_authkey.stat.exists
+
+    - name: Note whether the machine is a cluster member
+      ansible.builtin.set_fact:
+        update_debian_cluster: "{{ update_debian_authkey.stat.exists }}"
 
     - name: Check if the machine is part of a Ceph cluster
       ansible.builtin.stat:
@@ -95,6 +110,19 @@
           update_debian_free | int <
           (update_debian_snapshot_min_gib | float * 1073741824)
 
+    # A member whose Pacemaker is down cannot be put in standby, and would
+    # take guests back as soon as it joins, on a system that boot counting
+    # may still roll back.
+    - name: Refuse to update a cluster member whose Pacemaker is down
+      ansible.builtin.fail:
+        msg: >-
+          {{ inventory_hostname }} is a cluster member, but Pacemaker is not
+          running on it, so its guests could not be moved off it first. Start
+          Pacemaker and let the machine rejoin the cluster, then update again.
+      when:
+        - update_debian_cluster
+        - update_debian_pacemaker.rc != 0
+
     # Only a new kernel needs the machine to reboot: every other package
     # takes effect when its service restarts, which the upgrade does. The
     # lists are refreshed here, and the upgrade installs what this simulation
@@ -151,14 +179,14 @@
       register: update_debian_maintenance_mode
       changed_when: false
       failed_when: false
-      when: update_debian_corosync_conf.stat.exists
+      when: update_debian_cluster
 
     # A maintenance an operator set is theirs to end, and is left as found.
     - name: Decide whether the cluster is detached during the upgrade
       ansible.builtin.set_fact:
         update_debian_detach: >-
           {{ not update_debian_reboot
-             and update_debian_corosync_conf.stat.exists
+             and update_debian_cluster
              and update_debian_simulation.stdout
                  is search('^Inst (pacemaker|corosync) ', multiline=True)
              and (update_debian_maintenance_mode.stdout | default('') | trim | lower)
@@ -220,7 +248,7 @@
         - name: Move the guests off the machine
           when:
             - update_debian_reboot
-            - update_debian_corosync_conf.stat.exists
+            - update_debian_cluster
           block:
             - name: Have the machine leave standby after the reboot
               ansible.builtin.copy:
@@ -263,7 +291,7 @@
         - name: Keep Ceph from rebalancing while the machine reboots
           when:
             - update_debian_reboot
-            - update_debian_corosync_conf.stat.exists
+            - update_debian_cluster
             - update_debian_ceph_conf.stat.exists
           block:
             - name: Have the machine let Ceph rebalance after the reboot
@@ -365,7 +393,7 @@
           changed_when: true
           when:
             - update_debian_reboot
-            - update_debian_corosync_conf.stat.exists
+            - update_debian_cluster
 
         # Not with pacemaker down here: the others would start this machine's
         # guests a second time. The maintenance is then left, with its file,
@@ -389,7 +417,7 @@
           changed_when: true
           when:
             - update_debian_reboot
-            - update_debian_corosync_conf.stat.exists
+            - update_debian_cluster
             - update_debian_ceph_conf.stat.exists
 
         - name: Leave the machine nothing to undo at the next boot
@@ -538,5 +566,5 @@
           delay: 10
           changed_when: false
           when:
-            - update_debian_corosync_conf.stat.exists
+            - update_debian_cluster
             - update_debian_ceph_conf.stat.exists
