@@ -1,0 +1,139 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+#
+# The update of a running workload, on the node it runs on. Every node has
+# the new images and quadlets by now, and systemd read them.
+#
+# The stand-in of each container handed over takes its service first. The
+# workload is then brought to what was deployed, by the lightest way that
+# does it, and the containers take their service back. Pacemaker leaves the
+# resource alone meanwhile.
+---
+# A run cut short may have left the workload stopped under its stand-ins:
+# that node is the one to finish on.
+- name: "Look for {{ _name }} on this node" # noqa: command-instead-of-module
+  ansible.builtin.command:
+    cmd: systemctl is-active {{ ([_unit] + _standins) | join(' ') }}
+  register: deploy_containers_cluster_running
+  changed_when: false
+  failed_when: false
+  vars:
+    _standins: >-
+      {{ container.update_steps | selectattr('handover', 'defined') | map(attribute='handover')
+         | map('regex_replace', '\.container$', '-b.service') | list }}
+
+# The pod, its networks and the containers no step names are what the last
+# start of the workload made of them: the unit noted them as it started.
+- name: "Compare with what it started from the quadlets of {{ _name }}"
+  ansible.builtin.command:
+    cmd: sha256sum --check --quiet {{ deploy_containers_cluster_started_dir }}/{{ _name }}
+  register: deploy_containers_cluster_fixed
+  changed_when: false
+  failed_when: false
+  when: "'active' in deploy_containers_cluster_running.stdout_lines"
+
+- name: "Update on this node {{ _name }}"
+  when: "'active' in deploy_containers_cluster_running.stdout_lines"
+  vars:
+    _gate:
+      - "{{ _name }}.{{ _index }}"
+      - "{{ container[_step.bridge] if _step.handover is defined else '' }}"
+      - "{{ container[_step.port] if _step.handover is defined else '' }}"
+      - "{{ deploy_containers_cluster_slot.port_b if _step.handover is defined else '' }}"
+      - "{{ deploy_containers_cluster_slot.unit_a if _step.handover is defined else '' }}"
+      - "{{ deploy_containers_cluster_slot.unit_b if _step.handover is defined else '' }}"
+  block:
+    # In maintenance, Pacemaker neither monitors the resource nor acts on it:
+    # it takes no stop of this update for a failure, and starts the workload
+    # nowhere else while a stand-in is heard here. Unmanaged would not do: the
+    # monitor would go on and note the stops, for Pacemaker to recover from
+    # once it manages the resource again.
+    - name: "Have Pacemaker leave alone {{ _name }}"
+      ansible.builtin.command:
+        cmd: crm resource maintenance {{ _name }} on
+      changed_when: true
+
+    - name: "Have their stand-ins heard for the containers handed over of {{ _name }}"
+      block:
+        - name: "Start the stand-ins of {{ _name }}"
+          ansible.builtin.command:
+            argv: >-
+              {{ ['/usr/local/bin/seapath-container-handover', 'enter'] + _gate
+                 + ['--settle', deploy_containers_cluster_slot.settle | string] }}
+          loop: "{{ container.update_steps }}"
+          loop_control:
+            loop_var: _step
+            index_var: _index
+            label: "{{ _step.handover | default('') }}"
+          when: _step.handover is defined
+          changed_when: true
+
+      # A stand-in that does not start is stopped by the tool, and the
+      # workload was not touched: Pacemaker has it back as it was.
+      rescue:
+        - name: "Give back to Pacemaker, untouched, {{ _name }}"
+          ansible.builtin.command:
+            cmd: crm resource maintenance {{ _name }} off
+          changed_when: true
+
+        - name: "Report the stand-in that did not start for {{ _name }}"
+          ansible.builtin.fail:
+            msg: >-
+              {{ _name }} was not updated and runs as before:
+              {{ ansible_failed_result.results | default([ansible_failed_result]) | map(attribute='stderr', default='') | select | join(' ') }}
+
+    - name: "Bring to what was deployed {{ _name }}"
+      block:
+        # The delivery left the pod and its networks as they are: each
+        # container is restarted alone, the pod stays.
+        - name: "Restart alone the containers of {{ _name }}" # noqa: command-instead-of-module
+          ansible.builtin.command:
+            cmd: systemctl restart {{ deploy_containers_cluster_slot.unit_a if _step.handover is defined else _step.restart }}
+          loop: "{{ container.update_steps }}"
+          loop_control:
+            loop_var: _step
+            label: "{{ _step.handover | default(_step.restart) }}"
+          when: deploy_containers_cluster_fixed.rc | default(1) == 0
+          changed_when: true
+
+        # The delivery changed more than containers, or the workload is
+        # stopped: its unit is started again, with all it makes.
+        - name: "Restart as a whole {{ _name }}" # noqa: command-instead-of-module
+          ansible.builtin.command:
+            cmd: systemctl restart {{ _unit }}
+          when: deploy_containers_cluster_fixed.rc | default(1) != 0
+          changed_when: true
+
+        # While a container does not run, its stand-in keeps the service.
+        - name: "Have the containers handed over heard again for {{ _name }}"
+          ansible.builtin.command:
+            argv: >-
+              {{ ['/usr/local/bin/seapath-container-handover', 'leave'] + _gate
+                 + ['--settle', deploy_containers_cluster_slot.settle | string] }}
+          loop: "{{ container.update_steps }}"
+          loop_control:
+            loop_var: _step
+            index_var: _index
+            label: "{{ _step.handover | default('') }}"
+          when: _step.handover is defined
+          changed_when: true
+
+      # Pacemaker is not given the resource back: it would start the
+      # workload again, here or on another node, beside a stand-in still
+      # heard here.
+      rescue:
+        - name: "Report the update left unfinished of {{ _name }}"
+          ansible.builtin.fail:
+            msg: >-
+              The update of {{ _name }} stopped on {{ inventory_hostname }} at
+              "{{ ansible_failed_task.name }}". The stand-ins of its containers
+              handed over keep their service there, and the resource is in
+              maintenance: Pacemaker does nothing with it, on any node. Once
+              the cause is fixed, or the previous version deployed again, run
+              the update again: it starts the workload, has its containers
+              heard and gives it back to Pacemaker.
+
+    - name: "Give back to Pacemaker {{ _name }}"
+      ansible.builtin.command:
+        cmd: crm resource maintenance {{ _name }} off
+      changed_when: true

@@ -1,0 +1,11 @@
+# The container handed over: what it declares, its stand-in keeps.
+[Container]
+Pod={{ container.name }}.pod
+ContainerName={{ container.name }}-app
+Image=localhost/molecule-web:1
+Volume=/mnt/rbd/{{ container.name }}:/var/lib/relay
+AddCapability=CAP_NET_RAW CAP_NET_BIND_SERVICE
+Exec=/bin/true
+
+[Service]
+ExecStartPre=find /mnt/rbd/{{ container.name }} -path /mnt/rbd/{{ container.name }}/lost+found -prune -o ! ( -user 65690 -group 65690 ) -exec chown -h 65690:65690 {} +

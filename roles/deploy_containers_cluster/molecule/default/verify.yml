@@ -213,3 +213,112 @@
       register: deploy_containers_cluster_verify_image
       changed_when: false
       failed_when: deploy_containers_cluster_verify_image.rc != 1
+
+    # A workload with a container handed over: its stand-in, out of the pod,
+    # depends on the RBD image alone and keeps what the container declares,
+    # its capabilities and its ExecStartPre=, which may need the image
+    # mounted.
+    - name: Deploy a workload with a container handed over
+      ansible.builtin.include_role:
+        name: deploy_containers_cluster
+        tasks_from: node.yml
+      vars:
+        deploy_containers_cluster_containers:
+          relay:
+            unit: relay-pod.service
+            quadlets:
+              - "{{ lookup('ansible.builtin.env', 'MOLECULE_SCENARIO_DIRECTORY') }}/files/relay.pod.j2"
+              - "{{ lookup('ansible.builtin.env', 'MOLECULE_SCENARIO_DIRECTORY') }}/files/relay-app.container.j2"
+              - "{{ lookup('ansible.builtin.env', 'MOLECULE_SCENARIO_DIRECTORY') }}/files/relay-pb.network.j2"
+            rbd:
+              size: 64M
+            update_steps:
+              - handover: relay-app.container
+                network: relay-pb.network
+                bridge: pb_bridge
+                port: pb_port
+            pb_bridge: br0
+            pb_port: relaypb
+
+    - name: Have quadlet make the units of the workload handed over
+      ansible.builtin.meta: flush_handlers
+
+    - name: Read the order of the units of the workload handed over # noqa: command-instead-of-module
+      ansible.builtin.command:
+        cmd: systemctl show -p After -p Requires -p BindsTo {{ item }}
+      loop:
+        - relay-pod.service
+        - relay-app.service
+        - relay-app-b.service
+      register: deploy_containers_cluster_verify_order
+      changed_when: false
+
+    - name: Assert the container starts once its RBD image is mounted, and so does its stand-in
+      ansible.builtin.assert:
+        that:
+          - _pod is search('Requires=.*seapath-rbd@relay\.service')
+          - _pod is search('After=.*seapath-rbd@relay\.service')
+          - _app is search('BindsTo=.*relay-pod\.service')
+          - _app is search('After=.*relay-pod\.service')
+          - _standin is search('Requires=.*seapath-rbd@relay\.service')
+          - _standin is search('After=.*seapath-rbd@relay\.service')
+          - _standin is not search('relay-pod\.service')
+      vars:
+        _pod: "{{ deploy_containers_cluster_verify_order.results[0].stdout }}"
+        _app: "{{ deploy_containers_cluster_verify_order.results[1].stdout }}"
+        _standin: "{{ deploy_containers_cluster_verify_order.results[2].stdout }}"
+
+    - name: Read how the container and its stand-in start # noqa: command-instead-of-module
+      ansible.builtin.command:
+        cmd: systemctl show -p ExecCondition -p ExecStartPre -p ExecStart {{ item }}
+      loop:
+        - relay-app.service
+        - relay-app-b.service
+        - relay-pod.service
+      register: deploy_containers_cluster_verify_start
+      changed_when: false
+
+    - name: Assert the stand-in has the capabilities, the volume owner and the RBD image of the container
+      ansible.builtin.assert:
+        that:
+          # Each mounts the image, which the other may already have mounted.
+          - _pod is search('ExecCondition=.*seapath-rbd-mount relay ')
+          - _standin is search('ExecCondition=.*seapath-rbd-mount relay ')
+          - _app is search('--cap-add cap_net_raw,cap_net_bind_service|--cap-add cap_net_raw --cap-add cap_net_bind_service')
+          - _standin is search('--cap-add cap_net_raw,cap_net_bind_service|--cap-add cap_net_raw --cap-add cap_net_bind_service')
+          - _app is search('chown -h 65690:65690')
+          - _standin is search('chown -h 65690:65690')
+          # Its port is closed once the volume is given, before it starts.
+          - _standin.index('chown -h 65690:65690') < _standin.index('seapath-container-handover guard')
+      vars:
+        _app: "{{ deploy_containers_cluster_verify_start.results[0].stdout }}"
+        _standin: "{{ deploy_containers_cluster_verify_start.results[1].stdout }}"
+        _pod: "{{ deploy_containers_cluster_verify_start.results[2].stdout }}"
+
+    - name: Remove the workload handed over
+      ansible.builtin.include_role:
+        name: deploy_containers_cluster
+        tasks_from: node.yml
+      vars:
+        deploy_containers_cluster_containers:
+          relay:
+            state: absent
+            unit: relay-pod.service
+            quadlets: []
+
+    - name: Look for what is left of the workload handed over
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - /etc/containers/systemd/relay.pod
+        - /etc/containers/systemd/relay-app.container
+        - /etc/containers/systemd/relay-app-b.container
+        - /etc/containers/systemd/relay-pb.network
+        - /etc/containers/systemd/relay-pb-b.network
+        - /etc/systemd/system/relay-pod.service.d
+      register: deploy_containers_cluster_verify_relay_left
+
+    - name: Assert nothing is left of the workload handed over
+      ansible.builtin.assert:
+        that: deploy_containers_cluster_verify_relay_left.results | selectattr('stat.exists') | list | length == 0
+        fail_msg: "{{ deploy_containers_cluster_verify_relay_left.results | selectattr('stat.exists') | map(attribute='item') | list }}"
