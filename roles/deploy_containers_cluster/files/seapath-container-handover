@@ -1,0 +1,200 @@
+#!/usr/bin/env python3
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+"""Keep a container heard while its workload is updated, with a single emitter at any time.
+
+Usage:
+  seapath-container-handover enter <gate> <bridge> <port> <stand-in port> <unit> <stand-in unit>
+                                   [--settle <seconds>]
+  seapath-container-handover leave <gate> <bridge> <port> <stand-in port> <unit> <stand-in unit>
+                                   [--settle <seconds>]
+  seapath-container-handover reset <gate> <bridge> <port> <stand-in unit>
+  seapath-container-handover guard <gate> <bridge> <stand-in port>
+  seapath-container-handover clear <gate> <bridge>
+
+A container handed over has a stand-in: the same container on what was last
+deployed, outside its pod, sending on an Open vSwitch port of its own. Both
+ports receive. The bridge drops what comes from one of them, the closed one,
+so whatever the two containers send, a single one is heard.
+
+`enter` starts the stand-in, whose port is made and closed as it starts,
+waits for its unit to be active and for the settle time, then opens its port
+and closes the container's in one OpenFlow bundle. The workload can then be stopped,
+started, restarted: the stand-in does not depend on it. A stand-in that does
+not start or does not stay up is stopped, and the container, which was never
+touched, keeps the service.
+
+`leave` waits for the container to have run for the settle time, swaps the
+two ports back in one bundle and stops the stand-in, whose port goes with it.
+While the container does not run, the stand-in keeps the service and `leave`
+fails.
+
+`guard` is for the unit of the stand-in, before its container starts and once
+its port is made: it closes that port, unless the stand-in is the one heard
+and only starts again after a failure.
+
+`reset` and `clear` are for the unit of the workload. `reset`, as it starts:
+the container's port, which has just been made, is closed when the stand-in
+runs and open otherwise. `clear`, once it has stopped, so that no rule
+outlives the port it named.
+
+The rules of a gate carry cookies made from its name, one for each of its two
+ports, which is how they are found again whatever number a port has, and why
+two workloads never touch each other's.
+"""
+import argparse
+import hashlib
+import subprocess
+import sys
+import time
+
+PRIORITY = 65535
+OPENFLOW = "OpenFlow14"
+
+
+CONTAINER, STANDIN = "container", "stand-in"
+
+
+def cookie(gate, side):
+    """The cookie of the rule that closes one port of `gate`, the same on every node and run."""
+    return "0x" + hashlib.sha256(f"seapath-handover:{gate}:{side}".encode()).hexdigest()[:16]
+
+
+def ofctl(*args, **kwargs):
+    return subprocess.run(["ovs-ofctl", "-O", OPENFLOW, *args], check=True, text=True, **kwargs)
+
+
+def clear(gate, bridge, sides=(CONTAINER, STANDIN)):
+    """Delete the rules of `gate`: nothing is closed."""
+    for side in sides:
+        ofctl("del-flows", bridge, f"cookie={cookie(gate, side)}/-1")
+
+
+def rule(gate, side, port):
+    return f"cookie={cookie(gate, side)},priority={PRIORITY},in_port={port},actions=drop"
+
+
+def close(gate, bridge, side, port):
+    """Drop what comes from `port`."""
+    ofctl("add-flow", bridge, rule(gate, side, port))
+
+
+def is_closed(gate, bridge, side):
+    """Whether the port of `side` is closed, whatever its number."""
+    shown = ofctl("dump-flows", bridge, f"cookie={cookie(gate, side)}/-1", stdout=subprocess.PIPE).stdout
+    return "actions=drop" in shown
+
+
+def swap(gate, bridge, open_side, closed_side, closed_port):
+    """Let the port of `open_side` out and drop what comes from `closed_port`, in one bundle."""
+    rules = (
+        f"delete cookie={cookie(gate, open_side)}/-1\n"
+        f"add {rule(gate, closed_side, closed_port)}\n"
+    )
+    ofctl("--bundle", "add-flows", bridge, "-", input=rules)
+
+
+def is_active(unit):
+    done = subprocess.run(["systemctl", "is-active", "--quiet", unit], check=False)
+    return done.returncode == 0
+
+
+def start(unit):
+    return subprocess.run(["systemctl", "start", unit], check=False).returncode == 0
+
+
+def stop(unit):
+    subprocess.run(["systemctl", "stop", unit], check=False)
+
+
+def settled(unit, settle):
+    """Whether `unit` stays active for `settle` seconds."""
+    waited = 0
+    while waited < settle:
+        time.sleep(min(1, settle - waited))
+        waited += 1
+        if not is_active(unit):
+            return False
+    return is_active(unit)
+
+
+def reset(gate, bridge, port, standin_unit):
+    """The gate as a start of the workload needs it: its new port closed while the stand-in is heard."""
+    clear(gate, bridge, [CONTAINER])
+    if is_active(standin_unit):
+        close(gate, bridge, CONTAINER, port)
+
+
+def guard(gate, bridge, standin_port):
+    """The stand-in's new port, closed unless the stand-in is the one heard."""
+    clear(gate, bridge, [STANDIN])
+    if not is_closed(gate, bridge, CONTAINER):
+        close(gate, bridge, STANDIN, standin_port)
+
+
+def enter(gate, bridge, port, standin_port, unit, standin_unit, settle):
+    """Have the stand-in heard in place of the container."""
+    if is_active(standin_unit):
+        print(f"{standin_unit}: already heard on {standin_port}")
+        return
+    if not is_active(unit):
+        raise RuntimeError(f"{unit} does not run: nothing to stand in for")
+    print(f"{standin_unit}: starting, {standin_port} closed")
+    if not (start(standin_unit) and settled(standin_unit, settle)):
+        stop(standin_unit)
+        clear(gate, bridge, [STANDIN])
+        raise RuntimeError(f"{standin_unit} did not start or did not stay up, {unit} keeps the service")
+    swap(gate, bridge, STANDIN, CONTAINER, port)
+    print(f"{standin_unit}: heard on {standin_port}, {port} closed")
+
+
+def leave(gate, bridge, port, standin_port, unit, standin_unit, settle):
+    """Have the container heard again and stop the stand-in."""
+    if not is_active(standin_unit):
+        print(f"{standin_unit}: does not run, {unit} is the one heard")
+        return
+    if not settled(unit, settle):
+        raise RuntimeError(f"{unit} does not run or did not stay up, {standin_unit} keeps the service")
+    swap(gate, bridge, CONTAINER, STANDIN, standin_port)
+    print(f"{unit}: heard on {port}, {standin_port} closed")
+    stop(standin_unit)
+    clear(gate, bridge, [STANDIN])
+    print(f"{standin_unit}: stopped")
+
+
+def parse(argv):
+    parser = argparse.ArgumentParser(prog="seapath-container-handover", description=__doc__.split("\n")[0])
+    commands = parser.add_subparsers(dest="command", required=True)
+    for verb, names, text in (
+        ("enter", ("gate", "bridge", "port", "standin_port", "unit", "standin_unit"),
+         "have the stand-in heard in place of the container"),
+        ("leave", ("gate", "bridge", "port", "standin_port", "unit", "standin_unit"),
+         "have the container heard again and stop the stand-in"),
+        ("reset", ("gate", "bridge", "port", "standin_unit"),
+         "the container's new port, closed while the stand-in is heard"),
+        ("guard", ("gate", "bridge", "standin_port"),
+         "the stand-in's new port, closed unless the stand-in is the one heard"),
+        ("clear", ("gate", "bridge"), "delete the rules of the gate"),
+    ):
+        command = commands.add_parser(verb, help=text)
+        for name in names:
+            command.add_argument(name)
+        if verb in ("enter", "leave"):
+            command.add_argument("--settle", type=float, default=0, metavar="SECONDS",
+                                 help="how long a container runs before it is heard (default 0)")
+    return parser.parse_args(argv)
+
+
+def main(argv=None):
+    args = vars(parse(sys.argv[1:] if argv is None else argv))
+    command = {"enter": enter, "leave": leave, "reset": reset, "guard": guard, "clear": clear}[args.pop("command")]
+    try:
+        command(**args)
+    except (RuntimeError, subprocess.CalledProcessError) as error:
+        print(f"seapath-container-handover: {error}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

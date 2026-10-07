@@ -44,6 +44,7 @@ inventory host: Ansible never connects to it.
 | `colocated_with` | No | `[]` | Pacemaker resources (VMs or workloads) to run on the same node. |
 | `strong_colocation` | No | `false` | Make the colocations mandatory. |
 | `monitor_interval`, `start_timeout`, `stop_timeout` | No | `10s`, `360s`, `100s` | Pacemaker operations. The start timeout covers the wait for Ceph of `seapath-rbd-mount` (300 s at most). |
+| `update_steps` | No | `[]` | How the workload is updated while it runs. See "Updating a running workload". |
 | `state` | No | `present` | `absent` removes the workload. |
 | `remove_rbd` | No | `false` | With `state: absent`, also delete the RBD image. |
 
@@ -70,10 +71,12 @@ Role variables:
 | `deploy_containers_cluster_archive_dir` | `/var/lib/seapath/containers` | Where the image archives are kept on the nodes. |
 | `deploy_containers_cluster_written_dir` | `/var/lib/seapath/containers/quadlets` | Where each node records the quadlets it wrote for each workload. |
 | `deploy_containers_cluster_config_dir` | `/etc/seapath-containers` | Where each node keeps the configuration of each workload. |
+| `deploy_containers_cluster_started_dir` | `/run/seapath-containers` | Where a workload with `update_steps` notes, as it starts, the quadlets no step replaces. |
 | `deploy_containers_cluster_checks_fatal` | `false` | Whether a failed check stops the run, or only warns. |
 | `deploy_containers_cluster_snapshots_kept` | `3` | Snapshots of its RBD image a workload keeps, and RBD images put aside by recreations. |
 | `deploy_containers_cluster_only` | `[]` | Workloads this run is limited to, a name or a list, every workload when empty (see below). Given with `-e`, never in the inventory. |
 | `deploy_containers_cluster_restart` | `[]` | Workloads to restart at the end of this run, a name or a list (see below). Given with `-e`, never in the inventory. |
+| `deploy_containers_cluster_update` | `[]` | Workloads this run updates while they run, a name or a list (see below). Given with `-e`, never in the inventory. |
 | `deploy_containers_cluster_recreate` | `[]` | Workloads to start again from nothing in this run, a name or a list (see below). Given with `-e`, never in the inventory. |
 | `deploy_containers_cluster_monitor_interval` | `10s` | Default monitor interval. |
 | `deploy_containers_cluster_monitor_timeout` | `100s` | Monitor timeout. |
@@ -265,6 +268,9 @@ through systemd dependencies, on that node only:
   `/mnt/rbd/<name>`, and unmounts and unmaps it once the workload has stopped.
   The quadlets only name the mountpoint in their `Volume=`.
 
+* What an update needs: for a workload with `update_steps`, a second
+  drop-in, `seapath-handover.conf` (see "Updating a running workload").
+
 The mount is a unit of its own because `seapath-rbd-mount` waits up to 300 s
 for Ceph at cluster boot, and extends the start timeout while it waits with
 `EXTEND_TIMEOUT_USEC`. systemd accepts that notification only from a unit with
@@ -346,9 +352,9 @@ its images, quadlets, configuration, RBD image and resource are neither checked
 nor written. What a node keeps is still read from every workload declared, so
 the images and archives of the others stay. A name `cluster_containers` does
 not declare stops the run, and so does a workload named in
-`deploy_containers_cluster_restart` or `deploy_containers_cluster_recreate`
-that the run leaves out. The variable is for one run: written in the inventory,
-no run would reach the other workloads.
+`deploy_containers_cluster_restart`, `deploy_containers_cluster_update` or
+`deploy_containers_cluster_recreate` that the run leaves out. The variable is
+for one run: written in the inventory, no run would reach the other workloads.
 
 ## Applying a change now
 
@@ -363,6 +369,165 @@ version, configuration or site value applies at once. A workload whose
 resource the run created or recreated has just started and is not restarted
 again. The variable is for one run: written in the inventory, every run would
 restart the workload.
+
+## Updating a running workload
+
+```sh
+ansible-playbook playbooks/deploy_containers_cluster.yaml \
+  -e deploy_containers_cluster_update=open61850-protect
+```
+
+A restart stops the whole workload and starts it again, several seconds
+without any of its services. A workload whose entry has `update_steps` is
+updated while it runs: whatever the new version changes, a container handed
+over is heard throughout, and the rest of the workload is interrupted for as
+little as that version allows.
+
+```yaml
+      open61850-protect:
+        ...
+        update_steps:
+          - handover: open61850-protect-rt.container
+            network: open61850-protect-pb.network
+            bridge: pb_bridge
+            port: pb_port
+            settle: update_settle
+          - restart: open61850-protect-shell.service
+```
+
+| Step | For | What it gets |
+|---|---|---|
+| `handover` | A container whose only effect is what it sends on a network: two versions can run side by side as long as one is heard. | A stand-in on the new version keeps its service while the workload is updated. Neither two emitters nor a silence. |
+| `restart` | A container that holds what two versions cannot share: a volume it writes, an address it listens on. | It is restarted alone when nothing but containers changed. |
+
+Once every node has the new images and quadlets, on the node the workload
+runs on:
+
+1. The resource is put in maintenance (`crm resource maintenance <name>
+   on`): Pacemaker neither monitors it nor acts on it.
+2. The stand-in of each container handed over starts, on the new version,
+   and takes its service.
+3. The workload is brought to the new version:
+   * the delivery changed nothing but the containers the steps name: each of
+     them is restarted alone (`systemctl restart`), in the order of the
+     steps, and the pod stays;
+   * it changed the pod, a network or a container no step names: the unit of
+     the workload is restarted, with all it makes.
+4. Each container handed over takes its service back and its stand-in stops.
+5. The resource is given back to Pacemaker, which finds it running.
+
+A workload that runs nowhere is left alone: it starts with what was deployed.
+
+Pacemaker is kept out because it would take a stop of step 3 for a failure,
+and because a workload it started on another node would be heard beside the
+stand-in of this one. Maintenance rather than `is-managed=false`: unmanaged,
+the resource is still monitored, and the stops Pacemaker noted would have it
+recover the resource, with a restart, once it manages it again.
+
+When a stand-in does not start, nothing was touched: the resource is given
+back to Pacemaker and the run fails. When the run fails later, with a
+stand-in heard, it stops there and leaves the resource in maintenance: the
+stand-ins keep their service, alone, and Pacemaker starts nothing. The run
+says so. Run again once the cause is fixed, or the previous version deployed
+again, the update finishes from where it is: it starts the workload, has its
+containers heard and gives the resource back.
+
+### Handover
+
+The step names the quadlet of the container (`handover`), a container of the
+pod, the quadlet of the network of the pod it sends on (`network`), and the
+site values of the entry that hold the Open vSwitch bridge and the port that
+network makes (`bridge`, `port`): the keys, as a check names its `value`,
+so that the steps are the same on every site and a delivery carries them.
+`settle` is the settle time: seconds (0 by default), or the site value that
+holds them, for a time that depends on how the site sets the application.
+The delivery is otherwise the one of any workload: nothing in its quadlets
+is written for the handover. The role makes the stand-in from these two quadlets:
+
+* `<container>-b.container`, the same container out of the pod, on
+  `<network>-b.network` with the options the pod gives that network;
+* `<network>-b.network`, the same network on a port of its own, `<port>b`.
+
+The stand-in has a network namespace of its own, so the same interface, the
+same MAC and the same command line as the container, and nothing of the pod
+to clash with. It depends on nothing of the workload but its RBD image, which
+it keeps mounted, so the workload can be restarted under it. It runs during
+an update only.
+
+Both ports receive. The bridge drops what comes from the port that is not in
+service. `seapath-container-handover`, which the role installs on every node:
+
+* `enter` starts the stand-in, whose port is made and closed before its
+  container starts, waits for its unit to be active, then for the settle
+  time, the time the application needs before its output can be trusted,
+  and opens that port and closes the container's in one OpenFlow bundle;
+* `leave` waits for the container to have run for `settle` seconds, swaps the
+  ports back in one bundle and stops the stand-in.
+
+A stand-in that does not start, or stops while settling, is stopped. A
+container that does not come back leaves its stand-in in service.
+
+The stand-in is alone: the other containers of the pod are out of its reach,
+and it is out of theirs. The container must therefore do its duty without
+them for as long as it stands in, and read what it needs from what it mounts.
+
+The role adds a drop-in to the unit of the workload,
+`/etc/systemd/system/<unit>.d/seapath-handover.conf`. As the unit starts, the
+port of each container handed over, just made, is closed if its stand-in is
+heard and open otherwise; once it has stopped, the rules are deleted. The
+unit also notes, under `/run/seapath-containers/`, the checksums of the
+quadlets no step replaces, which is how an update tells what the delivery
+changed.
+
+What the bridge guarantees is that one of the two is heard at any time. It
+does not look into the frames: two versions that answer the same input at
+different speeds may have a frame heard twice, or not at all, when the
+switch falls between their two answers. On a lab cluster, with a protection
+relay sending its trip by GOOSE and a fault every second, 51 833 switches
+between a container and one made 0.2 to 0.9 ms slower lost no change of
+state out of 1 800: 35 were heard at the first repetition, 4 ms later, and
+28 from both. Between two of the same speed, 34 460 switches delayed none
+out of 1 200. A sequence number the application keeps, such as the stNum of
+a GOOSE, restarts at each of the two switches, as it does on a restart.
+
+That relay, its delivery unchanged (a pod of its real-time container and its
+IED shell), its resource started by Pacemaker, updated four times by these
+tasks with a fault every second: 800 changes of state all heard on time,
+eight changes of emitter and no moment with two. When only the containers
+changed, the shell did not answer for 0.7 s; when a network of the pod
+changed and the workload was restarted, for 1.9 to 3.3 s, the trip still
+published throughout. An update whose pod could not start again left the
+shell down for the minute it took to deploy a pod that could and to run the
+update again: 420 changes of state all heard, from the stand-in then from
+the container.
+
+### Restart
+
+`systemctl restart` of the unit the step names, while the pod and its other
+containers stay. Quadlet has a pod stop with its last container, which a pod
+of one container would do in the middle of that restart: in the pod quadlet
+of a workload with `update_steps`, the role sets
+`PodmanArgs=--exit-policy=continue`.
+
+### Limits
+
+* A workload started before it had `update_steps` is updated this way from
+  its first update on, by the heavier way: its unit noted nothing as it
+  started, so the workload is restarted as a whole, under its stand-ins. On
+  the lab cluster, the relay deployed without steps then updated with them:
+  420 changes of state all heard, its shell silent for 3.2 s.
+* The stand-in needs the same resources as the container while both run: for
+  a container pinned by `seapath-container-pin`, an isolated core that is
+  free. Without one it does not start and the update fails before it touches
+  the workload.
+* The unit Pacemaker starts must stay while the containers change: it is a
+  pod, never the container handed over.
+* A handover is two switches, and an update lasts at least twice the settle
+  time.
+* During an update, two to three minutes with a settle time of a minute,
+  and for as long as an update that failed is left unfinished, the resource
+  is in maintenance: Pacemaker does not start the workload on another node
+  if this one fails. An update is run by someone who watches it.
 
 ## Starting a workload again from nothing
 
@@ -393,4 +558,7 @@ from the inventory.
 The molecule scenario covers the node side: quadlet templates and plain files,
 the configuration, the image loaded from an archive, the RBD drop-in, a quadlet
 and a configuration file a new version drops, the refusal of `[Install]`,
-idempotence and removal. Ceph and Pacemaker are tested on a lab cluster.
+idempotence and removal. Ceph, Pacemaker and the update of a running workload
+(the stand-in, the drop-in, the handover on Open vSwitch, the restart of one
+container and of the workload) are tested on a lab cluster; `tests/test_seapath_container_handover.py` covers
+the handover tool.
