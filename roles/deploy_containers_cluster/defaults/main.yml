@@ -17,6 +17,10 @@ deploy_containers_cluster_written_dir: /var/lib/seapath/containers/quadlets
 # `config` files: <dir>/<name>/, which the quadlets mount read only.
 deploy_containers_cluster_config_dir: /etc/seapath-containers
 
+# Where a workload with update steps notes, as it starts, the quadlets no step
+# replaces: an update restarts the whole workload once a delivery changed one.
+deploy_containers_cluster_started_dir: /run/seapath-containers
+
 # How many snapshots of its RBD image a workload keeps, one taken each time
 # its images change, and how many RBD images put aside by a recreation.
 deploy_containers_cluster_snapshots_kept: 3
@@ -44,6 +48,12 @@ deploy_containers_cluster_recreate: []
 # restarted, which on a substation is the operator's decision. A name or a
 # list of names.
 deploy_containers_cluster_restart: []
+
+# Workloads this run updates while they run, as their `update_steps` says.
+# Given to one run
+# (-e), never written in the inventory, as for a restart. A name or a list of
+# names.
+deploy_containers_cluster_update: []
 
 # Pacemaker operations, unless the workload sets its own. The start timeout
 # covers seapath-rbd-mount waiting up to 300 s for Ceph at cluster boot.

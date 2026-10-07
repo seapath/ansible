@@ -63,20 +63,71 @@
 - name: Check the configuration files of the workloads
   ansible.builtin.include_tasks: checks.yml
 
-- name: Check the workloads to recreate and to restart
+- name: Check the workloads to recreate, to restart and to update
   ansible.builtin.assert:
     that: _unknown | length == 0
     fail_msg: >-
-      deploy_containers_cluster_recreate or deploy_containers_cluster_restart
-      names {{ _unknown | join(', ') }}, which cluster_containers does not
-      declare as present{{
+      deploy_containers_cluster_recreate, deploy_containers_cluster_restart or
+      deploy_containers_cluster_update names {{ _unknown | join(', ') }}, which
+      cluster_containers does not declare as present{{
       ', or which deploy_containers_cluster_only leaves out of this run'
       if deploy_containers_cluster_only_list else '' }}.
     quiet: true
   vars:
     _unknown: >-
-      {{ (deploy_containers_cluster_recreate_list + deploy_containers_cluster_restart_list)
+      {{ (deploy_containers_cluster_recreate_list + deploy_containers_cluster_restart_list
+          + deploy_containers_cluster_update_list)
          | difference(deploy_containers_cluster_present | map(attribute='key')) }}
+  run_once: true
+
+# A step replaces one container of a running workload: by its other slot
+# (handover), or by a restart of its unit alone.
+- name: Check the update steps of the workloads
+  ansible.builtin.assert:
+    that:
+      - (_step.handover is defined) != (_step.restart is defined)
+      - _step.restart is not defined or _step.restart is string
+      - >-
+        _step.handover is not defined
+        or (_step.handover is string and _step.handover is match('.+\.container$') and _step.handover in _quadlets
+            and _step.network is defined and _step.network is match('.+\.network$') and _step.network in _quadlets
+            and _step.bridge | default('') in _entry and _step.port | default('') in _entry
+            and _entry[_step.port] | string | length <= 14
+            and (_entry[_step.settle] | default(-1) if _step.settle | default(0) is string
+                 else _step.settle | default(0)) | float(-1) >= 0
+            and _step.handover | regex_replace('\.container$', '.service') != _unit)
+    fail_msg: >-
+      {{ _step_of }}: an update step is either `restart`, a unit, or
+      `handover`, the quadlet of a container of the pod among `quadlets`,
+      with `network`, the quadlet of the network it sends on, `bridge` and
+      `port`, the site values of the entry that hold the Open vSwitch bridge
+      and the port that network makes (a port of 14 characters at most), and
+      an optional `settle`, seconds or the site value that holds them. The container handed over cannot be
+      the unit Pacemaker starts, which must stay.
+    quiet: true
+  loop: "{{ deploy_containers_cluster_present | subelements('value.update_steps', skip_missing=true) }}"
+  loop_control:
+    label: "{{ _step_of }}"
+  vars:
+    _step: "{{ item.1 }}"
+    _step_of: "{{ item.0.key }}"
+    _entry: "{{ item.0.value }}"
+    _unit: "{{ item.0.value.unit | default(item.0.key ~ '.service') }}"
+    _quadlets: "{{ item.0.value.quadlets | map('basename') | map('regex_replace', '\\.j2$', '') | list }}"
+  run_once: true
+
+- name: Check the workloads to update say how
+  ansible.builtin.assert:
+    that: _silent | length == 0
+    fail_msg: >-
+      deploy_containers_cluster_update names {{ _silent | join(', ') }}, whose
+      entry has no `update_steps`: restart it instead
+      (deploy_containers_cluster_restart).
+    quiet: true
+  vars:
+    _silent: >-
+      {{ deploy_containers_cluster_present | rejectattr('value.update_steps', 'defined')
+         | map(attribute='key') | intersect(deploy_containers_cluster_update_list) }}
   run_once: true
 
 # Before the node tasks: the units must be stopped before their quadlets go.
@@ -138,3 +189,20 @@
     - inventory_hostname == ansible_play_hosts[0]
     - _restart not in deploy_containers_cluster_created | default([])
   changed_when: true
+
+# On every node, since only the node knows whether the workload runs there. A
+# workload restarted or created by this run already runs what was deployed.
+- name: Update the workloads the run was asked to
+  ansible.builtin.include_tasks: update.yml
+  loop: >-
+    {{ deploy_containers_cluster_present | selectattr('key', 'in', deploy_containers_cluster_update_list
+         | difference(deploy_containers_cluster_restart_list)
+         | difference(deploy_containers_cluster_recreate_list)
+         | difference(hostvars[ansible_play_hosts[0]].deploy_containers_cluster_created | default([]))) }}
+  loop_control:
+    loop_var: _workload
+    label: "{{ _workload.key }}"
+  vars:
+    _name: "{{ _workload.key }}"
+    _unit: "{{ _workload.value.unit | default(_workload.key ~ '.service') }}"
+    container: "{{ _workload.value }}"

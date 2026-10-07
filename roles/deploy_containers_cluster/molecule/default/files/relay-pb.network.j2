@@ -1,0 +1,7 @@
+[Unit]
+StopWhenUnneeded=yes
+
+[Network]
+NetworkName={{ container.name }}-pb
+Driver=macvlan
+Options=parent={{ container.pb_port }}
