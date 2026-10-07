@@ -157,6 +157,92 @@ Target Podman 5.4 (SEAPATH Debian 13), with systemd 257.
    `Ulimit=`, `AddCapability=` and `Environment=` are used as usual. Never
    `--privileged`.
 
+8. **Nothing in a quadlet is written for an update.** A workload can be
+   updated while it runs, its emitting container never silent: what the
+   delivery gives for that is a few lines of its `inventory-example.yaml`,
+   and what the application must bear is in "Updates without interruption"
+   below.
+
+### Updates without interruption
+
+Applied by a restart, a new version stops the whole workload for several
+seconds. SEAPATH can instead apply it while the workload runs, when the
+delivery says how in the `update_steps` of its entry. The operator then
+chooses between the two, for each new version. This is optional: a delivery
+without `update_steps` is applied by a restart, as before.
+
+A step is one container of the pod, and there are two kinds:
+
+| Step | For a container | What SEAPATH does |
+|---|---|---|
+| `handover` | whose only effect is what it sends on a network: a relay publishing its trip | Runs a copy of it on the new version, alone and out of the pod, on an Open vSwitch port of its own. Both receive, and the bridge lets one of the two out at a time. The copy is heard while the workload is brought to the new version, then the container is heard again and the copy stops. Never two emitters, never a silence. |
+| `restart` | that holds what two versions cannot share: a volume it writes, an address it listens on | Stops it and starts it again alone, the pod and its other containers staying, when the new version changes nothing but containers. |
+
+When a new version changes the pod, a network or a container no step names,
+SEAPATH restarts the whole workload instead of its containers one by one. The
+copy of a container handed over is heard meanwhile, so that container is not
+interrupted either way; the others are, for the time of that restart.
+
+```yaml
+cluster_containers:
+  <name>:
+    ...
+    update_steps:
+      - handover: <name>-<container>.container
+        network: <name>-<network>.network
+        bridge: pb_bridge
+        port: pb_port
+        settle: update_settle
+      - restart: <name>-<other>.service
+```
+
+| Key | In | Meaning |
+|---|---|---|
+| `handover` | a handover | The quadlet of the container, as the entry lists it, without `.j2`. A container of the pod (`Pod=`). |
+| `network` | a handover | The quadlet of the network it sends on, a network of the pod on an Open vSwitch port its quadlet makes (rule 3). |
+| `bridge`, `port` | a handover | The keys of `values.yaml` that hold that bridge and that port. The keys, never the values: the steps are the same on every site. The port's value is 14 characters at most, SEAPATH naming the copy's port after it. |
+| `settle` | a handover, optional | How long a container runs before it is heard, in seconds: a number, or the key of `values.yaml` that holds it. 0 without it. |
+| `restart` | a restart | The unit of the container: `<name>-<other>.service`. |
+
+The steps are done in their order. Nothing is added to the quadlets: SEAPATH
+makes the copy from the two quadlets a handover names, with the same image,
+command line, interface name and MAC.
+
+What a container handed over must bear:
+
+* **Its copy runs alone.** It is out of the pod, in a network namespace of
+  its own, for as long as it stands in: at least twice the settle time, and
+  for as long as it takes to fix a new version that does not start. The
+  other containers of the pod are out of its reach, and it does its duty
+  without them. It reads what it needs from what it mounts, and a volume
+  both copies mount is read only.
+* **Two copies run at once**, with the same command line: nothing in it may
+  need to be the only one, apart from being heard.
+* **It is heard once its unit is active and the settle time has passed.**
+  Give the time the application needs before its output can be trusted: its
+  filters full, its timers armed. When that depends on how the site sets the
+  application, make it a site value, described in `values.yaml` with its
+  default. An application that knows when it is ready says so with
+  `Notify=healthy` and a `HealthCmd=`, and the settle time counts from there.
+* **What it numbers restarts.** A sequence number it keeps (the stNum of a
+  GOOSE) starts again with each copy, as at a restart: its subscribers see it
+  jump twice.
+* **It needs its resources twice** while both copies run: for a container
+  pinned by `seapath-container-pin`, a second isolated core, which the site
+  must have free.
+
+What a container restarted alone must bear:
+
+* It stops promptly on SIGTERM and starts promptly: the interruption of what
+  it serves is the two together.
+* The other containers of the pod run without it meanwhile, and take it back
+  when it returns, on a version that may be newer than theirs for that
+  moment.
+
+The delivery's README says what an operator sees during an update: what is
+interrupted and for how long in each of the two cases, and what the settle
+time stands for.
+
 ### Configuration files
 
 Configuration files are optional. A workload whose configuration is made in
@@ -230,8 +316,8 @@ nor in the configuration files: the application reads them from files under
 
 ### Site values
 
-`values.yaml` lists every key the templates read as `{{ container.<key> }}`,
-and nothing else. It is what an installer builds its form from and checks the
+`values.yaml` lists every key the templates read as `{{ container.<key> }}`
+and every key the `update_steps` name, and nothing else. It is what an installer builds its form from and checks the
 values against, so each key says what it is:
 
 ```yaml
@@ -292,7 +378,7 @@ hexadecimal. A file the site renders from a `.j2` gets its values from
 The `cluster_containers` entry SEAPATH adds to its inventory, with a value for
 every key of `values.yaml`. The paths are the delivery's own: whoever installs
 it rewrites them to where the files end up, and, installing it under another
-name, the quadlets and the `unit` as well. Where the workload runs
+name, the quadlets `unit` and `update_steps` name as well. Where the workload runs
 (`preferred_host`, `pinned_host`) is the site's choice, among nodes the
 supplier does not know, and is not in the example.
 
@@ -311,6 +397,7 @@ cluster_containers:
     checks: [...]                # the content of checks.yaml
     rbd:
       size: 256M
+    update_steps: [...]          # optional: see "Updates without interruption"
     sbus_ip: 192.0.2.30
     ...
 ```
@@ -324,8 +411,8 @@ cluster_containers:
   prints the units and no error.
 * `grep -l '^\[Install\]' quadlets/*` prints nothing.
 * The keys of `values.yaml` are exactly the `container.<key>` the templates
-  read, apart from `container.images` and `container.name`, and each example
-  is valid for its format.
+  read, apart from `container.images` and `container.name`, and the keys the
+  `update_steps` name, and each example is valid for its format.
 * Rendered with `container.name` set to another name, no quadlet holds the
   proposed one: `grep -l <name>` on the rendered files prints nothing, and the
   workload can be installed twice.
@@ -335,4 +422,9 @@ cluster_containers:
   workload runs, stops cleanly, and leaves
   no network behind (`podman network ls`).
 * Started again with the state the previous version wrote, it reads it.
+* With `update_steps`: each `handover` and `network` is a quadlet of the
+  entry, each `bridge`, `port` and `settle` key is in `values.yaml`; a second
+  copy of a container handed over, started out of the pod while the first
+  runs, starts and does its duty; `systemctl restart` of a unit named by a
+  `restart` leaves the pod and its other containers running.
 * The checks of `checks.yaml`, if any, pass on the examples with the example values.

@@ -23,9 +23,11 @@
   vars:
     _content: "{{ lookup('ansible.builtin.template' if _quadlet.endswith('.j2') else 'ansible.builtin.file', _quadlet) }}"
 
+# A pod whose containers are replaced one at a time may be left with none for
+# a moment: quadlet would have it stop with its last container.
 - name: "Write the quadlets of {{ _name }}"
   ansible.builtin.copy:
-    content: "{{ _content.rstrip() ~ '\n' }}"
+    content: "{{ (_lasting if _replaced else _content).rstrip() ~ '\n' }}"
     dest: "/etc/containers/systemd/{{ _quadlet | basename | regex_replace('\\.j2$', '') }}"
     owner: root
     group: root
@@ -34,8 +36,83 @@
   loop_control:
     loop_var: _quadlet
   vars:
+    _file: "{{ _quadlet | basename | regex_replace('\\.j2$', '') }}"
+    _replaced: "{{ _file.endswith('.pod') and container.update_steps | default([]) | length > 0 }}"
+    _lasting: "{{ _content | regex_replace('(?m)^\\[Pod\\][ \\t]*$', '[Pod]\nPodmanArgs=--exit-policy=continue') }}"
     _content: "{{ lookup('ansible.builtin.template' if _quadlet.endswith('.j2') else 'ansible.builtin.file', _quadlet) }}"
   register: deploy_containers_cluster_quadlets
+  notify: Reload systemd
+
+# A container handed over is a container of the pod, on a network of the pod.
+# Its stand-in keeps its service while the workload is updated: the same
+# container out of the pod, in a network namespace of its own, so with the
+# same interface, the same MAC and the same command line, on the same network
+# under a second name and a port of its own. It depends on nothing of the
+# workload but its RBD image, so that the workload can be restarted under it,
+# and runs during an update only (update.yml).
+- name: "Read where the containers handed over send for {{ _name }}"
+  ansible.builtin.assert:
+    that:
+      - _pod | length == 1
+      - _options | length == 1
+    fail_msg: >-
+      {{ _name }}: {{ _step.handover }} must be a container of a pod of the
+      workload (Pod=), and that pod must name {{ _step.network }}
+      (Network=).
+    quiet: true
+  loop: "{{ _handovers }}"
+  loop_control:
+    loop_var: _step
+    label: "{{ _step.handover }}"
+  vars: &handover_sources
+    _slot: "{{ deploy_containers_cluster_slot }}"
+    _source: "{{ container.quadlets | select('match', '(.*/)?' ~ (_step.handover | regex_escape) ~ '(\\.j2)?$') | first }}"
+    _content: "{{ lookup('ansible.builtin.template' if _source.endswith('.j2') else 'ansible.builtin.file', _source) }}"
+    _pod: "{{ _content | regex_search('(?m)^Pod=(.+?)[ \\t]*$', '\\1') or [] }}"
+    _pod_source: "{{ container.quadlets | select('match', '(.*/)?' ~ (_pod | first | default('none') | regex_escape) ~ '(\\.j2)?$') | first | default('') }}"
+    _pod_content: "{{ lookup('ansible.builtin.template' if _pod_source.endswith('.j2') else 'ansible.builtin.file', _pod_source) if _pod_source else '' }}"
+    _options: "{{ _pod_content | regex_search('(?m)^Network=' ~ (_step.network | regex_escape) ~ '(.*?)[ \\t]*$', '\\1') or [] }}"
+
+- name: "Write the second slots of {{ _name }}"
+  ansible.builtin.copy:
+    content: >
+      {{ _mounted ~ (_content
+         | regex_replace('(?m)^Pod=.*$', 'Network=' ~ _slot.network_b ~ (_options | first))
+         | regex_replace('(?m)^(ContainerName=.*?)[ \t]*$', '\1-b')).rstrip() ~ _guarded }}
+    dest: "/etc/containers/systemd/{{ _slot.container_b }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ _handovers }}"
+  loop_control:
+    loop_var: _step
+    label: "{{ _step.handover }}"
+  vars:
+    <<: *handover_sources
+    # Its port is closed once made and before the container starts.
+    _guarded: "\n\n[Service]\nExecStartPre=/usr/local/bin/seapath-container-handover guard {{ _name }}.{{ container.update_steps.index(_step) }} {{ container[_step.bridge] }} {{ _slot.port_b }}\n"
+  register: deploy_containers_cluster_slots
+  notify: Reload systemd
+
+- name: "Write the networks of the second slots of {{ _name }}"
+  ansible.builtin.copy:
+    content: >
+      {{ (_content
+         | regex_replace('(?<![\w.-])' ~ (_network | regex_escape) ~ '(?![\w-])', _network ~ '-b')
+         | regex_replace('(?<![\w.-])' ~ (container[_step.port] | regex_escape) ~ '(?![\w-])', container[_step.port] ~ 'b')).rstrip() }}
+    dest: "/etc/containers/systemd/{{ deploy_containers_cluster_slot.network_b }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ _handovers }}"
+  loop_control:
+    loop_var: _step
+    label: "{{ _step.network }}"
+  vars:
+    _source: "{{ container.quadlets | select('match', '(.*/)?' ~ (_step.network | regex_escape) ~ '(\\.j2)?$') | first }}"
+    _content: "{{ lookup('ansible.builtin.template' if _source.endswith('.j2') else 'ansible.builtin.file', _source) }}"
+    _network: "{{ _step.network | regex_replace('\\.network$', '') }}"
+  register: deploy_containers_cluster_slot_networks
   notify: Reload systemd
 
 # A quadlet a new version renames or drops is removed. Only what the role wrote
@@ -57,7 +134,7 @@
   loop_control:
     loop_var: _stale
   vars:
-    _written: "{{ container.quadlets | map('basename') | map('regex_replace', '\\.j2$', '') | list }}"
+    _written: "{{ (container.quadlets | map('basename') | map('regex_replace', '\\.j2$', '') | list) + _second_slots }}"
   notify: Reload systemd
 
 - name: "Record the quadlets written for {{ _name }}"
@@ -68,7 +145,7 @@
     group: root
     mode: "0644"
   vars:
-    _written: "{{ container.quadlets | map('basename') | map('regex_replace', '\\.j2$', '') | list }}"
+    _written: "{{ (container.quadlets | map('basename') | map('regex_replace', '\\.j2$', '') | list) + _second_slots }}"
 
 - name: "Create the drop-in directory of {{ _unit }}"
   ansible.builtin.file:
@@ -77,7 +154,7 @@
     owner: root
     group: root
     mode: "0755"
-  when: container.rbd is defined
+  when: container.rbd is defined or container.update_steps | default([]) | length > 0
 
 - name: "Mount the RBD image when this unit starts: {{ _unit }}"
   ansible.builtin.copy:
@@ -99,6 +176,43 @@
     path: "/etc/systemd/system/{{ _unit }}.d/seapath-rbd.conf"
     state: absent
   when: container.rbd is not defined
+  notify: Reload systemd
+
+# As it starts, the unit of the workload sets the gate of each container
+# handed over: its port, just made, is closed while the stand-in is heard and
+# open otherwise, whatever a previous run on this node left. The rules go
+# with the workload, so that none outlives the port it named.
+#
+# The unit also notes the quadlets it starts from that no step replaces: the
+# pod, its networks, the containers without a step. An update restarts the
+# containers alone while the delivery left those as they are, and the whole
+# workload once it changed one (update.yml).
+- name: "Set what an update needs with this unit: {{ _unit }}"
+  ansible.builtin.copy:
+    content: |
+      # Managed by the deploy_containers_cluster role.
+      [Service]
+      {% for _step in container.update_steps | default([]) %}
+      {% if _step.handover is defined %}
+      ExecStartPre=/usr/local/bin/seapath-container-handover reset {{ _name }}.{{ loop.index0 }} {{ container[_step.bridge] }} {{ container[_step.port] }} {{ _step.handover | regex_replace('\.container$', '-b.service') }}
+      ExecStopPost=-/usr/local/bin/seapath-container-handover clear {{ _name }}.{{ loop.index0 }} {{ container[_step.bridge] }}
+      {% endif %}
+      {% endfor %}
+      ExecStartPost=/bin/sh -c 'mkdir -p {{ deploy_containers_cluster_started_dir }} && sha256sum "$@" > {{ deploy_containers_cluster_started_dir }}/{{ _name }}' sh {{ _fixed | join(' ') }}
+      ExecStopPost=-/usr/bin/rm -f {{ deploy_containers_cluster_started_dir }}/{{ _name }}
+    dest: "/etc/systemd/system/{{ _unit }}.d/seapath-handover.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  when: container.update_steps | default([]) | length > 0
+  register: deploy_containers_cluster_gates
+  notify: Reload systemd
+
+- name: "Remove what an update needs from the unit {{ _unit }}"
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ _unit }}.d/seapath-handover.conf"
+    state: absent
+  when: container.update_steps | default([]) | length == 0
   notify: Reload systemd
 
 # The configuration of the site, on every node, where the quadlets mount it
@@ -172,6 +286,9 @@
   when: >-
     deploy_containers_cluster_quadlets is changed
     or deploy_containers_cluster_dropin is changed
+    or deploy_containers_cluster_gates is changed
+    or deploy_containers_cluster_slots is changed
+    or deploy_containers_cluster_slot_networks is changed
     or deploy_containers_cluster_config_templates is changed
     or deploy_containers_cluster_config_files is changed
     or deploy_containers_cluster_config_stale is changed

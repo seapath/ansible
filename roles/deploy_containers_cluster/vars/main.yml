@@ -33,9 +33,27 @@ deploy_containers_cluster_restart_list: >-
   {{ ([deploy_containers_cluster_restart] if deploy_containers_cluster_restart is string
       else deploy_containers_cluster_restart) | select | list }}
 
+deploy_containers_cluster_update_list: >-
+  {{ ([deploy_containers_cluster_update] if deploy_containers_cluster_update is string
+      else deploy_containers_cluster_update) | select | list }}
+
 deploy_containers_cluster_recreate_list: >-
   {{ ([deploy_containers_cluster_recreate] if deploy_containers_cluster_recreate is string
       else deploy_containers_cluster_recreate) | select | list }}
+
+# A handover step names the quadlet of a container, the quadlet of the
+# network it sends on, and the site values that hold the bridge and the port
+# of that network. The second slot is the same two files under the names
+# below, on a port of its own. Read with `_step` set.
+deploy_containers_cluster_slot:
+  unit_a: "{{ _step.handover | regex_replace('\\.container$', '.service') }}"
+  unit_b: "{{ _step.handover | regex_replace('\\.container$', '-b.service') }}"
+  container_b: "{{ _step.handover | regex_replace('\\.container$', '-b.container') }}"
+  network_b: "{{ _step.network | regex_replace('\\.network$', '-b.network') }}"
+  network_unit_a: "{{ _step.network | regex_replace('\\.network$', '-network.service') }}"
+  network_unit_b: "{{ _step.network | regex_replace('\\.network$', '-b-network.service') }}"
+  port_b: "{{ container[_step.port] }}b"
+  settle: "{{ container[_step.settle] if _step.settle | default(0) is string else _step.settle | default(0) }}"
 
 # The members a workload may run on, which placement names.
 deploy_containers_cluster_members: "{{ groups['cluster_machines'] | intersect(groups['hypervisors']) }}"

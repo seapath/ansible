@@ -36,6 +36,16 @@
     group: root
     mode: "0755"
 
+# What hands a running container over to its other slot (update.yml), and
+# closes the port of the slot that waits when a workload starts.
+- name: Install the handover tool
+  ansible.builtin.copy:
+    src: seapath-container-handover
+    dest: /usr/local/bin/seapath-container-handover
+    owner: root
+    group: root
+    mode: "0755"
+
 - name: Install the workloads
   ansible.builtin.include_tasks: node_present.yml
   loop: "{{ deploy_containers_cluster_scope }}"
@@ -47,6 +57,19 @@
     _unit: "{{ _workload.value.unit | default(_workload.key ~ '.service') }}"
     _config_dir: "{{ deploy_containers_cluster_config_dir }}/{{ _workload.key }}"
     _config_names: "{{ _workload.value.config | default([]) | map('basename') | map('regex_replace', '\\.j2$', '') | list }}"
+    _handovers: "{{ _workload.value.update_steps | default([]) | selectattr('handover', 'defined') | list }}"
+    _second_slots: >-
+      {{ (_workload.value.update_steps | default([]) | selectattr('handover', 'defined')
+          | map(attribute='handover') | map('regex_replace', '\.container$', '-b.container') | list)
+         + (_workload.value.update_steps | default([]) | selectattr('handover', 'defined')
+            | map(attribute='network') | map('regex_replace', '\.network$', '-b.network') | list) }}
+    _fixed: >-
+      {{ (_workload.value.quadlets | map('basename') | map('regex_replace', '\.j2$', '') | list)
+         | difference(_workload.value.update_steps | default([]) | selectattr('handover', 'defined') | map(attribute='handover'))
+         | difference(_workload.value.update_steps | default([]) | selectattr('restart', 'defined')
+                      | map(attribute='restart') | map('regex_replace', '\.service$', '.container'))
+         | map('regex_replace', '^', '/etc/containers/systemd/') | list }}
+    _mounted: "{{ ('[Unit]\nRequires=seapath-rbd@' ~ _workload.key ~ '.service\nAfter=seapath-rbd@' ~ _workload.key ~ '.service\n\n') if _workload.value.rbd is defined else '' }}"
     # The templates name what the workload makes on a node after its entry,
     # so that one delivery can be installed twice under two names.
     container: "{{ _workload.value | combine({'name': _workload.key}) }}"
