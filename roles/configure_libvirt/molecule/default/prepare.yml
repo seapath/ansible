@@ -1,0 +1,24 @@
+---
+- name: Prepare libvirt test environment
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Create libvirt configuration directory
+      ansible.builtin.file:
+        path: /etc/libvirt
+        state: directory
+        mode: "0755"
+
+    - name: Create qemu hook directory
+      ansible.builtin.file:
+        path: /etc/libvirt/hooks/qemu.d
+        state: directory
+        mode: "0755"
+
+    - name: Create qemu hook that disabled role configuration must remove
+      ansible.builtin.copy:
+        dest: /etc/libvirt/hooks/qemu.d/seapath_qemu_hook.py
+        content: stale hook\n
+        mode: "0755"
