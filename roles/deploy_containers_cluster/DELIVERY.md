@@ -414,8 +414,10 @@ cluster_containers:
   read, apart from `container.images` and `container.name`, and the keys the
   `update_steps` name, and each example is valid for its format.
 * Rendered with `container.name` set to another name, no quadlet holds the
-  proposed one: `grep -l <name>` on the rendered files prints nothing, and the
-  workload can be installed twice.
+  proposed one, and the workload can be installed twice: `grep <name>` on the
+  rendered files finds nothing but the paths inside the containers
+  (`/etc/<application>`, `/var/lib/<application>`), which are the
+  application's and stay, when the proposed name is also the application's.
 * Started by hand on a machine with Podman 5.4 (`systemctl start
   <name>-pod.service`), with `examples/`, if any, in
   `/etc/seapath-containers/<name>/` and an empty `/mnt/rbd/<name>/`, the
