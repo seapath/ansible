@@ -29,6 +29,13 @@
     masked: true
   when: "'chrony.service' in services and (services['chrony.service'].status != 'not-found')"
   failed_when: false
+- name: Copy chrony.conf file
+  when: seapath_distro == "SLES"
+  ansible.builtin.copy:
+    src: /usr/etc/chrony.conf
+    dest: "{{ timemaster_path_chrony_conf }}"
+    mode: "0644"
+    remote_src: true
 - name: Create timemaster configuration # noqa: risky-file-permissions
   ansible.builtin.template:
     src: timemaster.conf.j2
