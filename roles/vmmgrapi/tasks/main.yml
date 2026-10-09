@@ -13,6 +13,17 @@
     vmmgrapi_certs_dir: "/var/local/vmmgrapi/certs"
   when: enable_vmmgr_http_api is defined and enable_vmmgr_http_api is true
   block:
+    - name: Assert that the vm-mgr HTTP API is protected by authentication
+      ansible.builtin.assert:
+        that:
+          - vmmgr_http_local_auth_file is defined
+          - vmmgr_http_local_auth_file | default('', true) | trim | length > 0
+        fail_msg: >-
+          enable_vmmgr_http_api is enabled but vmmgr_http_local_auth_file is not
+          defined or is empty. The vm_manager REST API must not be exposed without
+          authentication. Set vmmgr_http_local_auth_file to the path of an
+          htpasswd file, or disable the API with enable_vmmgr_http_api: false.
+
     - name: Create vm-mgr api certs folder
       ansible.builtin.file:
         path: "{{ vmmgrapi_certs_dir }}"

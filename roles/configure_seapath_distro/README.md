@@ -8,6 +8,15 @@ This role doesn't apply to SEAPATH Yocto distributions.
 
 no requirement.
 
+## Privilege model
+
+The administrative operator defined by `admin_user` is deliberately granted
+passwordless sudo (`ALL=(ALL) NOPASSWD: ALL`). The `vm_manager` service runs as
+root and there is currently no RBAC layer, so the operator must be able to
+manage the platform without an interactive password prompt. This is an
+intentional design decision: protect the admin account's SSH access and
+credentials carefully, since they grant full control of the machine.
+
 ## Role Variables
 
 | Variable             | Required | Type        | Comments                                                           |
