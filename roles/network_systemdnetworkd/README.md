@@ -65,6 +65,23 @@ It can be used to connect to the VMs and the hypervisor on the same interface.
 | gateway_addr       | Yes      | String  |         | IP address of the gateway on the administration network                |
 | subnet             | No       | Integer | 24      | Subnet of the administration network in CIDR notation                  |
 | br0vlan            | No       | Integer |         | Number of the VLAN to configure a VLAN on the br0 bridge               |
+| network_systemdnetworkd_br0_macvlan | No | Bool | false | Put to true to carry the administration IP on a macvlan of the bridge. See below |
+
+#### Workloads on a macvlan of the bridge
+
+A workload whose interface is a macvlan on `br0` (a container of `deploy_containers_cluster` on the station bus, for example) reaches every machine of that network but the one it runs on: Linux passes no frame between a macvlan and the address of its parent. Such a workload cannot read the metrics proxy of its own hypervisor, nor any other service the hypervisor serves on that address.
+
+With `network_systemdnetworkd_br0_macvlan: true`, the bridge keeps no address. The role creates `macvlan0`, a macvlan of `br0` in bridge mode, and gives it `ip_addr` and `gateway_addr`: the hypervisor and the workloads are then macvlans of the same parent, and talk to each other. With `br0vlan`, `macvlan0` is made on the VLAN interface, which is the one that carried the address.
+
+What it changes on a machine:
+
+- The administration IP answers from the MAC address of `macvlan0`, another one than the bridge's. A switch that filters by MAC address, or a DHCP reservation, has to know it.
+- Every macvlan workload of the bridge reaches the services the hypervisor listens to on that address (SSH among them), which the macvlan kept them from until then.
+- The guests and the other ports of the bridge are left as they are.
+
+Give the option to all the machines a workload may run on. On a machine already deployed, the change is applied at the next reboot, or at once with `network_systemdnetworkd_apply_config`: the administration IP is then out of reach for the few seconds systemd-networkd takes to move it, and a cluster machine stays reachable meanwhile by its cluster network.
+
+A `custom_network` that matches `br0` and gives it addresses takes precedence over the file of the role, as it always did: move these addresses to a `custom_network` that matches `macvlan0`.
 
 ## Example Playbook
 
