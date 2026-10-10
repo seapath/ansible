@@ -8,8 +8,8 @@
 # move to the loopback (deploy_prometheus_exporters and cephadm read this very
 # variable to decide where they bind), and this proxy becomes the single
 # endpoint the node exposes on the administration network. One port, one
-# certificate, one TLS policy, instead of six HTTP endpoints in the clear whose
-# support for TLS is uneven and unconfigured.
+# certificate, one TLS policy, instead of seven HTTP endpoints in the clear
+# whose support for TLS is uneven and unconfigured.
 #
 # Each exporter keeps its own path on that port and its own job on the
 # Prometheus side. The proxy forwards bytes: every exposition reaches

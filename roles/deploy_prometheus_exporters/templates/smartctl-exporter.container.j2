@@ -1,0 +1,21 @@
+[Unit]
+Description=Prometheus smartctl Exporter (health of the physical disks)
+After=network.target
+
+[Container]
+Image={{ deploy_prometheus_exporters_smartctl_exporter_image }}
+PublishPort={{ deploy_prometheus_exporters_listen_address }}:9633:9633
+# smartctl sends pass-through commands to the disks themselves: it needs the
+# devices of the host and the right to talk to them.
+PodmanArgs=--privileged
+User=root
+# The disks are asked once per interval and the scrapes are answered from
+# what they said then.
+Exec=--smartctl.interval={{ deploy_prometheus_exporters_smartctl_interval }}
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
