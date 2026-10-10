@@ -20,6 +20,8 @@ exposes.
 - Libvirt socket access for libvirt and SEAPATH exporters (`libvirtd.service` on
   Debian, `virtqemud.service` on Oracle Linux)
 - Pacemaker/Corosync tools on the host for the HA cluster exporter
+- The smartctl exporter runs privileged: it sends SMART commands to the disks
+  of the host
 - `seapath_distro` should be set, typically by calling `detect_seapath_distro`
   before this role
 
@@ -36,6 +38,8 @@ exposes.
 | `deploy_prometheus_exporters_libvirt_exporter_image` | No | String | see defaults | Libvirt exporter container image |
 | `deploy_prometheus_exporters_seapath_exporter_image` | No | String | see defaults | SEAPATH exporter container image |
 | `deploy_prometheus_exporters_ha_cluster_exporter_image` | No | String | see defaults | HA cluster exporter container image |
+| `deploy_prometheus_exporters_smartctl_exporter_image` | No | String | see defaults | smartctl exporter container image |
+| `deploy_prometheus_exporters_smartctl_interval` | No | String | `300s` | How often the smartctl exporter asks the disks, see below |
 | `deploy_prometheus_exporters_manage_services` | No | Boolean | `true` | Start systemd units and restart them on unit file changes |
 | `deploy_prometheus_exporters_lvm_enabled` | No | Boolean | `true` | Write the LVM metrics to the node exporter textfile collector, see below |
 | `deploy_prometheus_exporters_register_essential_services` | No | Boolean | `true` | Publish deployed services for cukinia tests |
@@ -60,6 +64,7 @@ variables.
 | `libvirt-exporter` | 9177 | hypervisors |
 | `seapath-exporter` | 9184 | hypervisors |
 | `ha_cluster_exporter` | 9664 | cluster machines |
+| `smartctl-exporter` | 9633 | cluster machines and hypervisors |
 
 ### Default exporter selection
 
@@ -71,14 +76,15 @@ added from the inventory groups the host belongs to:
 | `node-exporter` | always |
 | `ha_cluster_exporter` | `cluster_machines` |
 | `podman-exporter`, `libvirt-exporter`, `seapath-exporter` | `hypervisors` |
+| `smartctl-exporter` | `cluster_machines` or `hypervisors` |
 
 Examples:
 
 | Host | Groups | Result |
 |---|---|---|
 | Cluster hypervisor | `cluster_machines`, `hypervisors` | all exporters |
-| Observer | `cluster_machines` only | node + ha cluster |
-| Standalone hypervisor | `hypervisors` | node + podman + libvirt + seapath |
+| Observer | `cluster_machines` only | node + ha cluster + smartctl |
+| Standalone hypervisor | `hypervisors` | node + podman + libvirt + seapath + smartctl |
 | VM | `VMs` | node only |
 
 The mapping is defined in `vars/main.yml` as
@@ -90,6 +96,46 @@ The mapping is defined in `vars/main.yml` as
 |---|---|---|---|
 | Debian, CentOS, SLES | `/var/run/libvirt/libvirt-sock-ro` | `/var/run/libvirt/libvirt-sock` | `libvirtd.service` |
 | Oracle Linux | `/run/libvirt/virtqemud-sock` | `/run/libvirt/virtqemud-sock` | `virtqemud.service` |
+
+## Disk health
+
+node_exporter says how full and how busy a disk is, and nothing of its health.
+The [smartctl exporter](https://github.com/prometheus-community/smartctl_exporter)
+runs `smartctl` on every disk it finds, SATA, SAS and NVMe, and serves what
+they answer. It is deployed on the physical machines, the ones of a cluster
+and the hypervisors, and on no VM: a virtual disk has no SMART data.
+
+| Metric | Labels | Meaning |
+|---|---|---|
+| `smartctl_device` | `device`, `model_name`, `serial_number`, `firmware_version`, `interface`, `protocol` | Always 1: what the disk is |
+| `smartctl_device_smart_status` | `device` | 1 when the disk says it is healthy, 0 when it predicts its failure |
+| `smartctl_device_smartctl_exit_status` | `device` | Exit status of `smartctl`, a bit mask: 0 when the disk answered every command |
+| `smartctl_device_temperature` | `device`, `temperature_type` | Temperature in Celsius |
+| `smartctl_device_power_on_seconds`, `smartctl_device_power_cycle_count` | `device` | How long the disk has run, and how many times it was powered |
+| `smartctl_device_capacity_bytes` | `device` | Size of the disk |
+| `smartctl_device_attribute` | `device`, `attribute_id`, `attribute_name`, `attribute_value_type` | Each SMART attribute of an ATA disk: `raw`, `value`, `worst` and `thresh` |
+| `smartctl_device_percentage_used`, `smartctl_device_available_spare`, `smartctl_device_media_errors`, `smartctl_device_critical_warning` | `device` | Wear, spare blocks, media errors and warnings of an NVMe disk |
+| `smartctl_devices` | | Number of disks found |
+
+The attributes of an ATA disk are the vendor's: their names and the meaning
+of their raw value change from one model to another, and `value` against
+`thresh` is what compares across disks. The wear of a SATA SSD is one of
+them (`Media_Wearout_Indicator`, `Wear_Leveling_Count` or
+`Percent_Lifetime_Remain`, depending on the vendor).
+
+The disks are asked every `deploy_prometheus_exporters_smartctl_interval`,
+five minutes unless the inventory says otherwise, and a scrape is answered
+from what they said then: scraping more often sends them no more commands.
+
+Some alerts worth setting:
+
+- `smartctl_device_smart_status == 0`: the disk predicts its own failure.
+- `smartctl_device_attribute{attribute_name="Reallocated_Sector_Ct",attribute_value_type="raw"} > 0`
+  and growing, or `smartctl_device_media_errors > 0` on NVMe.
+- `smartctl_devices` lower than it was: a disk is no longer seen.
+
+A disk behind a hardware RAID controller is seen only when the controller
+passes SMART commands through.
 
 ## LVM metrics
 
@@ -178,6 +224,7 @@ deploy_prometheus_exporters_images:
   libvirt-exporter: registry.local/seapath/prometheus-libvirt-exporter:2.3.1
   seapath-exporter: registry.local/seapath/seapath-exporter:1.0.0
   ha_cluster_exporter: registry.local/seapath/ha-cluster-exporter:0.0.1
+  smartctl-exporter: registry.local/seapath/smartctl-exporter:v0.14.0
 ```
 
 Override a single exporter:

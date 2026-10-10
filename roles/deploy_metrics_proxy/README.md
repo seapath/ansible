@@ -13,10 +13,11 @@ bind.
 
 ## What this is for
 
-A hypervisor of a cluster exposes six HTTP endpoints on its administration
+A hypervisor of a cluster exposes seven HTTP endpoints on its administration
 address, all in the clear and unauthenticated: node-exporter (9100),
 libvirt-exporter (9177), seapath-exporter (9184), podman-exporter (9882),
-ha_cluster_exporter (9664) and the Ceph mgr `prometheus` module (9283). Among
+ha_cluster_exporter (9664), smartctl-exporter (9633) and the Ceph mgr
+`prometheus` module (9283). Among
 other things, 9100 serves the `seapath_rt_*` textfile block: the tuned profile,
 the kernel command line, the RT throttling window, the hugepages per NUMA node,
 SMT, THP, the interrupt affinities reaching the isolated cores. That is the
@@ -41,6 +42,7 @@ exporter wrote it, each exporter stays its own Prometheus job with its own
 | `/metrics/seapath_custom_exporter` | seapath-exporter | 9184 |
 | `/metrics/libvirt_exporter` | libvirt-exporter | 9177 |
 | `/metrics/podman_exporter` | podman-exporter | 9882 |
+| `/metrics/smartctl` | smartctl-exporter | 9633 |
 
 A node serves only the paths of the exporters it runs. Any other path answers
 404, and a path whose exporter is not answering yet answers 502.
@@ -121,7 +123,7 @@ ansible-playbook playbooks/seapath_setup_prometheus_exporters.yaml
 
 ## On the Prometheus side
 
-The six jobs of [PROMETHEUS.md](../seapath_alloc/PROMETHEUS.md) stay,
+The seven jobs of [PROMETHEUS.md](../seapath_alloc/PROMETHEUS.md) stay,
 with their `keep` rules. A `proxy: "true"` label on a target switches that host
 to HTTPS, the path of its exporter and the port of the proxy, and keeps the
 `instance` it had, so nodes move behind the proxy one at a time: see

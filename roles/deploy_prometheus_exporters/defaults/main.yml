@@ -34,21 +34,30 @@ deploy_prometheus_exporters_ha_cluster_exporter_image: >-
   {{ deploy_prometheus_exporters_images.get(
        'ha_cluster_exporter',
        deploy_prometheus_exporters_default_images['ha_cluster_exporter']) }}
+deploy_prometheus_exporters_smartctl_exporter_image: >-
+  {{ deploy_prometheus_exporters_images.get(
+       'smartctl-exporter',
+       deploy_prometheus_exporters_default_images['smartctl-exporter']) }}
+# How often the smartctl exporter asks the disks. What SMART says changes over
+# days: five minutes keeps the commands sent to the disks of a real-time
+# machine few.
+deploy_prometheus_exporters_smartctl_interval: 300s
 
 deploy_prometheus_exporters_exporters: >-
   {{
-    ['node-exporter']
-    + (
-      deploy_prometheus_exporters_group_exporters.cluster_machines
-      if inventory_hostname in groups.get('cluster_machines', [])
-      else []
-    )
-    + (
-      deploy_prometheus_exporters_group_exporters.hypervisors
-      if inventory_hostname in groups.get('hypervisors', [])
-      else []
-    )
-    | unique
+    (
+      ['node-exporter']
+      + (
+        deploy_prometheus_exporters_group_exporters.cluster_machines
+        if inventory_hostname in groups.get('cluster_machines', [])
+        else []
+      )
+      + (
+        deploy_prometheus_exporters_group_exporters.hypervisors
+        if inventory_hostname in groups.get('hypervisors', [])
+        else []
+      )
+    ) | unique
   }}
 
 deploy_prometheus_exporters_enabled: true
