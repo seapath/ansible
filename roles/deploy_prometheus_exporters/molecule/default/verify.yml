@@ -10,6 +10,7 @@
       - libvirt-exporter
       - seapath-exporter
       - ha_cluster_exporter
+      - smartctl-exporter
 
   tasks:
     - name: Check node-exporter quadlet unit exists
