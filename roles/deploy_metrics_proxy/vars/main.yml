@@ -26,6 +26,9 @@ deploy_metrics_proxy_target_map:
   ha_cluster_exporter:
     job: ha
     port: 9664
+  smartctl-exporter:
+    job: smartctl
+    port: 9633
 
 # Mirrors deploy_prometheus_exporters_group_exporters. The two roles are
 # normally applied in the same play, where the exporters role's own list wins;
@@ -33,10 +36,12 @@ deploy_metrics_proxy_target_map:
 deploy_metrics_proxy_group_exporters:
   cluster_machines:
     - ha_cluster_exporter
+    - smartctl-exporter
   hypervisors:
     - podman-exporter
     - libvirt-exporter
     - seapath-exporter
+    - smartctl-exporter
 
 deploy_metrics_proxy_ceph_job: ceph
 deploy_metrics_proxy_ceph_port: 9283
