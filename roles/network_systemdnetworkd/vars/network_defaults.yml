@@ -6,6 +6,29 @@
 network_systemdnetworkd_network_custom: "{{ custom_network | default({}) }}"
 network_systemdnetworkd_netdev_custom: "{{ custom_netdev | default({}) }}"
 
+# What gives the machine its address on the administration network: carried by
+# the bridge (or its VLAN), or by a macvlan on it when
+# network_systemdnetworkd_br0_macvlan is set.
+network_systemdnetworkd_admin_address:
+  - Gateway: "{{ gateway_addr }}"
+  - Address: "{{ ip_addr }}/{{ subnet | default(24) }}"
+network_systemdnetworkd_admin_macvlan:
+  - MACVLAN: "macvlan0"
+network_systemdnetworkd_admin_options: "{{ network_systemdnetworkd_admin_macvlan if network_systemdnetworkd_br0_macvlan else network_systemdnetworkd_admin_address }}"
+
+network_systemdnetworkd_macvlan_netdev:
+  79-macvlan0:
+    - NetDev:
+        - Name: "macvlan0"
+        - Kind: "macvlan"
+    - MACVLAN:
+        - Mode: "bridge"
+network_systemdnetworkd_macvlan_network:
+  79-macvlan0:
+    - Match:
+        - Name: "macvlan0"
+    - Network: "{{ network_systemdnetworkd_admin_address }}"
+
 network_systemdnetworkd_br0vlan_netdev:
   79-br0:
     - NetDev:
@@ -24,9 +47,7 @@ network_systemdnetworkd_br0vlan_network:
   79-br0vlan:
     - Match:
         - Name: "vlan{{ br0vlan | default('') }}"
-    - Network:
-        - Gateway: "{{ gateway_addr }}"
-        - Address: "{{ ip_addr }}/{{ subnet | default(24) }}"
+    - Network: "{{ network_systemdnetworkd_admin_options }}"
   79-br0:
     - Match:
         - Name: "br0"
@@ -52,17 +73,15 @@ network_systemdnetworkd_br0_network:
   79-br0:
     - Match:
         - Name: "br0"
-    - Network:
-        - Gateway: "{{ gateway_addr }}"
-        - Address: "{{ ip_addr }}/{{ subnet | default(24) }}"
+    - Network: "{{ network_systemdnetworkd_admin_options }}"
   79-wired:
     - Match:
         - Name: "{{ network_interface }}"
     - Network:
         - Bridge: "br0"
 
-network_systemdnetworkd_wired_netdev: "{{ network_systemdnetworkd_br0vlan_netdev if br0vlan is defined else network_systemdnetworkd_br0_netdev }}"
-network_systemdnetworkd_wired_network: "{{ network_systemdnetworkd_br0vlan_network if br0vlan is defined else network_systemdnetworkd_br0_network }}"
+network_systemdnetworkd_wired_netdev: "{{ (network_systemdnetworkd_br0vlan_netdev if br0vlan is defined else network_systemdnetworkd_br0_netdev) | combine(network_systemdnetworkd_macvlan_netdev if network_systemdnetworkd_br0_macvlan else {}) }}"
+network_systemdnetworkd_wired_network: "{{ (network_systemdnetworkd_br0vlan_network if br0vlan is defined else network_systemdnetworkd_br0_network) | combine(network_systemdnetworkd_macvlan_network if network_systemdnetworkd_br0_macvlan else {}) }}"
 
 network_systemdnetworkd_netdev_nocluster: "{{ network_systemdnetworkd_wired_netdev | combine(network_systemdnetworkd_netdev_custom) }}"
 network_systemdnetworkd_network_nocluster: "{{ network_systemdnetworkd_wired_network | combine(network_systemdnetworkd_network_custom) }}"
