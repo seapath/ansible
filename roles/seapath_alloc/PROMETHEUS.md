@@ -40,6 +40,7 @@ what the `file_sd_configs` plus static labels pattern below is for.
 | `seapath_custom_exporter` | `seapath-exporter` | 9184 | `deploy_prometheus_exporters` | `hypervisors` |
 | `libvirt_exporter` | `prometheus-libvirt-exporter` | 9177 | `deploy_prometheus_exporters` | `hypervisors` |
 | `podman_exporter` | `prometheus-podman-exporter` | 9882 | `deploy_prometheus_exporters` | `hypervisors` |
+| `smartctl` | `smartctl_exporter` | 9633 | `deploy_prometheus_exporters` | the physical machines: `cluster_machines` and `hypervisors` |
 
 The `seapath-alloc` metrics (`seapath_alloc_*`) are not a separate job: they
 are written as a Prometheus textfile
@@ -191,6 +192,19 @@ scrape_configs:
         regex: "(.+)"
         target_label: __address__
         replacement: "${1}:9882"
+
+  - job_name: smartctl
+    file_sd_configs:
+      - files: ["/etc/prometheus/targets/*.yml"]
+    relabel_configs:
+      - source_labels: [cluster, seapath]
+        separator: ";"
+        regex: '.+;.*|.*;true'
+        action: keep
+      - source_labels: [__address__]
+        regex: "(.+)"
+        target_label: __address__
+        replacement: "${1}:9633"
 ```
 
 ### Scrape filtering
@@ -212,6 +226,9 @@ other projects) on hosts that have nothing to do with SEAPATH at all.
   selects the right hosts. The `seapath: "true"` fallback exists for
   standalone machines, which carry no `cluster` label; without it they would
   never be scraped by these three jobs.
+- `smartctl` keeps on `cluster` or `seapath: "true"` too, and that selects
+  exactly the machines it runs on: every machine of a cluster, observers
+  included, and the standalone hypervisors.
 
 **Caveat, 2-hypervisor + 1-observer clusters:** an observer is in
 `cluster_machines` (so it correctly gets `cluster`/`ha` scraping) but not in
@@ -246,7 +263,7 @@ optional convenience, not a requirement.
 ## Behind the per-node metrics proxy
 
 Everything above assumes Prometheus reaches each exporter directly, which
-means six HTTP endpoints per hypervisor, in the clear, on the administration
+means seven HTTP endpoints per hypervisor, in the clear, on the administration
 network. The `deploy_metrics_proxy` role replaces that with a single TLS
 endpoint per node: an nginx serves each exporter on its own path of port 9464,
 `/metrics/<job>`, and the exporters move to `127.0.0.1` (see
@@ -264,7 +281,7 @@ which hosts are behind the proxy:
   labels: { project: siteA, cluster: siteA, nodename: siteA-node2 }
 ```
 
-The six jobs above stay, `keep` rules included, and route each target from
+The seven jobs above stay, `keep` rules included, and route each target from
 that label. A `replace` rule whose regex does not match leaves the target
 alone, so three rules shared by all jobs switch a tagged host to HTTPS, the
 path of the job and the proxy port, and the last rule gives the other hosts
@@ -316,11 +333,12 @@ scrape_configs:
         action: labeldrop
 ```
 
-The other five jobs take the same rules and change only the port, in the
+The other six jobs take the same rules and change only the port, in the
 `instance` rule and the last `__address__` rule, to the one of the
 [exporter table](#exporters-and-jobs). The path comes from the job name
 (`/metrics/ceph`, `/metrics/ha`, `/metrics/seapath_custom_exporter`,
-`/metrics/libvirt_exporter`, `/metrics/podman_exporter`), so the three
+`/metrics/libvirt_exporter`, `/metrics/podman_exporter`,
+`/metrics/smartctl`), so the three
 proxy rules are identical in every job and fit a YAML anchor. The `instance`
 rule is what keeps the single-node dashboard working, since every job of a
 proxied host reaches the same address and port. The last `__address__` rule
