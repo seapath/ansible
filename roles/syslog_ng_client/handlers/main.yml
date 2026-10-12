@@ -6,6 +6,6 @@
 - name: Restart syslog-ng
   become: true
   ansible.builtin.systemd:
-    name: syslog-ng
+    name: "{{ syslog_ng_client_syslog_service }}"
     state: restarted
     enabled: true
