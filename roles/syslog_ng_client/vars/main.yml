@@ -1,0 +1,5 @@
+# Copyright (C) 2026 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+---
+
+syslog_ng_client_syslog_service: "syslog-ng{{ '@' + syslog_ng_client_service_instance if syslog_ng_client_service_instance is defined else '' }}"

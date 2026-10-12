@@ -12,12 +12,13 @@ If not, TLS encryption is deactivated.
 
 ## Role Variables
 
-| Variable             | Required | Type        | Default | Comments                                                           |
-|----------------------|----------|-------------|---------|--------------------------------------------------------------------|
-| syslog_conf_template |  No      | String      | Config template provided by the role | Local path to the syslog-ng configuration template.|
-| syslog_tls_ca        |  No      | String      |         | Syslog TLS public key                                              |
-| syslog_tls_key       |  No      | String      |         | Syslog TLS private key                                             |
-| syslog_tls_server_ca |  No      | String      |         | Syslog TLS CA                                                      |
+| Variable                | Required | Type        | Default | Comments                                                           |
+|-------------------------|----------|-------------|---------|--------------------------------------------------------------------|
+| syslog_conf_template    |  No      | String      | Config template provided by the role | Local path to the syslog-ng configuration template.|
+| syslog_ng_client_service_instance | No | String  |         | Service template instance, if one.                                 |
+| syslog_tls_ca           |  No      | String      |         | Syslog TLS public key                                              |
+| syslog_tls_key          |  No      | String      |         | Syslog TLS private key                                             |
+| syslog_tls_server_ca    |  No      | String      |         | Syslog TLS CA                                                      |
 
 ## Role's configuration template variables
 
