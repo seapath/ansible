@@ -1,0 +1,9 @@
+# Copyright (C) 2024-2025 Savoir-faire Linux, Inc.
+# SPDX-License-Identifier: Apache-2.0
+#
+---
+
+- name: Restart libvirtd
+  ansible.builtin.systemd:
+    name: libvirtd
+    state: restarted
