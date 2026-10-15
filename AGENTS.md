@@ -31,6 +31,7 @@
 - **Playbook tests only**: `tox -e molecule-playbooks`  (runs from `playbooks/` dir)
 - **Single role**: `cd roles/<role> && molecule test --all`
 - **Backend**: Podman. Molecule tests require podman installed.
+- **PR requirement**: Changes to Ansible roles or playbooks must include or update relevant Molecule tests. Docs-only/non-behavior changes are exempt; explain in the PR if a test cannot reasonably be added.
 
 ## CI Pipeline (PRs to `main`)
 
