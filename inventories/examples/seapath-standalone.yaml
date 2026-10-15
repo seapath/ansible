@@ -49,7 +49,8 @@ hypervisors:
   hosts:
     seapath-machine:
   vars:
-    isolcpus: "4-N" # List of CPUs to isolate (Debian only). TODO
+    # Select CPUs to isolate. recommended: CPU 4 through the highest CPU ID available on the host.
+    isolcpus: "4-<MAX_CPU_ID>" # TODO
 
 # Empty groups to prevent warnings
 cluster_machines:
