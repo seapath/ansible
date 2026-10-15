@@ -66,7 +66,8 @@ hypervisors:
     node2:
     node3:
   vars:
-    isolcpus: "4-N" # The list of CPUs to isolate. TODO
+    # Select CPUs to isolate. recommended: CPU 4 through the highest CPU ID available on the host.
+    isolcpus: "4-<MAX_CPU_ID>" # TODO
     livemigration_user: libvirtadmin
 
 # Three hypervisors setup. The observer group is empty.
