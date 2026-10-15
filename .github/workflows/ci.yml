@@ -7,6 +7,10 @@ on:
   pull_request:
     types: [opened, reopened, synchronize]
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - '**.adoc'
+      - 'inventories/**'
   workflow_dispatch:
 
 permissions:
