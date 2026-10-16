@@ -1,0 +1,12 @@
+---
+- name: Supply deterministic cyclictest output
+  hosts: all
+  become: true
+  tasks:
+    - name: Install fake cyclictest on Molecule hosts
+      ansible.builtin.copy:
+        dest: /usr/local/bin/cyclictest
+        mode: "0755"
+        content: |
+          #!/bin/sh
+          printf 'Max Latencies: 5\n'

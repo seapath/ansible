@@ -1,0 +1,17 @@
+---
+- name: Verify hypervisor and VM results were fetched
+  hosts: localhost
+  gather_facts: false
+  vars:
+    result_folder: "{{ lookup('ansible.builtin.env', 'MOLECULE_EPHEMERAL_DIRECTORY') }}/results"
+  tasks:
+    - name: Read cyclictest results
+      ansible.builtin.set_fact:
+        hypervisor_result: "{{ lookup('ansible.builtin.file', result_folder ~ '/cyclictest_cyclictest-hypervisor.txt') }}"
+        vm_result: "{{ lookup('ansible.builtin.file', result_folder ~ '/cyclictest_cyclictest-vm.txt') }}"
+
+    - name: Assert both hosts were measured
+      ansible.builtin.assert:
+        that:
+          - "'Max Latencies: 5' in hypervisor_result"
+          - "'Max Latencies: 5' in vm_result"

@@ -1,0 +1,42 @@
+---
+dependency:
+  name: galaxy
+
+driver:
+  name: podman
+
+platforms:
+  - name: cyclictest-hypervisor
+    image: docker.io/geerlingguy/docker-debian13-ansible:latest
+    groups:
+      - standalone_machine
+  - name: cyclictest-vm
+    image: docker.io/geerlingguy/docker-debian13-ansible:latest
+    groups:
+      - VMs
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      roles_path: "${MOLECULE_PROJECT_DIRECTORY}/../roles"
+  playbooks:
+    prepare: prepare.yml
+    converge: converge.yml
+    verify: verify.yml
+
+scenario:
+  test_sequence:
+    - dependency
+    - cleanup
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+    - verify
+    - cleanup
+    - destroy
+
+verifier:
+  name: ansible

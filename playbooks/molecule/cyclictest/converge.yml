@@ -1,0 +1,6 @@
+---
+- name: Run cyclictest on hypervisors and VMs
+  ansible.builtin.import_playbook: ../../test_run_cyclictest.yaml
+  vars:
+    cyclictest_duration: 1
+    cyclictest_result_folder: "{{ lookup('ansible.builtin.env', 'MOLECULE_EPHEMERAL_DIRECTORY') }}/results"
