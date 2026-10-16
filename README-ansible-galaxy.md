@@ -207,13 +207,13 @@ The other playbooks can be called alone to re-configure a specific part, when yo
 ## Test
 
 - `test_deploy_cukinia_tests.yaml`: Deploy the tests on all machine (Debian and SLES, on Yocto the tests are natively present)
-- `test_run_cukinia.yaml`: Run functional tests and export a CSV.
+- `test_run_cukinia.yaml`: Run functional tests and export JUnit XML results.
+- `test_run_cyclictest.yaml`: Measure latency and fetch cyclictest results.
 
 ## CI
 
 CI playbooks. These should not be used directly. They should be moved into a different collection in future releases.
 
-- `ci_all_machines_tests.yaml`:
 - `ci_centos_test.yaml`
 - `ci_configure.yaml`
 - `ci_prepare_publisher.yaml`

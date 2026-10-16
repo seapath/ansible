@@ -27,7 +27,7 @@ PASS
 
 {% if hypervisors %}
 = Hypervisor
-{% for hyp, hyp_data in hypervisors.items() if not hyp_data.skip_cyclictest %}
+{% for hyp, hyp_data in hypervisors.items() if hyp_data.run_cyclictest %}
 == {{ hyp }}
 image::cyclictest_{{ hyp }}.png[]
 {{ cyclictest_table(env["LATENCY_HYP_" + hyp] | int, env["LATENCY_MAXIMAL_HYP"] | int) }}
@@ -36,7 +36,7 @@ image::cyclictest_{{ hyp }}.png[]
 
 {% if vms %}
 = Virtual Machines
-{% for vm, vm_data in vms.items() if vm_data.rt and not vm_data.skip_cyclictest %}
+{% for vm, vm_data in vms.items() if vm_data.rt and vm_data.run_cyclictest %}
 == {{ vm }}
 image::cyclictest_{{ vm }}.png[]
 {{ cyclictest_table(env["LATENCY_VM_" + vm] | int, env["LATENCY_MAXIMAL_VM"] | int) }}

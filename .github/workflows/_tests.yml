@@ -65,13 +65,6 @@ on:
           Name of the folder containing the compliance matrices .csv files.
           If empty, no matrices will be created.
           e.g. 'yocto'
-      skip_cyclictest:
-        type: boolean
-        default: false
-        description: |
-          Don't expect the test playbooks to run Cyclictests. Can be overriden
-          per host with the 'skip_cyclictest' Ansible variable.
-
 env:
   # TODO make this better
   INVENTORY_PUBLISHER: "inventories_private/ci_publisher.yaml"
@@ -137,13 +130,15 @@ jobs:
 
           echo "::endgroup::"
 
+          # Test playbook selection, not inventory flags, determines which
+          # hosts are expected to produce cyclictest results.
           # Create a JSON object with data about the hypervisors
           hyp=$(cqfd exec ansible-inventory --list \
             ${{ inputs.hyp-inventories }} \
             --limit "standalone_machine,cluster_machines" \
             2> /dev/null \
             | jq -c '._meta.hostvars | map_values({
-                skip_cyclictest: (.skip_cyclictest // ${{ inputs.skip_cyclictest }}),
+                run_cyclictest: ${{ contains(inputs.hyp-test-playbooks, 'playbooks/test_run_cyclictest.yaml') }},
             })'
           )
           hyp_pretty_list=$(echo "$hyp" | jq -r 'keys | join(", ")')
@@ -197,7 +192,7 @@ jobs:
             echo "FAILED=true" >> "$GITHUB_ENV"
           fi
 
-          for hyp in $(echo $INVENTORY_HYP | jq -r 'map_values(select(.skip_cyclictest == false)) | keys | join(" ")'); do
+          for hyp in $(echo $INVENTORY_HYP | jq -r 'map_values(select(.run_cyclictest)) | keys | join(" ")'); do
             file="${{ env.RESULTS_FOLDER }}/cyclictest_${hyp}.txt"
             if [[ -f "$file" ]]; then
               max_latency=$(grep "Max Latencies" "$file" | tr " " "\n" | sort -n | tail -1 | sed s/^0*//)
@@ -251,7 +246,7 @@ jobs:
             2> /dev/null \
             | jq -c '. as $root | ._meta.hostvars | with_entries(.value = {
                 rt: (.value.vm_features // []) | contains(["rt"]),
-                skip_cyclictest: (.value.skip_cyclictest // ${{ inputs.skip_cyclictest }}),
+                run_cyclictest: ${{ contains(inputs.vms-test-playbooks, 'playbooks/test_run_cyclictest.yaml') }},
                 sv_subscriber: (.key as $key | ($root.subscriber.hosts // []) | any(select(. == $key))), # works only if members of group subscriber are not transitive
             })'
           )
@@ -295,7 +290,7 @@ jobs:
             fi
           done
 
-          for vm in $(echo $INVENTORY_VMS | jq -r 'map_values(select(.skip_cyclictest == false and .rt == true)) | keys | join(" ")'); do
+          for vm in $(echo $INVENTORY_VMS | jq -r 'map_values(select(.run_cyclictest and .rt)) | keys | join(" ")'); do
             file="${{ env.RESULTS_FOLDER }}/cyclictest_${vm}.txt"
             if [[ -f "$file" ]]; then
               max_latency=$(grep "Max Latencies" "$file" | tr " " "\n" | sort -n | tail -1 | sed s/^0*//)
@@ -423,8 +418,8 @@ jobs:
           echo "$INVENTORY_HYP" "$INVENTORY_VMS" | jq --slurp '{hypervisors: .[0], vms: (.[1] // {})}' > ${{ env.RESULTS_FOLDER }}/data.json
 
           echo "DO_CYCLIC_TESTS=$(jq \
-            'any(.vms[]; .skip_cyclictest == false and .rt == true)
-            or any(.hypervisors[]; .skip_cyclictest == false)'\
+            'any(.vms[]; .run_cyclictest and .rt)
+            or any(.hypervisors[]; .run_cyclictest)'\
             ${{ env.RESULTS_FOLDER }}/data.json
           )" >> "$GITHUB_ENV"
 
@@ -432,7 +427,7 @@ jobs:
         if: "${{ env.DO_CYCLIC_TESTS == 'true' }}"
         working-directory: test-report-pdf
         run: |
-          for hyp in $(echo $INVENTORY_HYP | jq -r 'map_values(select(.skip_cyclictest == false)) | keys | join(" ")'); do
+          for hyp in $(echo $INVENTORY_HYP | jq -r 'map_values(select(.run_cyclictest)) | keys | join(" ")'); do
             echo "Generating Cyclictest plot for $hyp"
 
             ../ansible/.github/test-report/cyclictest_plot.sh \
@@ -441,7 +436,7 @@ jobs:
               -l "${{ env.LATENCY_MAXIMAL_HYP }}"
           done
 
-          for vm in $(echo $INVENTORY_VMS | jq -r 'map_values(select(.skip_cyclictest == false and .rt == true)) | keys | join(" ")'); do
+          for vm in $(echo $INVENTORY_VMS | jq -r 'map_values(select(.run_cyclictest and .rt)) | keys | join(" ")'); do
             echo "Generating Cyclictest plot for $vm"
 
             ../ansible/.github/test-report/cyclictest_plot.sh \

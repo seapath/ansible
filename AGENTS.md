@@ -45,6 +45,14 @@ Integration tests run on self-hosted runners and use the external `seapath/ci` r
 
 - **Main setup playbook**: `playbooks/seapath_setup_main.yaml`
 - **Debian hardening**: `playbooks/seapath_setup_hardening.yaml`
+- **CI functional tests**: `playbooks/test_run_cukinia.yaml` runs Cukinia on
+  hypervisors and VMs; `playbooks/ci_test.yaml` also deploys tests for Debian
+  and OracleLinux.
+- **CI latency tests**: `playbooks/test_run_cyclictest.yaml` runs separately on
+  hypervisors and VMs. `.github/workflows/ci-yocto.yml` selects it for Welotec,
+  not AAEON; SLES runs it for hypervisors and VMs. Debian and OracleLinux remain
+  Cukinia-only.
+  flags for skipping latency tests; workflow playbook selection controls reporting.
 - **Example inventories**: `inventories/examples/` (cluster, standalone, vm-deployment, ovs)
 - **Roles**: `roles/` — most have a `README`. Some include `molecule/` for unit tests.
 - **Custom modules**: `library/`
