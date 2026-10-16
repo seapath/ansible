@@ -34,10 +34,12 @@ jobs:
         playbooks/seapath_setup_hardening.yaml
       hyp-test-playbooks: >-
         playbooks/test_deploy_cukinia_tests.yaml
-        playbooks/ci_all_machines_tests.yaml
+        playbooks/test_run_cukinia.yaml
+        playbooks/test_run_cyclictest.yaml
         playbooks/test_run_oscap_tests.yaml
       vms-inventories: ${{ matrix.vms-inventories }}
       vms-deploy-playbooks: >-
         playbooks/ci_vms_standalone_ptp.yaml
       vms-test-playbooks: >-
-        playbooks/ci_all_machines_tests.yaml
+        playbooks/test_run_cukinia.yaml
+        playbooks/test_run_cyclictest.yaml

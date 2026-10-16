@@ -30,9 +30,14 @@ jobs:
               --inventory inventories_private/ci_yocto_standalone.yaml
             vms-inventories: >-
               --inventory inventories_private/ci_vms.yaml
+            hyp-test-playbooks: >-
+              playbooks/test_run_cukinia.yaml
+              playbooks/test_run_cyclictest.yaml
           - name: Aaeon ARM I.MX8P-2G
             hyp-inventories: >-
               --inventory inventories_private/ci_yocto_standalone_aaeon.yaml
+            hyp-test-playbooks: >-
+              playbooks/test_run_cukinia.yaml
     uses: ./.github/workflows/_tests.yml
     name: Run tests on ${{ matrix.name }}
     with:
@@ -44,10 +49,10 @@ jobs:
       hyp-configure-playbooks: >-
         playbooks/ci_standalone_setup.yaml
         playbooks/ci_prepare_publisher.yaml
-      hyp-test-playbooks: >-
-        playbooks/ci_all_machines_tests.yaml
+      hyp-test-playbooks: ${{ matrix.hyp-test-playbooks }}
       vms-inventories: ${{ matrix.vms-inventories }}
       vms-deploy-playbooks: >-
         playbooks/ci_vms_standalone_ptp.yaml
       vms-test-playbooks: >-
-        playbooks/ci_all_machines_tests.yaml
+        playbooks/test_run_cukinia.yaml
+        playbooks/test_run_cyclictest.yaml

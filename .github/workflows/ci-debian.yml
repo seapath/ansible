@@ -40,7 +40,6 @@ jobs:
       runner-label: ${{ matrix.runner-label }}
       inventories-repository: "git@github.com:insatomcat/seapath_inventories_ci.git"
       ansible_ssh_keyfile: "inventories_private/ci_rsa"
-      skip_cyclictest: true # the inventories don't have the expected skip_cyclictest variables
       hyp-inventories: ${{ matrix.hyp-inventories }}
       hyp-configure-playbooks: >-
         playbooks/ci_configure.yaml
