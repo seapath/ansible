@@ -4,12 +4,20 @@
 # Disable the TLS and TCP socket
 listen_tls = 0
 listen_tcp = 0
-# Disable the Unix socket access for other
+
+{% if configure_libvirt_allow_non_root_libvirt_socket_access %}
+# Non-root access to the libvirt socket is explicitly enabled. Members of the
+# "libvirt" group can read and write the socket, which is root-equivalent.
 unix_sock_ro_perms = "0770"
 unix_sock_rw_perms = "0770"
-
-# Allow members of the libvirt group to access the socket
 unix_sock_group = "libvirt"
+{% else %}
+# Non-root access to the libvirt socket is disabled (default): only root can
+# read and write the socket.
+unix_sock_ro_perms = "0700"
+unix_sock_rw_perms = "0700"
+unix_sock_group = "root"
+{% endif %}
 
 # Derive the host UUID from /etc/machine-id for a stable identity across
 # libvirtd restarts without depending on dmidecode or inventory-computed values.

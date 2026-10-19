@@ -2,4 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-configure_libvirt_allow_non_root_libvirt_socket_access: true
+# Allow non-root users in the libvirt group to access the libvirt socket.
+# The read/write libvirt socket is root-equivalent, so this is opt-in and
+# should only be enabled when a non-root account really needs local libvirt
+# access (for example a non-root livemigration_user).
+configure_libvirt_allow_non_root_libvirt_socket_access: false
