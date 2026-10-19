@@ -56,8 +56,9 @@ all:
     # Hardening Debian specific
     # On Debian you can defined the Grub (Bootloader) protected password here
     # Use grub2-mkpasswd-pbkdf2 -c 65536 / grub-mkpasswd-pbkdf2 -c 65536 to encoded it.
-    # Default password is seapath
-    grub_password: "grub.pbkdf2.sha512.65536.5F25EF26A45C4B6C46CD7EE718E12B1E1D9A3FDDA519CE8779BAA861082BF13E5F63DEAF247CBA8B7DCC90985885A85DEBC38482901BFF391315219FAE1D8E64.47AE5887490718AF95C518A900675E60DE36336688814E7F1485E986814D070ED9CD392D1B1C4D21EAD81A084D570653B0D87A4B5189F666AFCEA93B0DAC27AF"
+    # TODO: the value below is a placeholder. Generate your own hash with the
+    # command above and replace it before deploying; never ship a shared default.
+    grub_password: "grub.pbkdf2.sha512.65536.REPLACE_WITH_GENERATED_SALT.REPLACE_WITH_GENERATED_HASH"
 
 # Three hypervisors setup. All machines are part of the hypervisor group.
 hypervisors:
