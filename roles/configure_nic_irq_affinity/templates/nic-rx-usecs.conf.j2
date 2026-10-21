@@ -1,0 +1,6 @@
+# {{ ansible_managed }}
+{% for item in nics_rx_usecs %}
+{% for nic, usecs in item.items() %}
+{{ nic }} {{ usecs }}
+{% endfor %}
+{% endfor %}

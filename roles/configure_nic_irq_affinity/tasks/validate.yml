@@ -5,5 +5,12 @@
 - name: Verify nics_affinity variable
   ansible.builtin.assert:
     that:
-      - nics_affinity is not none
-    fail_msg: "nics_affinity must be defined to use this role"
+      - nics_affinity is not none or nics_rx_usecs | length > 0
+    fail_msg: "nics_affinity or nics_rx_usecs must be defined to use this role"
+
+- name: Verify nics_rx_usecs variable
+  ansible.builtin.assert:
+    that:
+      - item.value | string is match('^[0-9]+$')
+    fail_msg: "nics_rx_usecs: {{ item.key }} wants a whole number of microseconds, not {{ item.value }}"
+  loop: "{{ nics_rx_usecs | map('dict2items') | flatten }}"
