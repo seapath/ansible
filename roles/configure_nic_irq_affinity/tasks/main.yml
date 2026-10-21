@@ -39,6 +39,13 @@
     mode: "0644"
   notify: Restart NIC IRQ affinity service
 
+- name: Deploy NIC interrupt coalescing config
+  ansible.builtin.template:
+    src: nic-rx-usecs.conf.j2
+    dest: /etc/nic-rx-usecs.conf
+    mode: "0644"
+  notify: Restart NIC IRQ affinity service
+
 - name: Deploy IRQ affinity service
   ansible.builtin.copy:
     src: nic-irq-affinity.service

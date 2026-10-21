@@ -1,5 +1,5 @@
 # {{ ansible_managed }}
-{% for item in nics_affinity %}
+{% for item in nics_affinity or [] %}
 {% for nic, cpu in item.items() %}
 {{ nic }} {{ cpu }}
 {% endfor %}
