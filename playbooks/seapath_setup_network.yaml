@@ -86,7 +86,7 @@
   become: true
   roles:
     - role: configure_nic_irq_affinity
-      when: nics_affinity is not none
+      when: nics_affinity is not none or nics_rx_usecs | default([]) | length > 0
 
 - name: Restart machine if needed
   hosts:

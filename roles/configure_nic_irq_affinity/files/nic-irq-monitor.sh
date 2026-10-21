@@ -18,6 +18,7 @@
 # RTM_NEWLINK events).
 
 CONF=/etc/nic-irq-affinity.conf
+COALESCE=/etc/nic-rx-usecs.conf
 
 # Pin every IRQ owned by interface $1 to CPU list $2.
 #
@@ -82,13 +83,38 @@ apply() {
     logger -t nic-irq-monitor "pinned $iface IRQs to cpu $cpu"
 }
 
+# Set the receive interrupt coalescing of interface $1 when the config names
+# it. Config format: one "<iface> <usecs>" line per interface.
+#
+# The driver's default may hold a frame back to batch interrupts: igb's
+# rx-usecs 3, its "dynamic conservative" mode, lets an interface take one
+# interrupt every 50 us or so, and the frames of a burst of Sampled Values
+# after the first wait for it. rx-usecs 0 interrupts for every frame. The
+# value survives a link down and up, but a driver reload puts the default
+# back, after which the link comes up again and it is applied once more.
+coalesce() {
+    iface=$1
+    usecs=$(grep "^${iface} " "$COALESCE" 2>/dev/null | cut -d' ' -f2)
+    [ -n "$usecs" ] || return
+    current=$(ethtool -c "$iface" 2>/dev/null | sed -n 's/^rx-usecs:[[:space:]]*//p')
+    [ "$current" = "$usecs" ] && return
+    if ethtool -C "$iface" rx-usecs "$usecs" 2>/dev/null; then
+        logger -t nic-irq-monitor "set $iface rx-usecs to $usecs (was $current)"
+    else
+        logger -t nic-irq-monitor "could not set $iface rx-usecs to $usecs"
+    fi
+}
+
+# The interfaces either config names.
+managed() {
+    cat "$CONF" "$COALESCE" 2>/dev/null | grep -v -e '^#' -e '^$' | cut -d' ' -f1 | sort -u
+}
+
 # Startup pass: apply to managed interfaces that are already up, so a manual
 # service restart re-pins them without waiting for the next link event.
-while IFS= read -r line; do
-    case "$line" in '#'*|'') continue ;; esac
-    iface=$(printf '%s' "$line" | cut -d' ' -f1)
-    ip link show "$iface" 2>/dev/null | grep -qE '[<,]UP[,>]' && apply "$iface"
-done < "$CONF"
+for iface in $(managed); do
+    ip link show "$iface" 2>/dev/null | grep -qE '[<,]UP[,>]' && { apply "$iface"; coalesce "$iface"; }
+done
 
 # Event loop: re-apply on every link UP event. ip monitor link blocks on the
 # netlink socket and only emits a line when the link state actually changes,
@@ -99,8 +125,8 @@ ip monitor link | while IFS= read -r line; do
         [0-9]*:\ *:\ \<*)
             iface=$(printf '%s' "$line" | cut -d' ' -f2 | tr -d ':')
             flags=$(printf '%s' "$line" | grep -o '<[^>]*>')
-            grep -q "^${iface} " "$CONF" 2>/dev/null || continue
-            printf '%s' "$flags" | grep -qE '[<,]UP[,>]' && apply "$iface"
+            cat "$CONF" "$COALESCE" 2>/dev/null | grep -q "^${iface} " || continue
+            printf '%s' "$flags" | grep -qE '[<,]UP[,>]' && { apply "$iface"; coalesce "$iface"; }
             ;;
     esac
 done

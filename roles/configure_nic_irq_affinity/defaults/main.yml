@@ -3,3 +3,5 @@
 
 ---
 nics_affinity: # noqa: var-naming[no-role-prefix]
+# Each NIC's interrupt coalescing on receive, in microseconds (ethtool -C rx-usecs), e.g. - "eth0": 0
+nics_rx_usecs: [] # noqa: var-naming[no-role-prefix]
