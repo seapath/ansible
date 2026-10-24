@@ -163,6 +163,69 @@ Target Podman 5.4 (SEAPATH Debian 13), with systemd 257.
    and what the application must bear is in "Updates without interruption"
    below.
 
+### Running as an ordinary user
+
+An image whose `USER` is an ordinary user runs as that user on the node:
+the containers are rootful and have no user namespace, so the uid in the
+container is the uid on the host. SEAPATH runs such an image as it is; what
+changes is in the image and its quadlets.
+
+* **The user.** One fixed uid and gid per application, in 65536-99999: Debian
+  allocates none of them to an account of the host, and the subordinate ids
+  of `/etc/subuid` start at 100000. Never an uid of 1000 and above, which
+  would be an account of the node. The image creates it and names it by
+  number, so that the quadlets can name the same:
+
+  ```dockerfile
+  RUN groupadd -g 65630 gateway \
+   && useradd -l -M -d /nonexistent -s /usr/sbin/nologin -u 65630 -g gateway gateway
+  USER 65630:65630
+  ```
+
+* **Every capability is declared.** Podman's default capabilities (among them
+  `CAP_NET_BIND_SERVICE`, `CAP_CHOWN`, `CAP_DAC_OVERRIDE`, `CAP_SETUID`,
+  `CAP_KILL`) are given to root only: an ordinary user starts with none. A
+  capability named by `AddCapability=` is given to the user, in its ambient
+  set, with no `setcap` on the binary. So the quadlet names each one the
+  application uses, including those it had for free as root:
+
+  | The application | Needs |
+  |---|---|
+  | listens on a port under 1024 (MMS on 102) | `CAP_NET_BIND_SERVICE` |
+  | opens a raw socket (SV, GOOSE, `AF_PACKET`) | `CAP_NET_RAW` |
+  | gives its threads a real-time policy (`APP 0`, rule 5) | `CAP_SYS_NICE` |
+  | locks its memory (`mlockall`) | `CAP_IPC_LOCK` |
+
+  Put them in the container's quadlet, never in the pod's: the stand-in of a
+  container handed over is made from the container's quadlet alone (see
+  "Updates without interruption"). For the same reason, lowering
+  `net.ipv4.ip_unprivileged_port_start`, which in a pod is a sysctl of the
+  pod, is no substitute for `CAP_NET_BIND_SERVICE`.
+
+* **The state belongs to the user.** SEAPATH creates the RBD image with a
+  filesystem owned by root, and the image may come back from a snapshot or
+  from a version that ran as root. The container's quadlet gives the volume to
+  its user each time it starts, changing only what differs:
+
+  ```ini
+  [Service]
+  ExecStartPre=find /mnt/rbd/{{ container.name }} -path /mnt/rbd/{{ container.name }}/lost+found -prune -o ! ( -user 65630 -group 65630 ) -exec chown -h 65630:65630 {} +
+  ```
+
+  It runs on the host, as root, once the image is mounted, and after the
+  `ExecStartPre=/usr/bin/mkdir` of rule 4 when it follows it. The containers
+  of a workload that write its volume run with the same uid. The
+  `Volume=...:U` of quadlet is not used: it changes the owner of the whole
+  volume at every start.
+
+* **The configuration is readable.** SEAPATH writes the files of
+  `/etc/<application>` owned by root, readable by all (`0644`): an ordinary
+  user reads them as they are. Secrets, kept under `/var/lib/<application>`
+  (see "Configuration"), are the user's like the rest of the state.
+
+The real-time placement (`seapath-container-pin`) is done from the host and
+works the same for any user.
+
 ### Updates without interruption
 
 Applied by a restart, a new version stops the whole workload for several
@@ -424,6 +487,9 @@ cluster_containers:
   workload runs, stops cleanly, and leaves
   no network behind (`podman network ls`).
 * Started again with the state the previous version wrote, it reads it.
+* An image with an ordinary `USER` also runs with an `/mnt/rbd/<name>/`
+  owned by root, and the `AddCapability=` of its quadlets name all it uses:
+  `podman exec <container> grep Cap /proc/1/status` shows them in `CapEff`.
 * With `update_steps`: each `handover` and `network` is a quadlet of the
   entry, each `bridge`, `port` and `settle` key is in `values.yaml`; a second
   copy of a container handed over, started out of the pod while the first
