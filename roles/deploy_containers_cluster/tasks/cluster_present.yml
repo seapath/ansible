@@ -7,7 +7,7 @@
 # failure (Ceph unreachable) must not be taken for a missing image.
 - name: "Look for the RBD image of {{ _name }}"
   ansible.builtin.command:
-    cmd: rbd info rbd/{{ _name }}
+    cmd: rbd info rbd/{{ _name }} --format json
   register: deploy_containers_cluster_rbd_info
   changed_when: false
   failed_when: deploy_containers_cluster_rbd_info.rc not in [0, 2]
@@ -72,6 +72,66 @@
           {{ _name }}: filling the RBD image failed on
           {{ ansible_failed_task.name }}: {{ ansible_failed_result.msg | default(ansible_failed_result) }}.
           The image was removed, run the playbook again once fixed.
+
+# The image follows its entry upwards: a size larger than the image is given
+# to rbd resize, and the node that has it mounted grows its filesystem online.
+# A node that mounts it later grows it then (seapath-rbd-mount), which also
+# finishes a growth this run could not. An image is never shrunk: ext4 cannot
+# shrink while mounted, and what the workload wrote past the new end would be
+# lost. rbd reads a size with no suffix as MiB and its suffixes as powers of
+# 1024, and so does the comparison.
+- name: "Grow the RBD image of {{ _name }}"
+  when:
+    - container.rbd is defined
+    - deploy_containers_cluster_rbd_info.rc == 0
+  vars:
+    _size: "{{ container.rbd.size | string | trim }}"
+    _number: "{{ _size | regex_replace('^([0-9]+(\\.[0-9]+)?).*$', '\\1') }}"
+    _unit: "{{ (_size | regex_replace('^[0-9.]+\\s*', '') | upper)[:1] or 'M' }}"
+    _wanted: "{{ (_number | float * 1024 ** ({'K': 1, 'M': 2, 'G': 3, 'T': 4, 'P': 5}[_unit] | default(2))) | int }}"
+    _current: "{{ (deploy_containers_cluster_rbd_info.stdout | from_json).size | int }}"
+  block:
+    - name: "Check that this run does not shrink the RBD image of {{ _name }}"
+      ansible.builtin.assert:
+        that: _wanted | int >= _current | int
+        fail_msg: >-
+          {{ _name }}: rbd.size is {{ _size }}, {{ _wanted }} bytes, and its
+          RBD image already holds {{ _current }}. An image is never shrunk:
+          give it a size at least as large.
+        quiet: true
+
+    - name: "Resize the RBD image of {{ _name }}"
+      ansible.builtin.command:
+        cmd: rbd resize rbd/{{ _name }} --size {{ _size }}
+      when: _wanted | int > _current | int
+      changed_when: true
+
+    - name: "Find the node that mounts the RBD image of {{ _name }}"
+      ansible.builtin.command:
+        cmd: findmnt -rn -o SOURCE /mnt/rbd/{{ _name }}
+      delegate_to: "{{ _host }}"
+      loop: "{{ ansible_play_hosts }}"
+      loop_control:
+        loop_var: _host
+      register: deploy_containers_cluster_rbd_mounted
+      changed_when: false
+      failed_when: deploy_containers_cluster_rbd_mounted.rc not in [0, 1]
+
+    # Run whether or not the image grew now, so a run after one that resized
+    # the image and failed here grows the filesystem too. It does nothing
+    # when the filesystem already fills its device.
+    - name: "Grow the filesystem of {{ _name }}"
+      ansible.builtin.command:
+        argv:
+          - resize2fs
+          - "{{ _mounted.stdout | trim }}"
+      delegate_to: "{{ _mounted._host }}"
+      loop: "{{ deploy_containers_cluster_rbd_mounted.results | selectattr('rc', 'equalto', 0) }}"
+      loop_control:
+        loop_var: _mounted
+        label: "{{ _mounted._host }}"
+      register: deploy_containers_cluster_resize2fs
+      changed_when: "'Nothing to do' not in (deploy_containers_cluster_resize2fs.stdout ~ deploy_containers_cluster_resize2fs.stderr)"
 
 # The images the workload was last deployed with are kept in the metadata of
 # its RBD image. When they change, a snapshot keeps the state the workload

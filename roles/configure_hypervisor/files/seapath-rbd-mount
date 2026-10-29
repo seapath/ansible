@@ -10,7 +10,8 @@
 #
 # Wraps the full lifecycle needed before a container can use an RBD-backed
 # volume: dirty-state cleanup, image creation on first use, device mapping,
-# filesystem creation on first use, and mounting.
+# filesystem creation on first use, mounting, and growing the filesystem to
+# an image grown since it was made.
 #
 # The script is idempotent: calling it again while the image is already
 # correctly mapped and mounted is a no-op, and it is safe to call from
@@ -25,7 +26,7 @@
 # Filesystem: ext4.  The device is formatted only once, on first use, when
 # blkid reports no existing filesystem signature.
 #
-# Requires: rbd, jq, blkid, mkfs.ext4, findmnt, mount, and coreutils
+# Requires: rbd, jq, blkid, mkfs.ext4, resize2fs, findmnt, mount, and coreutils
 # (readlink, wc, tr).
 #
 # Exit: 0 on success, non-zero on any failure in the map/format/mount steps.
@@ -278,3 +279,23 @@ fi
 
 mount "$DEV_PATH" "$MOUNTPOINT"
 log "$RBD_IMAGE mounted at $MOUNTPOINT"
+
+# ---------------------------------------------------------------------------
+# Grow the filesystem to the image
+#
+# deploy_containers_cluster grows an image when its entry asks for more room,
+# and grows the filesystem of the node that has it mounted.  An image grown
+# while no node had it mounted, or whose growth stopped half way, holds a
+# filesystem smaller than its device: resize2fs grows it online, before the
+# container sees it, and does nothing when it already fills the device.
+#
+# A failure is logged and the mount kept: the workload starts with the room
+# it had rather than not at all.
+# ---------------------------------------------------------------------------
+
+if ! resized="$(resize2fs "$DEV_PATH" 2>&1)"; then
+    log "growing the filesystem of $RBD_IMAGE failed, kept as it is:" \
+        "$(printf '%s' "$resized" | tr '\n' ' ')"
+elif [[ "$resized" != *"Nothing to do"* ]]; then
+    log "filesystem of $RBD_IMAGE grown to its image"
+fi
