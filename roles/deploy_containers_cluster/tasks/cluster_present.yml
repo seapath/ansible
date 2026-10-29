@@ -79,31 +79,33 @@
 # finishes a growth this run could not. An image is never shrunk: ext4 cannot
 # shrink while mounted, and what the workload wrote past the new end would be
 # lost. rbd reads a size with no suffix as MiB and its suffixes as powers of
-# 1024, and so does the comparison.
+# 1024, and so does the comparison. Its variables carry a _rbd_ prefix: the
+# include passes _unit (the systemd unit), and include variables outrank
+# block variables, which turned every suffix into the MiB default.
 - name: "Grow the RBD image of {{ _name }}"
   when:
     - container.rbd is defined
     - deploy_containers_cluster_rbd_info.rc == 0
   vars:
-    _size: "{{ container.rbd.size | string | trim }}"
-    _number: "{{ _size | regex_replace('^([0-9]+(\\.[0-9]+)?).*$', '\\1') }}"
-    _unit: "{{ (_size | regex_replace('^[0-9.]+\\s*', '') | upper)[:1] or 'M' }}"
-    _wanted: "{{ (_number | float * 1024 ** ({'K': 1, 'M': 2, 'G': 3, 'T': 4, 'P': 5}[_unit] | default(2))) | int }}"
-    _current: "{{ (deploy_containers_cluster_rbd_info.stdout | from_json).size | int }}"
+    _rbd_size: "{{ container.rbd.size | string | trim }}"
+    _rbd_number: "{{ _rbd_size | regex_replace('^([0-9]+(\\.[0-9]+)?).*$', '\\1') }}"
+    _rbd_unit: "{{ (_rbd_size | regex_replace('^[0-9.]+\\s*', '') | upper)[:1] or 'M' }}"
+    _rbd_wanted: "{{ (_rbd_number | float * 1024 ** ({'K': 1, 'M': 2, 'G': 3, 'T': 4, 'P': 5}[_rbd_unit] | default(2))) | int }}"
+    _rbd_current: "{{ (deploy_containers_cluster_rbd_info.stdout | from_json).size | int }}"
   block:
     - name: "Check that this run does not shrink the RBD image of {{ _name }}"
       ansible.builtin.assert:
-        that: _wanted | int >= _current | int
+        that: _rbd_wanted | int >= _rbd_current | int
         fail_msg: >-
-          {{ _name }}: rbd.size is {{ _size }}, {{ _wanted }} bytes, and its
-          RBD image already holds {{ _current }}. An image is never shrunk:
-          give it a size at least as large.
+          {{ _name }}: rbd.size is {{ _rbd_size }}, {{ _rbd_wanted }} bytes,
+          and its RBD image already holds {{ _rbd_current }}. An image is
+          never shrunk: give it a size at least as large.
         quiet: true
 
     - name: "Resize the RBD image of {{ _name }}"
       ansible.builtin.command:
-        cmd: rbd resize rbd/{{ _name }} --size {{ _size }}
-      when: _wanted | int > _current | int
+        cmd: rbd resize rbd/{{ _name }} --size {{ _rbd_size }}
+      when: _rbd_wanted | int > _rbd_current | int
       changed_when: true
 
     - name: "Find the node that mounts the RBD image of {{ _name }}"
