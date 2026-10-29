@@ -38,7 +38,7 @@ inventory host: Ansible never connects to it.
 | `unit` | No | `<name>.service` | The unit Pacemaker starts. For a pod `foo.pod` it is `foo-pod.service`. |
 | `config` | No | `[]` | Configuration files on the Ansible machine, written to `/etc/seapath-containers/<name>/` on every node. A file ending in `.j2` is a template, written without that suffix. See "Configuration". |
 | `checks` | No | `[]` | Values of the `config` files compared with site values before the run changes anything. See "Checks". |
-| `rbd` | No | | `size` (required). `files`, a list of `src` and `dest` copied once when the image is created, is still read for the workloads that have it; `config` replaces it. |
+| `rbd` | No | | `size` (required), as `rbd create` reads it: `512M`, `2G`, a bare number being MiB. A larger size grows the image and its filesystem (see "Growing the RBD image"); a smaller one is refused. `files`, a list of `src` and `dest` copied once when the image is created, is still read for the workloads that have it; `config` replaces it. |
 | `preferred_host` | No | | Node the workload runs on when it is up, written as the constraint `seapath-preferred-<name>` with an infinite score, as `vm_manager` does for a VM. |
 | `pinned_host` | No | | Node the workload runs on, and only there: `pin-<name>`. |
 | `colocated_with` | No | `[]` | Pacemaker resources (VMs or workloads) to run on the same node. |
@@ -352,6 +352,28 @@ has them. Pacemaker then moves a running workload to the node they name, which
 is a stop and a start. The resource is banned from the cluster members that
 are not hypervisors, the observers.
 
+## Growing the RBD image
+
+A larger `rbd.size` grows the image on the next run: `rbd resize`, then
+`resize2fs` on the node that has it mounted, online, while the workload runs.
+A node that mounts the image later, the workload stopped during the run,
+grows its filesystem as it mounts it (`seapath-rbd-mount`), and so does a node
+mounting an image whose growth a failed run left half done. A run limited to
+the workload is enough:
+
+```sh
+ansible-playbook playbooks/deploy_containers_cluster.yaml \
+  -e deploy_containers_cluster_only=open61850-protect
+```
+
+An image is never shrunk: a size smaller than the image stops the run before
+it changes anything for that workload. ext4 cannot shrink while mounted, and
+what the workload wrote past the new end would be lost. To give a workload
+less room, start it again from nothing (below) with the smaller size.
+
+`rbd snap rollback` to a snapshot taken before the growth brings the image
+back to the size it had then, and the next run grows it again to `rbd.size`.
+
 ## Limiting a run to some workloads
 
 ```sh
@@ -573,7 +595,7 @@ from the inventory.
 The molecule scenario covers the node side: quadlet templates and plain files,
 the configuration, the image loaded from an archive, the RBD drop-in, a quadlet
 and a configuration file a new version drops, the refusal of `[Install]`,
-idempotence and removal. Ceph, Pacemaker and the update of a running workload
+idempotence and removal. Ceph, Pacemaker, the growth of an RBD image and the update of a running workload
 (the stand-in, the drop-in, the handover on Open vSwitch, the restart of one
 container and of the workload) are tested on a lab cluster; `tests/test_seapath_container_handover.py` covers
 the handover tool.
