@@ -11,3 +11,4 @@ stage_vm_disk_validate_certs: true
 stage_vm_disk_destination_directory: ""
 stage_vm_disk_destination: "{{ stage_vm_disk_destination_directory ~ '/' ~ (stage_vm_disk_resolved_source | basename) if stage_vm_disk_destination_directory | length > 0 else '' }}"
 stage_vm_disk_label: "{{ stage_vm_disk_destination }}"
+stage_vm_disk_remote_tmp: "/tmp"

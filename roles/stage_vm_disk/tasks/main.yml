@@ -88,7 +88,7 @@
     checksum: "{{ stage_vm_disk_checksum_algorithm }}:{{ stage_vm_disk_checksum_hash }}"
     validate_certs: "{{ stage_vm_disk_validate_certs }}"
   vars:
-    ansible_remote_tmp: "{{ stage_vm_disk_remote_tmp | default(omit) }}"
+    ansible_remote_tmp: "{{ stage_vm_disk_remote_tmp }}"
   when: stage_vm_disk_source_is_remote
 
 - name: "Copy disk on target for {{ stage_vm_disk_label }}"
@@ -97,7 +97,7 @@
     dest: "{{ stage_vm_disk_destination }}"
     mode: "0644"
   vars:
-    ansible_remote_tmp: "{{ stage_vm_disk_remote_tmp | default(omit) }}"
+    ansible_remote_tmp: "{{ stage_vm_disk_remote_tmp }}"
   when: not stage_vm_disk_source_is_remote
 
 - name: "Stat disk for checksum verification of {{ stage_vm_disk_label }}"

@@ -18,6 +18,7 @@
         stage_vm_disk_checksum:
           sha256: "{{ stage_vm_disk_test_sha256 }}"
         stage_vm_disk_destination: "{{ stage_vm_disk_test_directory }}/vm-local.qcow2"
+        stage_vm_disk_remote_tmp: "{{ stage_vm_disk_test_remote_tmp_local }}"
 
     - name: Stage disk from a remote source (passed as raw disk entry)
       ansible.builtin.include_role:
@@ -28,6 +29,7 @@
           path: "{{ stage_vm_disk_test_remote_disk }}"
           sha256: "{{ stage_vm_disk_test_sha256 }}"
         stage_vm_disk_destination: "{{ stage_vm_disk_test_directory }}/vm-remote.qcow2"
+        stage_vm_disk_remote_tmp: "{{ stage_vm_disk_test_remote_tmp_remote }}"
 
     - name: Stage disk via the directory fallback source
       ansible.builtin.include_role:
