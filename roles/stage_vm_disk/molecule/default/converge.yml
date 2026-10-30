@@ -3,11 +3,14 @@
   hosts: hv1
   gather_facts: false
   tasks:
-    - name: Create staging destination directory
+    - name: Create staging destination directories
       ansible.builtin.file:
-        path: "{{ stage_vm_disk_test_directory }}"
+        path: "{{ item }}"
         state: directory
         mode: "0755"
+      loop:
+        - "{{ stage_vm_disk_test_directory }}"
+        - "{{ stage_vm_disk_test_remote_directory }}"
 
     - name: Stage disk from a local source
       ansible.builtin.include_role:
@@ -48,6 +51,36 @@
         stage_vm_disk_checksum:
           sha256: "{{ stage_vm_disk_test_sha256 }}"
         stage_vm_disk_destination_directory: "{{ stage_vm_disk_test_directory }}"
+
+    - name: Stage disk from a signed-style URL with the destination derived from the URL path (query and fragment dropped)
+      ansible.builtin.include_role:
+        name: stage_vm_disk
+      vars:
+        stage_vm_disk_label: vm-derived-url
+        stage_vm_disk_remote_source: "{{ stage_vm_disk_test_remote_disk }}?token=xyz&expires=1#fragment"
+        stage_vm_disk_checksum:
+          sha256: "{{ stage_vm_disk_test_sha256 }}"
+        stage_vm_disk_destination_directory: "{{ stage_vm_disk_test_remote_directory }}"
+
+    - name: Stage disk from a percent-encoded URL (encoding kept in the derived file name)
+      ansible.builtin.include_role:
+        name: stage_vm_disk
+      vars:
+        stage_vm_disk_label: vm-derived-url-encoded
+        stage_vm_disk_remote_source: "http://127.0.0.1:8080/guest%20copy.qcow2?token=abc"
+        stage_vm_disk_checksum:
+          sha256: "{{ stage_vm_disk_test_sha256 }}"
+        stage_vm_disk_destination_directory: "{{ stage_vm_disk_test_remote_directory }}"
+
+    - name: Stage disk from a URL with an encoded path separator (must stay a flat file name, never a sub path)
+      ansible.builtin.include_role:
+        name: stage_vm_disk
+      vars:
+        stage_vm_disk_label: vm-derived-url-encoded-slash
+        stage_vm_disk_remote_source: "http://127.0.0.1:8080/images%2Fnested.qcow2"
+        stage_vm_disk_checksum:
+          sha256: "{{ stage_vm_disk_test_sha256 }}"
+        stage_vm_disk_destination_directory: "{{ stage_vm_disk_test_remote_directory }}"
 
     - name: Stage disk with a correct sha512 and a wrong sha256 dummy (strongest algorithm must win)
       ansible.builtin.include_role:
@@ -224,6 +257,25 @@
           ansible.builtin.set_fact:
             stage_vm_disk_test_no_destination_rejected: true
 
+    - name: Attempt staging from a URL without a file name in its path
+      block:
+        - name: Stage disk for vm-url-without-file
+          ansible.builtin.include_role:
+            name: stage_vm_disk
+          vars:
+            stage_vm_disk_label: vm-url-without-file
+            stage_vm_disk_remote_source: "http://127.0.0.1:8080/?token=xyz"
+            stage_vm_disk_checksum:
+              sha256: "{{ stage_vm_disk_test_sha256 }}"
+            stage_vm_disk_destination_directory: "{{ stage_vm_disk_test_remote_directory }}"
+        - name: Record unexpected success
+          ansible.builtin.set_fact:
+            stage_vm_disk_test_url_without_file_rejected: false
+      rescue:
+        - name: Record expected failure
+          ansible.builtin.set_fact:
+            stage_vm_disk_test_url_without_file_rejected: true
+
     - name: Normalize a mixed additional disk list
       ansible.builtin.include_role:
         name: stage_vm_disk
@@ -237,11 +289,18 @@
             label: "scada-data"
           - path: "{{ stage_vm_disk_test_remote_disk }}"
             sha256: "{{ stage_vm_disk_test_sha256 }}"
+          - path: "{{ stage_vm_disk_test_remote_disk }}?token=xyz&expires=1#fragment"
+            sha256: "{{ stage_vm_disk_test_sha256 }}"
+          - path: "http://127.0.0.1:8080/guest%20copy.qcow2?token=abc"
+            sha256: "{{ stage_vm_disk_test_sha256 }}"
+          - "../files/odd?name.qcow2"
+          - path: "http://127.0.0.1:8080/images%2F..%2Fguest.qcow2"
+            sha256: "{{ stage_vm_disk_test_sha256 }}"
 
     - name: Assert normalized disk entries
       ansible.builtin.assert:
         that:
-          - stage_vm_disk_normalized_disks | length == 3
+          - stage_vm_disk_normalized_disks | length == 7
           - stage_vm_disk_normalized_disks[0].file == 'plain.qcow2'
           - stage_vm_disk_normalized_disks[0].label == ''
           - stage_vm_disk_normalized_disks[0].local_source == '../files/plain.qcow2'
@@ -255,6 +314,12 @@
           - stage_vm_disk_normalized_disks[2].label == ''
           - stage_vm_disk_normalized_disks[2].local_source == ''
           - stage_vm_disk_normalized_disks[2].remote_source == stage_vm_disk_test_remote_disk
+          - stage_vm_disk_normalized_disks[3].file == 'guest.qcow2'
+          - stage_vm_disk_normalized_disks[3].remote_source == stage_vm_disk_test_remote_disk ~ '?token=xyz&expires=1#fragment'
+          - stage_vm_disk_normalized_disks[4].file == 'guest%20copy.qcow2'
+          - stage_vm_disk_normalized_disks[5].file == 'odd?name.qcow2'
+          - stage_vm_disk_normalized_disks[5].local_source == '../files/odd?name.qcow2'
+          - stage_vm_disk_normalized_disks[6].file == 'images%2F..%2Fguest.qcow2'
         fail_msg: "Normalization produced unexpected entries: {{ stage_vm_disk_normalized_disks }}"
 
     - name: Attempt normalizing an invalid disk entry
@@ -309,6 +374,7 @@
           - stage_vm_disk_test_local_url_rejected
           - stage_vm_disk_test_string_checksum_rejected
           - stage_vm_disk_test_no_destination_rejected
+          - stage_vm_disk_test_url_without_file_rejected
           - stage_vm_disk_test_invalid_entry_rejected
           - stage_vm_disk_test_invalid_label_rejected
         fail_msg: >-
@@ -321,5 +387,6 @@
           a URL as local source ({{ stage_vm_disk_test_local_url_rejected }}),
           a checksum that is not a dict ({{ stage_vm_disk_test_string_checksum_rejected }}),
           a missing destination ({{ stage_vm_disk_test_no_destination_rejected }}),
+          a URL without a file name ({{ stage_vm_disk_test_url_without_file_rejected }}),
           an invalid normalize entry ({{ stage_vm_disk_test_invalid_entry_rejected }}) and
           an invalid disk label ({{ stage_vm_disk_test_invalid_label_rejected }}).

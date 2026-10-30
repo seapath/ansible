@@ -3,17 +3,24 @@
   hosts: hv1
   gather_facts: false
   tasks:
-    - name: Create HTTP server root
+    - name: Create HTTP server directories
       ansible.builtin.file:
-        path: /srv/disk-images
+        path: "{{ item }}"
         state: directory
         mode: "0755"
+      loop:
+        - /srv/disk-images
+        - /srv/disk-images/images
 
     - name: Publish the test disk on the HTTP server root
       ansible.builtin.copy:
         src: files/guest.qcow2
-        dest: /srv/disk-images/guest.qcow2
+        dest: "/srv/disk-images/{{ item }}"
         mode: "0644"
+      loop:
+        - guest.qcow2
+        - guest copy.qcow2  # served as guest%20copy.qcow2
+        - images/nested.qcow2  # requested as images%2Fnested.qcow2
 
     - name: Start an HTTP server for the remote disk source
       ansible.builtin.shell: |

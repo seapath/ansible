@@ -30,8 +30,9 @@
   vars:
     _disk_source: "{{ disk.path | default('') if disk is mapping else disk }}"
     _disk_is_remote: "{{ _disk_source is match(stage_vm_disk_url_regex) }}"
+    _disk_file_name: "{{ (_disk_source | urlsplit('path') if _disk_is_remote else _disk_source) | basename }}"
     _normalized_disk:
-      file: "{{ _disk_source | basename }}"
+      file: "{{ _disk_file_name }}"
       label: "{{ disk.label | default('') if disk is mapping else '' }}"
       local_source: "{{ '' if _disk_is_remote else _disk_source }}"
       remote_source: "{{ _disk_source if _disk_is_remote else '' }}"
@@ -39,4 +40,4 @@
   loop: "{{ stage_vm_disk_disks }}"
   loop_control:
     loop_var: disk
-    label: "{{ _disk_source | basename }}"
+    label: "{{ _disk_file_name }}"

@@ -15,6 +15,9 @@
         - "{{ stage_vm_disk_test_directory }}/vm-fallback.qcow2"
         - "{{ stage_vm_disk_test_directory }}/vm-checksum-preference.qcow2"
         - "{{ stage_vm_disk_test_directory }}/guest.qcow2"
+        - "{{ stage_vm_disk_test_remote_directory }}/guest.qcow2"
+        - "{{ stage_vm_disk_test_remote_directory }}/guest%20copy.qcow2"
+        - "{{ stage_vm_disk_test_remote_directory }}/images%2Fnested.qcow2"
 
     - name: Assert staged disks match the source checksum
       ansible.builtin.assert:
@@ -25,6 +28,16 @@
       loop: "{{ stage_vm_disk_test_staged.results }}"
       loop_control:
         label: "{{ item.item }}"
+
+    - name: Stat the sub path an encoded path separator would have created
+      ansible.builtin.stat:
+        path: "{{ stage_vm_disk_test_remote_directory }}/images"
+      register: stage_vm_disk_test_decoded_sub_path
+
+    - name: Assert the encoded path separator never became a sub path
+      ansible.builtin.assert:
+        that: not stage_vm_disk_test_decoded_sub_path.stat.exists
+        fail_msg: "{{ stage_vm_disk_test_remote_directory }}/images exists, the derived file name was URL-decoded into a path."
 
     - name: Stat the remote tmp directories passed to the role
       ansible.builtin.stat:
