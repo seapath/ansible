@@ -193,7 +193,7 @@
   ansible.builtin.set_fact:
     cephadm_conf_options: >-
       {%- set options = [] -%}
-      {%- for section, settings in (ceph_conf_overrides | default({})).items() -%}
+      {%- for section, settings in (cephadm_conf_defaults | combine(ceph_conf_overrides | default({}), recursive=True)).items() -%}
       {%- for name, value in settings.items() -%}
       {%- set _ = options.append({
             'section': section,

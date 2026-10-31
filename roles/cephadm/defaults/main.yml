@@ -3,6 +3,14 @@
 
 ---
 cephadm_release: "20.2.0"
+# Options the cluster is always given, under ceph_conf_overrides, which sets
+# them otherwise. A blocklist entry is what refuses the writes a node cut off
+# from the cluster still holds when it comes back, and the kernel client asks
+# for the default duration, an hour: past it they would go through. 30 days
+# outlast any outage, and an entry names one client that will never come back.
+cephadm_conf_defaults:
+  mon:
+    mon_osd_blocklist_default_expire: 2592000
 cephadm_prometheus_exporter_enabled: true
 # Where the mgr prometheus module binds. It follows the exporters: with the
 # per-node metrics proxy deployed (deploy_metrics_proxy_enabled), the module
