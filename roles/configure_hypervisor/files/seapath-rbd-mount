@@ -9,9 +9,10 @@
 # Maps rbd/<image-name> and mounts it at /mnt/rbd/<image-name>.
 #
 # Wraps the full lifecycle needed before a container can use an RBD-backed
-# volume: dirty-state cleanup, image creation on first use, device mapping,
-# filesystem creation on first use, mounting, and growing the filesystem to
-# an image grown since it was made.
+# volume: dirty-state cleanup, image creation on first use, the wait for the
+# previous holder to let go of it, device mapping, filesystem creation on
+# first use, mounting, and growing the filesystem to an image grown since it
+# was made.
 #
 # The script is idempotent: calling it again while the image is already
 # correctly mapped and mounted is a no-op, and it is safe to call from
@@ -50,10 +51,28 @@ WAIT_ATTEMPT_TIMEOUT=15
 # Comfortably longer than one iteration (attempt + sleep), so the start
 # deadline is always pushed past the next attempt.
 EXTEND_USEC=$(((WAIT_INTERVAL + WAIT_ATTEMPT_TIMEOUT) * 2 * 1000000))
+# A node that lost the cluster gets 100 s to stop its workload (stop_timeout
+# of deploy_containers_cluster), and the watch of a client that vanished
+# expires 30 s later (osd_client_watch_timeout).
+RELEASE_TIMEOUT=150
+RELEASE_INTERVAL=5
 
 log() { echo "seapath-rbd-mount: $*" >&2; }
 die() { log "$*"; exit 1; }
 count_lines() { printf '%s\n' "$1" | wc -l; }
+
+notify_warned=0
+
+# extend_deadline - push the start deadline of the calling unit back
+extend_deadline() {
+    systemd-notify "EXTEND_TIMEOUT_USEC=${EXTEND_USEC}" 2> /dev/null && return 0
+
+    if [ "$notify_warned" -eq 0 ]; then
+        log "systemd-notify refused: the wait is capped by the" \
+            "caller's own timeout, not by the helper's"
+        notify_warned=1
+    fi
+}
 
 command -v jq > /dev/null 2>&1 || die "jq is required but not installed"
 
@@ -201,7 +220,6 @@ fi
 
 wait_for_pool() {
     local deadline=$((SECONDS + WAIT_TIMEOUT))
-    local warned=0
 
     while :; do
         if timeout "$WAIT_ATTEMPT_TIMEOUT" rbd --pool "$POOL" ls \
@@ -211,15 +229,7 @@ wait_for_pool() {
 
         [ "$SECONDS" -lt "$deadline" ] || break
 
-        if ! systemd-notify "EXTEND_TIMEOUT_USEC=${EXTEND_USEC}" 2> /dev/null
-        then
-            if [ "$warned" -eq 0 ]; then
-                log "systemd-notify refused: the wait is capped by the" \
-                    "caller's own timeout, not by ${WAIT_TIMEOUT}s"
-                warned=1
-            fi
-        fi
-
+        extend_deadline
         log "waiting for Ceph pool $POOL ..."
         sleep "$WAIT_INTERVAL"
     done
@@ -230,17 +240,75 @@ wait_for_pool() {
 wait_for_pool
 
 # ---------------------------------------------------------------------------
+# wait_for_release - block until no client watches the image
+#
+# The exclusive lock of the image only arbitrates between clients that talk to
+# each other: krbd hands the lock over to whoever asks, so a holder that is
+# alive would give it up and two nodes would mount the same ext4.  It is meant
+# for a holder that is gone, and only a watch distinguishes the two.
+#
+# rbd map -o exclusive would refuse a live holder by itself, but it refuses
+# everybody else as well: rbd snap create and rbd resize fail with EROFS on a
+# mounted image, and the backup and the growth of an image run from another
+# node.
+#
+# A mapping of this image on this node was cleared above, so a watcher here is
+# another node.  It either lets go, as it stops its workload, or vanishes when
+# its watch expires.  One still there at the deadline is a node still using
+# the image: the start fails rather than share it.
+# ---------------------------------------------------------------------------
+
+wait_for_release() {
+    local deadline=$((SECONDS + RELEASE_TIMEOUT))
+    local watchers
+
+    while :; do
+        watchers="$(rbd status "$RBD_IMAGE" --format json \
+            | jq -r '[.watchers[].address] | join(" ")')"
+        [ -n "$watchers" ] || return 0
+
+        [ "$SECONDS" -lt "$deadline" ] || break
+
+        extend_deadline
+        log "$RBD_IMAGE still watched by $watchers ..."
+        sleep "$RELEASE_INTERVAL"
+    done
+
+    die "$RBD_IMAGE still watched by $watchers after ${RELEASE_TIMEOUT}s," \
+        "refusing to share it"
+}
+
+# ---------------------------------------------------------------------------
 # Create the RBD image on first use
 #
 # rbd info exits non-zero when the image does not exist.  We create it with
-# the layering feature (required for clone/snapshot, harmless otherwise) and
-# the caller-supplied size.  On subsequent runs the image already exists and
-# this block is skipped entirely.
+# the layering feature (required for clone/snapshot, harmless otherwise),
+# exclusive-lock and the caller-supplied size.
+#
+# exclusive-lock is what fences a node cut off from the cluster.  Its stop
+# cannot finish: umount has to flush to the Ceph it lost, so its kernel client
+# lives on with writes pending, and without fencing Pacemaker starts the
+# workload elsewhere.  When the network comes back those writes are sent again,
+# onto an ext4 mounted by another node.  With the lock, the first write of the
+# new node finds a holder without a watch, breaks the lock and blocklists it:
+# what it had pending is refused.
+#
+# An image made before that is given the feature here, at the first mount that
+# finds nobody on it.  On subsequent runs this block only checks.
 # ---------------------------------------------------------------------------
 
 if ! rbd info "$RBD_IMAGE" > /dev/null 2>&1; then
     log "creating RBD image $RBD_IMAGE (size $SIZE)"
-    rbd create "$RBD_IMAGE" --size "$SIZE" --image-feature layering
+    rbd create "$RBD_IMAGE" --size "$SIZE" \
+        --image-feature layering,exclusive-lock
+else
+    wait_for_release
+
+    if ! rbd info "$RBD_IMAGE" --format json \
+        | jq -e '.features | index("exclusive-lock")' > /dev/null; then
+        log "enabling exclusive-lock on $RBD_IMAGE"
+        rbd feature enable "$RBD_IMAGE" exclusive-lock
+    fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -249,9 +317,13 @@ fi
 # After a successful rbd map, the kernel exposes the device both as
 # /dev/rbdN (dynamically assigned number) and as the stable symlink
 # /dev/rbd/<pool>/<image>, which we use throughout this script.
+#
+# noshare gives the mapping its own client: the mappings of a node otherwise
+# share one, and a blocklist, which names a client, would take all of them
+# down, and refuse the next map on that node until they were all gone.
 # ---------------------------------------------------------------------------
 
-rbd map "$RBD_IMAGE"
+rbd map "$RBD_IMAGE" -o noshare
 
 # ---------------------------------------------------------------------------
 # Ensure mountpoint exists
