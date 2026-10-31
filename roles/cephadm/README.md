@@ -72,6 +72,11 @@ Option names are matched the way `ceph config` spells them, so spaces and
 dashes are accepted and normalised to underscores. An option Ceph does not
 know about fails the run instead of being silently dropped.
 
+`cephadm_conf_defaults` holds the options the role sets by itself, in the same
+form: `mon_osd_blocklist_default_expire` at 30 days, because a blocklist entry
+is what refuses the writes a node cut off from the cluster still holds when it
+comes back. `ceph_conf_overrides` takes precedence over it.
+
 Options removed from `ceph_conf_overrides` keep their value in the cluster:
 the role never unsets anything. Use `ceph config rm <section> <option>` to
 go back to the default.
