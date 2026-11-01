@@ -17,6 +17,11 @@ cephadm_install_pullimages: "{{ cephadm_pullimages | default(false) }}"
 cephadm_install_registryurl: "docker.io/library/registry:2"
 cephadm_install_cephadm_uid: null
 cephadm_install_cephadm_gid: null
+# The deb packages of quincy and reef write to /home/cephadm/.ssh whatever
+# the home is; from squid on, the packages use /var/lib/cephadm.
+cephadm_install_cephadm_home: >-
+  {{ '/home/cephadm' if (cephadm_install_release.split('.')[0] | int) < 19
+     else '/var/lib/cephadm' }}
 cephadm_install_containerized_ceph_uid: null
 cephadm_install_containerized_ceph_gid: null
 cephadm_install_containerized_ceph_enabled: false

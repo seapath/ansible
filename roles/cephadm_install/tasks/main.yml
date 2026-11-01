@@ -17,11 +17,56 @@
     state: present
   when: seapath_distro != "Yocto"
 
+- name: Read the "cephadm" user entry
+  ansible.builtin.getent:
+    database: passwd
+    key: cephadm
+    fail_key: false
+  when: seapath_distro != "Yocto"
+
+# The Debian postinst of 21.x moves any home other than /var/lib/cephadm
+# there on every configure. usermod refuses to move the home of a user that
+# owns processes, and the mgr keeps an ssh session open as cephadm, so an
+# upgrade fails on a live cluster. Move the home once here, in the short
+# window after closing the sessions; the mgr reconnects by itself.
+# When the new home already exists, usermod -m records it in /etc/passwd
+# and then refuses to move the files, which leaves the mgr key behind:
+# copy the old home into it instead.
+- name: Move the "cephadm" home to {{ cephadm_install_cephadm_home }}
+  ansible.builtin.shell: |
+    set -eu
+    old={{ ansible_facts.getent_passwd.cephadm[4] | quote }}
+    new={{ cephadm_install_cephadm_home | quote }}
+    pkill -u cephadm || true
+    for i in 1 2 3 4 5 6 7 8 9 10; do
+      pgrep -u cephadm >/dev/null || break
+      sleep 0.2
+    done
+    if [ -e "$new" ]; then
+      if [ -d "$old" ]; then
+        cp -a "$old"/. "$new"/
+      fi
+      usermod --home "$new" cephadm
+    else
+      usermod --home "$new" -m cephadm
+    fi
+  register: cephadm_install_move_home
+  until: cephadm_install_move_home.rc == 0
+  retries: 5
+  delay: 1
+  changed_when: true
+  when:
+    - seapath_distro != "Yocto"
+    - (ansible_facts.getent_passwd | default({})).cephadm is defined
+    - ansible_facts.getent_passwd.cephadm is not none
+    - ansible_facts.getent_passwd.cephadm[4] != cephadm_install_cephadm_home
+
 - name: Ensure user "cephadm" exists
   ansible.builtin.user:
     name: cephadm
     uid: "{{ cephadm_install_cephadm_uid }}"
     group: cephadm
+    home: "{{ cephadm_install_cephadm_home }}"
     create_home: true
   when: seapath_distro != "Yocto"
 
