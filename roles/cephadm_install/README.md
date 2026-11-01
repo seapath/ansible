@@ -29,6 +29,7 @@ The detected version is set as a host fact, so it also applies to the `cephadm` 
 | cephadm_install_common            | No       | Boolean | false                          | Install ceph-common with "cephadm install ceph-common" (fallback: `cephadm_installcommon`) |
 | cephadm_install_pullimages        | No       | Boolean | false                          | Pull ceph container images and start local registry (fallback: `cephadm_pullimages`)       |
 | cephadm_install_registryurl       | No       | String  | "docker.io/library/registry:2" | Image used to run the local Podman registry                                                |
+| cephadm_install_cephadm_home      | No       | String  | `/home/cephadm` before 19, `/var/lib/cephadm` from 19 on | Home of the cephadm user; an existing user is moved there (its ssh sessions are closed) |
 
 ## Example Playbook
 
