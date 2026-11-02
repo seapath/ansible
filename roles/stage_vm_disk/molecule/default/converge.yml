@@ -23,6 +23,16 @@
         stage_vm_disk_destination: "{{ stage_vm_disk_test_directory }}/vm-local.qcow2"
         stage_vm_disk_remote_tmp: "{{ stage_vm_disk_test_remote_tmp_local }}"
 
+    - name: Stage disk from a local source with an upper-case, padded checksum digest
+      ansible.builtin.include_role:
+        name: stage_vm_disk
+      vars:
+        stage_vm_disk_label: vm-upper-padded-checksum
+        stage_vm_disk_local_source: "{{ stage_vm_disk_test_local_disk }}"
+        stage_vm_disk_checksum:
+          sha256: " {{ stage_vm_disk_test_sha256 | upper }} "
+        stage_vm_disk_destination: "{{ stage_vm_disk_test_directory }}/vm-upper-padded-checksum.qcow2"
+
     - name: Stage disk from a remote source (passed as raw disk entry)
       ansible.builtin.include_role:
         name: stage_vm_disk

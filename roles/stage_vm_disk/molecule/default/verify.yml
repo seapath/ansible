@@ -11,6 +11,7 @@
       register: stage_vm_disk_test_staged
       loop:
         - "{{ stage_vm_disk_test_directory }}/vm-local.qcow2"
+        - "{{ stage_vm_disk_test_directory }}/vm-upper-padded-checksum.qcow2"
         - "{{ stage_vm_disk_test_directory }}/vm-remote.qcow2"
         - "{{ stage_vm_disk_test_directory }}/vm-fallback.qcow2"
         - "{{ stage_vm_disk_test_directory }}/vm-checksum-preference.qcow2"

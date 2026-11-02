@@ -13,5 +13,5 @@ stage_vm_disk_source_file_name: "{{ (stage_vm_disk_resolved_source | urlsplit('p
 stage_vm_disk_checksum_preference: ['sha512', 'sha384', 'sha256']
 stage_vm_disk_checksum_unknown: "{{ (stage_vm_disk_checksum.keys() | list) | difference(stage_vm_disk_checksum_preference) }}"
 stage_vm_disk_checksum_algorithm: "{{ stage_vm_disk_checksum_preference | select('in', stage_vm_disk_checksum.keys() | list) | first | default('') }}"
-stage_vm_disk_checksum_hash: "{{ stage_vm_disk_checksum[stage_vm_disk_checksum_algorithm] | default('') }}"
+stage_vm_disk_checksum_hash: "{{ stage_vm_disk_checksum[stage_vm_disk_checksum_algorithm] | default('') | string | trim | lower }}"
 stage_vm_disk_checksum_present: "{{ (stage_vm_disk_checksum_algorithm | length > 0) and (stage_vm_disk_checksum_hash | length > 0) }}"
