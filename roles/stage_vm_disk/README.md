@@ -24,7 +24,7 @@ No requirement.
 
 ## Entry point `normalize`
 
-Converts a mixed disk list — path strings and dicts with `path` plus optional flat checksum keys (`sha512`/`sha384`/`sha256`) and an optional `label` — into a normalized dict list. Entries whose `path` is a URL (`http`/`https`/`ftp`/`ftps`) are classified as remote. The `label` (letters, digits, `_` and `-` only) is passed through for consumers that reflect it in the staged file name, e.g. `deploy_vms_standalone` naming additional disks `<vm>_data_<index>_<label>.qcow2`. Invalid entries fail with a descriptive message.
+Converts a mixed disk list — path strings and dicts with `path` plus optional flat checksum keys (`sha512`/`sha384`/`sha256`) and an optional `label` — into a normalized dict list. Entries whose `path` is a URL (`http`/`https`/`ftp`/`ftps`) are classified as remote. The `label` (letters, digits, `_` and `-` only) is passed through for consumers that reflect it in the staged file name, e.g. `deploy_vms_standalone` naming additional disks `<vm>_data_<index>_<label>.qcow2`.
 
 Staging itself does not need this entry point (pass raw entries via `stage_vm_disk_source` instead); use it when the normalized data is needed as such, e.g. to derive the staged file names for a libvirt template.
 

@@ -7,13 +7,20 @@
     command: list_vms
   register: deploy_vms_standalone_all_vms
 
-# Runs first so invalid disk entries fail before the existing VM is
-# destroyed (force) or any disk is staged.
-- name: Normalize additional disk file names for the VM templates
+- name: Validate the system disk entry before the existing VM is touched
+  ansible.builtin.include_tasks: normalize_system_disk.yml
+  vars:
+    _vm_name: "{{ item }}"
+  loop: "{{ deploy_vms_standalone_guests }}"
+  when:
+    - hostvars[item].vm_disk is defined
+    - item not in deploy_vms_standalone_all_vms.list_vms or (item in deploy_vms_standalone_all_vms.list_vms and hostvars[item].force is defined and hostvars[item].force)
+
+- name: Validate the additional disk entries and derive their file names before the existing VM is touched
   ansible.builtin.include_tasks: normalize_additional_disk.yml
   vars:
     _vm_name: "{{ item }}"
-  loop: "{{ groups['VMs'] }}"
+  loop: "{{ deploy_vms_standalone_guests }}"
   when:
     - hostvars[item].additional_disk is defined
     - item not in deploy_vms_standalone_all_vms.list_vms or (item in deploy_vms_standalone_all_vms.list_vms and hostvars[item].force is defined and hostvars[item].force)

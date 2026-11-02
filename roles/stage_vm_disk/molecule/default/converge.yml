@@ -439,6 +439,43 @@
           ansible.builtin.set_fact:
             stage_vm_disk_test_invalid_label_failure: "{{ stage_vm_disk_test_failure_message }}"
 
+    - name: Attempt normalizing a remote disk entry without a checksum
+      block:
+        - name: Normalize a URL entry without checksum keys
+          ansible.builtin.include_role:
+            name: stage_vm_disk
+            tasks_from: normalize
+          vars:
+            stage_vm_disk_label: normalize-remote-nosum
+            stage_vm_disk_disks:
+              - path: "{{ stage_vm_disk_test_remote_disk }}"
+        - name: Record unexpected success
+          ansible.builtin.set_fact:
+            stage_vm_disk_test_remote_nosum_entry_failure: ""
+      rescue:
+        - name: Record the failure message
+          ansible.builtin.set_fact:
+            stage_vm_disk_test_remote_nosum_entry_failure: "{{ stage_vm_disk_test_failure_message }}"
+
+    - name: Attempt normalizing a disk entry with an empty checksum digest
+      block:
+        - name: Normalize a dict entry whose sha256 is empty
+          ansible.builtin.include_role:
+            name: stage_vm_disk
+            tasks_from: normalize
+          vars:
+            stage_vm_disk_label: normalize-empty-digest
+            stage_vm_disk_disks:
+              - path: "{{ stage_vm_disk_test_local_disk }}"
+                sha256: ""
+        - name: Record unexpected success
+          ansible.builtin.set_fact:
+            stage_vm_disk_test_empty_digest_entry_failure: ""
+      rescue:
+        - name: Record the failure message
+          ansible.builtin.set_fact:
+            stage_vm_disk_test_empty_digest_entry_failure: "{{ stage_vm_disk_test_failure_message }}"
+
     - name: Assert invalid disk source configurations were rejected for the expected reason
       tags: molecule-idempotence-notest  # depends on facts from the skipped attempt above
       ansible.builtin.assert:
@@ -458,6 +495,8 @@
           - "'set stage_vm_disk_destination' in stage_vm_disk_test_url_without_file_failure"
           - "'Invalid disk entry' in stage_vm_disk_test_invalid_entry_failure"
           - "'Invalid disk entry' in stage_vm_disk_test_invalid_label_failure"
+          - "'Invalid disk entry' in stage_vm_disk_test_remote_nosum_entry_failure"
+          - "'Invalid disk entry' in stage_vm_disk_test_empty_digest_entry_failure"
         fail_msg: >-
           A rejected staging attempt succeeded or failed for another reason than expected.
           Recorded failure messages (empty = succeeded):
@@ -475,4 +514,6 @@
           no destination: '{{ stage_vm_disk_test_no_destination_failure }}';
           URL without file name: '{{ stage_vm_disk_test_url_without_file_failure }}';
           invalid normalize entry: '{{ stage_vm_disk_test_invalid_entry_failure }}';
-          invalid label: '{{ stage_vm_disk_test_invalid_label_failure }}'.
+          invalid label: '{{ stage_vm_disk_test_invalid_label_failure }}';
+          normalized remote entry without checksum: '{{ stage_vm_disk_test_remote_nosum_entry_failure }}';
+          normalized entry with empty digest: '{{ stage_vm_disk_test_empty_digest_entry_failure }}'.

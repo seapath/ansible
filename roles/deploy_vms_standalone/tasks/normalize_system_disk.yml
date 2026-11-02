@@ -1,0 +1,11 @@
+# Copyright (C) 2026 Sprecher Automation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: "Validate the system disk entry of {{ _vm_name }}"
+  ansible.builtin.include_role:
+    name: stage_vm_disk
+    tasks_from: normalize
+  vars:
+    stage_vm_disk_label: "{{ _vm_name }}"
+    stage_vm_disk_disks: "{{ [hostvars[_vm_name].vm_disk] }}"
