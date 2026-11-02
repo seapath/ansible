@@ -1,0 +1,50 @@
+#!/bin/sh
+# Copyright (C) 2026 Florent Carli
+# SPDX-License-Identifier: Apache-2.0
+
+# Activate incomplete volume groups in degraded mode, so that a root LV
+# on RAID comes up on its remaining legs when a PV is missing for good.
+# Since 2.03.15 the udev rules only activate complete VGs (#1018730,
+# #1089167).
+#
+# Proposed to Debian as lvm-team/lvm2!26 on salsa. It has the name a
+# packaged copy would get in /usr/share/initramfs-tools/scripts, so this
+# one replaces it instead of running twice.
+#
+# local_device_setup() runs the local-block scripts about once a second
+# while the root device is missing. Like the mdadm script, wait for 2/3
+# of the root delay before degrading, so that slow disks of a healthy
+# machine show up first: activating at the first PV would map the legs
+# of the late PVs to error targets.
+
+PREREQ=""
+
+prereqs()
+{
+	echo "$PREREQ"
+}
+
+case $1 in
+prereqs)
+	prereqs
+	exit 0
+	;;
+esac
+
+. /scripts/functions
+
+[ -e /run/lvm2-degraded.initrd ] && exit 0
+
+MAX=30
+if [ "${ROOTDELAY:-0}" -gt $MAX ]; then
+	MAX=$ROOTDELAY
+fi
+MAX=$((MAX*2/3))
+
+[ "$(time_elapsed)" -ge "$MAX" ] || exit 0
+
+: > /run/lvm2-degraded.initrd
+log_warning_msg "lvm2: activating incomplete volume groups in degraded mode"
+lvm vgchange --sysinit -aay --activation degraded || true
+
+exit 0
