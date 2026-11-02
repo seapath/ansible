@@ -3,3 +3,11 @@
 
 ---
 conntrackd_interface: "team0"
+
+# Name of the Pacemaker resource that makes a node the router, the one the
+# routed IPs and routes are colocated with. When set, Pacemaker runs
+# conntrackd as a promotable clone whose promoted instance follows that
+# resource, and the other nodes keep the sessions they receive in their
+# external cache instead of their kernel table. Left empty, conntrackd is a
+# plain systemd service on every node.
+conntrackd_pacemaker_router: ""

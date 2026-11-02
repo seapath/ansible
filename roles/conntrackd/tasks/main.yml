@@ -35,17 +35,31 @@
         owner: root
         mode: "0644"
       register: conntrackd_conntrackdconf
+    # The file of the Debian package restarts conntrackd every week.
+    - name: Copy the logrotate file of conntrackd
+      ansible.builtin.copy:
+        src: conntrackd.logrotate
+        dest: /etc/logrotate.d/conntrackd
+        group: root
+        owner: root
+        mode: "0644"
     - name: Enable conntrackd.service
       ansible.builtin.systemd:
         name: conntrackd.service
         enabled: true
         state: started
+      when: conntrackd_pacemaker_router | length == 0
     - name: Enable conntrackd.service # noqa: no-handler
       ansible.builtin.systemd:
         name: conntrackd.service
         enabled: true
         state: restarted
-      when: conntrackd_conntrackdconf.changed
+      when:
+        - conntrackd_pacemaker_router | length == 0
+        - conntrackd_conntrackdconf.changed
+    - name: Run conntrackd under Pacemaker
+      ansible.builtin.include_tasks: pacemaker.yml
+      when: conntrackd_pacemaker_router | length > 0
 
 - name: Stop and disable conntrackd.service
   ansible.builtin.systemd:

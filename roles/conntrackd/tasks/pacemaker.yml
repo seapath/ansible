@@ -1,0 +1,44 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# The resource agent starts conntrackd itself (conntrackd -d). A systemd
+# instance would hold its lock file and its socket.
+- name: Stop and disable conntrackd.service, Pacemaker runs conntrackd
+  ansible.builtin.systemd:
+    name: conntrackd.service
+    enabled: false
+    state: stopped
+
+# Created once: an existing clone keeps its operations and constraints.
+- name: Look for the conntrackd Pacemaker resource
+  ansible.builtin.command:
+    cmd: crm configure show cl_conntrackd
+  register: conntrackd_resource
+  changed_when: false
+  failed_when: false
+  run_once: true
+
+- name: Create the conntrackd Pacemaker resource
+  ansible.builtin.command:
+    cmd: crm configure load update -
+    stdin: "{{ lookup('ansible.builtin.template', 'pacemaker.crm.j2') }}"
+  when: conntrackd_resource.rc != 0
+  changed_when: true
+  run_once: true
+
+# conntrackd reads its configuration when it starts. The demotion of the
+# router's instance schedules a flush of its sessions 60 s later (-t), and
+# the stop that follows at once kills conntrackd before that flush.
+- name: Restart the conntrackd Pacemaker resource after a configuration change
+  ansible.builtin.command:
+    cmd: crm resource restart cl_conntrackd
+  when:
+    - conntrackd_resource.rc == 0
+    - >-
+      ansible_play_hosts | map('extract', hostvars)
+      | selectattr('conntrackd_conntrackdconf', 'defined')
+      | map(attribute='conntrackd_conntrackdconf')
+      | selectattr('changed') | list | length > 0
+  changed_when: true
+  run_once: true

@@ -1,0 +1,16 @@
+{# Loaded in one transaction by crm configure load update, so the clone never
+   starts before its constraints exist.
+   The resource agent checks master-max, master-node-max and clone-node-max
+   (all 1): it runs as a pseudo master and refuses any other value. #}
+primitive conntrackd ocf:heartbeat:conntrackd params config=/etc/conntrackd/conntrackd.conf op start interval=0 timeout=30s op stop interval=0 timeout=30s op promote interval=0 timeout=30s op demote interval=0 timeout=30s op notify interval=0 timeout=30s op monitor interval=20s timeout=20s role=Unpromoted op monitor interval=10s timeout=20s role=Promoted
+clone cl_conntrackd conntrackd meta promotable=true master-max=1 master-node-max=1 clone-node-max=1 notify=true critical=false
+{# The promoted instance follows the router. critical=false keeps a failing
+   conntrackd from pulling the router elsewhere. #}
+colocation conntrackd_promoted_with_router inf: cl_conntrackd:Promoted {{ conntrackd_pacemaker_router }}
+{# On a failover, commit the sessions into the new router's kernel before its
+   IPs come up. Optional: a conntrackd that cannot promote never holds the
+   router back. #}
+order conntrackd_promote_before_router Optional: cl_conntrackd:promote {{ conntrackd_pacemaker_router }}:start
+{% for node in groups['cluster_machines'] | difference(ansible_play_hosts_all) %}
+location ban-conntrackd-on-{{ node }} cl_conntrackd -inf: {{ node }}
+{% endfor %}
