@@ -111,6 +111,38 @@ The `vm_template` variable point toward a jinja2 templated XML file.
 If writing your own templated xml file, all the vm member variables are accessible using the `vm` variable. Ex : `"{{ vm.vm_disk }}"`
 You can find an example of templated XML file in templates/vm/guest.xml.j2.
 
+### Additional disks in a custom template
+
+`vm.additional_disk` holds the sources of the additional disks (control node paths, URLs or dicts with checksum and label, see below), not the files the VM runs on. For every VM that defines `additional_disk`, the role sets `vm.standalone_additional_disks`: a list of strings with one staged file name per `additional_disk` entry, in the same order. Each name is relative to the disk pool (`deploy_vms_standalone_disk_pool`) and follows `<vm>_data_<index>[_<label>].qcow2`, where `index` is the position of the entry in `additional_disk` and `label` its optional `label` key. For example
+
+```yaml
+additional_disk:
+  - /srv/images/scada.qcow2
+  - path: https://mirror.example.com/historian.qcow2
+    sha256: "0123..."
+    label: historian
+```
+
+on the VM `vm1` yields
+
+```yaml
+standalone_additional_disks:
+  - vm1_data_0.qcow2
+  - vm1_data_1_historian.qcow2
+```
+
+A template attaches them the way `guest.xml.j2` does:
+
+```jinja
+{% for file in vm.standalone_additional_disks %}
+<disk type="file" device="disk">
+   <driver name="qemu" type="qcow2"/>
+   <source file="/var/lib/libvirt/images/{{ file }}"/>
+   <target dev="vd{{ 'bcdefghijklmnop'[loop.index0] }}" bus="virtio"/>
+</disk>
+{% endfor %}
+```
+
 ### Use the templated XML file guest.xml.j2
 
 This templated XML file offers default behaviors and configurations to launch VMs on SEAPATH. It is mostly used for CI and demonstration on SEAPATH.
@@ -123,7 +155,7 @@ Below is a list of the VMs member variables that can be used with this XML file.
 | description     |                  | String          | Test VM   | Libvirt description of the VM                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | autostart       |                  | Bool            | true      | Set the VM to autostart on hypervisor boot                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | memory          |                  | Integer         | 2048      | RAM of the VM in MiB                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| additional_disk |                  | List of strings |           | Additional disks to give to the VM. Each entry is either a path string, or a dict with `path` plus optional checksum keys (`sha512`/`sha384`/`sha256`) and an optional `label` (letters, digits, `_` and `-`). A `path` that is a URL (`http`/`https`/`ftp`/`ftps`) is fetched directly on the target and requires a checksum. Device names (vdb, vdc, ...) are assigned automatically. Each disk is staged as `<vm>_data_<index>.qcow2` (or `<vm>_data_<index>_<label>.qcow2`), so VMs sharing a source image never share the staged file. The role derives `standalone_additional_disks`, the list of those staged file names in the disk pool; the bundled `guest.xml.j2` renders that list, while custom templates may keep consuming the raw `additional_disk` entries. |
+| additional_disk |                  | List of strings |           | Additional disks to give to the VM. Each entry is either a path string, or a dict with `path` plus optional checksum keys (`sha512`/`sha384`/`sha256`) and an optional `label` (letters, digits, `_` and `-`). A `path` that is a URL (`http`/`https`/`ftp`/`ftps`) is fetched directly on the target and requires a checksum. Device names (vdb, vdc, ...) are assigned automatically. Each disk is staged as `<vm>_data_<index>.qcow2` (or `<vm>_data_<index>_<label>.qcow2`), so VMs sharing a source image never share the staged file. Templates attach the staged files through `standalone_additional_disks`, see "Additional disks in a custom template". |
 | vm_features     |                  | List of strings |           | List of vm features to enable. Possible values are "rt", "isolated", "secure-boot", "dpdk", "memballoon", "graphic-console", "windows"                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 |                 | rt               |                 |           | Enable real time tweaks (priority, cgroup, scheduler, etc ...). Depends on `cpuset`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 |                 | isolated         |                 |           | Pin vCPU to hypervisor CPUs. Depends on `cpuset`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
