@@ -18,40 +18,11 @@
 
 - name: "Validate disk source for {{ stage_vm_disk_label }}"
   ansible.builtin.assert:
-    that:
-      - not (stage_vm_disk_local_source | length > 0 and stage_vm_disk_source_is_remote)
-      - stage_vm_disk_resolved_local_source | length > 0 or stage_vm_disk_source_is_remote
+    that: stage_vm_disk_resolved_source | length > 0
     quiet: true
     fail_msg: >-
-      For '{{ stage_vm_disk_label }}', set exactly one disk source: a local path on the
-      control node or a URL (http/https/ftp/ftps) fetched on the target.
-
-- name: "Validate disk source locations for {{ stage_vm_disk_label }}"
-  ansible.builtin.assert:
-    that:
-      - stage_vm_disk_remote_source | length == 0 or stage_vm_disk_remote_source is match(stage_vm_disk_url_regex)
-      - stage_vm_disk_resolved_local_source is not match(stage_vm_disk_url_regex)
-    quiet: true
-    fail_msg: >-
-      For '{{ stage_vm_disk_label }}', a remote disk source must be a URL (http/https/ftp/ftps)
-      and a local disk source must be a file path on the control node.
-      Got local: '{{ stage_vm_disk_resolved_local_source }}', remote: '{{ stage_vm_disk_remote_source }}'.
-
-- name: "Validate checksum type for {{ stage_vm_disk_label }}"
-  ansible.builtin.assert:
-    that: stage_vm_disk_checksum is mapping
-    quiet: true
-    fail_msg: >-
-      The checksum for '{{ stage_vm_disk_label }}' must be a dict mapping algorithms to hex
-      digests (e.g. {sha256: '<hex>'}). Got: {{ stage_vm_disk_checksum }}.
-
-- name: "Reject unsupported checksum algorithms for {{ stage_vm_disk_label }}"
-  ansible.builtin.assert:
-    that: stage_vm_disk_checksum_unknown | length == 0
-    quiet: true
-    fail_msg: >-
-      The checksum for '{{ stage_vm_disk_label }}' contains unsupported keys: {{ stage_vm_disk_checksum_unknown }}.
-      Supported algorithms: {{ stage_vm_disk_checksum_preference | join(', ') }} (strongest used).
+      No disk source for '{{ stage_vm_disk_label }}': set stage_vm_disk_source to a path on the
+      control node or a URL (http/https/ftp/ftps), or provide stage_vm_disk_fallback_source.
 
 - name: "Validate checksum shape for {{ stage_vm_disk_label }}"
   ansible.builtin.assert:
@@ -82,7 +53,7 @@
 
 - name: "Download disk from URL for {{ stage_vm_disk_label }}"
   ansible.builtin.get_url:
-    url: "{{ stage_vm_disk_remote_source }}"
+    url: "{{ stage_vm_disk_resolved_source }}"
     dest: "{{ stage_vm_disk_destination }}"
     mode: "0644"
     checksum: "{{ stage_vm_disk_checksum_algorithm }}:{{ stage_vm_disk_checksum_hash }}"
@@ -93,7 +64,7 @@
 
 - name: "Copy disk on target for {{ stage_vm_disk_label }}"
   ansible.builtin.copy:
-    src: "{{ stage_vm_disk_resolved_local_source }}"
+    src: "{{ stage_vm_disk_resolved_source }}"
     dest: "{{ stage_vm_disk_destination }}"
     mode: "0644"
   vars:

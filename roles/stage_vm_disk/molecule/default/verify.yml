@@ -56,24 +56,30 @@
       loop_control:
         label: "{{ item.item }}"
 
-    - name: Stat disks of rejected staging attempts
-      ansible.builtin.stat:
-        path: "{{ stage_vm_disk_test_directory }}/{{ item }}"
-      register: stage_vm_disk_test_rejected
+    - name: List the files in the staging directories
+      ansible.builtin.find:
+        paths: "{{ item }}"
+        file_type: file
+      register: stage_vm_disk_test_found
       loop:
-        - vm-remote-badsum.qcow2
-        - vm-local-badsum.qcow2
-        - vm-unsupported-algo.qcow2
-        - vm-remote-nosum.qcow2
-        - vm-no-source.qcow2
-        - vm-both-sources.qcow2
-        - vm-local-url.qcow2
-        - vm-string-checksum.qcow2
+        - "{{ stage_vm_disk_test_directory }}"
+        - "{{ stage_vm_disk_test_remote_directory }}"
 
-    - name: Assert rejected staging attempts left no disk behind
+    - name: Assert only the successfully staged disks exist, rejected attempts left nothing behind
       ansible.builtin.assert:
-        that: not item.stat.exists
-        fail_msg: "{{ item.item }} must not exist after a rejected staging attempt."
-      loop: "{{ stage_vm_disk_test_rejected.results }}"
+        that: item.0.files | map(attribute='path') | map('basename') | sort == item.1 | sort
+        fail_msg: "Unexpected files in {{ item.0.item }}: {{ item.0.files | map(attribute='path') | map('basename') | sort | difference(item.1) }}, missing: {{ item.1 | difference(item.0.files | map(attribute='path') | map('basename')) }}."
+      loop: "{{ stage_vm_disk_test_found.results | zip(stage_vm_disk_test_expected_files) | list }}"
       loop_control:
-        label: "{{ item.item }}"
+        label: "{{ item.0.item }}"
+      vars:
+        stage_vm_disk_test_expected_files:
+          - - vm-local.qcow2
+            - vm-upper-padded-checksum.qcow2
+            - vm-remote.qcow2
+            - vm-fallback.qcow2
+            - vm-checksum-preference.qcow2
+            - guest.qcow2
+          - - guest.qcow2
+            - guest%20copy.qcow2
+            - images%2Fnested.qcow2
