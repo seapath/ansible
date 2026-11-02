@@ -3,9 +3,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- name: Add udev rules for lvm2 limitation
-  ansible.builtin.copy:
-    src: debian/69-lvm.rules
-    dest: /etc/udev/rules.d/69-lvm.rules
-    mode: "0644"
-  when: ansible_distribution_version | int >= 12
+# Older versions of this role installed a copy of 69-lvm.rules that
+# activated an incomplete VG in degraded mode as soon as its first PV
+# showed up, which left the legs of the late PVs of a healthy machine
+# mapped to error targets. The initramfs-tools local-block/lvm2 script
+# handles the missing PV now, with the stock rule.
+- name: Remove the SEAPATH copy of 69-lvm.rules
+  ansible.builtin.file:
+    path: /etc/udev/rules.d/69-lvm.rules
+    state: absent
+  notify: Rebuild initramfs if necessary

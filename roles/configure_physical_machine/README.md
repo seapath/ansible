@@ -19,6 +19,10 @@ No requirement.
 | configure_physical_machine_distro_extra_modules | String list | List of distro specific kernel modules to load during boot |
 | configure_physical_machine_initramfs | String | The initramfs tool used by the distribution. Can be `initramfs-tools` or `dracut`. Do not set if the initramfs shouldn't be configured. |
 
+## RAID root on LVM (initramfs-tools)
+
+Since lvm2 2.03.15 the udev rules only activate complete volume groups, so a root LV on RAID would not boot with a dead disk. The role installs the initramfs-tools script `local-block/lvm2`, which activates the incomplete VGs in degraded mode once 2/3 of the root delay (`max(30, rootdelay)` seconds) is spent and the root device is still missing. A healthy machine never reaches it.
+
 ## Example Playbook
 
 ```yaml
