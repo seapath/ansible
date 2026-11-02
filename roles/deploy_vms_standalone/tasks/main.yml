@@ -63,7 +63,6 @@
     stage_vm_disk_destination: "{{ deploy_vms_standalone_disk_pool }}/{{ hostvars[item].inventory_hostname }}.{{ deploy_vms_standalone_disk_extension }}"
     stage_vm_disk_source: "{{ hostvars[item].vm_disk | default('') }}"
     stage_vm_disk_fallback_source: "{{ deploy_vms_standalone_vms_disks_directory ~ '/' ~ item ~ '.' ~ deploy_vms_standalone_disk_extension if deploy_vms_standalone_vms_disks_directory | length > 0 else '' }}"
-    stage_vm_disk_checksum: "{{ hostvars[item].vm_disk_checksum | default({}) }}"
     stage_vm_disk_remote_tmp: "{{ deploy_vms_standalone_qcow2tmpuploadfolder }}"
   when:
     - deploy_vms_standalone_disk_copy | bool

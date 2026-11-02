@@ -53,8 +53,8 @@ whole group.
 
 | *item* variables   | Required | Type        | Default                               | Comments                                                                                                                                                                                                                                      |
 |--------------------|----------|-------------|---------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| vm_disk            | No       | String      | vms_disks_directory + item + ".qcow2" | Path to the VM disk in `qcow2` format on the Ansible machine, or a URL (`http`/`https`/`ftp`/`ftps`) fetched directly on the target. A URL requires `vm_disk_checksum`.                                                                       |
-| vm_disk_checksum   | No       | Dict        |                                       | Dict `{<algo>: <hex>, ...}` to verify the system disk after staging. Required when `vm_disk` is a URL, optional for a local path. May list multiple algorithms; the strongest available is used (preference: `sha512` > `sha384` > `sha256`). |
+| vm_disk            | No       | String or Dict | vms_disks_directory + item + ".qcow2" | Path to the VM disk in `qcow2` format on the Ansible machine, or a URL (`http`/`https`/`ftp`/`ftps`) fetched directly on the target. To verify the disk after staging, use the dict form `{path: <path or URL>, sha256: <hex>}`; one or more of `sha512`/`sha384`/`sha256` may be given, the strongest is used. A URL requires a checksum. |
+| additional_disk    | No       | List of String or Dict |                            | Additional disks to give to the VM. Each entry uses the same format as `vm_disk`: a path string, or a dict with `path` plus checksum keys; a URL requires a checksum. An optional `label` key is accepted but ignored; the cluster storage names the disks itself. vm_manager imports the disks into the cluster storage and attaches them as vdb, vdc, ... in list order. |
 | vm_template        | No       | String      |                                       | Path of the VM Libvirt XML templated file on the ansible machine                                                                                                                                                                              |
 | xml_path           | No       | String      | vms_disks_directory + item + ".qcow2" | Path of the VM Libvirt XML file (non-template) on the ansible machine                                                                                                                                                                         |
 | force              | No       | Bool        | false                                 | Replace the VM if a VM with the same name is already deployed                                                                                                                                                                                 |
@@ -83,15 +83,15 @@ VMs:
       [...]
 ```
 
-The same VM with its disk fetched from a remote location instead (`vm_disk_checksum` is mandatory here):
+The same VM with its disk fetched from a remote location instead (a checksum is mandatory for a URL):
 
 ```yaml
 VMs:
   hosts:
     myVM:
       vm_template: "../templates/vm/guest.xml.j2"
-      vm_disk: "https://images.example.com/seapath/guest.qcow2"
-      vm_disk_checksum:
+      vm_disk:
+        path: "https://images.example.com/seapath/guest.qcow2"
         sha256: "<sha256 hex digest of guest.qcow2>"
       additional_disk:
         - "../files/data.qcow2"
@@ -135,7 +135,7 @@ Below is a list of the VMs member variables that can be used with this XML file.
 | uuid            |                  | Integer         | random    | Libvirt UUID of the VM                                                                                                                                                                                                                                                                                                           |
 | description     |                  | String          | Test VM   | Libvirt description of the VM                                                                                                                                                                                                                                                                                                    |
 | memory          |                  | Integer         | 2048      | RAM of the VM in MiB                                                                                                                                                                                                                                                                                                             |
-| additional_disk |                  | List            |           | Additional disks to give to the VM. Each entry is either a path string, or a dict with `path` plus optional checksum keys (`sha512`/`sha384`/`sha256`). A `path` that is a URL (`http`/`https`/`ftp`/`ftps`) is fetched directly on the target and requires a checksum. Device names (vdb, vdc, ...) are assigned automatically. |
+| additional_disk |                  |                 |           | Available to the template but should not be used in cluster mode: vm_manager imports the additional disks into the cluster storage and appends them to the XML itself. Rendering additional disks in a template is only relevant for `deploy_vms_standalone`. |
 | vm_features     |                  | List of strings |           | List of vm features to enable. Possible values are "rt", "isolated", "secure-boot", "dpdk", "memballoon", "graphic-console", "windows"                                                                                                                                                                                           |
 |                 | rt               |                 |           | Enable real time tweaks (priority, cgroup, scheduler, etc ...). Depends on `cpuset`                                                                                                                                                                                                                                              |
 |                 | isolated         |                 |           | Pin vCPU to hypervisor CPUs. Depends on `cpuset`                                                                                                                                                                                                                                                                                 |

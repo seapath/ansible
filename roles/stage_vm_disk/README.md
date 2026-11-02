@@ -45,7 +45,6 @@ Sets the fact `stage_vm_disk_normalized_disks`: one dict per entry with `file` (
   vars:
     stage_vm_disk_label: "{{ item }}"
     stage_vm_disk_source: "{{ hostvars[item].vm_disk | default('') }}"
-    stage_vm_disk_checksum: "{{ hostvars[item].vm_disk_checksum | default({}) }}"
     stage_vm_disk_destination: "/var/lib/libvirt/images/{{ item }}.qcow2"
 
 - name: "Stage additional disks for {{ item }}"
