@@ -4,7 +4,12 @@
 Sync {
         Mode NOTRACK {
                 DisableInternalCache on
-                DisableExternalCache on
+{# On a router failover, the new router commits its external cache
+   (conntrackd -c). Without that cache, every node writes the sessions it
+   receives into its own kernel table, where no traffic refreshes them: when
+   such a copy expires, its deletion is sent back and removes the live
+   session on the router. #}
+                DisableExternalCache {{ 'off' if conntrackd_pacemaker_router else 'on' }}
                 StartupResync on
         }
         Multicast {
@@ -22,7 +27,7 @@ Sync {
         }
 }
 General {
-        Systemd on
+        Systemd {{ 'off' if conntrackd_pacemaker_router else 'on' }}
         HashSize 32768
         HashLimit 131072
         Syslog on

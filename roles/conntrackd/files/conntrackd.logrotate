@@ -1,0 +1,10 @@
+# Managed by the SEAPATH conntrackd role.
+# The Debian file restarts conntrackd after each rotation. Every node then
+# restarts at the same midnight and asks the router for a full resync.
+# copytruncate needs no restart.
+/var/log/conntrackd-stats.log {
+    weekly
+    rotate 2
+    missingok
+    copytruncate
+}
