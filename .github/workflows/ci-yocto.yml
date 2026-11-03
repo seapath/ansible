@@ -23,9 +23,11 @@ jobs:
   call-tests:
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
         include:
           - name: Welotec RSAPC Mk2
+            runner-label: runner-SFL-Welotec
             hyp-inventories: >-
               --inventory inventories_private/ci_yocto_standalone.yaml
             vms-inventories: >-
@@ -34,6 +36,7 @@ jobs:
               playbooks/test_run_cukinia.yaml
               playbooks/test_run_cyclictest.yaml
           - name: Aaeon ARM I.MX8P-2G
+            runner-label: runner-SFL-AAEON
             hyp-inventories: >-
               --inventory inventories_private/ci_yocto_standalone_aaeon.yaml
             hyp-test-playbooks: >-
@@ -43,7 +46,7 @@ jobs:
     with:
       seapath-flavor: "Yocto ${{ matrix.name }}"
       compliance_matrices_folder: yocto
-      runner-label: "runner-SFL"
+      runner-label: ${{ matrix.runner-label }}
       inventories-repository: "git@github.com:seapath-ci/ci-seapath-yocto-inventories.git"
       hyp-inventories: ${{ matrix.hyp-inventories }}
       hyp-configure-playbooks: >-
