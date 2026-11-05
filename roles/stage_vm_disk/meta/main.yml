@@ -1,0 +1,16 @@
+# Copyright (C) 2026 Sprecher Automation
+# SPDX-License-Identifier: Apache-2.0
+---
+galaxy_info:
+  author: "Seapath"
+  description: stages a VM system disk on the hypervisor from a local file or a remote URL
+  license: Apache-2.0
+  min_ansible_version: 2.9.10
+  platforms:
+    - name: Debian
+      versions:
+        - all
+    - name: EL
+      versions:
+        - all
+dependencies: []

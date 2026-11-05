@@ -5,6 +5,7 @@
 deploy_vms_standalone_disk_copy: true
 deploy_vms_standalone_qcow2tmpuploadfolder: "/tmp"
 deploy_vms_standalone_disk_pool: "/var/lib/libvirt/images"
+deploy_vms_standalone_vms_disks_directory: ""
 
 # The guests this role deploys. `standalone_VMs`, a child group of `VMs`, tells
 # an inventory holding both a cluster and a standalone machine which guests
