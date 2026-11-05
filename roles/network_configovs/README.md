@@ -8,6 +8,10 @@ throughput and latency) layer 2 network.
 
 This role configures additional Open vSwitch bridges
 
+When the PTP VLAN is a kernel VLAN device on a NIC that is also an OVS port,
+the ingress traffic of that VLAN bypasses OVS. See the "PTP VLAN on an
+interface that is also an OVS port" section of the timemaster role README.
+
 ## Requirements
 
 No requirement.
