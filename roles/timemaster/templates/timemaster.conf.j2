@@ -23,6 +23,11 @@ ntp_options {{ timemaster_ptp_ntp_options }}
 # chrony keeps PTP as the reference when an NTP source disagrees with it:
 # PTP and a single NTP server one second apart leave no majority, and chrony
 # then follows no source at all. When PTP is lost, NTP still takes over.
+# trust is only set by default with one NTP server or none. With two or more,
+# the NTP servers can outvote a grand master that sends a wrong time, such as
+# a boundary clock that becomes grand master and announces no valid UTC
+# offset (37 s step), or a switch that relays a class 6 grand master before
+# its own clock is set (hours of step).
 {% endif %}
 {% endif %}
 

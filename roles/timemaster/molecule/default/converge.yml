@@ -1,0 +1,16 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+- name: Converge
+  hosts: all
+  gather_facts: false
+  become: true
+  vars_files:
+    - ../../defaults/main.yml
+    - ../../vars/Debian.yml
+  tasks:
+    - name: Render the timemaster configuration
+      ansible.builtin.template:
+        src: ../../templates/timemaster.conf.j2
+        dest: /tmp/timemaster.conf
+        mode: "0644"

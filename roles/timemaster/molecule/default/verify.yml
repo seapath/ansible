@@ -1,0 +1,20 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+- name: Verify timemaster
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Read the rendered configuration
+      ansible.builtin.slurp:
+        src: /tmp/timemaster.conf
+      register: timemaster_test_conf
+
+    - name: Assert trust is only set with fewer than two NTP servers
+      ansible.builtin.assert:
+        that:
+          - >-
+            (timemaster_test_conf.content | b64decode).splitlines()
+            | select('match', '^ntp_options ') | list
+            == ['ntp_options ' ~ timemaster_test_options]

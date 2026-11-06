@@ -1,0 +1,53 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+dependency:
+  name: galaxy
+
+driver:
+  name: podman
+
+# One container per number of NTP servers. The scenario renders the
+# timemaster configuration only: running timemaster needs a NIC with a PHC.
+platforms:
+  - name: ntp0
+    image: docker.io/geerlingguy/docker-debian13-ansible:latest
+  - name: ntp1
+    image: docker.io/geerlingguy/docker-debian13-ansible:latest
+  - name: ntp1str
+    image: docker.io/geerlingguy/docker-debian13-ansible:latest
+  - name: ntp2
+    image: docker.io/geerlingguy/docker-debian13-ansible:latest
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      roles_path: "${MOLECULE_PROJECT_DIRECTORY}/.."
+  playbooks:
+    converge: converge.yml
+    verify: verify.yml
+  inventory:
+    group_vars:
+      all:
+        seapath_distro: Debian
+        ptp_interface: eth0
+    host_vars:
+      ntp0:
+        timemaster_test_options: trust prefer
+      ntp1:
+        ntp_servers:
+          - 192.0.2.1
+        timemaster_test_options: trust prefer
+      # A single server given as a string, as in the ABB inventory example.
+      ntp1str:
+        ntp_servers: 192.0.2.1
+        timemaster_test_options: trust prefer
+      ntp2:
+        ntp_servers:
+          - 192.0.2.1
+          - 192.0.2.2
+        timemaster_test_options: prefer
+
+verifier:
+  name: ansible

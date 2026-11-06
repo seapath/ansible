@@ -6,5 +6,9 @@ timemaster_ptp_network_transport: "L2"
 timemaster_ptp_delay_mechanism: "P2P"
 timemaster_ptp_domain_number: 0
 timemaster_ptp_minor_version: 1
-timemaster_ptp_ntp_options: "trust prefer"
+# chrony options of the PTP refclock. With two NTP servers or more, they can
+# outvote a grand master that sends a wrong time, so PTP is only preferred.
+# With one NTP server or none there is no majority against PTP: trust keeps
+# chrony on PTP when the NTP server disagrees with it.
+timemaster_ptp_ntp_options: "{{ 'prefer' if ([ntp_servers | default([])] | flatten | length) > 1 else 'trust prefer' }}"
 timemaster_ptp_custom_options:
