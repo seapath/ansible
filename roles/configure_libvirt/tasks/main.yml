@@ -40,3 +40,66 @@
     state: started
     enabled: true
   when: seapath_distro == "OracleLinux"
+
+- name: Check configure_libvirt_tap_link_speed
+  ansible.builtin.assert:
+    that:
+      - configure_libvirt_tap_link_speed | string is match('^[0-9]+$')
+    fail_msg: >-
+      configure_libvirt_tap_link_speed is {{ configure_libvirt_tap_link_speed }};
+      it must be a speed in Mb/s, or 0 to disable the hook.
+    quiet: true
+
+- name: Configure the tap link speed hook
+  when: configure_libvirt_tap_link_speed | int > 0
+  block:
+    - name: Ensure /etc/seapath exists
+      ansible.builtin.file:
+        path: /etc/seapath
+        state: directory
+        mode: "0755"
+
+    - name: Write the tap link speed
+      ansible.builtin.copy:
+        content: |
+          # Link speed in Mb/s set on the guest tap devices, managed by Ansible
+          {{ configure_libvirt_tap_link_speed | int }}
+        dest: /etc/seapath/tap-link-speed.conf
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Ensure /etc/libvirt/hooks/qemu.d exists
+      ansible.builtin.file:
+        path: /etc/libvirt/hooks/qemu.d
+        state: directory
+        mode: "0755"
+
+    # libvirt only discovers hook scripts when its QEMU daemon starts, so the
+    # first install restarts it; later updates of the script do not need it.
+    - name: Register the tap link speed hook with libvirt
+      ansible.builtin.copy:
+        src: seapath-tap-link-speed
+        dest: /etc/libvirt/hooks/qemu.d/20-seapath-tap-link-speed
+        owner: root
+        group: root
+        mode: "0755"
+        force: false
+      notify: Restart the libvirt QEMU daemon
+
+    - name: Update the tap link speed hook
+      ansible.builtin.copy:
+        src: seapath-tap-link-speed
+        dest: /etc/libvirt/hooks/qemu.d/20-seapath-tap-link-speed
+        owner: root
+        group: root
+        mode: "0755"
+
+- name: Remove the tap link speed hook
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/libvirt/hooks/qemu.d/20-seapath-tap-link-speed
+    - /etc/seapath/tap-link-speed.conf
+  when: configure_libvirt_tap_link_speed | int == 0

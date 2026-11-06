@@ -1,0 +1,11 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+- name: Converge
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Apply role under test
+      ansible.builtin.include_role:
+        name: configure_libvirt
