@@ -56,6 +56,10 @@ seapath_alloc/
 ├── applier.py        taskset + chrt application (VM path only)
 ├── claim.py          claim/release logic for seapath-run processes
 └── hook.py           libvirt QEMU hook entry point
+│
+│  ── observability ──────────────────────────────────────────────────────
+├── status.py         pool state collection, no side effects
+└── cli.py            entry points for all CLI binaries
 ```
 
 `scheduler.py` is the single convergence point: every allocation path calls

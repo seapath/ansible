@@ -64,6 +64,7 @@ Each degradation is logged to `/var/log/seapath/alloc.log` with its severity:
 | Path | Purpose |
 |------|---------|
 | `/usr/lib/seapath/seapath_alloc/` | Python package (topology, pool, allocator, ...) |
+| `/usr/bin/seapath-alloc` | CLI status tool |
 | `/usr/bin/seapath-qemu-hook` | libvirt hook entry point |
 | `/usr/bin/seapath-run` | Launch a third-party binary on an isolated core |
 | `/etc/libvirt/hooks/qemu.d/10-seapath-pinning` | Symlink → seapath-qemu-hook |
@@ -266,6 +267,18 @@ seapath-run sv-sim exclusive_logical FIFO 80 -- \
 Exits with the child's exit code. Signal-terminated children produce exit code
 `128 + signal_number` (standard shell convention), and a command that cannot
 be started gives 127 (not found) or 126 (not executable).
+
+## Checking pool state
+
+```bash
+seapath-alloc status
+```
+
+Prints a table of all currently occupied isolated cores and the actor holding
+each one (VM name, container service name, IRQ number, or claim label). A
+process pinned to isolated cores without seapath-alloc (a quadlet with
+`CPUAffinity=`, a tool started with `taskset`) holds its cores too and is
+listed as `pinned`, `<comm>[<pid>]`.
 
 ## Log output
 
