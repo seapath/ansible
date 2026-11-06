@@ -75,3 +75,13 @@
       ansible.builtin.assert:
         that:
           - seapath_alloc_run_bin.stat.mode == "0755"
+
+    - name: Read the pool state
+      ansible.builtin.command: seapath-alloc status --json
+      register: seapath_alloc_status
+      changed_when: false
+
+    - name: Assert the pool state is readable
+      ansible.builtin.assert:
+        that:
+          - "'isolated' in (seapath_alloc_status.stdout | from_json)"
