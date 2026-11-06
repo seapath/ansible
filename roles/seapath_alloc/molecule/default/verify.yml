@@ -59,3 +59,19 @@
       ansible.builtin.assert:
         that:
           - "'no QEMU process for VM vm0' in (seapath_alloc_log.content | b64decode)"
+
+    - name: Read the seapath-run helper
+      ansible.builtin.stat:
+        path: /usr/bin/seapath-run
+      register: seapath_alloc_run_bin
+
+    # isolation none with OTHER takes no core and applies nothing: the
+    # helper only has to import its package and return the child's status.
+    - name: Run a command through seapath-run
+      ansible.builtin.command: seapath-run molecule none OTHER 0 -- true
+      changed_when: false
+
+    - name: Assert seapath-run is installed
+      ansible.builtin.assert:
+        that:
+          - seapath_alloc_run_bin.stat.mode == "0755"

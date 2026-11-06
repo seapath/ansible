@@ -65,6 +65,7 @@ Each degradation is logged to `/var/log/seapath/alloc.log` with its severity:
 |------|---------|
 | `/usr/lib/seapath/seapath_alloc/` | Python package (topology, pool, allocator, ...) |
 | `/usr/bin/seapath-qemu-hook` | libvirt hook entry point |
+| `/usr/bin/seapath-run` | Launch a third-party binary on an isolated core |
 | `/etc/libvirt/hooks/qemu.d/10-seapath-pinning` | Symlink → seapath-qemu-hook |
 | `/etc/seapath/alloc.yaml` | Host-wide settings (`allocation_strategy`) |
 
@@ -191,7 +192,8 @@ vcpus:
 #### Allocation strategies
 
 The strategy is set host-wide via the `seapath_alloc_strategy` Ansible variable
-(written to `/etc/seapath/alloc.yaml`).
+(written to `/etc/seapath/alloc.yaml`).  It applies to both VM thread groups
+and `seapath-run` claims.
 
 | Strategy | Behaviour |
 |----------|-----------|
@@ -231,7 +233,42 @@ This means that once the `configure_nic_irq_affinity` monitor daemon pins a
 NIC queue to an isolated core, that core is automatically unavailable to VMs
 without any coordination between the two roles.
 
+### 3. Third-party processes (seapath-run)
+
+For any binary that cannot be modified, use `seapath-run` as a wrapper:
+
+```bash
+seapath-run <label> <isolation> <scheduler> <priority> -- <command> [args...]
+```
+
+`seapath-run`:
+1. Allocates cores from the pool and registers the claim under `label`.
+2. Applies `taskset -cp` and `chrt` to itself.
+3. Launches `command` as a child process. The child inherits CPU affinity and
+   RT scheduling automatically via `fork`/`exec` — no modification to the
+   binary is required.
+4. On child exit (or SIGTERM/SIGINT, which are forwarded to the child),
+   releases the claim.
+
+The command must stay in the foreground (`Type=simple` in a systemd unit): a
+command that forks into the background makes `seapath-run` release the claim
+at once while the daemon keeps the cores. A FIFO or RR request that finds no
+free isolated core is refused (exit 1) rather than run as OTHER on the
+housekeeping cores.
+
+Example — IEC 61850 Sampled Values publisher:
+
+```bash
+seapath-run sv-sim exclusive_logical FIFO 80 -- \
+    /usr/bin/sv-simulator -i eth0
+```
+
+Exits with the child's exit code. Signal-terminated children produce exit code
+`128 + signal_number` (standard shell convention), and a command that cannot
+be started gives 127 (not found) or 126 (not executable).
+
 ## Log output
 
 The libvirt hook writes to `/var/log/seapath/alloc.log` (rotated weekly via
-`/etc/logrotate.d/seapath-alloc`).
+`/etc/logrotate.d/seapath-alloc`). `seapath-run` writes to stderr
+(captured by journald when run from a systemd unit).
