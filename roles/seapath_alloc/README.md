@@ -321,6 +321,10 @@ to stderr (captured by journald when run from a systemd unit).
 
 ## Prometheus monitoring
 
+For the Prometheus scrape configuration needed to feed the cluster-wide
+dashboard (file-based service discovery, required `cluster`/`nodename`
+labels, one job per exporter), see [PROMETHEUS.md](PROMETHEUS.md).
+
 ### Textfile collector
 
 The role deploys a systemd timer (`seapath-alloc-export.timer`) that runs
@@ -335,6 +339,23 @@ systemctl status seapath-alloc-export.timer   # check timer state
 systemctl start seapath-alloc-export.service  # force an immediate run
 journalctl -u seapath-alloc-export            # exporter logs
 ```
+
+### Grafana dashboard
+
+Import `roles/seapath_alloc/files/grafana-seapath-alloc.json` into
+Grafana (Dashboards → Import).  The dashboard shows:
+
+- **Pool Overview** — free cores, free pairs, active VM/IRQ/claim counts,
+  fallback counter, metrics age (all with colour thresholds)
+- **CPU Map** — one row per CPU with topology (isolated, HT pair, HT
+  sibling), state, actor label, thread group, scheduler and priority;
+  state column is colour-coded (green=free, blue=vm, orange=irq,
+  purple=claim, gray=housekeeping)
+- **VM Threads** — one row per QEMU thread with VM name, kernel comm,
+  CPU(s), scheduler and RT priority
+- **NIC IRQs** — interface, IRQ range, CPU
+- **Claims** — label, CPU, scheduler, priority, PID
+- **Allocation Failures** — rate graph + last-fallback context panel
 
 ### Exported metrics
 
