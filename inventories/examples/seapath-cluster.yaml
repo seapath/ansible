@@ -69,6 +69,10 @@ hypervisors:
     # Select CPUs to isolate. recommended: CPU 4 through the highest CPU ID available on the host.
     isolcpus: "4-<MAX_CPU_ID>" # TODO
     livemigration_user: libvirtadmin
+    # libvirtadmin drives live migration and console access over qemu+ssh.
+    # The ssh session opens the target's local libvirt socket as this non-root
+    # user, so non-root socket access must be explicitly allowed here.
+    configure_libvirt_allow_non_root_libvirt_socket_access: true
 
 # Three hypervisors setup. The observer group is empty.
 observers:
