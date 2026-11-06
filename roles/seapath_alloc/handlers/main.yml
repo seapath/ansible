@@ -21,3 +21,15 @@
       fi
     done
   changed_when: true
+
+# The NIC IRQ monitor declares the slots of nic-irq-affinity.conf only when
+# seapath-alloc is installed, so a running monitor with slots to declare is
+# restarted once it is.
+- name: Restart the NIC IRQ affinity monitor
+  ansible.builtin.shell: |
+    set -e
+    if systemctl is-active --quiet nic-irq-affinity.service &&
+        grep -q ' slot=' /etc/nic-irq-affinity.conf; then
+      systemctl restart nic-irq-affinity.service
+    fi
+  changed_when: true
