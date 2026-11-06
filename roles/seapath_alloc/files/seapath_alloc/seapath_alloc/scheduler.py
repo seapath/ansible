@@ -32,9 +32,12 @@ def allocate_cores(pool, specs: list, topo, *,
       2. Load the allocation strategy from /etc/seapath/alloc.yaml.
       3. If REPACKING and there is a shortfall of free physical pairs,
          compact existing threads to free enough pairs before allocating.
-      4. Run AllocationEngine with the active strategy.
-      5. Register reserved HT siblings for exclusive_physical allocations.
-      6. Log every degradation at the level of its severity.
+      4. Run AllocationEngine with the active strategy and the live slot map
+         (specs referencing a known slot join its cores instead of consuming
+         new ones).
+      5. Register reserved HT siblings for exclusive_physical allocations and
+         any slots created during this round.
+      6. Log every degradation at the level of its severity, and record it.
 
     The caller must hold the pool lock (i.e. call this inside a
     ``with CorePool(...) as pool:`` block).  The caller is responsible
@@ -48,9 +51,31 @@ def allocate_cores(pool, specs: list, topo, *,
 
     strategy = load_strategy()
 
+    slots_map = {
+        s["name"]: {"cores": s.get("cores", []),
+                    "isolation": s.get("isolation", "")}
+        for s in pool.slots()
+    }
+
     if strategy == AllocationStrategy.REPACKING:
-        needed = sum(s.get("count", 1) for s in specs
-                     if s.get("isolation") == "exclusive_physical")
+        # A spec joining an existing slot consumes nothing; a slot created in
+        # this round consumes its pairs once, however many specs reference it,
+        # sized and typed as the engine merges it (_merge_slot_defs).
+        needed = 0
+        new_slots: dict = {}
+        for s in specs:
+            isolation = s.get("isolation")
+            slot = s.get("slot")
+            if slot:
+                if slot in slots_map or isolation not in (
+                        "exclusive_logical", "exclusive_physical"):
+                    continue
+                size, physical = new_slots.get(slot, (1, False))
+                new_slots[slot] = (max(size, s.get("count", 1)),
+                                   physical or isolation == "exclusive_physical")
+            elif isolation == "exclusive_physical":
+                needed += s.get("count", 1)
+        needed += sum(size for size, physical in new_slots.values() if physical)
         shortfall = max(0, needed - len(pool.free_physical()))
         if shortfall > 0:
             log.info("%s: repacking: %d pair(s) short, attempting compaction",
@@ -70,11 +95,15 @@ def allocate_cores(pool, specs: list, topo, *,
         housekeeping=topo.housekeeping_cpus(),
         sibling_of_fn=topo.siblings_of,
         strategy=strategy,
+        existing_slots=slots_map,
     )
     result = engine.allocate(specs)
 
     for idle, active in result.reserved_siblings:
         pool.add_reserved_sibling(idle, active)
+
+    for name, cores, isolation in result.new_slots:
+        pool.add_slot(name, cores, isolation)
 
     for spec, alloc in zip(specs, result.allocations):
         if not alloc.severity:
@@ -91,3 +120,46 @@ def allocate_cores(pool, specs: list, topo, *,
         clear_fallbacks(label, met)
 
     return result
+
+
+def declare_slot(pool, cpus: list, name: str, topo) -> list:
+    """
+    Register a slot on operator-chosen cores, without allocating anything.
+
+    The slot is exclusive_logical: the HT siblings of its cores stay in the
+    pool, as for any NIC IRQ the inventory pins.
+
+    This is the declarative counterpart of a slot spec: the caller (typically
+    the NIC IRQ monitor, whose placement comes from the inventory) has already
+    decided the cores and pins its actor itself; the pool is only informed so
+    that the cores are protected from normal allocations and joiners can
+    reference the slot by name. Never fails: conflicts are logged, the
+    operator is the authority.
+
+    The caller must hold the pool lock. Returns the slot's cores.
+    """
+    existing = next((s for s in pool.slots() if s["name"] == name), None)
+    if existing and set(existing.get("cores", [])) != set(cpus):
+        log.warning("slot %r: re-declared on cores %s (was %s)",
+                    name, cpus, existing.get("cores"))
+
+    isolated = set(topo.isolated_cpus())
+    outside = [c for c in cpus if c not in isolated]
+    if outside:
+        log.warning("slot %r: cores %s are not isolated, they remain shared"
+                    " with housekeeping load", name, outside)
+
+    # IRQs are not checked: the declaring actor is usually an IRQ already
+    # pinned (or about to be pinned) on these cores.
+    occupied = set(pool.occupied_cpus())
+    for slot in pool.slots():
+        if slot["name"] != name:
+            occupied.update(slot.get("cores", []))
+    conflicts = sorted(set(cpus) & occupied)
+    if conflicts:
+        log.warning("slot %r: declared cores %s are already occupied by"
+                    " another actor", name, conflicts)
+
+    pool.add_slot(name, list(cpus), "exclusive_logical")
+    log.info("slot %r declared: cores=%s", name, cpus)
+    return list(cpus)
