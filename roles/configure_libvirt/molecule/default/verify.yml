@@ -1,0 +1,75 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+- name: Verify configure_libvirt
+  hosts: all
+  become: true
+  gather_facts: false
+  vars:
+    configure_libvirt_test_hook: /etc/libvirt/hooks/qemu.d/20-seapath-tap-link-speed
+  tasks:
+    - name: Read the tap link speed hook
+      ansible.builtin.stat:
+        path: "{{ configure_libvirt_test_hook }}"
+      register: configure_libvirt_test_hook_stat
+
+    - name: Read the tap link speed
+      ansible.builtin.slurp:
+        src: /etc/seapath/tap-link-speed.conf
+      register: configure_libvirt_test_conf
+
+    - name: Assert the hook is installed with its speed
+      ansible.builtin.assert:
+        that:
+          - configure_libvirt_test_hook_stat.stat.mode == "0755"
+          - configure_libvirt_test_hook_stat.stat.pw_name == "root"
+          - (configure_libvirt_test_conf.content | b64decode).splitlines()[-1] == "1000"
+
+    - name: Create a tap device
+      ansible.builtin.command: ip tuntap add mode tap tapmol0
+      changed_when: true
+
+    # The speed of a tap device can only be read once it is up.
+    - name: Set the tap device up
+      ansible.builtin.command: ip link set tapmol0 up
+      changed_when: true
+
+    - name: Run the hook on a VM start
+      ansible.builtin.shell: >-
+        set -o pipefail;
+        echo '<domain><devices><interface type="bridge"><target dev="tapmol0"/>
+        </interface></devices></domain>'
+        | {{ configure_libvirt_test_hook }} vm0 started begin -
+      args:
+        executable: /bin/bash
+      changed_when: false
+
+    - name: Read the tap device speed
+      ansible.builtin.slurp:
+        src: /sys/class/net/tapmol0/speed
+      register: configure_libvirt_test_speed
+
+    - name: Delete the tap device
+      ansible.builtin.command: ip tuntap del mode tap tapmol0
+      changed_when: true
+
+    - name: Assert the hook set the speed
+      ansible.builtin.assert:
+        that:
+          - (configure_libvirt_test_speed.content | b64decode | trim) == "1000"
+
+    - name: Apply the role with the hook disabled
+      ansible.builtin.include_role:
+        name: configure_libvirt
+      vars:
+        configure_libvirt_tap_link_speed: 0
+
+    - name: Read the hook after disabling it
+      ansible.builtin.stat:
+        path: "{{ configure_libvirt_test_hook }}"
+      register: configure_libvirt_test_hook_removed
+
+    - name: Assert the hook is removed
+      ansible.builtin.assert:
+        that:
+          - not configure_libvirt_test_hook_removed.stat.exists

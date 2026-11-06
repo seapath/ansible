@@ -1,0 +1,15 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+- name: Prepare test environment (Debian 13)
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    # ip, to create the tap device the hook is run against.
+    - name: Install iproute2
+      ansible.builtin.apt:
+        name: iproute2
+        state: present
+        update_cache: true
