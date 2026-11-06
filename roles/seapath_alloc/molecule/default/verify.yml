@@ -101,3 +101,25 @@
       loop: "{{ seapath_alloc_container_bins.results }}"
       loop_control:
         label: "{{ item.item }}"
+
+    - name: Read the exporter timer state
+      ansible.builtin.systemd:
+        name: seapath-alloc-export.timer
+      register: seapath_alloc_export_timer
+
+    - name: Run the exporter once
+      ansible.builtin.systemd:
+        name: seapath-alloc-export.service
+        state: started
+      changed_when: false
+
+    - name: Read the exported metrics
+      ansible.builtin.slurp:
+        src: /var/lib/prometheus/node_exporter/seapath-alloc.prom
+      register: seapath_alloc_metrics
+
+    - name: Assert the exporter is scheduled and writes its metrics
+      ansible.builtin.assert:
+        that:
+          - seapath_alloc_export_timer.status.UnitFileState == "enabled"
+          - "'seapath_alloc_isolated_cpus' in (seapath_alloc_metrics.content | b64decode)"

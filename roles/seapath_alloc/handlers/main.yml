@@ -2,6 +2,12 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+- name: Restart seapath-alloc-export timer
+  ansible.builtin.systemd:
+    name: seapath-alloc-export.timer
+    state: restarted
+    daemon_reload: true
+
 # libvirt only discovers hook scripts when its QEMU daemon starts: virtqemud
 # on OracleLinux (modular daemons), libvirtd elsewhere. Only the running ones
 # need a restart; a socket-activated daemon that is not running will load the

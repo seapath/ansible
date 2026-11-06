@@ -216,6 +216,7 @@ def test_qemu_actors_report_the_scheduler_of_each_thread(tmp_path):
 
     vcpu = [t for t in actors[0]["threads"] if t["comm"] == "CPU 0/KVM"][0]
     assert (vcpu["scheduler"], vcpu["priority"]) == ("FIFO", 90)
+    assert vcpu["tid"] == 1010
 
 
 # --- _read_irq_actors -----------------------------------------------------
@@ -482,3 +483,74 @@ def test_pinned_actors_without_a_pinned_main_thread(tmp_path):
     (actor,) = _read_pinned_actors(proc, ISOLATED, covered=set())
 
     assert (actor["cpus"], actor["scheduler"]) == ("6", "RR")
+
+# --- degraded actors ------------------------------------------------------
+
+
+@pytest.fixture
+def active_fallbacks(tmp_path, monkeypatch):
+    """Point the exporter's active-fallback state at a scratch file."""
+    from seapath_alloc import exporter as exporter_mod
+
+    path = tmp_path / "active_fallbacks.json"
+    monkeypatch.setattr(exporter_mod, "_ACTIVE_PATH", str(path))
+
+    def install(entries):
+        exporter_mod._write_json(str(path), entries)
+
+    return install
+
+
+def fallback(label, group, requested, severity, pid):
+    return {"label": label, "group": group, "requested": requested,
+            "severity": severity, "since": 0, "pid": pid}
+
+
+def test_read_fallbacks_tells_a_typo_from_an_exhausted_pool(
+    tmp_path, active_fallbacks
+):
+    proc = tmp_path / "proc"
+    (proc / "100").mkdir(parents=True)
+    active_fallbacks({
+        "a": fallback("VM vm0", "vcpu/2", "exclusive_phyical", "hard", 100),
+        "b": fallback("VM vm0", "vcpu/1", "exclusive_physical", "soft", 100),
+        "c": fallback("VM vm1", "vcpu/0", "exclusive_logical", "hard", 100),
+        "d": fallback("VM vm1", "vhost", "exclusive_logical", "soft", 100),
+    })
+
+    reasons = [(f["group"], f["reason"])
+               for f in status_mod._read_fallbacks(str(proc))]
+
+    assert reasons == [
+        ("vcpu/1", "no free physical pair, HT-pair guarantee lost"),
+        ("vcpu/2", "unknown isolation 'exclusive_phyical', no RT isolation"),
+        ("vcpu/0", "no core left, no RT isolation"),
+        ("vhost", "fewer cores than asked, RT isolation kept"),
+    ]
+
+
+def test_read_fallbacks_skips_exited_processes(tmp_path, active_fallbacks):
+    proc = tmp_path / "proc"
+    proc.mkdir()
+    active_fallbacks({
+        "a": fallback("VM vm0", "vcpu/1", "exclusive_physical", "soft", 100),
+    })
+
+    assert status_mod._read_fallbacks(str(proc)) == []
+
+
+def test_read_fallbacks_skips_a_recycled_pid(tmp_path, active_fallbacks,
+                                             monkeypatch):
+    proc = tmp_path / "proc"
+    (proc / "100").mkdir(parents=True)
+    entry = fallback("VM vm0", "vcpu/1", "exclusive_physical", "soft", 100)
+    entry["start"] = 777
+    active_fallbacks({"a": entry})
+    monkeypatch.setattr("seapath_alloc.exporter.process_start_time",
+                        lambda pid, proc_path="/proc": 999)
+
+    assert status_mod._read_fallbacks(str(proc)) == []
+
+
+def test_read_fallbacks_without_state(tmp_path, active_fallbacks):
+    assert status_mod._read_fallbacks(str(tmp_path)) == []
