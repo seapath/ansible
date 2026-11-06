@@ -15,6 +15,7 @@ import logging
 
 from .allocator import HARD, SOFT, AllocationEngine, AllocationStrategy
 from .config import load_strategy
+from .exporter import clear_fallbacks, record_fallback
 from .repacker import execute_repack, find_repack_moves
 
 log = logging.getLogger(__name__)
@@ -75,11 +76,18 @@ def allocate_cores(pool, specs: list, topo, *,
     for idle, active in result.reserved_siblings:
         pool.add_reserved_sibling(idle, active)
 
-    for alloc in result.allocations:
+    for spec, alloc in zip(specs, result.allocations):
+        if not alloc.severity:
+            continue
         if alloc.severity == HARD:
             log.error("%s: %s: no RT isolation (%s)", label, alloc.name, alloc.warning)
-        elif alloc.severity == SOFT:
+        else:
             log.warning("%s: %s: RT isolation preserved with less than asked (%s)",
                         label, alloc.name, alloc.warning)
+        record_fallback(label, alloc.name, spec.get("isolation", ""), pid=pid,
+                        severity=alloc.severity)
+    met = [a.name for a in result.allocations if not a.severity]
+    if met:
+        clear_fallbacks(label, met)
 
     return result
