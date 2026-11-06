@@ -321,6 +321,10 @@ to stderr (captured by journald when run from a systemd unit).
 
 ## Prometheus monitoring
 
+For the Prometheus scrape configuration needed to feed the cluster-wide
+dashboard (file-based service discovery, required `cluster`/`nodename`
+labels, one job per exporter), see [PROMETHEUS.md](PROMETHEUS.md).
+
 ### Textfile collector
 
 The role deploys a systemd timer (`seapath-alloc-export.timer`) that runs
@@ -335,6 +339,36 @@ systemctl status seapath-alloc-export.timer   # check timer state
 systemctl start seapath-alloc-export.service  # force an immediate run
 journalctl -u seapath-alloc-export            # exporter logs
 ```
+
+### Grafana dashboard
+
+Import `roles/seapath_alloc/files/grafana-seapath-alloc.json` into
+Grafana (Dashboards → Import). Both dashboards draw their CPU map with the
+[Vega panel](https://grafana.com/grafana/plugins/akdor1154-vega-panel/)
+plugin (`akdor1154-vega-panel`), to install first. The dashboard shows:
+
+- **Pool Overview**: free cores, free pairs, active VM/IRQ/claim counts,
+  fallback counter, metrics age (all with colour thresholds)
+- **CPU Map**: colour-coded per-CPU grid, one cell per logical CPU
+  grouped by physical core (green=free, blue=vm, orange=irq,
+  teal=quadlet, pink=run, purple=claim, brown=pinned, dark red=reserved,
+  gray=housekeeping).  The tooltip shows the actor, thread group,
+  scheduler and priority when set.  The legend gutter also displays the
+  soft/hard fallback counters, so the map alone gives the full picture.
+- **VM Threads**: one row per QEMU thread with VM name, kernel comm,
+  CPU(s), scheduler and RT priority
+- **NIC IRQs**: interface, IRQ range, CPU
+- **Claims**: label, CPU, scheduler, priority, PID
+- **Allocation Failures**: rate graph + last-fallback context panel
+
+A cluster-wide variant, `grafana-seapath-alloc-cluster.json`, shows one CPU
+map per node (repeated panels, `cluster`/`nodename` template variables).
+Its gutter additionally carries the list of VMs running on the node and
+a per-node health block (RAM, disk and swap usage, failed systemd units)
+with the usual colour thresholds, so the first row only keeps the
+cluster-wide indicators (Ceph, Corosync, Pacemaker). It requires the
+`cluster` and `nodename` labels on every scraped target; see
+[PROMETHEUS.md](PROMETHEUS.md) for the scrape configuration.
 
 ### Exported metrics
 
