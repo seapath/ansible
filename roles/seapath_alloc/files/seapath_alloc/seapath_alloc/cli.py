@@ -4,7 +4,7 @@
 """
 seapath-alloc CLI entry point.
 
-Subcommands: status, claim, release, spread.
+Subcommands: status, claim, release, spread, export.
 Data collection is in status.py; this module only contains argument parsing
 and subcommand dispatch.
 """
@@ -65,6 +65,11 @@ def main(argv=None):
         help="Print planned moves without applying them",
     )
 
+    # export
+    sub.add_parser("export",
+                   help="Write Prometheus metrics to"
+                        " /var/lib/prometheus/node_exporter/seapath-alloc.prom")
+
     args = parser.parse_args(argv)
 
     if args.command == "status" or args.command is None:
@@ -93,6 +98,11 @@ def main(argv=None):
                         prio = actor.get('priority', 0)
                         sched_str = f"  {sched}/{prio}" if sched else ""
                         print(f"  {t:7s} {actor['label']:18s}  cpus={actor['cpus']}  pid={actor.get('pid')}{sched_str}")
+            if data.get('fallbacks'):
+                print("\nDegraded:")
+                for f in data['fallbacks']:
+                    print(f"  {f['severity']:4s}  {f['label']}  {f['group']:10s}"
+                          f"  {f['reason']}")
 
     elif args.command == "claim":
         from .allocator import HARD
@@ -171,6 +181,10 @@ def main(argv=None):
                 print(f"Spread: applied {len(moves)} move(s).")
                 for move in moves:
                     print(_fmt(move))
+
+    elif args.command == "export":
+        from .exporter import write_prom
+        write_prom()
 
     else:
         parser.print_help()

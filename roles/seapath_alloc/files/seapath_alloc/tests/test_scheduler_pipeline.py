@@ -46,6 +46,28 @@ def pool_at(tmp_path, monkeypatch):
         pool.unlock()
 
 
+@pytest.fixture(autouse=True)
+def cleared(monkeypatch):
+    """Capture clear_fallbacks calls: no test touches /var/lib."""
+    calls = []
+    monkeypatch.setattr(scheduler_mod, "clear_fallbacks",
+                        lambda label, groups: calls.append((label, groups)))
+    return calls
+
+
+@pytest.fixture
+def fallbacks(monkeypatch):
+    """Capture record_fallback calls instead of writing the state files."""
+    recorded = []
+    monkeypatch.setattr(
+        scheduler_mod, "record_fallback",
+        lambda label, group, requested, pid=0, severity="hard": recorded.append(
+            (label, group, requested, pid, severity)
+        ),
+    )
+    return recorded
+
+
 def spec(name="claim", isolation="exclusive_logical", **extra):
     base = {"name": name, "isolation": isolation, "scheduler": "OTHER",
             "priority": 0}
@@ -118,7 +140,7 @@ def repack(monkeypatch):
     return install
 
 
-def test_repacking_compacts_when_pairs_are_short(pool_at, repack,
+def test_repacking_compacts_when_pairs_are_short(pool_at, fallbacks, repack,
                                                  caplog):
     # One isolated pair, two exclusive_physical specs: one pair short.
     pool, topo = pool_at(strategy=AllocationStrategy.REPACKING, isolated="4-5")
@@ -138,7 +160,7 @@ def test_repacking_compacts_when_pairs_are_short(pool_at, repack,
     assert "applied 1 move(s)" in caplog.text
 
 
-def test_repacking_warns_when_nothing_can_be_moved(pool_at, repack,
+def test_repacking_warns_when_nothing_can_be_moved(pool_at, fallbacks, repack,
                                                    caplog):
     pool, topo = pool_at(strategy=AllocationStrategy.REPACKING, isolated="4-5")
     state = repack(moves=[])
@@ -179,7 +201,7 @@ def test_repacking_ignores_specs_that_do_not_need_a_pair(
     assert state["asked"] == []
 
 
-def test_repacking_honours_the_spec_count(pool_at, repack):
+def test_repacking_honours_the_spec_count(pool_at, repack, fallbacks):
     pool, topo = pool_at(strategy=AllocationStrategy.REPACKING, isolated="4-5")
     state = repack(moves=[])
 
@@ -193,17 +215,35 @@ def test_repacking_honours_the_spec_count(pool_at, repack):
 # --- degradation reporting ------------------------------------------------
 
 
-def test_allocate_cores_reports_a_hard_fallback(pool_at, caplog):
+def test_allocate_cores_reports_a_hard_fallback(pool_at, fallbacks, caplog):
     # No isolated cores at all: everything lands on housekeeping.
     pool, topo = pool_at(isolated="")
 
     with caplog.at_level("ERROR", logger=scheduler_mod.log.name):
-        allocate_cores(pool, [spec(name="vcpu/0")], topo, label="VM vm0")
+        allocate_cores(pool, [spec(name="vcpu/0")], topo, label="VM vm0",
+                       pid=4242)
 
     assert "VM vm0: vcpu/0: no RT isolation (pool exhausted" in caplog.text
+    assert fallbacks == [("VM vm0", "vcpu/0", "exclusive_logical", 4242, "hard")]
 
 
-def test_allocate_cores_reports_a_soft_fallback(pool_at, caplog):
+def test_allocate_cores_reports_an_unknown_isolation_as_hard(
+    pool_at, fallbacks, caplog
+):
+    # A typo leaves the thread on housekeeping although free pairs exist: the
+    # guest lost its RT isolation, which is a hard fallback.
+    pool, topo = pool_at()
+
+    with caplog.at_level("WARNING", logger=scheduler_mod.log.name):
+        allocate_cores(pool, [spec(name="vcpu/1", isolation="exclusive_phyical")],
+                       topo, label="VM vm0", pid=4242)
+
+    assert fallbacks == [("VM vm0", "vcpu/1", "exclusive_phyical", 4242, "hard")]
+    assert "VM vm0: vcpu/1: no RT isolation (unknown isolation" in caplog.text
+    assert "RT isolation preserved" not in caplog.text
+
+
+def test_allocate_cores_reports_a_soft_fallback(pool_at, fallbacks, caplog):
     # cpu6 is isolated but cpu7 is not, so 6 is a free logical core that is
     # not part of any free pair: the second exclusive_physical spec keeps its
     # RT isolation but loses the HT-pair guarantee.
@@ -219,23 +259,43 @@ def test_allocate_cores_reports_a_soft_fallback(pool_at, caplog):
 
     assert "VM vm0: b: RT isolation preserved with less than asked" in caplog.text
     assert "ERROR" not in caplog.text
+    assert "soft" in [f[4] for f in fallbacks]
 
 
-def test_an_unknown_isolation_is_reported_as_a_hard_fallback(pool_at, caplog):
-    # It used to land in the "HT-pair guarantee lost" branch.
-    pool, topo = pool_at()
-
-    with caplog.at_level("WARNING", logger=scheduler_mod.log.name):
-        allocate_cores(pool, [spec(name="v", isolation="exclusif")], topo,
-                       label="VM vm0")
-
-    assert "VM vm0: v: no RT isolation (unknown isolation" in caplog.text
-
-
-def test_allocate_cores_says_nothing_when_everything_fits(pool_at, caplog):
+def test_allocate_cores_says_nothing_when_everything_fits(
+    pool_at, fallbacks, caplog
+):
     pool, topo = pool_at()
 
     with caplog.at_level("WARNING", logger=scheduler_mod.log.name):
         allocate_cores(pool, [spec()], topo, label="t")
 
     assert caplog.text == ""
+    assert fallbacks == []
+
+
+def test_groups_allocated_as_asked_clear_their_old_fallbacks(
+    pool_at, fallbacks, cleared
+):
+    # A running VM re-pinned once cores are free again is no longer degraded.
+    pool, topo = pool_at(isolated="4-6")
+
+    allocate_cores(
+        pool,
+        [spec(name="a", isolation="exclusive_physical"),
+         spec(name="b", isolation="exclusive_physical")],
+        topo, label="VM vm0", pid=4242,
+    )
+
+    assert cleared == [("VM vm0", ["a"])]
+    assert [f[1] for f in fallbacks] == ["b"]
+
+
+def test_nothing_is_cleared_when_every_group_is_degraded(
+    pool_at, fallbacks, cleared
+):
+    pool, topo = pool_at(isolated="")
+
+    allocate_cores(pool, [spec(name="a")], topo, label="VM vm0", pid=4242)
+
+    assert cleared == []
