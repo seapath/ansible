@@ -55,6 +55,22 @@
     group: root
     mode: "0755"
 
+- name: Install seapath-container-pin helper
+  ansible.builtin.copy:
+    src: seapath-container-pin
+    dest: /usr/bin/seapath-container-pin
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install seapath-container-unpin helper
+  ansible.builtin.copy:
+    src: seapath-container-unpin
+    dest: /usr/bin/seapath-container-unpin
+    owner: root
+    group: root
+    mode: "0755"
+
 - name: Install seapath-run helper
   ansible.builtin.copy:
     src: seapath-run

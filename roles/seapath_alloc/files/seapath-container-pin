@@ -1,0 +1,146 @@
+#!/usr/bin/env python3
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+"""
+Pin a systemd container service to an isolated CPU core.
+
+Allocates the requested cores via the seapath-alloc pool, then confines the
+container to them and applies the scheduling policy to every thread of the
+container.  With Podman's split cgroups (what quadlet generates), only the
+libpod-payload sub-cgroup gets the cores and the policy: conmon and systemd's
+.control are confined to the housekeeping cores and keep their policy.  Any
+other service is treated as a whole.  See cgroup.py.
+
+Usage:
+    seapath-container-pin <service-name> <isolation> <scheduler> <priority>
+
+    isolation   exclusive_logical | exclusive_physical | none
+    scheduler   FIFO | RR | OTHER | BATCH
+    priority    RT priority (0 for OTHER and BATCH)
+
+<service-name> may be given with or without the .service suffix.
+The script is designed to be called from ExecStartPost= in a quadlet.
+"""
+
+import subprocess
+import sys
+
+sys.path.insert(0, '/usr/lib/seapath')
+
+from seapath_alloc.cgroup import cgroup_procs, cgroup_root, place_service, schedule_payload
+from seapath_alloc.claim import ClaimError, claim_allocation
+from seapath_alloc.logging_setup import setup_logging
+from seapath_alloc.topology import Topology, format_cpu_list
+
+
+def _service_main_pid(service):
+    try:
+        out = subprocess.check_output(
+            ["systemctl", "show", "--property=MainPID", "--value", service],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+        pid = int(out)
+        return pid if pid > 1 else 0
+    except (subprocess.CalledProcessError, ValueError):
+        return 0
+
+
+def main():
+    setup_logging()
+    if len(sys.argv) != 5:
+        sys.stderr.write(
+            f"usage: {sys.argv[0]} <service-name> <isolation> <scheduler> <priority>\n"
+        )
+        sys.exit(1)
+
+    name = sys.argv[1]
+    if name.endswith(".service"):
+        name = name[:-8]
+    service = f"{name}.service"
+
+    isolation = sys.argv[2]
+    scheduler = sys.argv[3].upper()
+    try:
+        priority = int(sys.argv[4])
+    except ValueError:
+        sys.stderr.write(f"error: priority must be an integer, got {sys.argv[4]!r}\n")
+        sys.exit(1)
+
+    root = cgroup_root(service)
+
+    # The claim's owning PID must belong to the container, not to this
+    # short-lived script: a claim keyed on a dead PID self-expires on the
+    # next pool read, silently freeing cores the container still occupies.
+    # For a quadlet the MainPID is conmon, which lives exactly as long as
+    # the container.
+    main_pid = _service_main_pid(service)
+    if not main_pid and root:
+        cgroup_pids = cgroup_procs(root)
+        main_pid = cgroup_pids[0] if cgroup_pids else 0
+    if not main_pid:
+        sys.stderr.write(
+            f"error: no live PID found for {service} (MainPID unset and cgroup"
+            " empty) — refusing to register a claim that would instantly expire\n"
+        )
+        sys.exit(1)
+
+    try:
+        alloc = claim_allocation(
+            label=name,
+            isolation=isolation,
+            scheduler=scheduler,
+            priority=priority,
+            target_pid=main_pid,
+            no_apply=True,
+            kind="quadlet",
+        )
+    except ClaimError as exc:
+        sys.stderr.write(f"error: {exc}\n")
+        sys.exit(1)
+    cores = alloc.cpus
+    # The policy applied is the allocation's: after a hard fallback to the
+    # housekeeping cores, FIFO and RR are dropped to OTHER.
+    scheduler, priority = alloc.scheduler.upper(), alloc.priority
+
+    cpu_str = format_cpu_list(cores) or "housekeeping"
+    if alloc.warning:
+        sys.stderr.write(f"warning: {service}: {alloc.warning}\n")
+
+    # Nothing here fails the unit: the container runs, and what could not be
+    # applied is said in its journal, the details being in the alloc log.
+    if not root:
+        sys.stderr.write(
+            f"warning: {service}: no cgroup found, core(s) {cpu_str} claimed"
+            f" but neither affinity nor {scheduler}/{priority} applied\n")
+        return
+
+    applied = True
+    if cores:
+        placement = place_service(root, cores, Topology().housekeeping_cpus())
+        if not placement.cpuset:
+            sys.stderr.write(
+                f"warning: {service}: cpuset not written (cpuset controller not"
+                " delegated?), its threads are confined by affinity only\n")
+        if placement.refused:
+            applied = False
+            sys.stderr.write(
+                f"warning: {service}: {placement.refused} thread(s) refused"
+                f" the affinity {cpu_str}\n")
+    # isolation=none still honours an RT scheduler request.
+    if cores or scheduler in ("FIFO", "RR"):
+        tids, refused = schedule_payload(root, scheduler, priority)
+        if refused:
+            applied = False
+            sys.stderr.write(
+                f"warning: {service}: {refused} of {len(tids)} thread(s)"
+                f" refused {scheduler}/{priority} (no RT runtime for the"
+                " cgroup?)\n")
+
+    state = "pinned" if applied else "partly pinned"
+    print(f"{state} {service} to core(s) {cpu_str} ({scheduler}/{priority})")
+
+
+if __name__ == "__main__":
+    main()
