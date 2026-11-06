@@ -16,7 +16,7 @@ import pytest
 from seapath_alloc import scheduler as scheduler_mod
 from seapath_alloc.allocator import AllocationStrategy
 from seapath_alloc.pool import CorePool
-from seapath_alloc.scheduler import allocate_cores
+from seapath_alloc.scheduler import allocate_cores, declare_slot
 from seapath_alloc.topology import Topology
 from .conftest import make_cpu_topology
 
@@ -272,6 +272,52 @@ def test_allocate_cores_says_nothing_when_everything_fits(
 
     assert caplog.text == ""
     assert fallbacks == []
+
+
+def test_repacking_counts_a_new_slot_once(pool_at, fallbacks, repack):
+    """
+    Several specs joining the same new slot consume its pair once, so the
+    shortfall must not be inflated by the number of joiners.
+    """
+    pool, topo = pool_at(strategy=AllocationStrategy.REPACKING, isolated="4-5")
+    state = repack(moves=[])
+
+    allocate_cores(
+        pool,
+        [spec(name="a", isolation="exclusive_physical", slot="rt"),
+         spec(name="b", isolation="exclusive_physical", slot="rt"),
+         spec(name="c", isolation="exclusive_physical", slot="rt")],
+        topo, label="t",
+    )
+
+    # One pair needed for the slot, one free: no shortfall at all.
+    assert state["asked"] == []
+
+
+def test_repacking_ignores_specs_joining_an_existing_slot(
+    pool_at, fallbacks, repack
+):
+    pool, topo = pool_at(strategy=AllocationStrategy.REPACKING, isolated="4-5")
+    pool.add_slot("rt", [4], "exclusive_physical")
+    state = repack(moves=[])
+
+    allocate_cores(
+        pool, [spec(isolation="exclusive_physical", slot="rt")], topo, label="t"
+    )
+
+    assert state["asked"] == []
+
+
+def test_declare_slot_warns_about_non_isolated_cores(pool_at, caplog):
+    pool, topo = pool_at()
+
+    with caplog.at_level("WARNING", logger=scheduler_mod.log.name):
+        cores = declare_slot(pool, [2, 4], "irq-slot", topo)
+
+    assert cores == [2, 4]
+    assert "cores [2] are not isolated" in caplog.text
+    # Declared anyway: the operator is the authority.
+    assert [s["name"] for s in pool.slots()] == ["irq-slot"]
 
 
 def test_groups_allocated_as_asked_clear_their_old_fallbacks(

@@ -14,15 +14,18 @@ isolated set (whoever pinned it: this tool, a quadlet's CPUAffinity=, a
 taskset), when a vhost worker of a VM is, when a physical NIC IRQ is routed
 only to isolated cores, or when a claim or a reserved HT sibling holds it.
 
-Two small files complete that picture, both in /run (tmpfs, gone at reboot):
+Three small files complete that picture, all in /run (tmpfs, gone at
+reboot):
 
   claims.json          cores held by a container or a seapath-run process
   .reserved_siblings   the idle HT sibling of each exclusive_physical
                        allocation
+  slots.json           named shared-core slots
 
-Both heal themselves on read: a claim lapses when its process is gone (PID
+They heal themselves on read: a claim lapses when its process is gone (PID
 and start time no longer match), a reserved sibling when the core it guards
-is no longer held by a pinned thread or a live claim.
+is no longer held by a pinned thread, a live claim or a slot, and a slot
+once no live actor (pinned thread, claim, NIC IRQ) occupies its cores.
 
 All reads and writes happen under a flock on .lock so concurrent hook
 invocations (two VMs starting simultaneously) see a consistent snapshot and
@@ -35,12 +38,29 @@ import json
 import logging
 import os
 import re
+import time
 
 from .topology import Topology, parse_cpu_list
 
 log = logging.getLogger(__name__)
 
 _DEFAULT_ALLOC_DIR = "/run/seapath/alloc"
+
+# A memberless slot younger than this is kept: it covers the window between
+# slot creation and the moment its first member becomes visible to the pool
+# (e.g. `seapath-alloc slot` returns before the IRQ is pinned).
+_SLOT_GRACE_SECONDS = 60
+
+
+def _boot_seconds() -> int:
+    """
+    Seconds since boot. Slot ages use this clock: a wall clock jump (NTP or
+    PTP stepping the time, a master stuck in 1970) would otherwise keep a
+    slot in grace forever or end the grace early. slots.json lives in /run,
+    which starts empty at every boot, so the clock never goes back on it.
+    """
+    clock = getattr(time, "CLOCK_BOOTTIME", time.CLOCK_MONOTONIC)
+    return int(time.clock_gettime(clock))
 
 # Flag of a kernel thread in the ninth field of /proc/<pid>/stat.
 _PF_KTHREAD = 0x00200000
@@ -104,12 +124,14 @@ class CorePool:
         self._lock_file = os.path.join(alloc_dir, ".lock")
         self._reserved_file = os.path.join(alloc_dir, ".reserved_siblings")
         self._claims_file = os.path.join(alloc_dir, "claims.json")
+        self._slots_file = os.path.join(alloc_dir, "slots.json")
 
         # Memoized scans, computed once and invalidated by bust_cache().
         self._busy_cache = None
         self._threads_cache = None
         self._irq_cache = None
         self._claims_cache = None
+        self._slots_cache = None
         # PIDs whose /proc threads are ignored in busy accounting.
         # Set via exclude_pids() before the first free_logical()/free_physical()
         # call to allow re-allocating a running VM onto its own current CPUs.
@@ -208,7 +230,7 @@ class CorePool:
 
     def add_claim(self, label: str, pid: int, cores: list,
                   scheduler: str = "OTHER", priority: int = 0,
-                  kind: str = ""):
+                  kind: str = "", slot: str = ""):
         """
         Register a claim from a container or operator tool.
 
@@ -230,6 +252,8 @@ class CorePool:
             entry["start"] = start
         if kind:
             entry["kind"] = kind
+        if slot:
+            entry["slot"] = slot
         claims.append(entry)
         self._save_claims(claims)
         self.bust_cache()
@@ -254,15 +278,47 @@ class CorePool:
         """Return active (non-expired) claims."""
         return self._live_claims()
 
+    def add_slot(self, name: str, cores: list, isolation: str):
+        """
+        Register a named shared-core slot.
+
+        A slot's cores are counted busy for every normal allocation; actors
+        that reference the slot by name share them instead of consuming new
+        cores. The slot expires automatically once no live actor occupies any
+        of its cores (see _live_slots).
+        """
+        slots = self._load_slots()
+        slots = [s for s in slots if s.get("name") != name]
+        slots.append({
+            "name": name,
+            "cores": list(cores),
+            "isolation": isolation,
+            "created": _boot_seconds(),
+        })
+        self._save_slots(slots)
+        self.bust_cache()
+
+    def slots(self) -> list:
+        """Return active (non-expired) slots."""
+        return self._live_slots()
+
+    def slot_cores(self) -> set:
+        """All cores belonging to any active slot."""
+        cores = set()
+        for slot in self._live_slots():
+            cores.update(slot.get("cores", []))
+        return cores
+
     def active_reserved_siblings(self) -> list:
         """
         Return [(idle_cpu, active_cpu), ...] for live exclusive_physical reservations.
 
         Only entries whose active_cpu is still occupied by a live actor (pinned
-        thread or active claim) are returned; stale entries are discarded.
+        thread, active claim or slot) are returned; stale entries are
+        discarded.
         """
         entries = self._load_reserved_siblings()
-        currently_pinned = self.occupied_cpus()
+        currently_pinned = self.occupied_cpus() | self.slot_cores()
         return [(idle, active) for idle, active in entries
                 if active in currently_pinned]
 
@@ -272,9 +328,11 @@ class CorePool:
         if self._busy_cache is not None:
             return self._busy_cache
         occupied = self.occupied_cpus()
-        busy = set(occupied)
+        slot_cores = self.slot_cores()
+        busy = set(occupied) | slot_cores
         busy.update(self.irq_cpus())
-        busy.update(self._busy_reserved_siblings(occupied))
+        # A slot whose only members are IRQs keeps its reservation too.
+        busy.update(self._busy_reserved_siblings(occupied | slot_cores))
         self._busy_cache = busy & set(self._topo.isolated_cpus())
         return self._busy_cache
 
@@ -302,6 +360,7 @@ class CorePool:
         self._threads_cache = None
         self._irq_cache = None
         self._claims_cache = None
+        self._slots_cache = None
 
     def _thread_excluded(self, parts: list, comm: str) -> bool:
         """
@@ -512,13 +571,49 @@ class CorePool:
                     busy.add(c)
         return busy
 
+    def _live_slots(self) -> list:
+        """
+        Slots that still have at least one live member on their cores.
+
+        Membership is derived from the actor sources only (pinned threads,
+        claims, NIC IRQs), never from the slot source itself, which would be
+        circular. A memberless slot within the creation grace period is kept
+        so that a freshly created slot survives until its first member is
+        pinned. Expired slots are pruned and the file rewritten, unless a PID
+        is excluded: an exclusion makes the slot of a running VM look
+        memberless on purpose.
+        """
+        if self._slots_cache is not None:
+            return self._slots_cache
+        slots = self._load_slots()
+        if not slots:
+            self._slots_cache = []
+            return []
+        occupied = self.occupied_cpus() | self.irq_cpus()
+        now = _boot_seconds()
+        active = []
+        for slot in slots:
+            cores = set(slot.get("cores", []))
+            # A creation time ahead of now comes from an older wall-clock
+            # entry: it gets no grace.
+            in_grace = 0 <= now - slot.get("created", 0) <= _SLOT_GRACE_SECONDS
+            if cores & occupied or in_grace:
+                active.append(slot)
+            else:
+                log.debug("slot %r: no live member, expiring", slot.get("name"))
+        if len(active) != len(slots) and not self._excluded_pids:
+            self._save_slots(active)
+        self._slots_cache = active
+        return active
+
     def _busy_reserved_siblings(self, occupied: set) -> set:
         """
         Idle HT siblings reserved for exclusive_physical allocations.
 
         Each entry is [idle_cpu, active_cpu]. The reservation is valid only
-        while active_cpu is still occupied by a live actor: either a pinned
-        thread (VM) or an active claim (seapath-run, quadlet, ...). Stale
+        while active_cpu is still occupied by a live actor: a pinned thread
+        (VM), an active claim (seapath-run, quadlet, ...) or an active slot
+        (whose members may be IRQs, invisible to the other two). Stale
         entries (actor gone) are dropped automatically, but only from the
         file when no PID is excluded: an exclusion makes the entries of a
         running VM look stale on purpose.
@@ -574,3 +669,16 @@ class CorePool:
 
     def _save_claims(self, claims: list):
         self._write_json(self._claims_file, claims, indent=2)
+
+    def _load_slots(self) -> list:
+        try:
+            with open(self._slots_file) as f:
+                data = json.load(f)
+            if isinstance(data, list):
+                return data
+        except (OSError, json.JSONDecodeError):
+            pass
+        return []
+
+    def _save_slots(self, slots: list):
+        self._write_json(self._slots_file, slots, indent=2)

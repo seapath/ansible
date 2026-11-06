@@ -33,6 +33,47 @@ class ClaimError(Exception):
     """A claim that cannot be made or applied."""
 
 
+def parse_isolation_arg(value: str):
+    """
+    Parse a positional CLI isolation argument, which is either a plain
+    isolation level or a slot reference "slot:<name>[:<isolation>]".
+
+    Returns (isolation, slot_name); slot_name is "" for plain levels.
+    Raises ValueError on an empty slot name.
+    """
+    if not value.startswith("slot:"):
+        return value, ""
+    name, _, isolation = value[len("slot:"):].partition(":")
+    if not name:
+        raise ValueError(f"empty slot name in {value!r}")
+    return (isolation or "exclusive_logical"), name
+
+
+def parse_isolation_spec(value: str):
+    """
+    Parse a positional CLI isolation argument, as parse_isolation_arg, where
+    a plain level may also give a number of cores: "exclusive_logical:2",
+    "exclusive_physical:2". A slot's size is the slot's, never given here.
+
+    Returns (isolation, slot_name, count).
+    Raises ValueError on an empty slot name or a count that is not a
+    positive integer.
+    """
+    isolation, slot = parse_isolation_arg(value)
+    if slot:
+        return isolation, slot, 1
+    level, sep, raw = value.partition(":")
+    if not sep:
+        return level, "", 1
+    try:
+        count = int(raw)
+    except ValueError:
+        raise ValueError(f"core count must be an integer in {value!r}") from None
+    if count < 1:
+        raise ValueError(f"core count must be at least 1 in {value!r}")
+    return level, "", count
+
+
 def _load_profile_file(path: str) -> dict:
     if yaml is None:
         log.warning("pyyaml not available, ignoring profile file %s", path)
@@ -98,7 +139,9 @@ def claim_allocation(label: str,
                      profile_path: str = "",
                      target_pid: int = 0,
                      no_apply: bool = False,
-                     kind: str = ""):
+                     kind: str = "",
+                     slot: str = "",
+                     count: int = 1):
     """
     Allocate isolated cores for label and register the claim.
 
@@ -109,6 +152,15 @@ def claim_allocation(label: str,
 
     A label held by another live process is refused with ClaimError; the
     same process claiming again replaces its own claim.
+
+    slot: name of a host-global shared-core slot. The claim then joins the
+    slot's cores (creating the slot if needed, with `isolation` as the slot's
+    level) instead of consuming its own cores.
+
+    count: how many cores the claim takes for itself, of its isolation
+    level (logical CPUs, or physical pairs), without a slot. The process
+    may use them all and places its own threads among them; the repacker
+    never moves a claim of several cores.
 
     Returns the GroupAllocation: its scheduler and priority are the ones
     applied, which differ from the request after a hard fallback.
@@ -121,17 +173,24 @@ def claim_allocation(label: str,
         merged = {"isolation": raw.get("isolation", isolation),
                   "scheduler": raw.get("scheduler", scheduler),
                   "priority": raw.get("priority", priority)}
+        if raw.get("slot", slot):
+            merged["slot"] = raw.get("slot", slot)
         # A profile file is validated like a VM profile: a typo is logged
         # rather than handed to chrt.
         merged = _normalize_group(merged, f"profile {profile_path}")
         isolation = merged["isolation"]
         scheduler = merged["scheduler"]
         priority = merged["priority"]
+        slot = merged.get("slot", "")
     else:
         scheduler, priority = _check_request(isolation, scheduler, priority)
 
-    spec = [{"name": "claim", "isolation": isolation,
-             "scheduler": scheduler, "priority": priority}]
+    spec_dict = {"name": "claim", "isolation": isolation,
+                 "scheduler": scheduler, "priority": priority}
+    if slot:
+        spec_dict["slot"] = slot
+    elif count > 1:
+        spec_dict["count"] = count
 
     with CorePool(topology=topo) as pool:
         for existing in pool.all_claims():
@@ -139,9 +198,13 @@ def claim_allocation(label: str,
                     and existing["pid"] != pid):
                 raise ClaimError(f"label {label!r} is held by live pid"
                                  f" {existing['pid']}")
-        result = allocate_cores(pool, spec, topo, label=label, pid=pid)
+        result = allocate_cores(pool, [spec_dict], topo, label=label, pid=pid)
         alloc = result.allocations[0]
-        pool.add_claim(label, pid, alloc.cpus, alloc.scheduler, alloc.priority, kind=kind)
+        # Only record the slot if it actually exists after allocation: a
+        # creation that fell back to housekeeping does not persist the slot.
+        in_slot = slot if any(s["name"] == slot for s in pool.slots()) else ""
+        pool.add_claim(label, pid, alloc.cpus, alloc.scheduler, alloc.priority,
+                       kind=kind, slot=in_slot)
 
     if not no_apply:
         try:
