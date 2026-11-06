@@ -11,7 +11,7 @@ no requirement.
 ## Privilege model
 
 The administrative operator defined by `admin_user` is deliberately granted
-passwordless sudo (`ALL=(root) NOPASSWD: ALL`). The `vm_manager` service runs as
+passwordless sudo (`ALL=NOPASSWD:EXEC: ALL`). The `vm_manager` service runs as
 root and there is currently no RBAC layer, so the operator must be able to
 manage the platform without an interactive password prompt. This is an
 intentional design decision: protect the admin account's SSH access and

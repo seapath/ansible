@@ -27,7 +27,7 @@
 - name: Install sudo admin user rules
   ansible.builtin.copy:
     content: |
-      {{ admin_user }}   ALL=(root) NOPASSWD: ALL
+      {{ admin_user }}   ALL=NOPASSWD:EXEC: ALL
     dest: "/etc/sudoers.d/{{ admin_user }}"
     owner: root
     group: root
