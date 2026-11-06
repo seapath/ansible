@@ -54,6 +54,7 @@ seapath_alloc/
 │  ── application paths (one per caller type) ───────────────────────────
 ├── threads.py        /proc QEMU PID + TID discovery (VM path only)
 ├── applier.py        taskset + chrt application (VM path only)
+├── claim.py          claim/release logic for seapath-run processes
 └── hook.py           libvirt QEMU hook entry point
 ```
 
@@ -156,8 +157,8 @@ at the matching level:
 | Path | Written by | Read by |
 |------|-----------|---------|
 | `/run/seapath/alloc/.lock` | `pool.py` | `pool.py` (flock) |
+| `/run/seapath/alloc/claims.json` | `claim.py` | `pool.py` |
 | `/run/seapath/alloc/.reserved_siblings` | `pool.py` | `pool.py` |
-| `/run/seapath/alloc/claims.json` | `pool.py` | `pool.py` |
 | `/etc/seapath/alloc.yaml` | Ansible | `config.py` |
 | `/var/log/seapath/alloc.log` | all entry points | (operators) |
 
