@@ -333,3 +333,76 @@ def test_an_invalid_count_becomes_one(caplog):
                                          "count": "two"}})
     assert p["vhost"]["count"] == 1
     assert "vhost: invalid count 'two'" in caplog.text
+
+# ------------------------------------------------------------------ slots
+
+def test_slot_defaults_to_exclusive_logical_and_fifo():
+    profile = normalize_profile({"emulator": {"slot": "x"}})
+    e = profile["emulator"]
+    assert e["slot"] == "x"
+    assert e["isolation"] == "exclusive_logical"
+    assert e["scheduler"] == "FIFO"
+    assert e["priority"] == 1
+
+
+def test_slot_with_explicit_ts_scheduler():
+    profile = normalize_profile({"emulator": {"slot": "x",
+                                              "scheduler": "OTHER"}})
+    e = profile["emulator"]
+    assert e["isolation"] == "exclusive_logical"
+    assert e["scheduler"] == "OTHER"
+    assert e["priority"] == 0
+
+
+def test_slot_explicit_isolation_kept():
+    profile = normalize_profile({"vhost": {"slot": "x",
+                                           "isolation": "exclusive_physical"}})
+    assert profile["vhost"]["isolation"] == "exclusive_physical"
+    assert profile["vhost"]["slot"] == "x"
+
+
+def test_no_slot_key_when_absent():
+    profile = normalize_profile({})
+    for key in ("vcpus", "emulator", "vhost", "iothread"):
+        assert "slot" not in profile[key]
+
+
+def test_expand_group_specs_propagates_slot():
+    profile = normalize_profile({
+        "emulator": {"slot": "x", "scheduler": "OTHER"},
+        "vhost": {"slot": "x", "priority": 1},
+    })
+    specs = expand_group_specs(profile, vcpu_count=1,
+                               vhost_count=1, iothread_count=0)
+    by_name = {s["name"]: s for s in specs}
+    assert by_name["emulator"]["slot"] == "x"
+    assert by_name["vhost/0"]["slot"] == "x"
+    assert "slot" not in by_name["vcpu/0"]
+
+
+def test_count_is_dropped_from_vcpu_specs():
+    """count is a vhost/iothread group key; kept on a per-vCPU spec it would
+    allocate N cores to every single vCPU thread."""
+    profile = normalize_profile({
+        "vcpus": {"isolation": "exclusive_logical", "count": 2},
+        "vhost": {"isolation": "exclusive_logical", "count": 2},
+    })
+    specs = expand_group_specs(profile, vcpu_count=2,
+                               vhost_count=2, iothread_count=0)
+    by_name = {s["name"]: s for s in specs}
+    assert "count" not in by_name["vcpu/0"]
+    assert "count" not in by_name["vcpu/1"]
+    assert by_name["vhost"]["count"] == 2
+
+
+def test_count_sizes_a_vcpu_slot():
+    """On a vCPU spec that names a slot, count is the slot's size."""
+    profile = normalize_profile({
+        "vcpus": {"slot": "rt", "count": 4, "scheduler": "FIFO",
+                  "priority": 10},
+    })
+    specs = expand_group_specs(profile, vcpu_count=4,
+                               vhost_count=0, iothread_count=0)
+    vcpus = [s for s in specs if s["name"].startswith("vcpu/")]
+    assert [s["count"] for s in vcpus] == [4, 4, 4, 4]
+    assert {s["slot"] for s in vcpus} == {"rt"}
