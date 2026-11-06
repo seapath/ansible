@@ -1,0 +1,13 @@
+---
+- name: Converge default configuration
+  hosts: all
+  become: true
+  gather_facts: false
+
+  roles:
+    - role: configure_libvirt
+
+  handlers:
+    - name: Restart libvirtd
+      ansible.builtin.command: /usr/bin/true
+      changed_when: false
