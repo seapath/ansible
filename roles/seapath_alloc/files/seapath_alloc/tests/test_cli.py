@@ -9,6 +9,17 @@ from seapath_alloc import cli
 from seapath_alloc.cli import main
 
 
+class FakePool:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc_info):
+        return False
+
+    def bust_cache(self):
+        self.busted = True
+
+
 @pytest.fixture(autouse=True)
 def quiet_logging(monkeypatch):
     """main() configures the root logger on every call; keep it out of the way."""
@@ -30,6 +41,15 @@ def status(monkeypatch):
         return data
 
     return install
+
+
+@pytest.fixture
+def pool(monkeypatch):
+    """Stand in for CorePool wherever a subcommand opens one."""
+    fake = FakePool()
+    monkeypatch.setattr("seapath_alloc.pool.CorePool", lambda **kw: fake)
+    monkeypatch.setattr("seapath_alloc.topology.Topology", lambda **kw: object())
+    return fake
 
 
 # --- status ---------------------------------------------------------------
@@ -114,6 +134,36 @@ def test_status_lists_other_actors_with_their_pid(status, capsys):
     assert "process sv" in out and "pid=4243" in out
 
 
+def test_status_lists_slots_with_their_members(status, capsys):
+    status(slots=[{
+        "name": "rt-shared", "cores": "10", "isolation": "shared",
+        "members": [
+            {"kind": "vm", "label": "vm0", "group": "vcpu/0", "cpus": "10",
+             "scheduler": "FIFO", "priority": 80},
+            {"kind": "process", "label": "sv", "group": "claim", "cpus": "10"},
+        ],
+    }])
+
+    main(["status"])
+
+    out = capsys.readouterr().out
+    assert "rt-shared" in out and "isolation=shared" in out
+    assert "vm0/vcpu/0" in out and "FIFO/80" in out
+    assert "sv/claim" in out
+
+
+def test_status_reports_slot_warnings(status, capsys):
+    status(slots=[{
+        "name": "rt-shared", "cores": "10", "isolation": "shared",
+        "members": [],
+        "warnings": ["cpu10 also carries a NIC IRQ"],
+    }])
+
+    main(["status"])
+
+    assert "warning: cpu10 also carries a NIC IRQ" in capsys.readouterr().out
+
+
 def test_status_lists_degraded_actors_with_their_reason(status, capsys):
     status(fallbacks=[{
         "label": "VM debian14", "group": "vcpu/1",
@@ -160,6 +210,70 @@ def test_claim_prints_the_cores_it_got(monkeypatch, capsys):
     assert out.err == ""
 
 
+@pytest.mark.parametrize("argv", [
+    ["--isolation", "slot:sv0"],
+    ["--isolation", "slot:sv0", "--slot", "sv0"],
+])
+def test_claim_takes_the_slot_from_the_isolation(monkeypatch, argv):
+    seen = {}
+    monkeypatch.setattr("seapath_alloc.claim.claim_allocation",
+                        lambda **kw: seen.update(kw) or _granted(cpus=(14,)))
+
+    main(["claim", "--label", "sv", "--target-pid", "777"] + argv)
+
+    assert seen["slot"] == "sv0"
+    assert seen["isolation"] == "exclusive_logical"
+
+
+def test_claim_refuses_two_different_slots(monkeypatch, capsys):
+    monkeypatch.setattr("seapath_alloc.claim.claim_allocation",
+                        lambda **kw: _granted(cpus=(14,)))
+
+    with pytest.raises(SystemExit) as excinfo:
+        main(["claim", "--label", "sv", "--target-pid", "777",
+              "--isolation", "slot:a", "--slot", "b"])
+
+    assert excinfo.value.code == 1
+    assert "different slots" in capsys.readouterr().err
+
+
+def test_claim_passes_every_option_through(monkeypatch, capsys):
+    seen = {}
+
+    def fake_claim(**kwargs):
+        seen.update(kwargs)
+        return _granted(cpus=(7,))
+
+    monkeypatch.setattr("seapath_alloc.claim.claim_allocation", fake_claim)
+
+    main([
+        "claim", "--label", "sv", "--isolation", "exclusive_physical",
+        "--scheduler", "FIFO", "--priority", "90", "--profile", "/etc/p.yaml",
+        "--target-pid", "4242", "--no-apply", "--slot", "rt",
+    ])
+
+    assert seen == {
+        "label": "sv", "isolation": "exclusive_physical", "scheduler": "FIFO",
+        "priority": 90, "profile_path": "/etc/p.yaml", "target_pid": 4242,
+        "no_apply": True, "slot": "rt", "count": 1,
+    }
+
+
+def test_claim_defaults(monkeypatch):
+    seen = {}
+    monkeypatch.setattr(
+        "seapath_alloc.claim.claim_allocation",
+        lambda **kw: (seen.update(kw), _granted())[1],
+    )
+
+    main(["claim", "--label", "sv", "--target-pid", "777"])
+
+    assert seen["isolation"] == "exclusive_logical"
+    assert seen["scheduler"] == "OTHER"
+    assert seen["priority"] == 0
+    assert seen["no_apply"] is False
+
+
 def test_claim_belongs_to_the_pid_it_is_given(monkeypatch):
     seen = {}
     monkeypatch.setattr("seapath_alloc.claim.claim_allocation",
@@ -180,16 +294,31 @@ def test_claim_requires_an_owner(capsys):
     assert "--target-pid" in capsys.readouterr().err
 
 
-def test_claim_reports_an_error_and_exits_1(monkeypatch, capsys):
+def test_claim_parses_a_core_count(monkeypatch):
+    seen = {}
+    monkeypatch.setattr("seapath_alloc.claim.claim_allocation",
+                        lambda **kw: (seen.update(kw), _granted())[1])
+
+    main(["claim", "--label", "sv", "--target-pid", "777",
+          "--isolation", "exclusive_logical:2"])
+
+    assert (seen["isolation"], seen["count"]) == ("exclusive_logical", 2)
+
+
+@pytest.mark.parametrize("isolation", ["exclusive_logical:0", None])
+def test_claim_reports_an_error_and_exits_1(monkeypatch, capsys, isolation):
     from seapath_alloc.claim import ClaimError
 
     def refuse(**kw):
         raise ClaimError("label 'sv' is held by live pid 9")
 
     monkeypatch.setattr("seapath_alloc.claim.claim_allocation", refuse)
+    argv = ["claim", "--label", "sv", "--target-pid", "777"]
+    if isolation:
+        argv += ["--isolation", isolation]
 
     with pytest.raises(SystemExit) as excinfo:
-        main(["claim", "--label", "sv", "--target-pid", "777"])
+        main(argv)
 
     assert excinfo.value.code == 1
     assert "seapath-alloc claim:" in capsys.readouterr().err
@@ -305,27 +434,44 @@ def test_release_of_a_claim_gone_meanwhile_exits_1(releaser, capsys):
     assert "no claim 'sv'" in capsys.readouterr().err
 
 
+# --- slot -----------------------------------------------------------------
+
+
+def test_slot_declares_the_operator_chosen_cores(monkeypatch, pool, capsys):
+    seen = {}
+
+    def fake_declare(pool_arg, cores, name, topo, isolation):
+        seen.update(cores=cores, name=name, isolation=isolation)
+        return cores
+
+    monkeypatch.setattr("seapath_alloc.scheduler.declare_slot", fake_declare)
+
+    main(["slot", "rt-shared", "--cpus", "7,10-11"])
+
+    assert seen == {"cores": [7, 10, 11], "name": "rt-shared",
+                    "isolation": "exclusive_logical"}
+    assert capsys.readouterr().out == "7,10-11\n"
+
+
+def test_slot_records_the_requested_isolation(monkeypatch, pool, capsys):
+    seen = {}
+    monkeypatch.setattr(
+        "seapath_alloc.scheduler.declare_slot",
+        lambda p, cores, name, topo, isolation: (
+            seen.update(isolation=isolation), cores)[1],
+    )
+
+    main(["slot", "rt", "--cpus", "10", "--isolation", "exclusive_physical"])
+
+    assert seen["isolation"] == "exclusive_physical"
+
+
+def test_slot_requires_the_cpu_list():
+    with pytest.raises(SystemExit):
+        main(["slot", "rt"])
+
+
 # --- spread ---------------------------------------------------------------
-
-
-class FakePool:
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *exc_info):
-        return False
-
-    def bust_cache(self):
-        self.busted = True
-
-
-@pytest.fixture
-def pool(monkeypatch):
-    """Stand in for CorePool wherever a subcommand opens one."""
-    fake = FakePool()
-    monkeypatch.setattr("seapath_alloc.pool.CorePool", lambda **kw: fake)
-    monkeypatch.setattr("seapath_alloc.topology.Topology", lambda **kw: object())
-    return fake
 
 
 @pytest.fixture

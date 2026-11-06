@@ -53,13 +53,37 @@ set_affinity() {
 # lines are ignored.
 #
 # seapath-alloc tracks NIC IRQ occupancy passively by reading the IRQ
-# affinities under /proc/irq, so nothing has to be declared to it here.
+# affinities under /proc/irq, so no claim registration is needed here.
+#
+# A value of "slot=<name>:<cpu>" behaves like the plain static CPU list:
+# the CPU comes from the config (i.e. the inventory) and is pinned
+# unconditionally, but it additionally informs seapath-alloc that a slot
+# exists on that core, so other actors can join it by name later.
+# Pinning never depends on seapath-alloc.
 apply() {
     iface=$1
     cpu=$(grep "^${iface} " "$CONF" | cut -d' ' -f2-)
     [ -n "$cpu" ] || return
+    slot=
+    case "$cpu" in
+        slot=?*:?*)
+            slot=${cpu#slot=}
+            cpu=${slot#*:}
+            slot=${slot%%:*}
+            ;;
+        slot=*)
+            logger -t nic-irq-monitor \
+                "invalid '$cpu' for $iface: expected slot=<name>:<cpu>"
+            return
+            ;;
+    esac
     set_affinity "$iface" "$cpu"
     logger -t nic-irq-monitor "pinned $iface IRQs to cpu $cpu"
+    # Declared once the IRQs are pinned: the declaration takes the pool lock,
+    # which a VM start may hold for a while, and must not delay the pinning.
+    if [ -n "$slot" ] && command -v seapath-alloc >/dev/null 2>&1; then
+        seapath-alloc slot "$slot" --cpus "$cpu" >/dev/null
+    fi
 }
 
 # Startup pass: apply to managed interfaces that are already up, so a manual

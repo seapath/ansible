@@ -16,6 +16,11 @@ Usage:
     seapath-container-pin <service-name> <isolation> <scheduler> <priority>
 
     isolation   exclusive_logical | exclusive_physical | none
+                | exclusive_logical:<n> | exclusive_physical:<n>: n
+                cores of that level for the container, among which its
+                application places its own threads; never repacked
+                | slot:<name>[:<isolation>]  — join the named shared-core
+                slot (created on first use, default exclusive_logical)
     scheduler   FIFO | RR | OTHER | BATCH
     priority    RT priority (0 for OTHER and BATCH)
 
@@ -29,7 +34,7 @@ import sys
 sys.path.insert(0, '/usr/lib/seapath')
 
 from seapath_alloc.cgroup import cgroup_procs, cgroup_root, place_service, schedule_payload
-from seapath_alloc.claim import ClaimError, claim_allocation
+from seapath_alloc.claim import ClaimError, claim_allocation, parse_isolation_spec
 from seapath_alloc.logging_setup import setup_logging
 from seapath_alloc.topology import Topology, format_cpu_list
 
@@ -60,7 +65,11 @@ def main():
         name = name[:-8]
     service = f"{name}.service"
 
-    isolation = sys.argv[2]
+    try:
+        isolation, slot, count = parse_isolation_spec(sys.argv[2])
+    except ValueError as exc:
+        sys.stderr.write(f"error: {exc}\n")
+        sys.exit(1)
     scheduler = sys.argv[3].upper()
     try:
         priority = int(sys.argv[4])
@@ -95,6 +104,8 @@ def main():
             target_pid=main_pid,
             no_apply=True,
             kind="quadlet",
+            slot=slot,
+            count=count,
         )
     except ClaimError as exc:
         sys.stderr.write(f"error: {exc}\n")

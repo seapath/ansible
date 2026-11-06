@@ -4,7 +4,7 @@
 """
 seapath-alloc CLI entry point.
 
-Subcommands: status, claim, release, spread, export.
+Subcommands: status, claim, release, slot, spread, export.
 Data collection is in status.py; this module only contains argument parsing
 and subcommand dispatch.
 """
@@ -32,7 +32,9 @@ def main(argv=None):
     # claim
     claim_p = sub.add_parser("claim", help="Claim isolated cores")
     claim_p.add_argument("--label", required=True)
-    claim_p.add_argument("--isolation", default="exclusive_logical")
+    claim_p.add_argument("--isolation", default="exclusive_logical",
+                         help="exclusive_logical, exclusive_physical or none,"
+                              " optionally :<count> (exclusive_logical:2)")
     claim_p.add_argument("--scheduler", default="OTHER")
     claim_p.add_argument("--priority", type=int, default=0)
     claim_p.add_argument("--profile", default="", metavar="FILE")
@@ -46,6 +48,9 @@ def main(argv=None):
     claim_p.add_argument("--no-apply", action="store_true", default=False,
                          help="Register the claim without pinning the target"
                               " process via taskset/chrt")
+    claim_p.add_argument("--slot", default="", metavar="NAME",
+                         help="Join (or create) the named shared-core slot"
+                              " instead of consuming dedicated cores")
 
     # release
     rel_p = sub.add_parser("release", help="Release a claim")
@@ -54,6 +59,20 @@ def main(argv=None):
                        help="Release a claim whose owner is still running;"
                             " the owner keeps its cores but no longer"
                             " holds the label")
+
+    # slot
+    slot_p = sub.add_parser(
+        "slot",
+        help="Declare a named shared-core slot on operator-chosen cores"
+             " so other actors can join it by name",
+    )
+    slot_p.add_argument("name", metavar="NAME")
+    slot_p.add_argument("--cpus", required=True, metavar="LIST",
+                        help="Cores the slot covers (cpu-list notation, e.g."
+                             " \"14\" or \"7,10-13\"). Never fails; conflicts"
+                             " are logged.")
+    slot_p.add_argument("--isolation", default="exclusive_logical",
+                        help="Isolation level recorded on the slot")
 
     # spread
     spread_p = sub.add_parser(
@@ -98,6 +117,19 @@ def main(argv=None):
                         prio = actor.get('priority', 0)
                         sched_str = f"  {sched}/{prio}" if sched else ""
                         print(f"  {t:7s} {actor['label']:18s}  cpus={actor['cpus']}  pid={actor.get('pid')}{sched_str}")
+            if data.get('slots'):
+                print("\nSlots:")
+                for slot in data['slots']:
+                    print(f"  {slot['name']:18s}  cpus={slot['cores']}"
+                          f"  isolation={slot['isolation']}")
+                    for m in slot['members']:
+                        sched = m.get('scheduler', '')
+                        prio = m.get('priority', 0)
+                        sched_str = f"  {sched}/{prio}" if sched else ""
+                        print(f"    {m['kind']:7s} {m['label']}/{m['group']}"
+                              f"  cpus={m['cpus']}{sched_str}")
+                    for reason in slot.get('warnings', []):
+                        print(f"    warning: {reason}")
             if data.get('fallbacks'):
                 print("\nDegraded:")
                 for f in data['fallbacks']:
@@ -106,18 +138,27 @@ def main(argv=None):
 
     elif args.command == "claim":
         from .allocator import HARD
-        from .claim import ClaimError, claim_allocation, release as do_release
+        from .claim import (ClaimError, claim_allocation, parse_isolation_spec,
+                            release as do_release)
         try:
+            isolation, slot, count = parse_isolation_spec(args.isolation)
+            # --isolation slot:<name> is the seapath-run spelling of --slot.
+            if slot and args.slot and slot != args.slot:
+                raise ValueError(f"--slot {args.slot} and --isolation"
+                                 f" {args.isolation} name different slots")
+            slot = args.slot or slot
             alloc = claim_allocation(
                 label=args.label,
-                isolation=args.isolation,
+                isolation=isolation,
                 scheduler=args.scheduler,
                 priority=args.priority,
                 profile_path=args.profile,
                 target_pid=args.target_pid,
                 no_apply=args.no_apply,
+                slot=slot,
+                count=count,
             )
-        except ClaimError as exc:
+        except (ClaimError, ValueError) as exc:
             print(f"seapath-alloc claim: {exc}", file=sys.stderr)
             sys.exit(1)
         if alloc.severity == HARD and args.scheduler.upper() in ("FIFO", "RR"):
@@ -153,6 +194,17 @@ def main(argv=None):
             print(f"seapath-alloc release: no claim {args.label!r}",
                   file=sys.stderr)
             sys.exit(1)
+
+    elif args.command == "slot":
+        from .pool import CorePool
+        from .scheduler import declare_slot
+        from .topology import Topology as _Topo, parse_cpu_list
+
+        topo = _Topo()
+        with CorePool(topology=topo) as pool:
+            cores = declare_slot(pool, parse_cpu_list(args.cpus),
+                                 args.name, topo, isolation=args.isolation)
+        print(format_cpu_list(cores))
 
     elif args.command == "spread":
         from .pool import CorePool

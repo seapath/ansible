@@ -38,7 +38,7 @@ pool read — no explicit release protocol needed after a crash or OOM kill.
 A slot (named shared-core group, `slots.json`) expires once no live actor —
 QEMU thread, claim or NIC IRQ — occupies any of its cores. A memberless slot
 younger than 60 s is kept: this grace period covers the window between
-the slot being declared and the caller actually pinning (e.g. the IRQ
+`seapath-alloc slot` returning and the caller actually pinning (e.g. the IRQ
 monitor). Slot cores count as busy for every normal allocation; only specs
 referencing the slot by name land on them. Full rationale in
 [Shared-core slots](#shared-core-slots--model-and-rationale) below.
@@ -91,9 +91,9 @@ normal isolation paths. *Fixed* actors (NIC IRQs: the NIC is physically in
 the server, its IRQs exist from boot to shutdown) have no placement problem
 to solve at runtime — the operator already decided the core in the
 inventory. They never ask the pool; they *declare* their slot on the
-operator-chosen core (`declare_slot()`), and the pinning itself never
-depends on seapath-alloc — worst case only the colocation opportunity is
-lost. A dynamic "ask the pool" mode for IRQs was
+operator-chosen core (`declare_slot()`, `seapath-alloc slot NAME --cpus`),
+and the pinning itself never depends on seapath-alloc — worst case only the
+colocation opportunity is lost. A dynamic "ask the pool" mode for IRQs was
 considered and deliberately rejected: an IRQ never exits, so its allocation
 would never be released — a static assignment in disguise, less legible
 than the inventory, with an availability dependency for no benefit.
@@ -130,7 +130,10 @@ Any spec may reference any slot — including RT vCPUs, where colocation can
 stall the guest kernel. Forbidding cases would mean per-type exception code
 and paths that must be able to fail, while the hook must always exit 0 and
 the operator is the authority on their own machine. Risky-but-allowed
-patterns are surfaced instead of blocked.
+patterns are surfaced instead of blocked: logged, and exported as
+`slot_warning_info` (`equal_rt_priority`, `rt_priority_ge_irq`,
+`vcpu_shared`). Detection lives in status.py so it is recomputed live and
+cannot go stale.
 
 **A housekeeping fallback does not persist the slot.**
 A slot that could not get isolated cores has nothing to share: each member
@@ -338,7 +341,25 @@ asking for a CPU its parent lacks falls back to the parent's whole set,
 housekeeping included.  A move leaves policies alone, as a `ThreadMove`
 does.
 
-### 3. Prometheus export (`seapath-alloc export`)
+### 3. Slot declaration for IRQs (`seapath-alloc slot`)
+
+```
+cli.py slot <name> --cpus <list>
+  │
+  └─ with CorePool(topo) as pool:
+        └─ declare_slot() ──► scheduler.py
+             registers the operator-chosen cores in slots.json
+             never fails: conflicts and non-isolated cores are logged
+
+The cores come from the operator (nic-irq-affinity.conf, i.e. the
+inventory), not from the pool: the monitor pins the IRQs itself and only
+informs seapath-alloc so the cores are protected from normal allocations
+and joiners can reference the slot by name. The 60 s memberless grace in
+pool._live_slots() covers the window until the IRQs are pinned, after which
+they keep the slot alive through the passive /proc/irq source.
+```
+
+### 4. Prometheus export (`seapath-alloc export`)
 
 ```
 exporter.generate()

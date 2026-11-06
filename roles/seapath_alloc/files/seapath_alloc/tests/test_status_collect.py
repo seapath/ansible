@@ -336,8 +336,9 @@ def node(tmp_path, monkeypatch):
 
 
 class FakePool:
-    def __init__(self, claims=()):
+    def __init__(self, claims=(), slots=()):
         self._claims = list(claims)
+        self._slots = list(slots)
 
     def __enter__(self):
         return self
@@ -357,6 +358,8 @@ class FakePool:
     def active_reserved_siblings(self):
         return [(5, 4)]
 
+    def slots(self):
+        return self._slots
 
 
 def test_collect_reports_the_pool_state(node, monkeypatch):
@@ -368,6 +371,7 @@ def test_collect_reports_the_pool_state(node, monkeypatch):
     assert data["isolated"] == "4-11"
     assert data["free_logical"] == "8-11"
     assert data["free_physical"] == "8,10"
+    assert data["reserved_siblings"] == [(5, 4)]
 
 
 def test_collect_merges_vm_irq_and_claim_actors(node, monkeypatch):
@@ -375,8 +379,8 @@ def test_collect_merges_vm_irq_and_claim_actors(node, monkeypatch):
     monkeypatch.setattr(
         status_mod, "CorePool",
         lambda **kw: FakePool(claims=[{
-            "label": "sv", "pid": 4242, "cores": [7],
-            "scheduler": "FIFO", "priority": 80,
+            "label": "sv", "pid": 4242, "cores": [7], "kind": "process",
+            "scheduler": "FIFO", "priority": 80, "slot": "",
         }]),
     )
 
@@ -385,9 +389,50 @@ def test_collect_merges_vm_irq_and_claim_actors(node, monkeypatch):
     by_type = {a["type"]: a for a in data["actors"]}
     assert by_type["vm"]["label"] == "vm0"
     assert by_type["irq"]["label"] == "eno1/181"
-    assert by_type["claim"]["label"] == "sv"
-    assert by_type["claim"]["cpus"] == "7"
-    assert by_type["claim"]["pid"] == 4242
+    assert by_type["process"]["label"] == "sv"
+    assert by_type["process"]["cpus"] == "7"
+    assert by_type["process"]["pid"] == 4242
+
+
+def test_collect_labels_a_claim_with_no_kind(node, monkeypatch):
+    proc, sys_path = node
+    monkeypatch.setattr(
+        status_mod, "CorePool",
+        lambda **kw: FakePool(claims=[{"label": "sv", "cores": [7]}]),
+    )
+
+    data = collect(proc_path=proc, sys_path=sys_path)
+
+    claim_actor = [a for a in data["actors"] if a["label"] == "sv"][0]
+    assert claim_actor["type"] == "claim"
+    assert claim_actor["pid"] is None
+
+
+def test_collect_attaches_actors_to_their_slot(node, monkeypatch):
+    proc, sys_path = node
+    monkeypatch.setattr(
+        status_mod, "CorePool",
+        lambda **kw: FakePool(
+            claims=[{"label": "sv", "cores": [4], "kind": "process"}],
+            slots=[{"name": "rt", "cores": [4], "isolation": "shared"}],
+        ),
+    )
+
+    data = collect(proc_path=proc, sys_path=sys_path)
+
+    slot = data["slots"][0]
+    assert slot["name"] == "rt"
+    assert slot["cores"] == "4"
+    assert {m["kind"] for m in slot["members"]} == {"vm", "process"}
+
+
+def test_collect_on_an_idle_node(node, monkeypatch):
+    proc, sys_path = node
+    monkeypatch.setattr(status_mod, "CorePool", lambda **kw: FakePool())
+
+    data = collect(proc_path=proc, sys_path=sys_path)
+
+    assert data["slots"] == []
 
 
 
@@ -400,89 +445,6 @@ def test_irq_actors_fall_back_on_an_empty_effective_affinity(tmp_path):
         f.write("\n")
 
     assert _read_irq_actors(proc, ISOLATED, sys_path=sys_path)[0]["cpus"] == "6"
-
-
-# --- pinned actors (outside seapath-alloc) --------------------------------
-
-
-def make_task(proc, pid, tid, comm, cpus, flags=0, policy=0, rt_priority=0):
-    d = os.path.join(proc, str(pid), "task", str(tid))
-    os.makedirs(d, exist_ok=True)
-    with open(os.path.join(d, "status"), "w") as f:
-        f.write(f"Name:\t{comm}\nCpus_allowed_list:\t{cpus}\n")
-    fields = ["0"] * 39
-    fields[0] = "S"
-    fields[6] = str(flags)
-    fields[37] = str(rt_priority)
-    fields[38] = str(policy)
-    with open(os.path.join(d, "stat"), "w") as f:
-        f.write(f"{tid} ({comm}) " + " ".join(fields) + "\n")
-    with open(os.path.join(proc, str(pid), "comm"), "w") as f:
-        f.write(comm + "\n")
-
-
-def test_pinned_actors_name_a_process_pinned_outside_seapath_alloc(tmp_path):
-    proc = str(tmp_path / "proc")
-    make_task(proc, 500, 500, "sv-sub", "6", policy=1, rt_priority=70)
-    make_task(proc, 500, 501, "sv-sub", "7")
-    make_task(proc, 30, 30, "ksoftirqd/6", "6", flags=0x00200000)
-    make_task(proc, 600, 600, "chronyd", "0-11")
-    make_task(proc, 700, 700, "CPU 0/KVM", "8")
-
-    assert _read_pinned_actors(proc, ISOLATED, covered=set()) == [{
-        "type": "pinned", "label": "sv-sub[500]", "pid": 500, "cpus": "6-7",
-        "scheduler": "FIFO", "priority": 70,
-    }]
-
-
-def test_pinned_actors_skip_cores_a_claim_or_slot_already_names(tmp_path):
-    proc = str(tmp_path / "proc")
-    make_task(proc, 500, 500, "payload", "6")
-
-    assert _read_pinned_actors(proc, ISOLATED, covered={6}) == []
-
-
-def test_pinned_actors_skip_unreadable_tasks(tmp_path):
-    proc = str(tmp_path / "proc")
-    d = os.path.join(proc, "500", "task", "500")
-    os.makedirs(d)
-    with open(os.path.join(d, "status"), "w") as f:
-        f.write("Name:\tx\n")
-    os.makedirs(os.path.join(proc, "501", "task", "501", "status"))
-    d = os.path.join(proc, "502", "task", "502")
-    os.makedirs(d)
-    with open(os.path.join(d, "status"), "w") as f:
-        f.write("Name:\tx\nCpus_allowed_list:\t6\n")
-    make_task(proc, 503, 503, "gone", "6")
-    os.remove(os.path.join(proc, "503", "comm"))
-
-    actors = _read_pinned_actors(proc, ISOLATED, covered=set())
-
-    assert [(a["label"], a["pid"]) for a in actors] == [("[503]", 503)]
-
-
-def test_collect_lists_pinned_processes(node, monkeypatch):
-    proc, sys_path = node
-    monkeypatch.setattr(
-        status_mod, "CorePool",
-        lambda **kw: FakePool(claims=[{"label": "sv", "cores": [7]}]),
-    )
-    make_task(proc, 900, 900, "tool", "10")
-    make_task(proc, 901, 901, "payload", "7")
-
-    data = collect(proc_path=proc, sys_path=sys_path)
-
-    assert [a["label"] for a in data["actors"] if a["type"] == "pinned"] == [
-        "tool[900]"]
-
-def test_pinned_actors_without_a_pinned_main_thread(tmp_path):
-    proc = str(tmp_path / "proc")
-    make_task(proc, 500, 500, "app", "0-11")
-    make_task(proc, 500, 501, "worker", "6", policy=2, rt_priority=5)
-
-    (actor,) = _read_pinned_actors(proc, ISOLATED, covered=set())
-
-    assert (actor["cpus"], actor["scheduler"]) == ("6", "RR")
 
 # --- degraded actors ------------------------------------------------------
 
@@ -554,3 +516,90 @@ def test_read_fallbacks_skips_a_recycled_pid(tmp_path, active_fallbacks,
 
 def test_read_fallbacks_without_state(tmp_path, active_fallbacks):
     assert status_mod._read_fallbacks(str(tmp_path)) == []
+
+
+# --- pinned actors (outside seapath-alloc) --------------------------------
+
+
+def make_task(proc, pid, tid, comm, cpus, flags=0, policy=0, rt_priority=0):
+    d = os.path.join(proc, str(pid), "task", str(tid))
+    os.makedirs(d, exist_ok=True)
+    with open(os.path.join(d, "status"), "w") as f:
+        f.write(f"Name:\t{comm}\nCpus_allowed_list:\t{cpus}\n")
+    fields = ["0"] * 39
+    fields[0] = "S"
+    fields[6] = str(flags)
+    fields[37] = str(rt_priority)
+    fields[38] = str(policy)
+    with open(os.path.join(d, "stat"), "w") as f:
+        f.write(f"{tid} ({comm}) " + " ".join(fields) + "\n")
+    with open(os.path.join(proc, str(pid), "comm"), "w") as f:
+        f.write(comm + "\n")
+
+
+def test_pinned_actors_name_a_process_pinned_outside_seapath_alloc(tmp_path):
+    proc = str(tmp_path / "proc")
+    make_task(proc, 500, 500, "sv-sub", "6", policy=1, rt_priority=70)
+    make_task(proc, 500, 501, "sv-sub", "7")
+    make_task(proc, 30, 30, "ksoftirqd/6", "6", flags=0x00200000)
+    make_task(proc, 600, 600, "chronyd", "0-11")
+    make_task(proc, 700, 700, "CPU 0/KVM", "8")
+
+    assert _read_pinned_actors(proc, ISOLATED, covered=set()) == [{
+        "type": "pinned", "label": "sv-sub[500]", "pid": 500, "cpus": "6-7",
+        "scheduler": "FIFO", "priority": 70,
+    }]
+
+
+def test_pinned_actors_skip_cores_a_claim_or_slot_already_names(tmp_path):
+    proc = str(tmp_path / "proc")
+    make_task(proc, 500, 500, "payload", "6")
+
+    assert _read_pinned_actors(proc, ISOLATED, covered={6}) == []
+
+
+def test_pinned_actors_skip_unreadable_tasks(tmp_path):
+    proc = str(tmp_path / "proc")
+    d = os.path.join(proc, "500", "task", "500")
+    os.makedirs(d)
+    with open(os.path.join(d, "status"), "w") as f:
+        f.write("Name:\tx\n")
+    os.makedirs(os.path.join(proc, "501", "task", "501", "status"))
+    d = os.path.join(proc, "502", "task", "502")
+    os.makedirs(d)
+    with open(os.path.join(d, "status"), "w") as f:
+        f.write("Name:\tx\nCpus_allowed_list:\t6\n")
+    make_task(proc, 503, 503, "gone", "6")
+    os.remove(os.path.join(proc, "503", "comm"))
+
+    actors = _read_pinned_actors(proc, ISOLATED, covered=set())
+
+    assert [(a["label"], a["pid"]) for a in actors] == [("[503]", 503)]
+
+
+def test_collect_lists_pinned_processes(node, monkeypatch):
+    proc, sys_path = node
+    monkeypatch.setattr(
+        status_mod, "CorePool",
+        lambda **kw: FakePool(claims=[{"label": "sv", "cores": [7]}],
+                              slots=[{"name": "rt", "cores": [9],
+                                      "isolation": "exclusive_logical"}]),
+    )
+    make_task(proc, 900, 900, "tool", "10")
+    make_task(proc, 901, 901, "payload", "7")
+    make_task(proc, 902, 902, "member", "9")
+
+    data = collect(proc_path=proc, sys_path=sys_path)
+
+    assert [a["label"] for a in data["actors"] if a["type"] == "pinned"] == [
+        "tool[900]"]
+
+
+def test_pinned_actors_without_a_pinned_main_thread(tmp_path):
+    proc = str(tmp_path / "proc")
+    make_task(proc, 500, 500, "app", "0-11")
+    make_task(proc, 500, 501, "worker", "6", policy=2, rt_priority=5)
+
+    (actor,) = _read_pinned_actors(proc, ISOLATED, covered=set())
+
+    assert (actor["cpus"], actor["scheduler"]) == ("6", "RR")
