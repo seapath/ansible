@@ -1,0 +1,16 @@
+# Copyright (C) 2024 RTE
+# Copyright (C) 2026 Sprecher Automation
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: "Stage additional disks for {{ _vm_name }}"
+  ansible.builtin.include_role:
+    name: stage_vm_disk
+  vars:
+    stage_vm_disk_destination: "{{ deploy_vms_standalone_disk_pool }}/{{ hostvars[_vm_name].standalone_additional_disks[add_disk_idx] }}"
+    stage_vm_disk_source: "{{ add_disk }}"
+    stage_vm_disk_remote_tmp: "{{ deploy_vms_standalone_qcow2tmpuploadfolder }}"
+  loop: "{{ hostvars[_vm_name].additional_disk }}"
+  loop_control:
+    loop_var: add_disk
+    index_var: add_disk_idx
