@@ -10,6 +10,7 @@ release: remove the claim
 
 import logging
 import os
+import re
 import subprocess
 
 from .applier import CHRT_FLAG
@@ -75,6 +76,92 @@ def parse_isolation_spec(value: str):
     if count < 1:
         raise ValueError(f"core count must be at least 1 in {value!r}")
     return level, "", count
+
+
+# A container whose application places its own threads may ask its cores
+# in named groups, each at its own isolation, in its own slot or not: the
+# P7 of Schneider Electric runs its real-time threads on a whole core and
+# its other threads on a core it can share with the other P7s. Each group
+# is a claim of its own, labelled "<service>/<group>", of kind
+# "quadlet-group", which the repacker never moves: the application placed
+# its threads on them. The cores of each group are written in a file the
+# container reads, GROUPS_DIR/<service>/groups.
+GROUPS_DIR = "/run/seapath-alloc/groups"
+GROUP_KIND = "quadlet-group"
+_GROUP_NAME = re.compile(r"^[a-z][a-z0-9_-]{0,30}$")
+
+
+def parse_groups_spec(value: str):
+    """
+    Parse an isolation argument that names groups,
+    "<group>=<isolation>,<group>=<isolation>...", each isolation as
+    parse_isolation_spec reads it ("exclusive_physical", "slot:p7-be",
+    "exclusive_logical:2").
+
+    Returns a list of (group, isolation, slot, count), or None when the
+    argument names no group. Raises ValueError on a malformed or repeated
+    group, or two groups of one slot.
+    """
+    if "=" not in value:
+        return None
+    groups, slots = [], {}
+    for part in value.split(","):
+        name, sep, spec = part.partition("=")
+        if not sep or not spec:
+            raise ValueError(f"group {part!r}: <group>=<isolation>")
+        if not _GROUP_NAME.match(name):
+            raise ValueError(f"group {name!r}: lower-case letters, digits,"
+                             " '_' and '-', a letter first")
+        if any(g[0] == name for g in groups):
+            raise ValueError(f"group {name!r} given twice")
+        isolation, slot, count = parse_isolation_spec(spec)
+        if isolation not in ("exclusive_logical", "exclusive_physical"):
+            raise ValueError(f"group {name!r}: isolation {isolation!r}:"
+                             " exclusive_logical or exclusive_physical")
+        if slot and slot in slots:
+            raise ValueError(f"groups {slots[slot]!r} and {name!r} name slot"
+                             f" {slot!r}: one group")
+        if slot:
+            slots[slot] = name
+        groups.append((name, isolation, slot, count))
+    return groups
+
+
+def write_groups_file(service: str, groups: list, root: str = GROUPS_DIR):
+    """
+    Write the groups file of a container service: a line "<group> <cores>"
+    per group, in the order asked. groups is a list of (group, cores).
+    Renamed in place, so the container reads it whole or not at all.
+    """
+    name = service[:-8] if service.endswith(".service") else service
+    d = os.path.join(root, name)
+    os.makedirs(d, exist_ok=True)
+    tmp = os.path.join(d, ".groups")
+    with open(tmp, "w") as f:
+        for group, cores in groups:
+            f.write(f"{group} {format_cpu_list(sorted(cores)) or 'housekeeping'}\n")
+    os.replace(tmp, os.path.join(d, "groups"))
+
+
+def release_unit(name: str, root: str = GROUPS_DIR) -> int:
+    """
+    Remove the claims of a container service: its own label, and those of
+    its groups ("<name>/<group>"), and its groups file. Returns the number
+    of claims removed.
+    """
+    try:
+        os.remove(os.path.join(root, name, "groups"))
+    except FileNotFoundError:
+        pass
+    except OSError as exc:
+        log.warning("%s: groups file not removed: %s", name, exc)
+    with CorePool() as pool:
+        labels = {c.get("label") for c in pool.all_claims()
+                  if c.get("label") == name
+                  or str(c.get("label", "")).startswith(name + "/")}
+        for label in labels:
+            pool.remove_claim(label)
+        return len(labels)
 
 
 def _load_profile_file(path: str) -> dict:

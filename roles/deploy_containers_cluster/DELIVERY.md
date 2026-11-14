@@ -148,6 +148,29 @@ Target Podman 5.4 (SEAPATH Debian 13), with systemd 257.
      or `exclusive_physical:<n>` for `n` of them, for an application that
      places its own threads among several cores (a real-time core and a
      best-effort one). Such a container is never moved while it runs.
+   * Cores whose threads do not all need the same isolation are asked in
+     named groups, `<group>=<isolation>,...`, each isolation as above or a
+     shared-core slot (`slot:<name>`), with the scheduler `APP 0`:
+
+     ```ini
+     [Container]
+     Volume=/run/seapath-alloc/groups/%N:/run/seapath-alloc-groups:ro
+     [Service]
+     ExecStartPre=/usr/bin/install -d -m 0755 /run/seapath-alloc/groups/%N
+     ExecStartPre=/usr/bin/rm -f /run/seapath-alloc/groups/%N/groups
+     ExecStartPost=seapath-container-pin %N rt=exclusive_physical,be=slot:p7-be APP 0
+     ExecStopPost=-seapath-container-unpin %N
+     ```
+
+     Each group is a claim of its own, never moved. The container runs on
+     the cores of all its groups, and SEAPATH writes those of each in the
+     file `groups` of the directory mounted above, a line `<group> <cores>`
+     each (`rt 11`, `be 4`), about a second after the start. The
+     application waits for it, a few seconds at most, and places each
+     thread on its group's cores; it never infers a group from the order
+     of the core numbers, a slot's core may be the lower. The two
+     `ExecStartPre=` make the directory to mount and remove the file of the
+     previous start.
    * `<scheduler> <priority>`: `FIFO 90` gives that policy to every thread of
      the container. `APP 0` leaves each thread with the policy the application
      gives it, for a real-time process next to threads that must stay in

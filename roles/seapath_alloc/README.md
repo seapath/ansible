@@ -425,6 +425,19 @@ best-effort one, reads them with `sched_getaffinity` once it is pinned. The
 repacker never moves such a container, whose threads would lose the places
 the application gave them.
 
+`<isolation>` may also name groups, `<group>=<isolation>,...` with the
+scheduler `APP`, each isolation as above or a slot: a container whose
+application runs its real-time threads on a whole core and its other
+threads on a core shared with its peers asks
+`rt=exclusive_physical,be=slot:p7-be`. Each group is a claim of its own,
+labelled `<service>/<group>` and of kind `quadlet-group`, which the repacker
+never moves. The container is placed on the cores of all its groups, and
+those of each are written in `/run/seapath-alloc/groups/<service>/groups`,
+a line `<group> <cores>` each, for the application to read (the quadlet
+mounts that directory read only, makes it and removes the previous file
+before the start). `seapath-container-unpin` releases every group and
+removes the file.
+
 - Allocates one isolated core via the pool, or `n`.
 - Confines the container (Podman's `libpod-payload-*` sub-cgroup) to that
   core, and conmon and systemd's `.control` to the housekeeping cores, by

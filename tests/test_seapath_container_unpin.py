@@ -20,7 +20,9 @@ def harness(monkeypatch):
     record = {"released": []}
 
     monkeypatch.setattr(unpin, "setup_logging", lambda: None)
-    monkeypatch.setattr(unpin, "release", record["released"].append)
+    # Its own claim and those of its groups: two here.
+    monkeypatch.setattr(unpin, "release_unit",
+                        lambda name: record["released"].append(name) or 2)
 
     def run(argv):
         monkeypatch.setattr(unpin.sys, "argv",
@@ -52,4 +54,4 @@ def test_main_releases_the_claim_under_the_bare_name(harness, name, capsys):
     # The claim is labelled without the .service suffix, as in
     # seapath-container-pin.
     assert record["released"] == ["sv"]
-    assert "released claim for sv.service" in capsys.readouterr().out
+    assert "released 2 claim(s) for sv.service" in capsys.readouterr().out

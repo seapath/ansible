@@ -401,3 +401,127 @@ def test_main_reports_a_refused_claim(harness, capsys):
     assert record["exit"] == 1
     assert "held by live pid 9" in capsys.readouterr().err
     assert record["cpuset"] == []
+
+
+# --- groups -----------------------------------------------------------------
+
+GROUPS = "rt=exclusive_physical,be=slot:p7-be"
+
+
+@pytest.fixture
+def groups(harness, monkeypatch):
+    """
+    The harness, with one allocation per group: ``record`` keeps every
+    claim, the groups file written and the release made.
+    """
+    record = {"claims": [], "files": [], "released": []}
+
+    def fake_claim(**kwargs):
+        record["claims"].append(kwargs)
+        group = kwargs["label"].split("/", 1)[1]
+        if group in record["refused_groups"]:
+            raise ClaimError(f"{group} refused")
+        return GroupAllocation(name="claim", cpus=record["group_cores"][group],
+                               scheduler="APP", priority=0,
+                               warning=record["group_warnings"].get(group, ""))
+
+    def run(argv, group_cores, refused_groups=(), group_warnings=None,
+            **kwargs):
+        record.update(group_cores=group_cores, refused_groups=refused_groups,
+                      group_warnings=group_warnings or {})
+        monkeypatch.setattr(pin, "claim_allocation", fake_claim)
+        monkeypatch.setattr(pin, "write_groups_file",
+                            lambda service, g: record["files"].append(
+                                (service, g)))
+        monkeypatch.setattr(pin, "release_unit", record["released"].append)
+        result = harness(argv, **kwargs)
+        record.update(exit=result["exit"], cpuset=result["cpuset"],
+                      chrt=result["chrt"])
+        return record
+
+    return run
+
+
+def test_main_claims_each_group_and_writes_their_file(groups, capsys):
+    record = groups(["p71-p7", GROUPS, "APP", "0"],
+                    group_cores={"rt": [11], "be": [4]})
+
+    assert record["exit"] == 0
+    assert [(c["label"], c["isolation"], c["slot"], c["kind"])
+            for c in record["claims"]] == [
+        ("p71-p7/rt", "exclusive_physical", "", "quadlet-group"),
+        ("p71-p7/be", "exclusive_logical", "p7-be", "quadlet-group"),
+    ]
+    assert all(c["scheduler"] == "APP" and c["no_apply"]
+               for c in record["claims"])
+    assert record["files"] == [("p71-p7.service", [("rt", [11]), ("be", [4])])]
+    # The container is placed on the cores of all its groups, and its
+    # threads keep the policies the application gives them.
+    assert record["cpuset"] == [
+        ("/sys/fs/cgroup/system.slice/sv.service", [4, 11], [0, 1, 2, 3])]
+    assert record["chrt"] == []
+    out = capsys.readouterr().out
+    assert "pinned p71-p7.service rt to core(s) 11" in out
+    assert "pinned p71-p7.service to core(s) 4,11 (APP)" in out
+
+
+def test_main_refuses_groups_without_the_scheduler_app(groups, capsys):
+    record = groups(["p71-p7", GROUPS, "FIFO", "80"], group_cores={})
+
+    assert record["exit"] == 1
+    assert "groups need the scheduler APP" in capsys.readouterr().err
+    assert record["claims"] == []
+
+
+def test_main_rejects_a_malformed_group(groups, capsys):
+    record = groups(["p71-p7", "rt=none", "APP", "0"], group_cores={})
+
+    assert record["exit"] == 1
+    assert "error: group 'rt'" in capsys.readouterr().err
+    assert record["claims"] == []
+
+
+def test_main_gives_back_the_groups_claimed_before_a_refusal(groups, capsys):
+    record = groups(["p71-p7", GROUPS, "APP", "0"],
+                    group_cores={"rt": [11]}, refused_groups=("be",))
+
+    assert record["exit"] == 1
+    assert "be refused" in capsys.readouterr().err
+    assert record["released"] == ["p71-p7"]
+    assert record["files"] == []
+
+
+def test_main_writes_the_housekeeping_cores_of_groups_that_fell_back(
+    groups, capsys
+):
+    record = groups(["p71-p7", GROUPS, "APP", "0"],
+                    group_cores={"rt": [], "be": []},
+                    group_warnings={"be": "pool exhausted"})
+
+    assert record["exit"] == 0
+    assert record["files"] == [("p71-p7.service", [
+        ("rt", [0, 1, 2, 3]), ("be", [0, 1, 2, 3])])]
+    # No isolated core to place the container on.
+    assert record["cpuset"] == []
+    captured = capsys.readouterr()
+    assert "warning: p71-p7.service be: pool exhausted" in captured.err
+    assert "pinned p71-p7.service to core(s) housekeeping (APP)" in captured.out
+
+
+def test_main_claims_the_groups_of_a_service_without_a_cgroup(groups, capsys):
+    record = groups(["p71-p7", GROUPS, "APP", "0"],
+                    group_cores={"rt": [11], "be": [4]}, root=None)
+
+    assert record["exit"] == 0
+    assert record["files"] == [("p71-p7.service", [("rt", [11]), ("be", [4])])]
+    assert record["cpuset"] == []
+    assert "core(s) 4,11 claimed but not applied" in capsys.readouterr().err
+
+
+def test_main_warns_when_the_groups_cannot_be_placed(groups, capsys):
+    groups(["p71-p7", GROUPS, "APP", "0"], group_cores={"rt": [11], "be": [4]},
+           placed=False, affinity_refused=2)
+
+    err = capsys.readouterr().err
+    assert "cpuset not written" in err
+    assert "2 thread(s) refused the affinity 4,11" in err

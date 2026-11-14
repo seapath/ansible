@@ -5,8 +5,9 @@
 """
 Release the CPU pin for a systemd container service.
 
-Removes the claim from the seapath-alloc pool, so the freed cores become
-available to other actors. The cgroup goes away with the service.
+Removes the claim from the seapath-alloc pool, or the claims of its groups
+and their file, so the freed cores become available to other actors. The
+cgroup goes away with the service.
 
 Usage:
     seapath-container-unpin <service-name>
@@ -19,7 +20,7 @@ import sys
 
 sys.path.insert(0, '/usr/lib/seapath')
 
-from seapath_alloc.claim import release
+from seapath_alloc.claim import release_unit
 from seapath_alloc.logging_setup import setup_logging
 
 
@@ -34,9 +35,10 @@ def main():
         name = name[:-8]
     service = f"{name}.service"
 
-    release(name)
+    # Its own claim, or those of its groups, and its groups file.
+    n = release_unit(name)
 
-    print(f"released claim for {service}")
+    print(f"released {n} claim(s) for {service}")
 
 
 if __name__ == "__main__":

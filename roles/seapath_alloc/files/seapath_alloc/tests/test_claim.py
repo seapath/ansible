@@ -511,6 +511,61 @@ def test_claim_degrades_gracefully_without_pyyaml():
         importlib.reload(claim_mod)
 
 
+def test_parse_groups_spec():
+    from seapath_alloc.claim import parse_groups_spec
+    assert parse_groups_spec("exclusive_logical:2") is None
+    assert parse_groups_spec("rt=exclusive_physical,be=slot:p7-be,io=exclusive_logical:2") == [
+        ("rt", "exclusive_physical", "", 1),
+        ("be", "exclusive_logical", "p7-be", 1),
+        ("io", "exclusive_logical", "", 2),
+    ]
+    for bad in ("rt=", "RT=exclusive_logical", "rt=exclusive_logical,rt=exclusive_physical",
+                "rt=none", "rt=exclusive_logical:0", "a=slot:x,b=slot:x", "rt=exclusive_logical,be"):
+        with pytest.raises(ValueError):
+            parse_groups_spec(bad)
+
+
+def test_write_groups_file(tmp_path):
+    from seapath_alloc.claim import write_groups_file
+    write_groups_file("p71-p7.service", [("rt", [11]), ("be", [4])], root=str(tmp_path))
+    assert (tmp_path / "p71-p7" / "groups").read_text() == "rt 11\nbe 4\n"
+    assert not (tmp_path / "p71-p7" / ".groups").exists()
+
+
+def test_release_unit_removes_its_groups_and_their_file(releaser, tmp_path):
+    from seapath_alloc.claim import release_unit
+    pool = releaser(live=[{"label": "p71-p7/rt", "pid": 7}, {"label": "p71-p7/be", "pid": 7},
+                          {"label": "p71-p7x/rt", "pid": 8}, {"label": "p72-p7", "pid": 9}])
+    (tmp_path / "p71-p7").mkdir()
+    (tmp_path / "p71-p7" / "groups").write_text("rt 11\nbe 4\n")
+
+    assert release_unit("p71-p7", root=str(tmp_path)) == 2
+    assert sorted(pool.removed) == ["p71-p7/be", "p71-p7/rt"]
+    assert not (tmp_path / "p71-p7" / "groups").exists()
+
+
+def test_release_unit_of_a_container_without_groups(releaser, tmp_path):
+    from seapath_alloc.claim import release_unit
+    pool = releaser(live=[{"label": "sv", "pid": 7}])
+
+    assert release_unit("sv", root=str(tmp_path)) == 1
+    assert pool.removed == ["sv"]
+
+
+def test_release_unit_logs_a_groups_file_it_cannot_remove(
+    releaser, tmp_path, caplog
+):
+    from seapath_alloc.claim import release_unit
+    releaser(live=[])
+    # A directory where the file should be: os.remove() refuses it.
+    (tmp_path / "sv" / "groups").mkdir(parents=True)
+
+    with caplog.at_level("WARNING", logger=claim_mod.log.name):
+        assert release_unit("sv", root=str(tmp_path)) == 0
+
+    assert "sv: groups file not removed" in caplog.text
+
+
 def test_a_slot_reference_with_isolation_none_is_refused():
     with pytest.raises(ValueError, match="isolation none"):
         parse_isolation_arg("slot:sv0:none")
