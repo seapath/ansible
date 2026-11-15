@@ -603,8 +603,12 @@ A cluster-wide variant, `grafana-seapath-alloc-cluster.json`, shows one CPU
 map per node (repeated panels, `cluster`/`nodename` template variables).
 Its gutter additionally carries the list of VMs running on the node and
 a per-node health block (RAM, disk and swap usage, failed systemd units)
-with the usual colour thresholds, so the first row only keeps the
-cluster-wide indicators (Ceph, Corosync, Pacemaker). It requires the
+with the usual colour thresholds. The swap line shows how full the swap
+is but takes its colour from the swap-in plus swap-out rate over 5
+minutes (orange from 1 page/s, red from 256 pages/s): pages swapped out
+during an old peak stay there until read again, so a full swap on an
+idle node is no alarm. The first row only keeps the cluster-wide
+indicators (Ceph, Corosync, Pacemaker). It requires the
 `cluster` and `nodename` labels on every scraped target; see
 [PROMETHEUS.md](PROMETHEUS.md) for the scrape configuration.
 
