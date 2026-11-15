@@ -97,3 +97,17 @@ def test_slot_with_irq_member_is_irq_slot(std_topology):
     assert s["state"] == "irq_slot"
     assert s["slot"] == "sv0"
     assert s["member_count"] == "2"
+
+
+def test_container_group_is_a_quadlet(std_topology):
+    data = _data(actors=[
+        {"type": "quadlet-group", "label": "p71-p7/rt", "cpus": "11",
+         "scheduler": "APP", "priority": 0},
+        {"type": "pinned", "label": "qemu-system-x86[8020]", "cpus": "5",
+         "scheduler": "OTHER", "priority": 0},
+    ])
+    samples = _build_cpu_detail(data, std_topology)
+    group = _sample_for(samples, 11)
+    assert group["state"] == "quadlet"
+    assert group["label"] == "p71-p7/rt"
+    assert _sample_for(samples, 5)["state"] == "pinned"

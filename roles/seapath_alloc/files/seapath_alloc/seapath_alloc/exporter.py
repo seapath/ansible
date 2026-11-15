@@ -188,6 +188,11 @@ def _metric(buf: list, name: str, help_: str, type_: str, samples: list):
 # Per-CPU detail builders
 # ---------------------------------------------------------------------------
 
+# claim.GROUP_KIND, written out: claim imports this module through
+# scheduler.
+_STATE_OF_KIND = {"quadlet-group": "quadlet"}
+
+
 def _build_cpu_detail(data: dict, topo: Topology) -> list:
     """
     One sample per online CPU with full context:
@@ -248,9 +253,12 @@ def _build_cpu_detail(data: dict, topo: Topology) -> list:
                     "priority": "0",
                 }
         else:
+            # A group of a container is a container to the CPU map; its
+            # label, <service>/<group>, names the group.
+            state = _STATE_OF_KIND.get(t, t)
             for cpu in parse_cpu_list(actor["cpus"]):
                 cpu_occ[cpu] = {
-                    "state": t,
+                    "state": state,
                     "label": label,
                     "group": t,
                     "scheduler": actor.get("scheduler", ""),
