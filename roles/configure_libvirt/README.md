@@ -9,8 +9,23 @@ listeners disabled and `host_uuid_source = "machine-id"`.
 
 Non-root access to the libvirt socket is disabled by default
 (`configure_libvirt_allow_non_root_libvirt_socket_access: false`). In that case
-the role sets the read and write socket permissions to `0700` and the socket
-group to `root`, so only root can control libvirtd.
+only root can reach libvirt. The role enforces this on three layers:
+
+- `libvirtd.conf`: `unix_sock_*` permissions `0700`, group `root`. Only a
+  libvirtd that is not socket-activated reads these settings.
+- systemd drop-ins on every libvirt socket unit listed in
+  `configure_libvirt_socket_units` (`libvirtd*.socket` on Debian, the modular
+  `virt*d*.socket` daemons on OracleLinux): `SocketMode=0600`,
+  `SocketGroup=root`. This is what restricts the sockets on socket-activated
+  hosts, where the distribution ships them as `0666`.
+- a polkit rule, `/etc/polkit-1/rules.d/10-seapath-libvirt.rules`, that denies
+  every `org.libvirt.*` action to non-root users before the distribution
+  rules (such as Debian's `60-libvirt.rules`, which grants the `libvirt`
+  group) are evaluated. Hosts without `/etc/polkit-1/rules.d` (such as Yocto)
+  rely on the socket permissions alone.
+
+Changing this setting restarts the affected socket units and their daemons.
+Running VMs keep running.
 
 The read/write libvirt socket is **root-equivalent**: whoever can reach it can
 start, stop, reconfigure or open the console of every VM, attach host devices
@@ -21,8 +36,9 @@ equivalent, which is why it is opt-in.
 Set `configure_libvirt_allow_non_root_libvirt_socket_access: true` only when a
 non-root account (typically the `libvirtadmin` user created by
 `add_libvirtadmin_user`) must drive libvirt locally. The role then sets the
-socket group to `libvirt` with `0770` permissions, as libvirt expects for
-group-based access.
+socket group to `libvirt` (`0770` in `libvirtd.conf`, `0660` on the socket
+units) and removes its polkit rule, so the distribution polkit policy applies
+again.
 
 ## Live migration and console access
 
@@ -49,6 +65,7 @@ No requirement.
 | Variable                                               | Required | Type    | Default | Comments                                                                                              |
 |--------------------------------------------------------|----------|---------|---------|-------------------------------------------------------------------------------------------------------|
 | configure_libvirt_allow_non_root_libvirt_socket_access | no       | Boolean | false   | Allow non-root users in the libvirt group to access the (root-equivalent) libvirt read/write socket   |
+| configure_libvirt_socket_units                         | no       | List    | see `defaults/main.yml` | Libvirt socket units whose permissions are enforced; units missing on a host are ignored |
 
 ## Example Playbook
 
