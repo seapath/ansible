@@ -7,3 +7,27 @@
 # should only be enabled when a non-root account really needs local libvirt
 # access (for example a non-root livemigration_user).
 configure_libvirt_allow_non_root_libvirt_socket_access: false
+
+# Libvirt socket units whose permissions are enforced by the role. libvirtd
+# ignores unix_sock_* in libvirtd.conf when socket-activated, and the modular
+# daemons (OracleLinux) never read libvirtd.conf, so the restriction is applied
+# with systemd drop-ins. Units missing on a host are ignored.
+configure_libvirt_socket_units:
+  - libvirtd.socket
+  - libvirtd-ro.socket
+  - virtproxyd.socket
+  - virtproxyd-ro.socket
+  - virtqemud.socket
+  - virtqemud-ro.socket
+  - virtsecretd.socket
+  - virtsecretd-ro.socket
+  - virtstoraged.socket
+  - virtstoraged-ro.socket
+  - virtnetworkd.socket
+  - virtnetworkd-ro.socket
+  - virtnodedevd.socket
+  - virtnodedevd-ro.socket
+  - virtnwfilterd.socket
+  - virtnwfilterd-ro.socket
+  - virtinterfaced.socket
+  - virtinterfaced-ro.socket

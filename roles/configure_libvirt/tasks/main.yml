@@ -12,12 +12,89 @@
     mode: "0644"
   register: configure_libvirt_libvirtd_conf
 
-# Restart libvirtd if configuration changed
+- name: Create libvirt socket drop-in directories
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ item }}.d"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop: "{{ configure_libvirt_socket_units }}"
+
+- name: Restrict libvirt socket permissions
+  ansible.builtin.template:
+    src: socket-access.conf.j2
+    dest: "/etc/systemd/system/{{ item }}.d/seapath-socket-access.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ configure_libvirt_socket_units }}"
+  register: configure_libvirt_socket_dropins
+
+# Hosts without polkit (Yocto) rely on the socket permissions alone.
+- name: Check for the polkit rules directory
+  ansible.builtin.stat:
+    path: /etc/polkit-1/rules.d
+  register: configure_libvirt_polkit_rules_dir
+
+- name: Deny libvirt polkit actions to non-root users
+  ansible.builtin.copy:
+    src: 10-seapath-libvirt.rules
+    dest: /etc/polkit-1/rules.d/10-seapath-libvirt.rules
+    owner: root
+    group: root
+    mode: "0644"
+  when:
+    - not configure_libvirt_allow_non_root_libvirt_socket_access
+    - configure_libvirt_polkit_rules_dir.stat.isdir | default(false)
+
+- name: Remove the libvirt polkit restriction
+  ansible.builtin.file:
+    path: /etc/polkit-1/rules.d/10-seapath-libvirt.rules
+    state: absent
+  when: configure_libvirt_allow_non_root_libvirt_socket_access
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  when: configure_libvirt_socket_dropins.changed # noqa: no-handler
+
+# systemd refuses to restart a socket while its daemon is running, so stop
+# the daemon around the restart. Running VMs are not affected.
+- name: Restart libvirt sockets whose permissions changed
+  ansible.builtin.shell:
+    cmd: |
+      set -eo pipefail
+      sock="{{ item.item }}"
+      systemctl cat "$sock" >/dev/null 2>&1 || exit 0
+      systemctl is-active -q "$sock" || exit 0
+      svc="$(echo "$sock" | sed -e 's/-ro\.socket$//' -e 's/\.socket$//').service"
+      was_active=0
+      systemctl is-active -q "$svc" && was_active=1
+      systemctl stop "$svc"
+      systemctl restart "$sock"
+      [ "$was_active" = 1 ] && systemctl start "$svc"
+      echo restarted
+    executable: /bin/bash
+  loop: "{{ configure_libvirt_socket_dropins.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: item.changed # noqa: no-handler
+  register: configure_libvirt_socket_restart
+  changed_when: "'restarted' in configure_libvirt_socket_restart.stdout"
+
+# Restart libvirtd if configuration changed, unless restarting
+# libvirtd.socket above already restarted it with the new configuration.
 - name: Restart libvirtd
   ansible.builtin.systemd:
     name: libvirtd
     state: restarted
-  when: configure_libvirt_libvirtd_conf.changed # noqa: no-handler
+  when:
+    - configure_libvirt_libvirtd_conf.changed
+    - >-
+      'libvirtd.socket' not in (configure_libvirt_socket_restart.results
+      | selectattr('changed', 'defined') | selectattr('changed')
+      | map(attribute='item') | map(attribute='item') | list)
 
 # OracleLinux specific
 - name: Enable and start virtsecretd.socket
