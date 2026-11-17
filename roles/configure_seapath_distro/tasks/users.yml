@@ -18,6 +18,7 @@
     append: false
   no_log: true
 
+# Passwordless sudo for admin_user is intentional: see "Privilege model" in README.md.
 - name: Install sudo admin user rules
   ansible.builtin.copy:
     content: |
@@ -26,6 +27,7 @@
     owner: root
     group: root
     mode: "0440"
+    validate: visudo -cf %s
 - name: Remove admin sudoers line created by image build
   ansible.builtin.lineinfile:
     dest: /etc/sudoers
