@@ -97,7 +97,26 @@ $EXPECTED_GROUPS_DEBIAN \
 $EXPECTED_GROUPS_SLES \
 {% endif %}
 $EXPECTED_GROUPS_COMMON \
+{% for group in deploy_cukinia_tests_extra_expected_groups | default([]) %}
+    {{ group }} \
+{% endfor %}
 "
+
+# Groups created outside of this role, by another role or by the installer,
+# can also be declared as drop-in files, one group per line. They are read at
+# test time, like the extra essential services.
+_cukinia_extra_groups_dir="{{ deploy_cukinia_tests_extra_expected_groups_dir }}"
+if [ -d "$_cukinia_extra_groups_dir" ]; then
+    for _cukinia_extra_groups_file in "$_cukinia_extra_groups_dir"/*; do
+        [ -f "$_cukinia_extra_groups_file" ] || continue
+        while IFS= read -r _cukinia_extra_group || [ -n "$_cukinia_extra_group" ]; do
+            case "$_cukinia_extra_group" in
+                ''|\#*) continue ;;
+            esac
+            EXPECTED_GROUPS="$EXPECTED_GROUPS $_cukinia_extra_group"
+        done < "$_cukinia_extra_groups_file"
+    done
+fi
 
 args="-v"
 for g in ${EXPECTED_GROUPS}; do
