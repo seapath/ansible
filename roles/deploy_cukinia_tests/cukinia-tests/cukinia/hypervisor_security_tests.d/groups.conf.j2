@@ -141,5 +141,5 @@ GSHADOW_EXTRA_GROUPS=$(grep $args /etc/gshadow | wc -l)
 GSHADOW_NB_GROUPS=$(cat /etc/gshadow | wc -l)
 
 test_id "SEAPATH-00033" as "/etc/gshadow only contains expected groups" \
-    cukinia_test $GSHADOW_EXTRA_GROUPS -eq 0 && $GSHADOW_NB_GROUPS -eq $nb_group
+    cukinia_test $GSHADOW_EXTRA_GROUPS -eq 0 -a $GSHADOW_NB_GROUPS -eq $nb_group
 {% endif %}
