@@ -16,6 +16,11 @@ Roles may also publish extra essential services as drop-in files under
 cukinia test runtime, even when tests are deployed or executed later in a
 separate playbook run.
 
+Groups created outside of Ansible, such as the `seapath-admin` group the
+installer creates for the web UI, are declared the same way in
+`/etc/cukinia/extra-expected-groups.d/`, one group per line, for the
+expected groups check (SEAPATH-00033).
+
 ## Example Playbook
 ```yaml
 - name: deploy cukinia tests
