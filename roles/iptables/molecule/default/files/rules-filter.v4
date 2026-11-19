@@ -1,0 +1,8 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+*filter
+:INPUT ACCEPT [0:0]
+:FORWARD ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+-A INPUT -s 192.0.2.0/24 -j ACCEPT
+COMMIT

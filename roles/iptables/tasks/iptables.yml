@@ -1,0 +1,61 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# Nothing to do on a host the role never switched to nftables. On one it did,
+# for instance before a kernel that has the xtables extensions again, give the
+# rules back to iptables-restore and netfilter-persistent.
+- name: Look for a ruleset written in nftables mode
+  ansible.builtin.command:
+    argv:
+      - grep
+      - -qsx
+      - "# iptables role: nftables mode"
+      - "{{ iptables_nftables_conf }}"
+  register: iptables_nftables_mode
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Leave nftables mode
+  when: iptables_nftables_mode.rc == 0
+  block:
+    - name: Withdraw the nftables.service drop-in
+      ansible.builtin.file:
+        path: /etc/systemd/system/nftables.service.d/seapath-keep-on-stop.conf
+        state: absent
+
+    # Disabled only: stopping it would flush the ruleset of the other tools.
+    - name: Stop loading the nftables ruleset at boot
+      ansible.builtin.systemd:
+        name: nftables
+        enabled: false
+        daemon_reload: true
+
+    - name: Look for netfilter-persistent
+      ansible.builtin.service_facts:
+
+    - name: Load the rules with iptables-restore at boot again
+      ansible.builtin.systemd:
+        name: netfilter-persistent
+        enabled: true
+      when: "'netfilter-persistent.service' in ansible_facts.services"
+
+    # The handler then loads rules.v4 with iptables-restore, which replaces
+    # the tables nft created.
+    - name: Empty the nftables ruleset
+      ansible.builtin.copy:
+        content: |
+          #!/usr/sbin/nft -f
+          # Managed by the iptables role, which loads /etc/iptables/rules.v4
+          # with iptables-restore.
+        dest: "{{ iptables_nftables_conf }}"
+        owner: root
+        group: root
+        mode: "0755"
+      notify: Reload iptables rules if needed
+
+    - name: Withdraw the Cukinia declaration of nftables.service
+      ansible.builtin.file:
+        path: "{{ iptables_cukinia_extra_essential_services_dir }}/iptables"
+        state: absent
