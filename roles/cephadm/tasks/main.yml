@@ -172,6 +172,8 @@
   delegate_to: "{{ cephadm_first_node }}"
   when: cephadm_mon_nodes_to_add | length > 0
 
+# From Ceph 21 on, cephadm lowercases the names of the hosts it manages and
+# names the monitors it deploys after them: compare without case.
 - name: Confirm monitors are in monmap
   ansible.builtin.command: ceph mon dump
   register: cephadm_mon_dump
@@ -180,7 +182,7 @@
   changed_when: false
   run_once: true
   delegate_to: "{{ cephadm_first_node }}"
-  until: "hostvars[item]['hostname'] in cephadm_mon_dump.stdout"
+  until: "(hostvars[item]['hostname'] | lower) in (cephadm_mon_dump.stdout | lower)"
   loop: "{{ cephadm_mon_nodes_to_add }}"
   when: cephadm_mon_nodes_to_add | length > 0
 
@@ -404,13 +406,15 @@
       run_once: true
       delegate_to: "{{ cephadm_first_node }}"
 
+    # ceph orch ps reports the host names in lowercase from Ceph 21 on.
     - name: Find the mgr daemon running on this host
       ansible.builtin.set_fact:
         cephadm_mgr_daemon_name: >-
           {{
             cephadm_mgr_ps.stdout | from_json
-            | selectattr('hostname', 'equalto',
-                         hostname | default(ansible_facts['hostname'] | default(inventory_hostname)))
+            | selectattr('hostname', 'match',
+                         '^' ~ (hostname | default(ansible_facts['hostname'] | default(inventory_hostname)) | regex_escape) ~ '$',
+                         ignorecase=True)
             | map(attribute='daemon_name') | first | default('')
           }}
 
