@@ -2,6 +2,15 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+- name: Check the iptables backend
+  ansible.builtin.assert:
+    that:
+      - iptables_backend in ['auto', 'iptables', 'nftables']
+      - iptables_backend != 'nftables' or seapath_distro | default('') == 'Debian'
+    fail_msg: >-
+      iptables_backend is "{{ iptables_backend }}": use auto, iptables or
+      nftables, and nftables only on Debian.
+    quiet: true
 - name: Check presence of iptables_rules_path file
   delegate_to: localhost
   ansible.builtin.stat:
@@ -30,3 +39,49 @@
     mode: "0644"
   when: iptables_rules_template_path is defined and iptables_rules_template_path_present.stat.exists
   notify: Reload iptables rules if needed
+
+# In check mode the rules above are not written: work on the ones in place,
+# if there are any.
+- name: Look for the rules in place
+  ansible.builtin.stat:
+    path: /etc/iptables/rules.v4
+  register: iptables_rules_v4
+  check_mode: false
+
+- name: Apply the rules
+  when:
+    - >-
+      (iptables_rules_path is defined and iptables_rules_path_present.stat.exists)
+      or (iptables_rules_template_path is defined
+          and iptables_rules_template_path_present.stat.exists)
+    - iptables_rules_v4.stat.exists
+  become: true
+  block:
+    # iptables-restore --test asks the kernel for every extension the rules
+    # use, without loading anything, and only warns about the missing ones.
+    - name: Check the rules against the running kernel
+      ansible.builtin.command:
+        cmd: /usr/sbin/iptables-restore --test /etc/iptables/rules.v4
+      register: iptables_rules_test
+      changed_when: false
+      check_mode: false
+      when:
+        - iptables_backend == 'auto'
+        - seapath_distro | default('') == 'Debian'
+
+    - name: Choose how the rules are applied
+      ansible.builtin.set_fact:
+        iptables_backend_effective: >-
+          {{ 'nftables'
+             if iptables_backend == 'nftables'
+             or (iptables_backend == 'auto'
+                 and 'missing kernel module' in iptables_rules_test.stderr | default(''))
+             else 'iptables' }}
+
+    - name: Apply the rules with nftables
+      ansible.builtin.include_tasks: nftables.yml
+      when: iptables_backend_effective == 'nftables'
+
+    - name: Apply the rules with iptables
+      ansible.builtin.include_tasks: iptables.yml
+      when: iptables_backend_effective == 'iptables'

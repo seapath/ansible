@@ -1,0 +1,20 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+*filter
+:INPUT ACCEPT [0:0]
+:FORWARD ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+:SEAPATH-IN - [0:0]
+-A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+-A INPUT -p tcp -m tcp --dport 22 -m comment --comment "ssh admin" -j ACCEPT
+-A INPUT -s 192.0.2.0/24 -j SEAPATH-IN
+-A SEAPATH-IN -p udp -m multiport --dports 161,514 -j ACCEPT
+COMMIT
+*nat
+:PREROUTING ACCEPT [0:0]
+:INPUT ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+:POSTROUTING ACCEPT [0:0]
+-A PREROUTING -i eth9 -p tcp -m tcp --dport 8443 -j DNAT --to-destination 192.0.2.10:443
+-A POSTROUTING -s 198.51.100.0/24 -o eth9 -j MASQUERADE
+COMMIT

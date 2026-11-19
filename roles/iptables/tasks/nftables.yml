@@ -1,0 +1,96 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Translate the rules to nftables
+  ansible.builtin.command:
+    cmd: /usr/sbin/iptables-restore-translate -f /etc/iptables/rules.v4
+  register: iptables_nft_translation
+  changed_when: false
+  check_mode: false
+
+# A rule iptables-restore-translate cannot express comes out as a comment, and
+# the command still succeeds: loading the rest would leave a hole in the
+# firewall.
+- name: Check that every rule has an nftables translation
+  ansible.builtin.assert:
+    that: iptables_untranslated | length == 0
+    fail_msg: >-
+      iptables-restore-translate cannot express these rules in nftables:
+      {{ iptables_untranslated | join(' ; ') }}. Rewrite them, or set
+      iptables_backend to iptables on a kernel that has their extensions.
+    quiet: true
+  vars:
+    iptables_untranslated: >-
+      {{ iptables_nft_translation.stdout_lines
+         | select('match', '^#')
+         | reject('match', '^# (Translated by|Completed on) ')
+         | list }}
+
+- name: Write the nftables ruleset
+  ansible.builtin.template:
+    src: nftables.conf.j2
+    dest: "{{ iptables_nftables_conf }}"
+    owner: root
+    group: root
+    mode: "0755"
+    validate: /usr/sbin/nft -c -f %s
+  notify: Reload iptables rules if needed
+
+# Debian's nftables.service flushes the whole ruleset when it stops, the
+# tables of libvirt and netavark with it. Leave the rules in place instead, as
+# netfilter-persistent does.
+- name: Create the nftables.service drop-in directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/nftables.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Keep the ruleset when nftables.service stops
+  ansible.builtin.copy:
+    src: nftables-keep-on-stop.conf
+    dest: /etc/systemd/system/nftables.service.d/seapath-keep-on-stop.conf
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Look for netfilter-persistent
+  ansible.builtin.service_facts:
+
+# netfilter-persistent loads rules.v4 with iptables-restore at boot, which
+# fails on this kernel.
+- name: Stop loading the rules with iptables-restore at boot
+  ansible.builtin.systemd:
+    name: netfilter-persistent
+    enabled: false
+  when: "'netfilter-persistent.service' in ansible_facts.services"
+
+- name: Load the nftables ruleset at boot
+  ansible.builtin.systemd:
+    name: nftables
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Declare nftables.service to the Cukinia tests
+  when: iptables_register_essential_services | bool
+  block:
+    - name: Create the Cukinia extra essential services directory
+      ansible.builtin.file:
+        path: "{{ iptables_cukinia_extra_essential_services_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Declare nftables.service to the Cukinia tests
+      ansible.builtin.copy:
+        content: |
+          # Managed by the iptables role: the rules are loaded with nftables.
+          nftables
+        dest: "{{ iptables_cukinia_extra_essential_services_dir }}/iptables"
+        owner: root
+        group: root
+        mode: "0644"

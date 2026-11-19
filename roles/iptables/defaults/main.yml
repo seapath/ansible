@@ -1,0 +1,19 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# How the rules of /etc/iptables/rules.v4 are applied: "iptables" loads them
+# with iptables-restore, "nftables" translates them with
+# iptables-restore-translate and loads the result with nft. "auto" keeps
+# iptables-restore, and switches to nftables on a Debian host whose running
+# kernel lacks an xtables extension the rules use: the Debian 7.x kernels no
+# longer provide the NAT targets (MASQUERADE, SNAT, DNAT).
+iptables_backend: auto
+
+# The ruleset nftables.service loads at boot, written in nftables mode.
+iptables_nftables_conf: /etc/nftables.conf
+
+# In nftables mode, declare nftables.service to the Cukinia tests, which would
+# otherwise report it as an unrecognized service.
+iptables_register_essential_services: true
+iptables_cukinia_extra_essential_services_dir: /etc/cukinia/extra-essential-services.d

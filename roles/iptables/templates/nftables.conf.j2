@@ -1,0 +1,17 @@
+#!/usr/sbin/nft -f
+# {{ ansible_managed }}
+# iptables role: nftables mode
+#
+# /etc/iptables/rules.v4 translated by iptables-restore-translate, because the
+# running kernel lacks an xtables extension these rules use. Edit the iptables
+# rules, not this file. Each table is deleted and created again, so that
+# loading this file replaces the tables of rules.v4 as iptables-restore does,
+# and leaves the tables of other tools (libvirt, netavark) alone.
+{% for line in iptables_nft_translation.stdout_lines if line and not line.startswith('#') %}
+{%   if line.startswith('add table ') %}
+
+table {{ line.split()[2:4] | join(' ') }}
+delete table {{ line.split()[2:4] | join(' ') }}
+{%   endif %}
+{{ line }}
+{% endfor %}

@@ -4,6 +4,9 @@
 ---
 - name: Reload iptables rules if needed
   become: true
-  ansible.builtin.shell:
-    cmd: "/usr/sbin/iptables-restore < /etc/iptables/rules.v4"
+  ansible.builtin.command:
+    argv: >-
+      {{ ['/usr/sbin/nft', '-f', iptables_nftables_conf]
+         if iptables_backend_effective | default('iptables') == 'nftables'
+         else ['/usr/sbin/iptables-restore', '/etc/iptables/rules.v4'] }}
   changed_when: true

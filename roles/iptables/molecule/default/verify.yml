@@ -1,0 +1,141 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+- name: Verify the nftables mode
+  hosts: nft
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Read the nftables ruleset
+      ansible.builtin.slurp:
+        src: /etc/nftables.conf
+      register: iptables_test_conf
+
+    - name: Check the ruleset written from the rules
+      ansible.builtin.assert:
+        that:
+          - "'# iptables role: nftables mode' in iptables_test_conf_lines"
+          - "'delete table ip filter' in iptables_test_conf_lines"
+          - "'delete table ip nat' in iptables_test_conf_lines"
+          - iptables_test_conf_lines | select('search', 'masquerade') | list | length == 1
+          - iptables_test_conf_lines | select('search', 'Translated by') | list | length == 0
+      vars:
+        iptables_test_conf_lines: "{{ (iptables_test_conf.content | b64decode).splitlines() }}"
+
+    - name: Read the loaded nat table
+      ansible.builtin.command: /usr/sbin/nft list table ip nat
+      register: iptables_test_nat
+      changed_when: false
+
+    - name: Check the NAT rules are loaded
+      ansible.builtin.assert:
+        that:
+          - "'masquerade' in iptables_test_nat.stdout"
+          - "'dnat to 192.0.2.10:443' in iptables_test_nat.stdout"
+
+    - name: Read the state of the units
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+      register: iptables_test_units
+      loop:
+        - nftables
+        - netfilter-persistent
+
+    - name: Check nftables.service replaced netfilter-persistent
+      ansible.builtin.assert:
+        that:
+          - iptables_test_units.results[0].status.UnitFileState == 'enabled'
+          - iptables_test_units.results[1].status.UnitFileState == 'disabled'
+
+    - name: Check nftables.service no longer flushes the ruleset on stop
+      ansible.builtin.assert:
+        that: "'flush' not in iptables_test_units.results[0].status.ExecStop | default('')"
+
+    - name: Read the Cukinia declaration
+      ansible.builtin.slurp:
+        src: /etc/cukinia/extra-essential-services.d/iptables
+      register: iptables_test_cukinia
+
+    - name: Check nftables.service is declared to Cukinia
+      ansible.builtin.assert:
+        that: "'nftables' in (iptables_test_cukinia.content | b64decode).splitlines()"
+
+- name: Verify the iptables mode
+  hosts: legacy
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Read the loaded rules
+      ansible.builtin.command: /usr/sbin/iptables -S INPUT
+      register: iptables_test_rules
+      changed_when: false
+
+    - name: Check the rules are loaded with iptables
+      ansible.builtin.assert:
+        that: "'-A INPUT -s 192.0.2.0/24 -j ACCEPT' in iptables_test_rules.stdout_lines"
+
+    - name: Read the nftables ruleset
+      ansible.builtin.slurp:
+        src: /etc/nftables.conf
+      register: iptables_test_conf
+
+    - name: Check the nftables ruleset is left alone
+      ansible.builtin.assert:
+        that: "'iptables role' not in (iptables_test_conf.content | b64decode)"
+
+    - name: Look for a Cukinia declaration
+      ansible.builtin.stat:
+        path: /etc/cukinia/extra-essential-services.d/iptables
+      register: iptables_test_cukinia
+
+    - name: Check nothing is declared to Cukinia
+      ansible.builtin.assert:
+        that: not iptables_test_cukinia.stat.exists
+
+- name: Verify the way back from nftables
+  hosts: back
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Read the loaded rules
+      ansible.builtin.command: /usr/sbin/iptables -S INPUT
+      register: iptables_test_rules
+      changed_when: false
+
+    - name: Check iptables-restore replaced the nft table
+      ansible.builtin.assert:
+        that:
+          - "'-A INPUT -s 192.0.2.0/24 -j ACCEPT' in iptables_test_rules.stdout_lines"
+          - "'from-nft' not in iptables_test_rules.stdout"
+
+    - name: Read the state of the units
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+      register: iptables_test_units
+      loop:
+        - nftables
+        - netfilter-persistent
+
+    - name: Check netfilter-persistent loads the rules at boot again
+      ansible.builtin.assert:
+        that:
+          - iptables_test_units.results[0].status.UnitFileState == 'disabled'
+          - iptables_test_units.results[1].status.UnitFileState == 'enabled'
+
+    - name: Read the nftables ruleset
+      ansible.builtin.slurp:
+        src: /etc/nftables.conf
+      register: iptables_test_conf
+
+    - name: Check the nftables ruleset is no longer in nftables mode
+      ansible.builtin.assert:
+        that: "'# iptables role: nftables mode' not in (iptables_test_conf.content | b64decode).splitlines()"
+
+    - name: Look for a Cukinia declaration
+      ansible.builtin.stat:
+        path: /etc/cukinia/extra-essential-services.d/iptables
+      register: iptables_test_cukinia
+
+    - name: Check the Cukinia declaration is withdrawn
+      ansible.builtin.assert:
+        that: not iptables_test_cukinia.stat.exists
