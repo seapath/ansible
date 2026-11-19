@@ -1,0 +1,52 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+- name: Prepare the account the image creates
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Install sudo
+      ansible.builtin.apt:
+        name: sudo
+        state: present
+        update_cache: true
+
+    - name: Create the group of the image account
+      ansible.builtin.group:
+        name: "{{ configure_seapath_distro_image_user }}"
+        gid: 1000
+        state: present
+
+    - name: Create the supplementary group the image gives
+      ansible.builtin.group:
+        name: seapath-admin
+        state: present
+
+    - name: Create the image account
+      ansible.builtin.user:
+        name: "{{ configure_seapath_distro_image_user }}"
+        uid: 1000
+        group: "{{ configure_seapath_distro_image_user }}"
+        groups: seapath-admin
+        shell: /bin/bash
+        create_home: true
+
+    - name: Leave a file in its home
+      ansible.builtin.copy:
+        content: "kept\n"
+        dest: "/home/{{ configure_seapath_distro_image_user }}/marker"
+        owner: "{{ configure_seapath_distro_image_user }}"
+        mode: "0644"
+
+    - name: Grant it sudo the way the image does
+      ansible.builtin.lineinfile:
+        path: /etc/sudoers
+        line: "{{ configure_seapath_distro_image_user }}   ALL=NOPASSWD: ALL"
+        validate: visudo -cf %s
+
+    - name: Create admin_user beforehand on the taken host
+      ansible.builtin.user:
+        name: "{{ admin_user }}"
+        uid: 1500
+        shell: /bin/bash
+      when: inventory_hostname == 'taken'

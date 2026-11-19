@@ -1,0 +1,16 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+- name: Converge
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Rename or remove the account of the image
+      ansible.builtin.include_role:
+        name: configure_seapath_distro
+        tasks_from: remove_old_admin.yml
+
+    - name: Configure the admin user
+      ansible.builtin.include_role:
+        name: configure_seapath_distro
+        tasks_from: users.yml

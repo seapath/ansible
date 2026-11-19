@@ -1,0 +1,61 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+- name: Verify
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Read the user database
+      ansible.builtin.getent:
+        database: passwd
+    - name: Read the group database
+      ansible.builtin.getent:
+        database: group
+
+    - name: Read the groups of admin_user
+      ansible.builtin.command: id -nG {{ admin_user }}
+      register: configure_seapath_distro_groups
+      changed_when: false
+
+    - name: Read /etc/sudoers
+      ansible.builtin.slurp:
+        src: /etc/sudoers
+      register: configure_seapath_distro_sudoers
+
+    - name: Check admin_user holds UID and GID 1000
+      ansible.builtin.assert:
+        that:
+          - configure_seapath_distro_image_user not in ansible_facts.getent_passwd
+          - configure_seapath_distro_image_user not in ansible_facts.getent_group
+          - ansible_facts.getent_passwd[admin_user][1] == '1000'
+          - ansible_facts.getent_passwd[admin_user][2] == '1000'
+          - ansible_facts.getent_group[admin_user][1] == '1000'
+          - ansible_facts.getent_passwd[admin_user][4] == '/home/' ~ admin_user
+          - (configure_seapath_distro_sudoers.content | b64decode) is not search('^' ~ configure_seapath_distro_image_user ~ '\s', multiline=True)
+
+    - name: Check the sudoers drop-in of admin_user
+      ansible.builtin.stat:
+        path: "/etc/sudoers.d/{{ admin_user }}"
+      register: configure_seapath_distro_dropin
+      failed_when: not configure_seapath_distro_dropin.stat.exists
+
+    - name: Check the renamed account kept its groups and home
+      when: inventory_hostname == 'rename'
+      block:
+        - name: Read the file left in the old home
+          ansible.builtin.slurp:
+            src: "/home/{{ admin_user }}/marker"
+          register: configure_seapath_distro_marker
+
+        - name: Check the memberships and the home survived the rename
+          ansible.builtin.assert:
+            that:
+              - "'seapath-admin' in configure_seapath_distro_groups.stdout.split()"
+              - (configure_seapath_distro_marker.content | b64decode) == 'kept\n'
+
+    - name: Check the old home is gone on the taken host
+      when: inventory_hostname == 'taken'
+      ansible.builtin.stat:
+        path: "/home/{{ configure_seapath_distro_image_user }}"
+      register: configure_seapath_distro_old_home
+      failed_when: configure_seapath_distro_old_home.stat.exists

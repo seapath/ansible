@@ -1,0 +1,35 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+dependency:
+  name: galaxy
+
+driver:
+  name: podman
+
+# rename: the account of the image, renamed to admin_user.
+# taken: admin_user already exists under another UID, the account of the
+# image is removed.
+platforms:
+  - name: rename
+    image: docker.io/geerlingguy/docker-debian13-ansible:latest
+  - name: taken
+    image: docker.io/geerlingguy/docker-debian13-ansible:latest
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      roles_path: "${MOLECULE_PROJECT_DIRECTORY}/.."
+  playbooks:
+    prepare: prepare.yml
+    converge: converge.yml
+    verify: verify.yml
+  inventory:
+    group_vars:
+      all:
+        admin_user: operator1
+        configure_seapath_distro_image_user: admin
+
+verifier:
+  name: ansible

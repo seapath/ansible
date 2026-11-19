@@ -11,21 +11,66 @@
   ansible.builtin.set_fact:
     configure_seapath_distro_old_admin_user: "{{ configure_seapath_distro_user_info.stdout.split(':')[0] }}"
 
-- name: Removing old admin user created by the ISO
+# The account created by the image is renamed in place, so that it keeps its
+# UID, its home, its password and the supplementary groups the image gave it.
+# Deleting it and creating admin_user anew would drop those memberships.
+- name: Rename the admin user created by the image
   when: admin_user != configure_seapath_distro_old_admin_user
   block:
+    - name: Read the user database
+      ansible.builtin.getent:
+        database: passwd
+    - name: Read the group database
+      ansible.builtin.getent:
+        database: group
+
     - name: Remove old admin user from sudoers file
       ansible.builtin.lineinfile:
         dest: /etc/sudoers
         state: absent
-        regexp: "^{{ configure_seapath_distro_old_admin_user }}"
+        regexp: "^{{ configure_seapath_distro_old_admin_user }}\\s"
         validate: visudo -cf %s
+    - name: Remove old admin user sudoers drop-in
+      ansible.builtin.file:
+        path: "/etc/sudoers.d/{{ configure_seapath_distro_old_admin_user }}"
+        state: absent
+
+    - name: Rename the old admin user
+      ansible.builtin.command:
+        argv:
+          - usermod
+          - --login
+          - "{{ admin_user }}"
+          - --home
+          - "/home/{{ admin_user }}"
+          - --move-home
+          - "{{ configure_seapath_distro_old_admin_user }}"
+      changed_when: true
+      when: admin_user not in ansible_facts.getent_passwd
+
+    - name: Rename the old admin group
+      ansible.builtin.command:
+        argv:
+          - groupmod
+          - --new-name
+          - "{{ admin_user }}"
+          - "{{ configure_seapath_distro_old_admin_user }}"
+      changed_when: true
+      when:
+        - admin_user not in ansible_facts.getent_group
+        - configure_seapath_distro_old_admin_user in ansible_facts.getent_group
+
+    # admin_user already exists under another UID and takes UID 1000 in
+    # users.yml, so the account of the image has to go.
     - name: Remove the old admin user
-      ansible.builtin.user:
-        name: "{{ configure_seapath_distro_old_admin_user }}"
-        state: absent
-        remove: true
-    - name: Remove the old admin group
-      ansible.builtin.group:
-        name: "{{ configure_seapath_distro_old_admin_user }}"
-        state: absent
+      when: admin_user in ansible_facts.getent_passwd
+      block:
+        - name: Remove the old admin user
+          ansible.builtin.user:
+            name: "{{ configure_seapath_distro_old_admin_user }}"
+            state: absent
+            remove: true
+        - name: Remove the old admin group
+          ansible.builtin.group:
+            name: "{{ configure_seapath_distro_old_admin_user }}"
+            state: absent

@@ -17,6 +17,15 @@ manage the platform without an interactive password prompt. This is an
 intentional design decision: protect the admin account's SSH access and
 credentials carefully, since they grant full control of the machine.
 
+## Admin account
+
+The image creates its administration account with UID 1000. When `admin_user`
+names another account, the role renames that one in place (`usermod --login`,
+`groupmod --new-name`, home moved to `/home/<admin_user>`): it keeps its UID,
+its password and the supplementary groups the image gave it. If `admin_user`
+already exists under another UID, the account of the image is removed instead
+and `admin_user` takes UID 1000.
+
 ## Role Variables
 
 | Variable             | Required | Type        | Comments                                                           |
