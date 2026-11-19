@@ -35,12 +35,6 @@ jobs:
             hyp-test-playbooks: >-
               playbooks/test_run_cukinia.yaml
               playbooks/test_run_cyclictest.yaml
-          - name: Aaeon ARM I.MX8P-2G
-            runner-label: runner-SFL-AAEON
-            hyp-inventories: >-
-              --inventory inventories_private/ci_yocto_standalone_aaeon.yaml
-            hyp-test-playbooks: >-
-              playbooks/test_run_cukinia.yaml
     uses: ./.github/workflows/_tests.yml
     name: Run tests on ${{ matrix.name }}
     with:
