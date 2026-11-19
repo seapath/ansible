@@ -49,8 +49,8 @@ Integration tests run on self-hosted runners and use the external `seapath/ci` r
   hypervisors and VMs; `playbooks/ci_test.yaml` also deploys tests for Debian
   and OracleLinux.
 - **CI latency tests**: `playbooks/test_run_cyclictest.yaml` runs separately on
-  hypervisors and VMs. `.github/workflows/ci-yocto.yml` selects it for Welotec,
-  not AAEON; SLES runs it for hypervisors and VMs. Debian and OracleLinux remain
+  hypervisors and VMs. `.github/workflows/ci-yocto.yml` runs it on Welotec,
+  its only Yocto board (the Aaeon board is disabled); SLES runs it for hypervisors and VMs. Debian and OracleLinux remain
   Cukinia-only.
   flags for skipping latency tests; workflow playbook selection controls reporting.
 - **Example inventories**: `inventories/examples/` (cluster, standalone, vm-deployment, ovs)
