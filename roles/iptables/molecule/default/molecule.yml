@@ -1,0 +1,61 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+dependency:
+  name: galaxy
+
+driver:
+  name: podman
+
+# nft: rules with NAT, applied with nftables.
+# legacy: rules applied with iptables-restore, nothing else touched.
+# back: a host left in nftables mode by an earlier run, given back to
+# iptables-restore and netfilter-persistent.
+# The backend is forced: auto depends on the kernel of the host running the
+# containers.
+platforms:
+  - name: nft
+    image: docker.io/geerlingguy/docker-debian13-ansible:latest
+    privileged: true
+    command: /sbin/init
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+  - name: legacy
+    image: docker.io/geerlingguy/docker-debian13-ansible:latest
+    privileged: true
+    command: /sbin/init
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+  - name: back
+    image: docker.io/geerlingguy/docker-debian13-ansible:latest
+    privileged: true
+    command: /sbin/init
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      roles_path: "${MOLECULE_PROJECT_DIRECTORY}/.."
+  playbooks:
+    prepare: prepare.yml
+    converge: converge.yml
+    verify: verify.yml
+  inventory:
+    group_vars:
+      all:
+        seapath_distro: Debian
+    host_vars:
+      nft:
+        iptables_backend: nftables
+        iptables_rules_path: "${MOLECULE_SCENARIO_DIRECTORY}/files/rules-nat.v4"
+      legacy:
+        iptables_backend: iptables
+        iptables_rules_path: "${MOLECULE_SCENARIO_DIRECTORY}/files/rules-filter.v4"
+      back:
+        iptables_backend: iptables
+        iptables_rules_path: "${MOLECULE_SCENARIO_DIRECTORY}/files/rules-filter.v4"
+
+verifier:
+  name: ansible

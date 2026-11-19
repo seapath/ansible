@@ -1,0 +1,10 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+# No become on the play, as in playbooks/seapath_setup_network.yaml: the role
+# looks for the rules on the controller.
+- name: Converge
+  hosts: all
+  gather_facts: false
+  roles:
+    - role: iptables
