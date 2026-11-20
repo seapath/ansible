@@ -1,0 +1,50 @@
+---
+dependency:
+  name: galaxy
+
+driver:
+  name: podman
+
+# One host per socket access policy:
+# - hv-root: the default, libvirt reachable by root only.
+# - hv-dbus: libvirt-dbus installed, its libvirtdbus user keeps access.
+# - hv-optin: non-root livemigration_user, libvirt group allowed.
+platforms:
+  - name: hv-root
+    image: docker.io/geerlingguy/docker-debian13-ansible:latest
+    privileged: true
+    command: /sbin/init
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+  - name: hv-dbus
+    image: docker.io/geerlingguy/docker-debian13-ansible:latest
+    privileged: true
+    command: /sbin/init
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+  - name: hv-optin
+    image: docker.io/geerlingguy/docker-debian13-ansible:latest
+    privileged: true
+    command: /sbin/init
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      roles_path: "${MOLECULE_PROJECT_DIRECTORY}/.."
+  playbooks:
+    prepare: prepare.yml
+    converge: converge.yml
+    verify: verify.yml
+  inventory:
+    group_vars:
+      all:
+        seapath_distro: Debian
+    host_vars:
+      hv-optin:
+        livemigration_user: libvirtadmin
+
+verifier:
+  name: ansible

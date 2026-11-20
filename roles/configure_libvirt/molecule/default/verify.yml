@@ -1,0 +1,144 @@
+---
+- name: Verify the libvirt socket access policy
+  hosts: all
+  become: true
+  gather_facts: false
+
+  vars:
+    expected:
+      hv-root: {mode: "0600", group: root, rule: true, operator: false, dbus: false}
+      hv-dbus: {mode: "0660", group: libvirtdbus, rule: true, operator: false, dbus: true}
+      hv-optin: {mode: "0660", group: libvirt, rule: false, operator: true, dbus: true}
+    want: "{{ expected[inventory_hostname] }}"
+
+  tasks:
+    - name: Read the libvirtd.socket drop-in
+      ansible.builtin.slurp:
+        path: /etc/systemd/system/libvirtd.socket.d/seapath-socket-access.conf
+      register: configure_libvirt_verify_dropin
+
+    - name: Check the drop-in content
+      ansible.builtin.assert:
+        that:
+          - ("SocketMode=" ~ want.mode) in (configure_libvirt_verify_dropin.content | b64decode)
+          - ("SocketGroup=" ~ want.group) in (configure_libvirt_verify_dropin.content | b64decode)
+
+    - name: Stat the libvirt sockets
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - /run/libvirt/libvirt-sock
+        - /run/libvirt/libvirt-sock-ro
+      register: configure_libvirt_verify_sockets
+
+    - name: Check that the sockets were recreated with the expected permissions
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.mode == want.mode
+          - item.stat.gr_name == want.group
+        fail_msg: "{{ item.item }}: {{ item.stat.mode | default('') }} {{ item.stat.gr_name | default('') }}"
+      loop: "{{ configure_libvirt_verify_sockets.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Stat the polkit rule
+      ansible.builtin.stat:
+        path: /etc/polkit-1/rules.d/10-seapath-libvirt.rules
+      register: configure_libvirt_verify_rule
+
+    - name: Check the polkit rule
+      ansible.builtin.assert:
+        that: configure_libvirt_verify_rule.stat.exists == want.rule
+
+    - name: Connect to libvirt as root
+      ansible.builtin.command: virsh -c qemu:///system uri
+      changed_when: false
+
+    - name: Connect to libvirt as a non-root member of the libvirt group
+      ansible.builtin.command: runuser -u operator1 -- virsh -c qemu:///system uri
+      register: configure_libvirt_verify_operator
+      changed_when: false
+      failed_when: (configure_libvirt_verify_operator.rc == 0) != want.operator
+
+    - name: Connect to libvirt as libvirtdbus
+      ansible.builtin.command: runuser -u libvirtdbus -- virsh -c qemu:///system uri
+      register: configure_libvirt_verify_dbus
+      changed_when: false
+      failed_when: configure_libvirt_verify_dbus.rc != 0
+      when: want.dbus
+
+    - name: Call libvirt-dbus as a non-root member of the libvirt group
+      ansible.builtin.command: >-
+        runuser -u operator1 -- dbus-send --system --print-reply --dest=org.libvirt
+        /org/libvirt/QEMU org.freedesktop.DBus.Introspectable.Introspect
+      register: configure_libvirt_verify_dbus_call
+      changed_when: false
+      failed_when: (configure_libvirt_verify_dbus_call.rc == 0) != want.operator
+      when: want.dbus
+
+    - name: Call libvirt-dbus as root
+      ansible.builtin.command: >-
+        dbus-send --system --print-reply --dest=org.libvirt
+        /org/libvirt/QEMU org.freedesktop.DBus.Introspectable.Introspect
+      changed_when: false
+      when: want.dbus
+
+# Switching the policy on a host where libvirtd is running must recreate the
+# sockets and bring libvirtd back, then switching back must restore them.
+- name: Verify a policy switch with libvirtd running
+  hosts: hv-root
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Make sure libvirtd is running
+      ansible.builtin.command: virsh -c qemu:///system uri
+      changed_when: false
+
+    - name: Allow non-root access
+      ansible.builtin.include_role:
+        name: configure_libvirt
+      vars:
+        livemigration_user: libvirtadmin # noqa: var-naming[no-role-prefix]
+
+    - name: Check that the restart was reported
+      ansible.builtin.assert:
+        that: configure_libvirt_socket_restart is changed
+
+    - name: Stat the read/write socket
+      ansible.builtin.stat:
+        path: /run/libvirt/libvirt-sock
+      register: configure_libvirt_verify_switch_sock
+
+    - name: Check that libvirtd is running after the switch
+      ansible.builtin.systemd:
+        name: libvirtd.service
+      register: configure_libvirt_verify_after
+      failed_when: configure_libvirt_verify_after.status.ActiveState != "active"
+
+    - name: Check that the libvirt group can connect
+      ansible.builtin.command: runuser -u operator1 -- virsh -c qemu:///system uri
+      changed_when: false
+
+    - name: Check the socket permissions after the switch
+      ansible.builtin.assert:
+        that:
+          - configure_libvirt_verify_switch_sock.stat.mode == "0660"
+          - configure_libvirt_verify_switch_sock.stat.gr_name == "libvirt"
+
+    - name: Restore the default policy
+      ansible.builtin.include_role:
+        name: configure_libvirt
+
+    - name: Check that the libvirt group is refused again
+      ansible.builtin.command: runuser -u operator1 -- virsh -c qemu:///system uri
+      register: configure_libvirt_verify_switch_back
+      changed_when: false
+      failed_when: configure_libvirt_verify_switch_back.rc == 0
+
+    - name: Check that libvirtd is running again
+      ansible.builtin.systemd:
+        name: libvirtd.service
+      register: configure_libvirt_verify_again
+      failed_when: configure_libvirt_verify_again.status.ActiveState != "active"
