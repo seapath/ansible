@@ -58,30 +58,6 @@
         - "{{ seapath_webui_operator_group }}"
         - "{{ seapath_webui_viewer_group }}"
 
-    # The Cukinia test SEAPATH-00033 compares /etc/group and /etc/gshadow with
-    # a fixed list. deploy_cukinia_tests reads extra expected groups from this
-    # directory at test time. Same file name as the one the Debian ISO writes
-    # for seapath-admin, so this one replaces it with the three groups. Kept
-    # when the web UI is removed, like the groups themselves.
-    - name: Create the Cukinia extra expected groups directory
-      ansible.builtin.file:
-        path: "{{ seapath_webui_cukinia_groups_dir }}"
-        state: directory
-        owner: root
-        group: root
-        mode: "0755"
-
-    - name: Declare the web UI groups to the Cukinia tests
-      ansible.builtin.copy:
-        dest: "{{ seapath_webui_cukinia_groups_dir }}/seapath-webui"
-        content: |
-          {{ seapath_webui_admin_group }}
-          {{ seapath_webui_operator_group }}
-          {{ seapath_webui_viewer_group }}
-        owner: root
-        group: root
-        mode: "0644"
-
     # The same membership the Debian ISO gives at installation, for the images
     # that do not. The account is looked up first because the user module would
     # otherwise create it, and this role never invents an account. A machine

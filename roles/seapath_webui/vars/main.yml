@@ -8,7 +8,3 @@ seapath_webui_proxy_environment:
   http_proxy: "{{ seapath_webui_http_proxy }}"
   https_proxy: "{{ seapath_webui_http_proxy }}"
   no_proxy: "{{ seapath_webui_no_proxy }}"
-
-# Read by deploy_cukinia_tests, which names it
-# deploy_cukinia_tests_extra_expected_groups_dir.
-seapath_webui_cukinia_groups_dir: /etc/cukinia/extra-expected-groups.d

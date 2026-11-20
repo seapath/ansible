@@ -13,10 +13,6 @@ including against the machine it runs on. It configures no machine itself, so
 this role is the only thing that writes to a host on its behalf: the quadlet,
 the state directories, and the three Unix groups that grant each role.
 
-The three groups are also declared to the Cukinia tests in
-`/etc/cukinia/extra-expected-groups.d/seapath-webui`, so that SEAPATH-00033
-accepts them. The file stays when the web UI is removed, as the groups do.
-
 The `admin_user` account, when the inventory names one and the machine has it,
 is added to `seapath_webui_admin_group`, as the Debian ISO already does
 at installation. A machine without that account is left alone: `root` is an
