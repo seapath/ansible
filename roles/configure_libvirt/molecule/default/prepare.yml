@@ -1,0 +1,43 @@
+---
+- name: Prepare test environment (Debian 13)
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Install libvirt and polkit
+      ansible.builtin.apt:
+        name:
+          - libvirt-daemon-system
+          - libvirt-clients
+          - polkitd
+        install_recommends: false
+        state: present
+        update_cache: true
+
+    - name: Install libvirt-dbus
+      ansible.builtin.apt:
+        name: libvirt-dbus
+        install_recommends: false
+        state: present
+      when: inventory_hostname in ['hv-dbus', 'hv-optin']
+
+    - name: Create a non-root member of the libvirt group
+      ansible.builtin.user:
+        name: operator1
+        groups: libvirt
+        append: true
+
+    - name: Start the libvirt sockets
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        state: started
+      loop:
+        - libvirtd.socket
+        - libvirtd-ro.socket
+
+    # dbus does not pick up the polkit bus policy installed after it started.
+    - name: Reload dbus
+      ansible.builtin.systemd:
+        name: dbus
+        state: reloaded
