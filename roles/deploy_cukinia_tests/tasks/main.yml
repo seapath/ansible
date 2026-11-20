@@ -14,7 +14,6 @@
     rsync_opts:
       - "--exclude=*.j2"
       - "--exclude=extra-essential-services.d/"
-      - "--exclude=extra-expected-groups.d/"
       - "--chmod=D0755,F0644"
 
 - name: Copy Cukinia's tests templates
