@@ -3,14 +3,57 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+- name: Look up the trusted libvirt system user
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ configure_libvirt_socket_trusted_user }}"
+    fail_key: false
+  when: configure_libvirt_socket_trusted_user | length > 0
+
+- name: Look up the primary group of the trusted libvirt system user
+  ansible.builtin.getent:
+    database: group
+    key: "{{ ansible_facts.getent_passwd[configure_libvirt_socket_trusted_user][2] }}"
+  when:
+    - configure_libvirt_socket_trusted_user | length > 0
+    - ansible_facts.getent_passwd[configure_libvirt_socket_trusted_user] is not none
+
 - name: Set the libvirt socket access policy
   ansible.builtin.set_fact:
+    configure_libvirt_socket_trusted_group: "{{ _trusted_group }}"
     configure_libvirt_socket_group: >-
       {{ 'libvirt' if configure_libvirt_allow_non_root_libvirt_socket_access | bool
-      else 'root' }}
+      else (_trusted_group or 'root') }}
     configure_libvirt_socket_mode: >-
       {{ '0660' if configure_libvirt_allow_non_root_libvirt_socket_access | bool
-      else '0600' }}
+      or _trusted_group else '0600' }}
+  vars:
+    _trusted_group: >-
+      {{ (ansible_facts.getent_group | default({}) | list | first | default(''))
+      if configure_libvirt_socket_trusted_user | length > 0
+      and ansible_facts.getent_passwd[configure_libvirt_socket_trusted_user] is not none
+      else '' }}
+
+- name: Check that the trusted user does not open libvirt to a shared group
+  ansible.builtin.assert:
+    that: configure_libvirt_socket_trusted_group not in ['libvirt', 'users']
+    fail_msg: >-
+      The primary group of {{ configure_libvirt_socket_trusted_user }} is
+      {{ configure_libvirt_socket_trusted_group }}: giving it the libvirt
+      sockets would let every member of that group reach libvirt. Give the
+      user a dedicated group, or set configure_libvirt_socket_trusted_user to "".
+    quiet: true
+
+# With non-root access, the sockets belong to the libvirt group: the trusted
+# user (libvirtdbus) is not a member of it on every distribution.
+- name: Add the trusted libvirt system user to the libvirt group
+  ansible.builtin.user:
+    name: "{{ configure_libvirt_socket_trusted_user }}"
+    groups: libvirt
+    append: true
+  when:
+    - configure_libvirt_allow_non_root_libvirt_socket_access | bool
+    - configure_libvirt_socket_trusted_group | length > 0
 
 - name: Copy libvirtd.conf
   ansible.builtin.template:
@@ -47,8 +90,8 @@
   register: configure_libvirt_polkit_rules_dir
 
 - name: Deny libvirt polkit actions to non-root users
-  ansible.builtin.copy:
-    src: 10-seapath-libvirt.rules
+  ansible.builtin.template:
+    src: 10-seapath-libvirt.rules.j2
     dest: /etc/polkit-1/rules.d/10-seapath-libvirt.rules
     owner: root
     group: root
@@ -62,6 +105,42 @@
     path: /etc/polkit-1/rules.d/10-seapath-libvirt.rules
     state: absent
   when: configure_libvirt_allow_non_root_libvirt_socket_access | bool
+
+# libvirt-dbus reaches libvirt as the trusted user, and its D-Bus policy lets
+# the libvirt group call it: close that path too. /etc/dbus-1/system.d is read
+# after the packaged policies, so this rule wins for the libvirt group.
+- name: Check for the D-Bus system policy directory
+  ansible.builtin.stat:
+    path: /etc/dbus-1/system.d
+  register: configure_libvirt_dbus_policy_dir
+
+- name: Deny the libvirt group access to libvirt-dbus
+  ansible.builtin.copy:
+    src: seapath-libvirt-dbus.conf
+    dest: /etc/dbus-1/system.d/seapath-libvirt-dbus.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when:
+    - not configure_libvirt_allow_non_root_libvirt_socket_access | bool
+    - configure_libvirt_socket_trusted_group | length > 0
+    - configure_libvirt_dbus_policy_dir.stat.isdir | default(false)
+  register: configure_libvirt_dbus_policy
+
+- name: Remove the libvirt-dbus restriction
+  ansible.builtin.file:
+    path: /etc/dbus-1/system.d/seapath-libvirt-dbus.conf
+    state: absent
+  when: >-
+    configure_libvirt_allow_non_root_libvirt_socket_access | bool
+    or configure_libvirt_socket_trusted_group | length == 0
+  register: configure_libvirt_dbus_policy_removed
+
+- name: Reload the D-Bus policy
+  ansible.builtin.systemd:
+    name: dbus
+    state: reloaded
+  when: configure_libvirt_dbus_policy.changed or configure_libvirt_dbus_policy_removed.changed # noqa: no-handler
 
 - name: Reload systemd
   ansible.builtin.systemd:

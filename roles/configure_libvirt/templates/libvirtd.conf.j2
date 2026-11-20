@@ -9,6 +9,10 @@ listen_tcp = 0
 {% if configure_libvirt_allow_non_root_libvirt_socket_access | bool %}
 # Non-root access to the libvirt socket is enabled. Members of the "libvirt"
 # group can read and write the socket, which is root-equivalent.
+{% elif configure_libvirt_socket_trusted_group %}
+# Non-root access to the libvirt socket is disabled, except for the
+# {{ configure_libvirt_socket_trusted_user }} system user (group
+# {{ configure_libvirt_socket_trusted_group }}).
 {% else %}
 # Non-root access to the libvirt socket is disabled: only root can read and
 # write the socket.
