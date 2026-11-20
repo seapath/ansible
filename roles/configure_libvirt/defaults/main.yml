@@ -8,6 +8,13 @@
 # qemu+ssh opens the target's local socket as that user.
 configure_libvirt_allow_non_root_libvirt_socket_access: "{{ livemigration_user | default('root') != 'root' }}"
 
+# System user that keeps libvirt access when non-root access is disabled:
+# libvirt-dbus, which cockpit-machines relies on, runs as libvirtdbus. The
+# libvirt sockets are then given this user's primary group, and the polkit
+# rule lets it through. Ignored when the user does not exist on the host; set
+# it to "" to keep libvirt strictly root-only.
+configure_libvirt_socket_trusted_user: libvirtdbus
+
 # Libvirt socket units whose permissions are enforced by the role. libvirtd
 # ignores unix_sock_* in libvirtd.conf when socket-activated, and the modular
 # daemons (OracleLinux) never read libvirtd.conf, so the restriction is applied

@@ -19,26 +19,46 @@ and to false otherwise.
 
 ### Restricted access (non-root access disabled)
 
-Only root can reach libvirt. The role enforces this on three layers:
+Only root, and the trusted system user set by
+`configure_libvirt_socket_trusted_user`, can reach libvirt. That user defaults
+to `libvirtdbus`, the account libvirt-dbus runs as: cockpit-machines goes
+through libvirt-dbus, so its Virtual Machines page stays usable. It is ignored
+on hosts where the user does not exist, and `""` disables it.
 
-- `libvirtd.conf`: `unix_sock_*` permissions `0700`, group `root`. Only a
-  libvirtd that is not socket-activated reads these settings.
+The role enforces this on these layers:
+
+- `libvirtd.conf`: `unix_sock_*` permissions. Only a libvirtd that is not
+  socket-activated reads these settings.
 - systemd drop-ins on every libvirt socket unit listed in
   `configure_libvirt_socket_units` (`libvirtd*.socket` on Debian and SLES, the
   modular `virt*d*.socket` daemons on OracleLinux). This is what restricts the
   sockets on socket-activated hosts, where the distribution ships them as
-  `0666`: `SocketMode=0600`, `SocketGroup=root`.
+  `0666`.
 - a polkit rule, `/etc/polkit-1/rules.d/10-seapath-libvirt.rules`, that denies
-  every `org.libvirt.*` action to non-root users before the distribution
-  rules (such as Debian's `60-libvirt.rules`, which grants the `libvirt`
-  group) are evaluated. Hosts without `/etc/polkit-1/rules.d` (such as Yocto)
-  rely on the socket permissions alone.
+  every `org.libvirt.*` action to users other than root and the trusted user
+  before the distribution rules (such as Debian's `60-libvirt.rules`, which
+  grants the `libvirt` group) are evaluated. Hosts without
+  `/etc/polkit-1/rules.d` (such as Yocto) rely on the socket permissions alone.
+- when the trusted user exists, a D-Bus policy,
+  `/etc/dbus-1/system.d/seapath-libvirt-dbus.conf`, that denies the `libvirt`
+  group calls to libvirt-dbus (`org.libvirt`). libvirt-dbus reaches libvirt as
+  the trusted user and its packaged policy lets the `libvirt` group call it,
+  which would otherwise bypass the restriction. root keeps access.
+
+| Host                     | Socket mode | Socket group                    | `libvirtd.conf`      |
+|--------------------------|-------------|---------------------------------|----------------------|
+| without the trusted user | `0600`      | `root`                          | `0700`, group `root` |
+| with the trusted user    | `0660`      | primary group of the user       | `0770`, same group   |
+
+The role refuses a trusted user whose primary group is `libvirt` or `users`,
+since every member of that group would then reach libvirt.
 
 ### Non-root access enabled
 
 The role sets the socket group to `libvirt` (`0660` on the socket units,
-`0770` in `libvirtd.conf`) and removes its polkit rule, so the distribution
-polkit policy applies again. Every member of the `libvirt` group, typically the
+`0770` in `libvirtd.conf`), adds the trusted user (if it exists) to the
+`libvirt` group, and removes its polkit rule and D-Bus policy, so the
+distribution policies apply again. Every member of the `libvirt` group, typically the
 `libvirtadmin` user created by `add_libvirtadmin_user`, then becomes a root
 equivalent.
 
@@ -81,6 +101,7 @@ No requirement.
 | Variable                                               | Required | Type    | Default | Comments                                                                                              |
 |--------------------------------------------------------|----------|---------|---------|-------------------------------------------------------------------------------------------------------|
 | configure_libvirt_allow_non_root_libvirt_socket_access | no       | Boolean | true if `livemigration_user` is set and not `root`, else false | Allow non-root users in the libvirt group to access the (root-equivalent) libvirt read/write socket |
+| configure_libvirt_socket_trusted_user                  | no       | String  | `libvirtdbus` | System user that keeps libvirt access when non-root access is disabled; ignored if missing, `""` to disable |
 | configure_libvirt_socket_units                         | no       | List    | see `defaults/main.yml` | Libvirt socket units whose permissions are enforced; units missing on a host are ignored |
 
 ## Example Playbook
