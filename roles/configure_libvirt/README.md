@@ -24,8 +24,12 @@ only root can reach libvirt. The role enforces this on three layers:
   group) are evaluated. Hosts without `/etc/polkit-1/rules.d` (such as Yocto)
   rely on the socket permissions alone.
 
-Changing this setting restarts the affected socket units and their daemons.
-Running VMs keep running.
+Changing this setting recreates the affected sockets: the role only restarts
+the daemons whose sockets have a mode or group that differs from the policy,
+so a re-run with an unchanged policy restarts nothing. A daemon and all its
+sockets are stopped in a single systemd transaction, then started again, one
+host at a time. Running VMs keep running, but a live migration in progress on
+that host at that moment is aborted.
 
 The read/write libvirt socket is **root-equivalent**: whoever can reach it can
 start, stop, reconfigure or open the console of every VM, attach host devices

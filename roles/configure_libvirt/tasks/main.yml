@@ -3,6 +3,15 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+- name: Set the libvirt socket access policy
+  ansible.builtin.set_fact:
+    configure_libvirt_socket_group: >-
+      {{ 'libvirt' if configure_libvirt_allow_non_root_libvirt_socket_access | bool
+      else 'root' }}
+    configure_libvirt_socket_mode: >-
+      {{ '0660' if configure_libvirt_allow_non_root_libvirt_socket_access | bool
+      else '0600' }}
+
 - name: Copy libvirtd.conf
   ansible.builtin.template:
     src: libvirtd.conf.j2
@@ -45,56 +54,82 @@
     group: root
     mode: "0644"
   when:
-    - not configure_libvirt_allow_non_root_libvirt_socket_access
+    - not configure_libvirt_allow_non_root_libvirt_socket_access | bool
     - configure_libvirt_polkit_rules_dir.stat.isdir | default(false)
 
 - name: Remove the libvirt polkit restriction
   ansible.builtin.file:
     path: /etc/polkit-1/rules.d/10-seapath-libvirt.rules
     state: absent
-  when: configure_libvirt_allow_non_root_libvirt_socket_access
+  when: configure_libvirt_allow_non_root_libvirt_socket_access | bool
 
 - name: Reload systemd
   ansible.builtin.systemd:
     daemon_reload: true
   when: configure_libvirt_socket_dropins.changed # noqa: no-handler
 
-# systemd refuses to restart a socket while its daemon is running, so stop
-# the daemon around the restart. Running VMs are not affected.
-- name: Restart libvirt sockets whose permissions changed
+# A socket only takes its new mode and group when it is recreated. The daemon
+# and all its sockets are stopped in a single transaction, otherwise a client
+# of a socket still listening (exporters, Pacemaker monitors, vm_manager) could
+# reactivate the daemon and make systemd refuse the socket restart. Sockets
+# that already have the expected mode and group are left alone, so a re-run
+# with an unchanged policy does not restart anything, and a run interrupted
+# before this step is caught up by the next one. One host at a time, so
+# that a live migration in progress cannot lose both ends at once. Running
+# VMs are not affected.
+- name: Restart libvirt daemons whose sockets have stale permissions
   ansible.builtin.shell:
     cmd: |
       set -eo pipefail
-      sock="{{ item.item }}"
-      systemctl cat "$sock" >/dev/null 2>&1 || exit 0
-      systemctl is-active -q "$sock" || exit 0
-      svc="$(echo "$sock" | sed -e 's/-ro\.socket$//' -e 's/\.socket$//').service"
+      svc="{{ item }}"
+      expected="{{ configure_libvirt_socket_mode | regex_replace('^0', '') }} {{ configure_libvirt_socket_group }}"
+      sockets=""
+      stale=0
+      for sock in "$svc.socket" "$svc-ro.socket" "$svc-admin.socket"; do
+        systemctl is-active -q "$sock" || continue
+        sockets="$sockets $sock"
+        case "$sock" in *-admin.socket) continue ;; esac
+        for path in $(systemctl show -P Listen "$sock" | sed -n 's/ (Stream)$//p'); do
+          [ "$(stat -c '%a %G' "$path" 2>/dev/null)" = "$expected" ] || stale=1
+        done
+      done
+      [ "$stale" = 1 ] || exit 0
       was_active=0
-      systemctl is-active -q "$svc" && was_active=1
-      systemctl stop "$svc"
-      systemctl restart "$sock"
-      [ "$was_active" = 1 ] && systemctl start "$svc"
+      systemctl is-active -q "$svc.service" && was_active=1
+      # shellcheck disable=SC2086
+      systemctl stop "$svc.service" $sockets
+      # shellcheck disable=SC2086
+      systemctl start $sockets
+      [ "$was_active" = 0 ] || systemctl start "$svc.service"
       echo restarted
     executable: /bin/bash
-  loop: "{{ configure_libvirt_socket_dropins.results }}"
-  loop_control:
-    label: "{{ item.item }}"
-  when: item.changed # noqa: no-handler
+  loop: >-
+    {{ configure_libvirt_socket_units
+    | map('regex_replace', '(-ro)?\.socket$', '') | unique | list }}
+  throttle: 1
   register: configure_libvirt_socket_restart
   changed_when: "'restarted' in configure_libvirt_socket_restart.stdout"
 
-# Restart libvirtd if configuration changed, unless restarting
-# libvirtd.socket above already restarted it with the new configuration.
+# Restart libvirtd if its configuration changed, unless the step above already
+# restarted it. Only where libvirtd is in use: on OracleLinux the modular
+# daemons replace it, and starting it next to them must be avoided.
 - name: Restart libvirtd
-  ansible.builtin.systemd:
-    name: libvirtd
-    state: restarted
+  ansible.builtin.shell:
+    cmd: |
+      set -eo pipefail
+      if systemctl is-active -q libvirtd.service || systemctl is-enabled -q libvirtd.service; then
+        systemctl restart libvirtd.service
+        echo restarted
+      fi
+    executable: /bin/bash
   when:
     - configure_libvirt_libvirtd_conf.changed
     - >-
-      'libvirtd.socket' not in (configure_libvirt_socket_restart.results
-      | selectattr('changed', 'defined') | selectattr('changed')
-      | map(attribute='item') | map(attribute='item') | list)
+      'libvirtd' not in (configure_libvirt_socket_restart.results | default([])
+      | selectattr('changed') | map(attribute='item') | list)
+  throttle: 1
+  register: configure_libvirt_libvirtd_restart
+  changed_when: "'restarted' in configure_libvirt_libvirtd_restart.stdout"
 
 # OracleLinux specific
 - name: Enable and start virtsecretd.socket
