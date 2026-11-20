@@ -30,8 +30,9 @@ Consequences operators must accept:
   design, because live migration may target any node.
 - If `configure_libvirt_allow_non_root_libvirt_socket_access` is enabled (see
   `configure_libvirt`), `libvirtadmin` can reach the root-equivalent libvirt
-  socket and thus becomes a cluster-wide root equivalent. With the secure
-  default (`false`), that escalation path is closed and `libvirtadmin` can
+  socket and thus becomes a cluster-wide root equivalent. It is enabled by
+  default when `livemigration_user` is a non-root account such as
+  `libvirtadmin`. Otherwise that escalation path is closed: `libvirtadmin` can
   still SSH to any hypervisor but cannot control libvirt.
 
 ## Requirements

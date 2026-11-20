@@ -3,10 +3,10 @@
 
 ---
 # Allow non-root users in the libvirt group to access the libvirt socket.
-# The read/write libvirt socket is root-equivalent, so this is opt-in and
-# should only be enabled when a non-root account really needs local libvirt
-# access (for example a non-root livemigration_user).
-configure_libvirt_allow_non_root_libvirt_socket_access: false
+# The read/write libvirt socket is root-equivalent, so it is only allowed by
+# default when a non-root livemigration_user needs it: live migration over
+# qemu+ssh opens the target's local socket as that user.
+configure_libvirt_allow_non_root_libvirt_socket_access: "{{ livemigration_user | default('root') != 'root' }}"
 
 # Libvirt socket units whose permissions are enforced by the role. libvirtd
 # ignores unix_sock_* in libvirtd.conf when socket-activated, and the modular
