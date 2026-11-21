@@ -99,22 +99,25 @@ def test_topology_is_exposed(pool):
 # --- claim bookkeeping ----------------------------------------------------
 
 
-def test_a_claim_records_its_kind(pool):
+def test_a_claim_records_its_kind_and_slot(pool):
     with pool:
-        pool.add_claim("redis", CLAIM_PID, [4], "FIFO", 10, kind="quadlet")
+        pool.add_claim("redis", CLAIM_PID, [4], "FIFO", 10,
+                       kind="quadlet", slot="rt")
 
         claim = pool.all_claims()[0]
 
     assert claim["kind"] == "quadlet"
+    assert claim["slot"] == "rt"
 
 
-def test_a_claim_without_a_kind_omits_it(pool):
+def test_a_claim_without_a_kind_or_slot_omits_them(pool):
     with pool:
         pool.add_claim("sv", CLAIM_PID, [4], "OTHER", 0)
 
         claim = pool.all_claims()[0]
 
     assert "kind" not in claim
+    assert "slot" not in claim
 
 
 def test_moving_a_claim_reassigns_its_core(pool):
@@ -578,3 +581,11 @@ def test_a_state_file_that_is_not_a_list_reads_as_empty(pool, name):
 
     assert pool._load_claims() == []
     assert pool._load_reserved_siblings() == []
+
+
+def test_a_slots_file_that_is_not_a_list_reads_as_empty(pool):
+    os.makedirs(pool._alloc_dir)
+    with open(os.path.join(pool._alloc_dir, "slots.json"), "w") as f:
+        f.write('{"not": "a list"}')
+
+    assert pool._load_slots() == []
