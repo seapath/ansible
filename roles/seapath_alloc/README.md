@@ -401,6 +401,51 @@ cluster-wide indicators (Ceph, Corosync, Pacemaker). It requires the
 Fallback state persists across reboots in
 `/var/lib/seapath/alloc/fallbacks.json`.
 
+**Host real-time tuning** (`seapath_rt_*`, written by `conformance.py`):
+
+The metrics above say what the isolated cores are *doing*. These say what the
+machine was *tuned as*, which `prometheus-node-exporter` publishes nowhere:
+the tuned profile, the boot parameters, the RT throttling window, the hugepage
+pools, SMT, transparent hugepages, the interrupt affinities and ACPI. They ride
+in the same textfile, on the same timer, under the same `node` job.
+
+With every node scraped, the tuning of a whole cluster can be held against its
+inventory from one place, and a drift (a profile selected but installed
+nowhere, for one) becomes an alerting rule.
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `seapath_rt_tuned_info{profile,source,installed}` | gauge | The configured tuned profile (`/etc/tuned/active_profile`, never the running daemon's). `installed=0` means the profile is named but installed nowhere, so nothing is tuning the machine, which `tuned-adm active` does not tell you |
+| `seapath_rt_kernel_cmdline_info{cmdline}` | gauge | The kernel command line, verbatim. Carries `isolcpus` **as requested**, which `/sys/devices/system/cpu/isolated` cannot show: the two differ on a machine converged and never rebooted |
+| `seapath_rt_sched_rt_runtime_us` | gauge | Runtime an RT task may use per period. `-1` disables throttling, which is what the realtime profile sets |
+| `seapath_rt_sched_rt_period_us` | gauge | The throttling period |
+| `seapath_rt_hugepages_total{size_kb,node}` | gauge | Hugepages reserved. `node` is empty for the machine-wide pool and carries the NUMA node number otherwise: a guest pinned to one socket draws from that socket's pool, so the right total with an empty node is a guest that fails to start |
+| `seapath_rt_hugepages_free{size_kb,node}` | gauge | Hugepages still free, same labels; a pool whose free count cannot be read has no sample |
+| `seapath_rt_transparent_hugepages_info{enabled,defrag}` | gauge | Anything but `never` leaves khugepaged compacting memory in the background, which an isolated CPU does not escape |
+| `seapath_rt_smt_info{control}` | gauge | The SMT control the machine exposes (`on`, `off`, `forceoff`, `notsupported`, ...), empty on a kernel built without one (`CONFIG_HOTPLUG_SMT`) |
+| `seapath_rt_smt_active` | gauge | 1 when two threads share a core's execution units, so an isolated CPU is only isolated if its sibling is idle or isolated too |
+| `seapath_rt_acpi_present` | gauge | 1 when the firmware exposes ACPI. Nothing here measures an SMI: they are invisible to the kernel by construction, and `hwlatdetect` is what measures them |
+| `seapath_rt_irqs_total` | gauge | Interrupts the machine has a descriptor for |
+| `seapath_rt_irqs_on_isolated_cpus` | gauge | Interrupts delivered to an isolated CPU, whether or not they have fired there yet: their effective affinity where the kernel exposes it (`isolcpus=managed_irq` steers a managed interrupt off the isolated CPUs its mask still names), their requested one otherwise. The NIC interrupts pinned there on purpose are counted too |
+| `seapath_rt_nic_irqs_pinned_to_isolated_cpus` | gauge | Among them, the physical NIC interrupts confined to isolated CPUs: the shape `configure_nic_irq_affinity` gives on purpose |
+| `seapath_rt_irq_on_isolated_info{irq,name,cpus,nic}` | gauge | One series per such interrupt, naming the device behind it; `nic="1"` for a NIC interrupt confined to isolated CPUs. At most 8 are described, none when no interrupt reaches an isolated CPU; the gauge above always carries the true count |
+
+Two conventions the consumers rely on, both asserted by the test suite:
+
+- **An info family describing a setting is published even when the reading
+  came back empty.** An empty `profile` label means "read, and there is
+  none"; an absent `seapath_rt_tuned_info` means "this node runs a collector
+  too old to publish the block". Those are different faults with different
+  fixes, and a consumer can tell them apart.
+- **A numeric gauge is omitted when it could not be read**, never defaulted,
+  because every value it could carry is a legitimate one: `-1` is a correctly
+  tuned `sched_rt_runtime_us`, and a hugepage pool of `0` is a real answer.
+
+Nothing in this block is a verdict. Whether a value is right for a given
+machine depends on what that machine's inventory declares, which this collector
+does not have: it reports what it read, and whoever holds the inventory decides
+what it means.
+
 ### Recommended alerting rules
 
 ```yaml
@@ -438,6 +483,18 @@ groups:
           description: >
             At least one VM or process could not get isolated cores and is
             running without RT guarantees. Check hook.log for details.
+
+      - alert: SeapathRtProfileNotInstalled
+        expr: seapath_rt_tuned_info{installed="0"} == 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "tuned profile installed nowhere on {{ $labels.instance }}"
+          description: >
+            {{ $labels.profile }} is selected in /etc/tuned/active_profile but
+            no profile of that name is installed, so nothing is tuning this
+            machine. tuned-adm active reports the name either way.
 
       - alert: SeapathAllocMetricsStale
         expr: time() - seapath_alloc_scrape_timestamp_seconds > 120
