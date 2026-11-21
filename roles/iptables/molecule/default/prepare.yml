@@ -1,0 +1,69 @@
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+---
+- name: Prepare
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Do not save the current rules when installing iptables-persistent
+      ansible.builtin.debconf:
+        name: iptables-persistent
+        question: "iptables-persistent/{{ item }}"
+        value: "false"
+        vtype: boolean
+      loop:
+        - autosave_v4
+        - autosave_v6
+
+    - name: Install iptables, nftables and netfilter-persistent
+      ansible.builtin.apt:
+        name:
+          - iptables
+          - iptables-persistent
+          - nftables
+        update_cache: true
+
+- name: Leave a host in nftables mode, as an earlier run would
+  hosts: back
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Write a ruleset in nftables mode
+      ansible.builtin.copy:
+        content: |
+          #!/usr/sbin/nft -f
+          # iptables role: nftables mode
+          table ip filter
+          delete table ip filter
+          add table ip filter
+          add chain ip filter INPUT { type filter hook input priority 0; policy accept; }
+          add rule ip filter INPUT ip saddr 203.0.113.0/24 counter accept comment "from-nft"
+        dest: /etc/nftables.conf
+        mode: "0755"
+
+    - name: Load it
+      ansible.builtin.command: /usr/sbin/nft -f /etc/nftables.conf
+      changed_when: true
+
+    - name: Load it at boot
+      ansible.builtin.systemd:
+        name: nftables
+        enabled: true
+
+    - name: Do not load rules.v4 at boot
+      ansible.builtin.systemd:
+        name: netfilter-persistent
+        enabled: false
+
+    - name: Create the Cukinia extra essential services directory
+      ansible.builtin.file:
+        path: /etc/cukinia/extra-essential-services.d
+        state: directory
+        mode: "0755"
+
+    - name: Declare nftables.service to the Cukinia tests
+      ansible.builtin.copy:
+        content: "nftables\n"
+        dest: /etc/cukinia/extra-essential-services.d/iptables
+        mode: "0644"
