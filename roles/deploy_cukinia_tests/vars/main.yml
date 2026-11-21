@@ -3,5 +3,3 @@
 ---
 # Drop-in directory read at cukinia test runtime by systemd.conf (SEAPATH-00200).
 deploy_cukinia_tests_extra_essential_services_dir: /etc/cukinia/extra-essential-services.d
-# Drop-in directory read at cukinia test runtime by groups.conf (SEAPATH-00033).
-deploy_cukinia_tests_extra_expected_groups_dir: /etc/cukinia/extra-expected-groups.d
