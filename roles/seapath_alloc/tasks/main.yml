@@ -57,6 +57,7 @@
     owner: root
     group: root
     mode: "0755"
+  notify: Restart the NIC IRQ affinity monitor
 
 - name: Install seapath-container-pin helper
   ansible.builtin.copy:
