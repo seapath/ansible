@@ -17,6 +17,14 @@ permissions:
   checks: write
   contents: read
 
+# One run per PR: a new push cancels the run still going on the previous
+# head. Force-pushing a stack of PRs moves both the base and the head of
+# each PR and sends two synchronize events for the same commit; without
+# this, both runs would hold the integration benches one after the other.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ci-qa:
     uses: ./.github/workflows/ci-qa.yml
