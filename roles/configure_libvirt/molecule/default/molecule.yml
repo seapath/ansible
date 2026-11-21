@@ -43,6 +43,8 @@ provisioner:
       all:
         seapath_distro: Debian
     host_vars:
+      hv-root:
+        configure_libvirt_tap_link_speed: 1000
       hv-optin:
         livemigration_user: libvirtadmin
 

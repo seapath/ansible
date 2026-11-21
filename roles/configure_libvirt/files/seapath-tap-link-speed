@@ -1,0 +1,140 @@
+#!/usr/bin/env python3
+# Copyright (C) 2026 RTE
+# SPDX-License-Identifier: Apache-2.0
+
+"""
+libvirt QEMU hook that sets the link speed reported by the guest tap devices.
+
+The kernel reports 10 Mb/s for a tap device, so SNMP and other supervision
+tools compute a link usage above 100% as soon as a VM carries a few Sampled
+Values streams. The reported speed has no effect on the traffic itself.
+
+libvirt runs the hook with the domain name, the operation, the sub-operation
+and an extra argument, and writes the live domain XML on stdin. The hook acts
+on "started", which libvirt sends after a normal start, a restore and on the
+destination of a live migration, once the tap devices exist. The speed in Mb/s
+is read from CONFIG_FILE.
+
+The hook always exits 0: a VM must start even if its taps keep the default
+speed. Errors go to syslog.
+"""
+
+import array
+import fcntl
+import os
+import socket
+import struct
+import sys
+import syslog
+import xml.etree.ElementTree as ET
+
+CONFIG_FILE = "/etc/seapath/tap-link-speed.conf"
+SYS_CLASS_NET = "/sys/class/net"
+
+SIOCETHTOOL = 0x8946
+ETHTOOL_GSET = 0x00000001
+ETHTOOL_SSET = 0x00000002
+DUPLEX_FULL = 0x01
+AUTONEG_DISABLE = 0x00
+
+# struct ethtool_cmd from <linux/ethtool.h>: the legacy GSET/SSET interface,
+# which the tun driver serves through its link_ksettings callbacks.
+ETHTOOL_CMD = struct.Struct("=IIIHBBBBBBIIHBBI2I")
+SPEED = 3
+DUPLEX = 4
+AUTONEG = 8
+SPEED_HI = 12
+
+# struct ifreq is 40 bytes on 64-bit Linux: the 16-byte name, then a union
+# whose ifr_data member points to the ethtool_cmd.
+IFREQ = struct.Struct("16sP")
+IFREQ_SIZE = 40
+
+
+def read_speed():
+    """Return the speed in Mb/s: the first line of CONFIG_FILE not a comment."""
+    with open(CONFIG_FILE, encoding="utf-8") as config:
+        for line in config:
+            line = line.strip()
+            if line and not line.startswith("#"):
+                speed = int(line)
+                if not 0 < speed <= 0xFFFFFFFF:
+                    raise ValueError(f"speed {speed} out of range")
+                return speed
+    raise ValueError("no speed found")
+
+
+def tap_devices(domain_xml):
+    """Return the target devices of the domain interfaces, in XML order."""
+    root = ET.fromstring(domain_xml)
+    devices = []
+    for target in root.findall("./devices/interface/target"):
+        dev = target.get("dev")
+        if dev:
+            devices.append(dev)
+    return devices
+
+
+def is_tap(dev):
+    """tun_flags only exists for tun and tap devices: macvtap has none."""
+    return os.path.exists(os.path.join(SYS_CLASS_NET, dev, "tun_flags"))
+
+
+def _ethtool(sock, dev, data):
+    """Run one SIOCETHTOOL request on dev; data is updated in place."""
+    address, _ = data.buffer_info()
+    ifreq = IFREQ.pack(dev.encode(), address).ljust(IFREQ_SIZE, b"\0")
+    fcntl.ioctl(sock.fileno(), SIOCETHTOOL, ifreq)
+
+
+def set_speed(sock, dev, speed):
+    """Set speed, full duplex and no autonegotiation, keeping the rest."""
+    data = array.array("B", ETHTOOL_CMD.pack(ETHTOOL_GSET, *[0] * 17))
+    _ethtool(sock, dev, data)
+    fields = list(ETHTOOL_CMD.unpack(data.tobytes()))
+    fields[0] = ETHTOOL_SSET
+    fields[SPEED] = speed & 0xFFFF
+    fields[SPEED_HI] = speed >> 16
+    fields[DUPLEX] = DUPLEX_FULL
+    fields[AUTONEG] = AUTONEG_DISABLE
+    data = array.array("B", ETHTOOL_CMD.pack(*fields))
+    _ethtool(sock, dev, data)
+
+
+def run(argv, stdin, open_socket=socket.socket):
+    if len(argv) < 3 or argv[2] != "started":
+        return
+    name = argv[1]
+    try:
+        speed = read_speed()
+        devices = [dev for dev in tap_devices(stdin.read()) if is_tap(dev)]
+    except (OSError, ValueError, ET.ParseError) as err:
+        syslog.syslog(syslog.LOG_ERR, f"{name}: {err}")
+        return
+    if not devices:
+        return
+    with open_socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        for dev in devices:
+            try:
+                set_speed(sock, dev, speed)
+            except OSError as err:
+                syslog.syslog(
+                    syslog.LOG_ERR, f"{name}: cannot set the speed of {dev}: {err}"
+                )
+            else:
+                syslog.syslog(
+                    syslog.LOG_INFO, f"{name}: {dev} reports {speed} Mb/s"
+                )
+
+
+def main():
+    syslog.openlog("seapath-tap-link-speed")
+    try:
+        run(sys.argv, sys.stdin)
+    except Exception as err:  # pylint: disable=broad-except
+        syslog.syslog(syslog.LOG_ERR, f"unexpected error: {err!r}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

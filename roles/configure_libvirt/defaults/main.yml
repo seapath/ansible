@@ -38,3 +38,7 @@ configure_libvirt_socket_units:
   - virtnwfilterd-ro.socket
   - virtinterfaced.socket
   - virtinterfaced-ro.socket
+
+# Link speed in Mb/s reported by the guest tap devices, 0 keeps the kernel
+# default.
+configure_libvirt_tap_link_speed: 0

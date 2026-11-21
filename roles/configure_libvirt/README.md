@@ -103,6 +103,19 @@ No requirement.
 | configure_libvirt_allow_non_root_libvirt_socket_access | no       | Boolean | true if `livemigration_user` is set and not `root`, else false | Allow non-root users in the libvirt group to access the (root-equivalent) libvirt read/write socket |
 | configure_libvirt_socket_trusted_user                  | no       | String  | `libvirtdbus` | System user that keeps libvirt access when non-root access is disabled; ignored if missing, `""` to disable |
 | configure_libvirt_socket_units                         | no       | List    | see `defaults/main.yml` | Libvirt socket units whose permissions are enforced; units missing on a host are ignored |
+| configure_libvirt_tap_link_speed                       | no       | Integer | 0       | Link speed in Mb/s reported by the guest tap devices, see below. 0 keeps the default |
+
+## Tap link speed
+
+`configure_libvirt_tap_link_speed` sets the link speed, in Mb/s and full
+duplex, that the tap devices of the guests report, for example `1000`
+instead of the kernel's 10 Mb/s. It changes what supervision tools (SNMP
+`ifSpeed`, node_exporter) read, never the traffic. macvtap, vhost-user and
+passthrough interfaces are left alone.
+
+Enabling it for the first time restarts `libvirtd` (`virtqemud` on
+OracleLinux): do it before deploying the VMs, or with the cluster in
+maintenance mode. VMs already running get the new speed at their next start.
 
 ## Example Playbook
 
