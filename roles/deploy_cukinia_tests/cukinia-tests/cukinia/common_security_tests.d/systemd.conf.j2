@@ -136,11 +136,23 @@ $ESSENTIAL_SERVICES_COMMON\
 $ESSENTIAL_SERVICES_EXTRA\
 )"
 
-UNRECOGNIZED_SERVICES="$(systemctl list-units --type service --plain --no-pager --no-legend | awk -F ' ' '{ print $1}' | grep -Ev '^'${ESSENTIAL_SERVICES}'(@.*)?'.service'$')"
+# Only active and failed units count: a oneshot started at boot, for
+# instance by a timer catching up, is listed while it runs and would make
+# the result depend on when the tests start after a reboot.
+UNRECOGNIZED_SERVICES="$(systemctl list-units --type service --state=active,failed --plain --no-pager --no-legend | awk -F ' ' '{ print $1}' | grep -Ev '^'${ESSENTIAL_SERVICES}'(@.*)?'.service'$')"
 
 if [ "$UNRECOGNIZED_SERVICES" != "" ]; then
     cukinia_log "$(_colorize red Unrecognized services: $UNRECOGNIZED_SERVICES)"
 fi
 
-test_id "SEAPATH-00200" as "No unrecognized service enabled" \
-    cukinia_test "$UNRECOGNIZED_SERVICES" = ""
+# cukinia_log output is dropped in the JUnit XML report: print the services
+# from the test itself, which "verbose" stores in the system-out element.
+_check_no_unrecognized_service()
+{
+    [ -z "$UNRECOGNIZED_SERVICES" ] && return 0
+    echo "Unrecognized services:" $UNRECOGNIZED_SERVICES
+    return 1
+}
+
+test_id "SEAPATH-00200" as "No unrecognized service enabled" verbose \
+    cukinia_cmd _check_no_unrecognized_service
