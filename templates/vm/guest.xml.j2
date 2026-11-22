@@ -1,5 +1,6 @@
 <!-- Copyright (C) 2023, RTE (http://www.rte-france.com) -->
-<!--  Copyright (C) 2025 Savoir-faire Linux, Inc-->
+<!-- Copyright (C) 2025 Savoir-faire Linux, Inc-->
+<!-- Copyright (C) 2026 Sprecher Automation -->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 
 <!--
@@ -11,6 +12,10 @@
 {% set vm_features = vm.vm_features if "vm_features" in vm else [] %}
 {% set vm_legacy_bios = vm.legacy_bios if "legacy_bios" in vm else false %}
 {% set cpu_nb = (vm.cpuset | length) if vm.cpuset is defined else vm.nb_cpu | default(1) %}
+{% set pinned_devices = (vm.pci_passthrough | default([])) + (vm.bridges | default([])) %}
+{% set pinned_root_port_indexes = pinned_devices | selectattr("guest_address", "defined") | map(attribute="guest_address.bus") | map("int", base=16) | unique | sort %}
+{% for root_port_index in pinned_root_port_indexes if root_port_index < 1 %}{{ undef("guest_address.bus must name a pcie-root-port from 0x01 upwards; 0x00 is the pcie-root itself") }}{% endfor %}
+{% macro guest_pci_address(guest_address) %}<address type="pci" domain="{{ guest_address.domain | default('0x0000') }}" bus="{{ "0x%02x" | format(guest_address.bus | int(base=16)) }}" slot="{{ guest_address.slot | default('0x00') }}" function="{{ guest_address.function | default('0x0') }}"/>{% endmacro %}
 
 <domain type="{{ vm.vm_domain_type | default('kvm') }}">
     <name>{{ vm.inventory_hostname }}</name>
@@ -56,6 +61,24 @@
     <features>
         <acpi />
         <apic />
+{% if "windows" in vm_features %}
+        <hyperv mode="custom">
+            <relaxed state="on" />
+            <vapic state="on" />
+            <spinlocks state="on" retries="8191" />
+            <vpindex state="on" />
+            <runtime state="on" />
+            <synic state="on" />
+            <stimer state="on">
+                <direct state="on" />
+            </stimer>
+            <reset state="on" />
+            <frequencies state="on" />
+            <reenlightenment state="on" />
+            <tlbflush state="on" />
+            <ipi state="on" />
+        </hyperv>
+{% endif %}
         <vmport state="off" />
 {% if "rt" in vm_features %}
         <pmu state="off" />
@@ -80,6 +103,9 @@
     <cpu mode="host-passthrough">
         <topology sockets="1" dies="1" cores="{{ cpu_nb }}" threads="1" />
         <feature policy="require" name="tsc-deadline" />
+{% elif "windows" in vm_features %}
+    <cpu mode="host-passthrough" check="partial" migratable="on">
+        <topology sockets="1" dies="1" cores="{{ cpu_nb }}" threads="1" />
 {% else %}
     <cpu mode="host-model" check="partial">
         <model fallback="allow" />
@@ -98,6 +124,9 @@
         <timer name="rtc" tickpolicy="catchup" />
         <timer name="pit" tickpolicy="delay" />
         <timer name="hpet" present="no" />
+{% if "windows" in vm_features %}
+        <timer name="hypervclock" present="yes" />
+{% endif %}
     </clock>
     <on_poweroff>destroy</on_poweroff>
     <on_reboot>restart</on_reboot>
@@ -124,8 +153,8 @@
            <target dev="vda" bus="virtio"/>
         </disk>
 {% endif %}
-{% if vm.additional_disk is defined and vm.standalone_main_disk is defined %}
-{%     for file in vm.additional_disk %}
+{% if vm.standalone_additional_disks is defined and vm.standalone_main_disk is defined %}
+{%     for file in vm.standalone_additional_disks %}
         <disk type="file" device="disk">
            <driver name="qemu" type="{{ 'raw' if vm.disk_extract is defined and vm.disk_extract | bool else 'qcow2' }}"/>
            <source file="/var/lib/libvirt/images/{{ file }}"/>
@@ -159,6 +188,9 @@
                 <!-- The source is the NIC PIC address -->
                 <address domain="{{ pci.domain }}" bus="{{ pci.bus }}" slot="{{ pci.slot }}" function="{{ pci.function }}"/>
             </source>
+{%         if pci.guest_address is defined %}
+            {{ guest_pci_address(pci.guest_address) }}
+{%         endif %}
         </hostdev>
 {%     endfor %}
 {% endif %}
@@ -188,6 +220,9 @@
                     <tag id='{{ bridge.vlan.vlan_tag }}'/>
                 </vlan>
 {%         endif %}
+{%         if bridge.guest_address is defined %}
+            {{ guest_pci_address(bridge.guest_address) }}
+{%         endif %}
         </interface>
 {%     endfor %}
 {% endif %}
@@ -211,6 +246,11 @@
 {%     endfor %}
 {% endif %}
         <controller type="pci" index="0" model="pcie-root" />
+{% for root_port_index in pinned_root_port_indexes %}
+        <controller type="pci" index="{{ root_port_index }}" model="pcie-root-port">
+            <address type="pci" domain="0x0000" bus="0x00" slot="{{ "0x%02x" | format(2 + (root_port_index - 1) // 8) }}" function="{{ "0x%x" | format((root_port_index - 1) % 8) }}"/>
+        </controller>
+{% endfor %}
         <serial type="pty">
             <target type="isa-serial" port="0">
                 <model name="isa-serial" />
