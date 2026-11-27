@@ -1,0 +1,49 @@
+---
+dependency:
+  name: galaxy
+
+driver:
+  name: podman
+
+platforms:
+  - name: hv1
+    image: docker.io/geerlingguy/docker-debian13-ansible:latest
+    privileged: true
+    command: /sbin/init
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      roles_path: "${MOLECULE_PROJECT_DIRECTORY}/.."
+  playbooks:
+    prepare: prepare.yml
+    converge: converge.yml
+    verify: verify.yml
+  inventory:
+    host_vars:
+      hv1:
+        network_simple: true
+        network_systemdnetworkd_enable_resolved: false
+        network_systemdnetworkd_link:
+          10-eth0:
+            - Match:
+                - Name: "eth0"
+            - Link:
+                - MTUBytes: 1800
+        custom_netdev:
+          20-bridge0:
+            - NetDev:
+                - Name: "bridge0"
+                - Kind: "bridge"
+        custom_network:
+          30-test0:
+            - Match:
+                - Name: "eth0"
+            - Network:
+                - DHCP: "yes"
+
+verifier:
+  name: ansible
